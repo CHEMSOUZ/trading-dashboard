@@ -28,8 +28,8 @@ async function loadActiveDb() {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1280, height: 800,
-    minWidth: 900, minHeight: 600,
+    width: 1400, height: 900,
+    minWidth: 1000, minHeight: 700,
     backgroundColor: '#070d12',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),

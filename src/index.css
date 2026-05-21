@@ -1,22 +1,28 @@
-* {
+html {
+  font-size: 120%;
+}
+
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
 body {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
   background: #060c10;
   color: #c8d8c8;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 ::-webkit-scrollbar {
   width: 4px;
 }
+
 ::-webkit-scrollbar-track {
   background: #060c10;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #1a3a22;
   border-radius: 2px;
