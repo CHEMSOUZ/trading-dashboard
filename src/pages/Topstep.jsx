@@ -15,20 +15,27 @@ const FUNDED = {
 };
 
 const COMBINE = {
-  ACCOUNT_SIZE:        50000,
-  MAX_LOSS:            2000,
-  FLOOR_INITIAL:       48000,
-  BASE_PROFIT_TARGET:  3000,  // objectif de base
-  MIN_DAYS:            2,
-  CONSISTENCY_PCT:     0.50,  // best day < 50% du profit target
-  // Si best day >= 50% du target :
-  // Nouveau target = best day / 0.50
+  ACCOUNT_SIZE:       50000,
+  MAX_LOSS:           2000,
+  FLOOR_INITIAL:      48000,
+  BASE_PROFIT_TARGET: 3000,
+  MIN_DAYS:           2,
+  CONSISTENCY_PCT:    0.50,
 };
 
 // ── Helpers ───────────────────────────────────────────────────
+
+// Topstep utilise toujours le P&L net (après frais)
+// result_net = PnL brut - commissions - frais
+function getNet(trade) {
+  if (trade.result_net != null) return trade.result_net;
+  if (trade.result     != null) return trade.result;
+  return 0;
+}
+
 function fmt(n, sign = false) {
   if (n == null || isNaN(n)) return '—';
-  return `${sign && n >= 0 ? '+' : ''}${n.toFixed(0)}$`;
+  return `${sign && n >= 0 ? '+' : ''}${n.toFixed(2)}$`;
 }
 function pnlColor(v) {
   if (v > 0) return '#00ff88';
@@ -43,7 +50,7 @@ function CustomTooltip({ active, payload, label }) {
       <div style={{ color: '#3a6a4a', marginBottom: '4px' }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ color: p.name === 'Floor' ? '#ff4455' : '#00ff88', fontWeight: '700' }}>
-          {p.name}: {typeof p.value === 'number' ? `${p.value.toFixed(0)}$` : p.value}
+          {p.name}: {typeof p.value === 'number' ? `${p.value.toFixed(2)}$` : p.value}
         </div>
       ))}
     </div>
@@ -69,14 +76,9 @@ function ProgressBar({ label, current, max, color, displayText }) {
   const pct = Math.min((current / Math.max(max, 1)) * 100, 100);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      {label && (
+      {label !== null && (
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '10px', color: '#8aaa90' }}>{label}</span>
-          <span style={{ fontSize: '10px', color, fontWeight: '700' }}>{displayText}</span>
-        </div>
-      )}
-      {!label && displayText && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          {label && <span style={{ fontSize: '10px', color: '#8aaa90' }}>{label}</span>}
           <span style={{ fontSize: '10px', color, fontWeight: '700' }}>{displayText}</span>
         </div>
       )}
@@ -90,7 +92,7 @@ function ProgressBar({ label, current, max, color, displayText }) {
 function DayDot({ date, pnl }) {
   const isWin = pnl > 0;
   return (
-    <div title={`${date}: ${fmt(pnl, true)}`} style={{
+    <div title={`${date}: ${fmt(pnl, true)} (net)`} style={{
       width: '30px', height: '30px', borderRadius: '50%',
       background: isWin ? 'rgba(0,255,136,0.12)' : 'rgba(255,68,85,0.12)',
       border: `1.5px solid ${isWin ? '#00ff88' : '#ff4455'}`,
@@ -103,45 +105,62 @@ function DayDot({ date, pnl }) {
   );
 }
 
-// ── FUNDED TAB ────────────────────────────────────────────────
-function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setBalanceInput }) {
-  const { ACCOUNT_SIZE, MAX_LOSS, LOCK_LEVEL } = FUNDED;
+// ── Compute trailing drawdown from trades (using NET P&L) ─────
+function computeTrailing(trades, manualBalance, accountSize, maxLoss) {
+  const sorted = [...trades]
+    .filter(t => getNet(t) !== 0 || t.result != null)
+    .sort((a, b) => (a.entered_at || a.date).localeCompare(b.entered_at || b.date));
 
-  const totalPnl = trades.reduce((s, t) => s + (t.result ?? 0), 0);
-  const currentBalance = manualBalance > 0 ? manualBalance : ACCOUNT_SIZE + totalPnl;
+  let runBal = manualBalance > 0 ? manualBalance - trades.reduce((s,t) => s + getNet(t), 0) : accountSize;
+  let hwm    = runBal;
+  let floor  = runBal - maxLoss;
 
-  const sorted = [...trades].filter(t => t.result != null).sort((a, b) => a.date.localeCompare(b.date));
-  let runBal = manualBalance > 0 ? manualBalance - totalPnl : ACCOUNT_SIZE;
-  let hwm = runBal, floor = runBal - MAX_LOSS;
-
+  // Group by day
   const byDayArr = sorted.reduce((acc, t) => {
     const last = acc[acc.length - 1];
-    if (last && last.date === t.date) last.pnl += t.result ?? 0;
-    else acc.push({ date: t.date, pnl: t.result ?? 0 });
+    if (last && last.date === t.date) last.pnl += getNet(t);
+    else acc.push({ date: t.date, pnl: getNet(t) });
     return acc;
   }, []);
 
-  const equityPoints = [{ date: 'Start', balance: runBal, floor }];
+  const points = [{ date: 'Start', balance: runBal, floor }];
   byDayArr.forEach(({ date, pnl }) => {
     runBal += pnl;
-    if (runBal > hwm) { hwm = runBal; floor = hwm - MAX_LOSS; }
-    equityPoints.push({ date: date.slice(5), balance: Math.round(runBal * 100) / 100, floor: Math.round(floor * 100) / 100 });
+    if (runBal > hwm) { hwm = runBal; floor = hwm - maxLoss; }
+    points.push({ date: date.slice(5), balance: Math.round(runBal * 100) / 100, floor: Math.round(floor * 100) / 100 });
   });
 
-  const distanceToFloor = currentBalance - floor;
-  const accountLost  = currentBalance <= floor;
-  const isAboveLock  = currentBalance >= LOCK_LEVEL;
+  return { points, hwm, floor, byDayArr };
+}
 
-  const byDay = trades.reduce((acc, t) => { if (!acc[t.date]) acc[t.date] = 0; acc[t.date] += t.result ?? 0; return acc; }, {});
+// ── FUNDED TAB ────────────────────────────────────────────────
+function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setBalanceInput }) {
+  const { ACCOUNT_SIZE, MAX_LOSS, LOCK_LEVEL } = FUNDED;
+  const [localOption, setLocalOption] = useState(localStorage.getItem('ts_payout_option') || 'A');
+
+  const totalNet       = trades.reduce((s, t) => s + getNet(t), 0);
+  const currentBalance = manualBalance > 0 ? manualBalance : ACCOUNT_SIZE + totalNet;
+  const { points: equityPoints, hwm, floor } = computeTrailing(trades, manualBalance, ACCOUNT_SIZE, MAX_LOSS);
+
+  const distanceToFloor = currentBalance - floor;
+  const accountLost     = currentBalance <= floor;
+  const isAboveLock     = currentBalance >= LOCK_LEVEL;
+
+  // Daily NET P&L
+  const byDay = trades.reduce((acc, t) => {
+    if (!acc[t.date]) acc[t.date] = 0;
+    acc[t.date] += getNet(t);
+    return acc;
+  }, {});
   const dailyArr = Object.entries(byDay).sort(([a],[b]) => a.localeCompare(b)).map(([date, pnl]) => ({ date: date.slice(5), pnl: Math.round(pnl * 100) / 100 }));
   const allDays  = Object.entries(byDay).sort(([a],[b]) => a.localeCompare(b));
   const winDays  = Object.values(byDay).filter(p => p > 0).length;
-  const positivePnl = trades.filter(t => (t.result ?? 0) > 0).reduce((s,t) => s + t.result, 0);
-  const bestDayVal  = Math.max(...Object.values(byDay).filter(p => p > 0), 0);
-  const bestDayPct  = positivePnl > 0 ? (bestDayVal / positivePnl) * 100 : 0;
 
-  const payoutOption = localStorage.getItem('ts_payout_option') || 'A';
-  const [localOption, setLocalOption] = useState(payoutOption);
+  // Payout Option B — consistency rule sur net P&L
+  const posNetPnl  = trades.filter(t => getNet(t) > 0).reduce((s,t) => s + getNet(t), 0);
+  const bestDayNet = Math.max(...Object.values(byDay).filter(p => p > 0), 0);
+  const bestDayPct = posNetPnl > 0 ? (bestDayNet / posNetPnl) * 100 : 0;
+
   const optionAReady = winDays >= 5;
   const optionBReady = winDays >= 3 && bestDayPct <= 40;
 
@@ -161,6 +180,13 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
+      {/* Net P&L notice */}
+      <div style={{ background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: '6px', padding: '10px 14px', fontSize: '10px', color: '#4a7a5a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span>ℹ️</span>
+        <span>Tous les calculs utilisent le <strong style={{ color: '#00ff88' }}>P&L net</strong> (après commissions et frais), conformément aux règles Topstep.</span>
+      </div>
+
+      {/* Balance + status */}
       <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: '6px' }}>
           <input type="number" placeholder="Balance réelle ($)" value={balanceInput}
@@ -171,21 +197,24 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
         <div style={{ background: `rgba(${status.color==='#ff4455'?'255,68,85':status.color==='#f0a020'?'240,160,32':'0,255,136'},0.08)`, border: `1px solid ${status.color}40`, borderRadius: '6px', padding: '7px 14px', fontSize: '11px', fontWeight: '700', color: status.color }}>
           {status.label}
         </div>
+        <div style={{ fontSize: '10px', color: '#3a6a4a' }}>
+          P&L net total: <span style={{ color: pnlColor(totalNet), fontWeight: '700' }}>{fmt(totalNet, true)}</span>
+        </div>
       </div>
 
       {/* Trailing drawdown */}
       <div style={{ background: accountLost ? 'rgba(255,68,85,0.06)' : 'rgba(10,28,18,0.4)', border: `1px solid ${distanceToFloor < 500 ? 'rgba(255,68,85,0.3)' : 'rgba(0,255,136,0.08)'}`, borderRadius: '8px', padding: '18px' }}>
-        <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>⚠️ TRAILING DRAWDOWN</div>
+        <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>⚠️ TRAILING DRAWDOWN (basé sur P&L net)</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', marginBottom: '14px' }}>
-          <MetricCard label="BALANCE" value={`${currentBalance.toFixed(0)}$`} color={currentBalance >= LOCK_LEVEL ? '#00ff88' : '#c8d8c8'} sub={manualBalance > 0 ? 'Manuelle' : 'Estimée'} />
-          <MetricCard label="HIGH WATER MARK" value={`${hwm.toFixed(0)}$`} color="#f0a020" sub="Plus haut atteint" />
-          <MetricCard label="FLOOR" value={`${floor.toFixed(0)}$`} color="#ff4455" alert={distanceToFloor < 500} sub="Ne pas descendre sous" />
-          <MetricCard label="MARGE" value={`${distanceToFloor.toFixed(0)}$`} color={distanceToFloor < 500 ? '#ff4455' : distanceToFloor < 1000 ? '#f0a020' : '#00ff88'} alert={distanceToFloor < 500} />
+          <MetricCard label="BALANCE" value={`${currentBalance.toFixed(2)}$`} color={currentBalance >= LOCK_LEVEL ? '#00ff88' : '#c8d8c8'} sub={manualBalance > 0 ? 'Manuelle' : 'Estimée (net)'} />
+          <MetricCard label="HIGH WATER MARK" value={`${hwm.toFixed(2)}$`} color="#f0a020" sub="Plus haut net atteint" />
+          <MetricCard label="FLOOR" value={`${floor.toFixed(2)}$`} color="#ff4455" alert={distanceToFloor < 500} sub="Ne pas descendre sous" />
+          <MetricCard label="MARGE" value={`${distanceToFloor.toFixed(2)}$`} color={distanceToFloor < 500 ? '#ff4455' : distanceToFloor < 1000 ? '#f0a020' : '#00ff88'} alert={distanceToFloor < 500} />
         </div>
         <div style={{ height: '18px', background: 'rgba(0,0,0,0.3)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
           <div style={{ height: '100%', width: `${Math.min((distanceToFloor / MAX_LOSS) * 100, 100)}%`, background: distanceToFloor < 500 ? 'linear-gradient(90deg,#ff4455,#ff6677)' : distanceToFloor < 1000 ? 'linear-gradient(90deg,#f0a020,#f0c040)' : 'linear-gradient(90deg,#00aa55,#00ff88)', borderRadius: '4px', transition: 'width 0.5s ease' }} />
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: 'rgba(255,255,255,0.8)', fontWeight: '700' }}>
-            {distanceToFloor.toFixed(0)}$ de marge · Floor: {floor.toFixed(0)}$
+            {distanceToFloor.toFixed(2)}$ de marge · Floor: {floor.toFixed(2)}$
           </div>
         </div>
         {isAboveLock && <div style={{ marginTop: '10px', background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '4px', padding: '8px 12px', fontSize: '10px', color: '#00ff88' }}>🔒 Au-dessus de {LOCK_LEVEL}$ — trailing se stabilise.</div>}
@@ -194,31 +223,41 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
       {/* Payout */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
         {[
-          { key: 'A', title: '💸 PAYOUT STANDARD', desc: '5 jours gagnants minimum', ready: optionAReady,
+          { key: 'A', title: '💸 PAYOUT STANDARD', desc: '5 jours gagnants minimum (net)', ready: optionAReady,
             body: <>
-              <ProgressBar label="Jours gagnants" current={Math.min(winDays,5)} max={5} color={winDays>=5?'#00ff88':'#f0a020'} displayText={`${winDays}/5 jours`} />
+              <ProgressBar label="Jours gagnants (net > 0)" current={Math.min(winDays,5)} max={5} color={winDays>=5?'#00ff88':'#f0a020'} displayText={`${winDays}/5 jours`} />
               <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '10px' }}>
                 {allDays.slice(-7).map(([date,pnl]) => <DayDot key={date} date={date} pnl={pnl}/>)}
               </div>
               <div style={{ fontSize: '10px', color: optionAReady?'#00ff88':'#4a7a5a', marginTop: '8px' }}>
-                {optionAReady ? '✅ Éligible au payout.' : `⏳ Encore ${5-winDays} jour(s) requis.`}
+                {optionAReady ? '✅ Éligible au payout.' : `⏳ Encore ${5-winDays} jour(s) net positif requis.`}
               </div>
             </>
           },
-          { key: 'B', title: '⚡ PAYOUT CONSISTENCY', desc: '3 jours + règle 40%', ready: optionBReady,
+          { key: 'B', title: '⚡ PAYOUT CONSISTENCY', desc: '3 jours + règle 40% sur P&L net', ready: optionBReady,
             body: <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <ProgressBar label="Jours gagnants (min 3)" current={Math.min(winDays,3)} max={3} color={winDays>=3?'#00ff88':'#f0a020'} displayText={`${winDays}/3 jours`} />
-                <ProgressBar label="Règle 40% meilleur jour" current={Math.min(bestDayPct,40)} max={40} color={bestDayPct<=40?'#00ff88':'#ff4455'} displayText={`${bestDayPct.toFixed(1)}%/40%`} />
+                <ProgressBar label="Jours gagnants net (min 3)" current={Math.min(winDays,3)} max={3} color={winDays>=3?'#00ff88':'#f0a020'} displayText={`${winDays}/3 jours`} />
+                <ProgressBar label="Meilleur jour net / Total net positif" current={Math.min(bestDayPct,40)} max={40} color={bestDayPct<=40?'#00ff88':'#ff4455'} displayText={`${bestDayPct.toFixed(1)}%/40%`} />
+              </div>
+              <div style={{ marginTop: '8px', display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '6px' }}>
+                <div style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '6px 8px' }}>
+                  <div style={{ fontSize: '8px', color: '#3a6a4a', marginBottom: '2px' }}>MEILLEUR JOUR NET</div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#00ff88' }}>{fmt(bestDayNet, true)}</div>
+                </div>
+                <div style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '6px 8px' }}>
+                  <div style={{ fontSize: '8px', color: '#3a6a4a', marginBottom: '2px' }}>TOTAL NET POSITIF</div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#c8d8c8' }}>{fmt(posNetPnl, true)}</div>
+                </div>
               </div>
               <div style={{ fontSize: '10px', color: optionBReady?'#00ff88':'#4a7a5a', marginTop: '8px' }}>
-                {optionBReady ? '✅ Éligible au payout.' : winDays<3 ? `⏳ Encore ${3-winDays} jour(s).` : '⚠️ Best day trop élevé.'}
+                {optionBReady ? '✅ Éligible au payout.' : winDays<3 ? `⏳ Encore ${3-winDays} jour(s) net positif.` : '⚠️ Meilleur jour net trop élevé.'}
               </div>
             </>
           },
         ].map(opt => (
-          <div key={opt.key} onClick={() => selectOption(opt.key)} style={{ background: 'rgba(10,28,18,0.4)', border: `2px solid ${localOption===opt.key ? '#00ff88' : 'rgba(0,255,136,0.08)'}`, borderRadius: '8px', padding: '16px', cursor: 'pointer', transition: 'all 0.2s' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div key={opt.key} onClick={() => selectOption(opt.key)} style={{ background: 'rgba(10,28,18,0.4)', border: `2px solid ${localOption===opt.key?'#00ff88':'rgba(0,255,136,0.08)'}`, borderRadius: '8px', padding: '16px', cursor: 'pointer', transition: 'all 0.2s' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: `2px solid ${localOption===opt.key?'#00ff88':'#2a5a3a'}`, background: localOption===opt.key?'#00ff88':'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {localOption===opt.key && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#060c10' }} />}
@@ -236,7 +275,7 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
       {/* Charts */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>COURBE CAPITAL + FLOOR</div>
+          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>COURBE CAPITAL (P&L NET) + FLOOR</div>
           {equityPoints.length > 1 ? (
             <ResponsiveContainer width="100%" height={160}>
               <AreaChart data={equityPoints} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
@@ -246,14 +285,14 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
                 <YAxis tick={{ fill: '#3a6a4a', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}K`} domain={['auto','auto']} />
                 <Tooltip content={<CustomTooltip />} />
                 <ReferenceLine y={LOCK_LEVEL} stroke="#f0a020" strokeDasharray="4 4" strokeOpacity={0.4} />
-                <Area type="monotone" dataKey="balance" name="Capital" stroke="#00ff88" strokeWidth={2} fill="url(#balG)" dot={false} />
+                <Area type="monotone" dataKey="balance" name="Capital net" stroke="#00ff88" strokeWidth={2} fill="url(#balG)" dot={false} />
                 <Area type="monotone" dataKey="floor" name="Floor" stroke="#ff4455" strokeWidth={1.5} fill="none" strokeDasharray="4 4" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           ) : <div style={{ height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '10px' }}>Aucun trade</div>}
         </div>
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L PAR JOUR</div>
+          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
           {dailyArr.length > 0 ? (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={dailyArr} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
@@ -262,7 +301,7 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
                 <YAxis tick={{ fill: '#3a6a4a', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
                 <Tooltip content={<CustomTooltip />} />
                 <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
-                <Bar dataKey="pnl" name="P&L" radius={[3,3,0,0]} fill="#00ff88" isAnimationActive />
+                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#00ff88" isAnimationActive />
               </BarChart>
             </ResponsiveContainer>
           ) : <div style={{ height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '10px' }}>Aucun trade</div>}
@@ -276,68 +315,55 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
 function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, setBalanceInput }) {
   const { ACCOUNT_SIZE, MAX_LOSS, BASE_PROFIT_TARGET, MIN_DAYS, CONSISTENCY_PCT } = COMBINE;
 
-  const totalPnl = trades.reduce((s, t) => s + (t.result ?? 0), 0);
-  const currentBalance = manualBalance > 0 ? manualBalance : ACCOUNT_SIZE + totalPnl;
-
-  // Trailing drawdown
-  const sorted = [...trades].filter(t => t.result != null).sort((a, b) => a.date.localeCompare(b.date));
-  let runBal = manualBalance > 0 ? manualBalance - totalPnl : ACCOUNT_SIZE;
-  let hwm = runBal, floor = runBal - MAX_LOSS;
-
-  const byDayArr = sorted.reduce((acc, t) => {
-    const last = acc[acc.length - 1];
-    if (last && last.date === t.date) last.pnl += t.result ?? 0;
-    else acc.push({ date: t.date, pnl: t.result ?? 0 });
-    return acc;
-  }, []);
-
-  const equityPoints = [{ date: 'Start', balance: runBal, floor }];
-  byDayArr.forEach(({ date, pnl }) => {
-    runBal += pnl;
-    if (runBal > hwm) { hwm = runBal; floor = hwm - MAX_LOSS; }
-    equityPoints.push({ date: date.slice(5), balance: Math.round(runBal * 100) / 100, floor: Math.round(floor * 100) / 100 });
-  });
+  // Tout en NET
+  const totalNet       = trades.reduce((s, t) => s + getNet(t), 0);
+  const currentBalance = manualBalance > 0 ? manualBalance : ACCOUNT_SIZE + totalNet;
+  const { points: equityPoints, hwm, floor } = computeTrailing(trades, manualBalance, ACCOUNT_SIZE, MAX_LOSS);
 
   const distanceToFloor = currentBalance - floor;
   const accountLost     = currentBalance <= floor;
 
-  // Days
-  const byDay       = trades.reduce((acc, t) => { if (!acc[t.date]) acc[t.date] = 0; acc[t.date] += t.result ?? 0; return acc; }, {});
+  // Daily NET P&L
+  const byDay = trades.reduce((acc, t) => {
+    if (!acc[t.date]) acc[t.date] = 0;
+    acc[t.date] += getNet(t);
+    return acc;
+  }, {});
   const tradingDays = Object.keys(byDay).length;
   const allDays     = Object.entries(byDay).sort(([a],[b]) => a.localeCompare(b));
   const dailyArr    = allDays.map(([date, pnl]) => ({ date: date.slice(5), pnl: Math.round(pnl * 100) / 100 }));
   const winningDays = Object.values(byDay).filter(p => p > 0).length;
 
-  // ── CONSISTENCY RULE (dynamic target) ────────────────────
-  // Best day = meilleur jour POSITIF
-  const bestDayVal = Math.max(...Object.values(byDay).filter(p => p > 0), 0);
+  // ── CONSISTENCY sur NET P&L ───────────────────────────────
+  // Best day net = meilleur jour net
+  const bestDayNet = Math.max(...Object.values(byDay).filter(p => p > 0), 0);
 
-  // Calcul du profit target dynamique :
-  // Si best day >= 50% du target de base → nouveau target = best day / 0.50
-  const baseLimit   = BASE_PROFIT_TARGET * CONSISTENCY_PCT; // 1 500$
-  const isConsistencyBreached = bestDayVal >= baseLimit && bestDayVal > 0;
+  // Limite = 50% du profit target actuel
+  // Si best day net >= 50% du BASE target → nouveau target = best day / 0.50
+  const baseLimit = BASE_PROFIT_TARGET * CONSISTENCY_PCT; // 1 500$
+  const isConsistencyBreached = bestDayNet >= baseLimit && bestDayNet > 0;
 
-  // Nouveau profit target si la consistency est dépassée
+  // Nouveau profit target dynamique
   const dynamicProfitTarget = isConsistencyBreached
-    ? Math.ceil(bestDayVal / CONSISTENCY_PCT) // best day / 0.50
+    ? Math.ceil(bestDayNet / CONSISTENCY_PCT)
     : BASE_PROFIT_TARGET;
 
-  const dynamicLimit = dynamicProfitTarget * CONSISTENCY_PCT; // nouvelle limite best day
-
-  // L'objectif a-t-il été rehaussé ?
+  const dynamicLimit   = dynamicProfitTarget * CONSISTENCY_PCT;
   const targetAdjusted = dynamicProfitTarget > BASE_PROFIT_TARGET;
+  const targetBalance  = ACCOUNT_SIZE + dynamicProfitTarget;
 
-  // Validation
-  const profitSoFar   = Math.max(currentBalance - ACCOUNT_SIZE, 0);
-  const targetBalance = ACCOUNT_SIZE + dynamicProfitTarget;
+  // Profit net actuel (depuis le début du combine)
+  const netProfit   = Math.max(currentBalance - ACCOUNT_SIZE, 0);
   const targetReached = currentBalance >= targetBalance;
 
+  // Validation rules
   const rule1_floor   = !accountLost;
   const rule2_target  = targetReached;
   const rule3_minDays = tradingDays >= MIN_DAYS;
-  // La consistency ne peut pas "fail" le compte — elle ajuste le target
-  // Donc rule4 est toujours true (le compte ne fail pas)
   const allRulesPassed = rule1_floor && rule2_target && rule3_minDays;
+
+  // Pourcentage consistency actuel
+  const consistencyPct = dynamicProfitTarget > 0 ? (bestDayNet / dynamicProfitTarget) * 100 : 0;
 
   const status = accountLost ? { label: 'COMPTE PERDU ❌', color: '#ff4455' }
     : allRulesPassed ? { label: '✅ COMBINE VALIDÉ !', color: '#00ff88' }
@@ -348,11 +374,16 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
     if (!isNaN(v) && v > 0) { setManualBalance(v); localStorage.setItem('ts_combine_balance', String(v)); setBalanceInput(''); }
   }
 
-  // Equity chart with dynamic target line
   const equityWithTarget = equityPoints.map(p => ({ ...p, target: targetBalance }));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+      {/* Net P&L notice */}
+      <div style={{ background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: '6px', padding: '10px 14px', fontSize: '10px', color: '#4a7a5a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span>ℹ️</span>
+        <span>Topstep utilise uniquement le <strong style={{ color: '#00ff88' }}>P&L net</strong> (après frais). La Consistency Target est calculée sur le net profit.</span>
+      </div>
 
       {/* Balance + status */}
       <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -367,37 +398,29 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
         </div>
       </div>
 
-      {/* Dynamic target alert */}
+      {/* Consistency adjusted alert */}
       {targetAdjusted && (
-        <div style={{
-          background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.3)',
-          borderRadius: '8px', padding: '14px 18px',
-          display: 'flex', alignItems: 'flex-start', gap: '12px',
-        }}>
+        <div style={{ background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.3)', borderRadius: '8px', padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
           <span style={{ fontSize: '20px', flexShrink: 0 }}>⚡</span>
           <div>
             <div style={{ fontSize: '12px', fontWeight: '700', color: '#f0a020', marginBottom: '4px' }}>
-              Objectif ajusté — Consistency Target dépassé
+              Objectif ajusté — Consistency Target dépassée (sur P&L net)
             </div>
-            <div style={{ fontSize: '10px', color: '#8aaa90', lineHeight: '1.6' }}>
-              Ton meilleur jour ({fmt(bestDayVal)}) représente {((bestDayVal / BASE_PROFIT_TARGET) * 100).toFixed(0)}% de l'objectif initial (limite : 50%).
-              Le compte ne fail PAS, mais ton objectif est recalculé :
+            <div style={{ fontSize: '10px', color: '#8aaa90', lineHeight: '1.6', marginBottom: '8px' }}>
+              Ton meilleur jour net ({fmt(bestDayNet)}) dépasse 50% de l'objectif initial.
+              Le compte ne fail PAS — l'objectif est recalculé automatiquement :
             </div>
-            <div style={{ marginTop: '8px', display: 'flex', gap: '16px' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '1px' }}>CALCUL</div>
-                <div style={{ fontSize: '12px', color: '#f0a020', fontWeight: '700' }}>
-                  {fmt(bestDayVal)} ÷ 0.50 = {fmt(dynamicProfitTarget)}
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              {[
+                { label: 'FORMULE', value: `${fmt(bestDayNet)} ÷ 0.50 = ${fmt(dynamicProfitTarget)}`, color: '#f0a020' },
+                { label: 'ANCIEN TARGET', value: `+${BASE_PROFIT_TARGET}$`, color: '#8aaa90', strike: true },
+                { label: 'NOUVEAU TARGET', value: `+${dynamicProfitTarget}$`, color: '#f0a020' },
+              ].map(({ label, value, color, strike }) => (
+                <div key={label} style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '8px 12px' }}>
+                  <div style={{ fontSize: '8px', color: '#3a6a4a', marginBottom: '3px' }}>{label}</div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color, textDecoration: strike ? 'line-through' : 'none' }}>{value}</div>
                 </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '1px' }}>ANCIEN TARGET</div>
-                <div style={{ fontSize: '12px', color: '#8aaa90', fontWeight: '700', textDecoration: 'line-through' }}>+{BASE_PROFIT_TARGET}$</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '1px' }}>NOUVEAU TARGET</div>
-                <div style={{ fontSize: '12px', color: '#f0a020', fontWeight: '700' }}>+{dynamicProfitTarget}$</div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -405,8 +428,7 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
 
       {/* Rules */}
       <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', padding: '18px' }}>
-        <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>🎯 RÈGLES DU COMBINE</div>
-
+        <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>🎯 RÈGLES DU COMBINE (P&L NET)</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
           {/* Rule 1: Floor */}
@@ -414,29 +436,27 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
             <span style={{ fontSize: '18px' }}>{rule1_floor ? '✅' : '❌'}</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '11px', color: '#c8d8c8', fontWeight: '600', marginBottom: '2px' }}>Maximum Loss Limit</div>
-              <div style={{ fontSize: '10px', color: '#4a7a5a' }}>
-                Ne pas descendre sous 48 000$ · Floor actuel: {floor.toFixed(0)}$
-              </div>
+              <div style={{ fontSize: '10px', color: '#4a7a5a' }}>Balance nette ≥ {COMBINE.FLOOR_INITIAL.toLocaleString()}$ · Floor actuel: {floor.toFixed(2)}$</div>
             </div>
             <div style={{ fontSize: '13px', fontWeight: '700', color: rule1_floor ? '#00ff88' : '#ff4455', flexShrink: 0 }}>
               {fmt(distanceToFloor)} de marge
             </div>
           </div>
 
-          {/* Rule 2: Profit target (dynamic) */}
+          {/* Rule 2: Profit target */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: rule2_target ? 'rgba(0,255,136,0.04)' : 'rgba(10,28,18,0.4)', border: `1px solid ${rule2_target ? 'rgba(0,255,136,0.12)' : 'rgba(0,255,136,0.06)'}`, borderRadius: '6px' }}>
             <span style={{ fontSize: '18px' }}>{rule2_target ? '✅' : '⏳'}</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '11px', color: '#c8d8c8', fontWeight: '600', marginBottom: '6px' }}>
-                Profit Target — Atteindre {fmt(dynamicProfitTarget, true)}
+                Profit Target (net) — Atteindre +{dynamicProfitTarget.toLocaleString()}$
                 {targetAdjusted && <span style={{ fontSize: '9px', color: '#f0a020', marginLeft: '8px' }}>↑ AJUSTÉ</span>}
               </div>
               <ProgressBar
                 label={null}
-                current={Math.min(profitSoFar, dynamicProfitTarget)}
+                current={Math.min(netProfit, dynamicProfitTarget)}
                 max={dynamicProfitTarget}
                 color={rule2_target ? '#00ff88' : '#f0a020'}
-                displayText={`${fmt(profitSoFar, true)} / ${fmt(dynamicProfitTarget, true)}`}
+                displayText={`${fmt(netProfit, true)} / +${dynamicProfitTarget}$ (net)`}
               />
             </div>
           </div>
@@ -460,27 +480,31 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
             </div>
           </div>
 
-          {/* Rule 4: Consistency (informative — no fail) */}
+          {/* Rule 4: Consistency (informative — adjusts target, no fail) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'rgba(10,28,18,0.3)', border: `1px solid ${isConsistencyBreached ? 'rgba(240,160,32,0.3)' : 'rgba(0,255,136,0.06)'}`, borderRadius: '6px' }}>
-            <span style={{ fontSize: '18px' }}>{isConsistencyBreached ? '⚡' : bestDayVal > 0 ? '✅' : '⏳'}</span>
+            <span style={{ fontSize: '18px' }}>{isConsistencyBreached ? '⚡' : bestDayNet > 0 ? '✅' : '⏳'}</span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '11px', color: '#c8d8c8', fontWeight: '600', marginBottom: '6px' }}>
-                Consistency Target — Meilleur jour {'<'} 50% du Profit Target
-                <span style={{ fontSize: '9px', color: '#4a7a5a', marginLeft: '8px', fontWeight: '400' }}>(ajuste l'objectif si dépassé, ne fail pas le compte)</span>
+              <div style={{ fontSize: '11px', color: '#c8d8c8', fontWeight: '600', marginBottom: '4px' }}>
+                Consistency Target — Meilleur jour net {'<'} 50% du Profit Target
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
-                <div style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '8px', color: '#3a6a4a', marginBottom: '2px' }}>MEILLEUR JOUR</div>
-                  <div style={{ fontSize: '13px', fontWeight: '700', color: isConsistencyBreached ? '#f0a020' : '#00ff88' }}>{fmt(bestDayVal)}</div>
+              <div style={{ fontSize: '9px', color: '#4a7a5a', marginBottom: '8px' }}>
+                {isConsistencyBreached
+                  ? `⚡ Dépassée — l'objectif est ajusté automatiquement (pas de fail)`
+                  : `✓ Respectée — meilleur jour net: ${fmt(bestDayNet)} / limite: ${fmt(dynamicLimit)}`}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '6px' }}>
+                <div style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '7px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '8px', color: '#3a6a4a', marginBottom: '2px' }}>MEILLEUR JOUR NET</div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: isConsistencyBreached ? '#f0a020' : '#00ff88' }}>{fmt(bestDayNet, true)}</div>
                 </div>
-                <div style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '8px', color: '#3a6a4a', marginBottom: '2px' }}>LIMITE (50%)</div>
-                  <div style={{ fontSize: '13px', fontWeight: '700', color: '#c8d8c8' }}>{fmt(dynamicLimit)}</div>
+                <div style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '7px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '8px', color: '#3a6a4a', marginBottom: '2px' }}>LIMITE (50% du target)</div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#c8d8c8' }}>{fmt(dynamicLimit)}</div>
                 </div>
-                <div style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '8px', color: '#3a6a4a', marginBottom: '2px' }}>% DU TARGET</div>
-                  <div style={{ fontSize: '13px', fontWeight: '700', color: isConsistencyBreached ? '#f0a020' : '#00ff88' }}>
-                    {dynamicProfitTarget > 0 ? ((bestDayVal / dynamicProfitTarget) * 100).toFixed(0) : 0}%
+                <div style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '7px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '8px', color: '#3a6a4a', marginBottom: '2px' }}>% DU TARGET NET</div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: isConsistencyBreached ? '#f0a020' : '#00ff88' }}>
+                    {consistencyPct.toFixed(1)}%
                   </div>
                 </div>
               </div>
@@ -491,19 +515,17 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
 
       {/* Key metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
-        <MetricCard label="BALANCE" value={`${currentBalance.toFixed(0)}$`} color={rule2_target ? '#00ff88' : '#c8d8c8'} />
-        <MetricCard label="PROFIT TARGET" value={fmt(dynamicProfitTarget, true)}
-          color={targetAdjusted ? '#f0a020' : '#c8d8c8'}
-          sub={targetAdjusted ? `↑ Ajusté (base: +${BASE_PROFIT_TARGET}$)` : 'Objectif initial'} />
-        <MetricCard label="FLOOR" value={`${floor.toFixed(0)}$`} color="#ff4455" alert={distanceToFloor < 500} sub={`Marge: ${distanceToFloor.toFixed(0)}$`} />
-        <MetricCard label="JOURS TRADÉS" value={`${tradingDays}`} color={rule3_minDays ? '#00ff88' : '#f0a020'} sub={`Min requis: ${MIN_DAYS} · Gagnants: ${winningDays}`} />
+        <MetricCard label="BALANCE NETTE" value={`${currentBalance.toFixed(2)}$`} color={rule2_target ? '#00ff88' : '#c8d8c8'} sub={manualBalance > 0 ? 'Manuelle' : 'Estimée'} />
+        <MetricCard label="PROFIT NET" value={fmt(netProfit, true)} color={pnlColor(netProfit)} sub={`Objectif: +${dynamicProfitTarget}$ ${targetAdjusted ? '(ajusté ⚡)' : ''}`} />
+        <MetricCard label="FLOOR" value={`${floor.toFixed(2)}$`} color="#ff4455" alert={distanceToFloor < 500} sub={`Marge nette: ${distanceToFloor.toFixed(2)}$`} />
+        <MetricCard label="JOURS TRADÉS" value={`${tradingDays}`} color={rule3_minDays ? '#00ff88' : '#f0a020'} sub={`Min: ${MIN_DAYS} · Gagnants net: ${winningDays}`} />
       </div>
 
       {/* Charts */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
           <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>
-            PROGRESSION — Objectif: {fmt(dynamicProfitTarget, true)} {targetAdjusted ? '(ajusté ⚡)' : ''}
+            PROGRESSION NETTE — Objectif: +{dynamicProfitTarget}$ {targetAdjusted ? '⚡' : ''}
           </div>
           {equityWithTarget.length > 1 ? (
             <ResponsiveContainer width="100%" height={160}>
@@ -514,17 +536,18 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
                 <YAxis tick={{ fill: '#3a6a4a', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}K`} domain={['auto','auto']} />
                 <Tooltip content={<CustomTooltip />} />
                 <ReferenceLine y={targetBalance} stroke={targetAdjusted ? '#f0a020' : '#00ff88'} strokeDasharray="4 4" strokeOpacity={0.6}
-                  label={{ value: `Objectif ${(targetBalance/1000).toFixed(1)}K`, fill: targetAdjusted ? '#f0a020' : '#00ff88', fontSize: 8 }} />
+                  label={{ value: `${(targetBalance/1000).toFixed(1)}K`, fill: targetAdjusted ? '#f0a020' : '#00ff88', fontSize: 8 }} />
                 <ReferenceLine y={COMBINE.FLOOR_INITIAL} stroke="#ff4455" strokeDasharray="4 4" strokeOpacity={0.5}
-                  label={{ value: 'Floor 48K', fill: '#ff4455', fontSize: 8 }} />
-                <Area type="monotone" dataKey="balance" name="Capital" stroke="#00ff88" strokeWidth={2} fill="url(#combGrad)" dot={false} />
+                  label={{ value: '48K', fill: '#ff4455', fontSize: 8 }} />
+                <Area type="monotone" dataKey="balance" name="Capital net" stroke="#00ff88" strokeWidth={2} fill="url(#combGrad)" dot={false} />
                 <Area type="monotone" dataKey="floor" name="Floor" stroke="#ff4455" strokeWidth={1.5} fill="none" strokeDasharray="4 4" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           ) : <div style={{ height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '10px' }}>Aucun trade</div>}
         </div>
+
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L PAR JOUR</div>
+          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
           {dailyArr.length > 0 ? (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={dailyArr} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
@@ -535,19 +558,19 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
                 <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
                 <ReferenceLine y={dynamicLimit} stroke={targetAdjusted ? '#f0a020' : '#3a6a4a'} strokeDasharray="4 4" strokeOpacity={0.6}
                   label={{ value: `Limite ${dynamicLimit.toFixed(0)}$`, fill: targetAdjusted ? '#f0a020' : '#3a6a4a', fontSize: 8, position: 'right' }} />
-                <Bar dataKey="pnl" name="P&L" radius={[3,3,0,0]} fill="#00ff88" isAnimationActive />
+                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#00ff88" isAnimationActive />
               </BarChart>
             </ResponsiveContainer>
           ) : <div style={{ height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '10px' }}>Aucun trade</div>}
         </div>
       </div>
 
-      {/* Success banner */}
+      {/* Success */}
       {allRulesPassed && (
         <div style={{ background: 'rgba(0,255,136,0.08)', border: '2px solid #00ff88', borderRadius: '8px', padding: '20px', textAlign: 'center', boxShadow: '0 0 30px rgba(0,255,136,0.1)' }}>
           <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎉</div>
           <div style={{ fontSize: '16px', fontWeight: '700', color: '#00ff88', marginBottom: '6px' }}>TRADING COMBINE VALIDÉ !</div>
-          <div style={{ fontSize: '11px', color: '#4a7a5a' }}>Toutes les règles sont respectées. Tu peux demander ton compte Express Funded.</div>
+          <div style={{ fontSize: '11px', color: '#4a7a5a' }}>Toutes les règles sont respectées sur P&L net. Tu peux demander ton compte Express Funded.</div>
         </div>
       )}
     </div>
@@ -580,8 +603,6 @@ export default function Topstep() {
 
   return (
     <div style={{ padding: '24px 28px', maxWidth: '1100px' }}>
-
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '6px' }}>TOPSTEP</div>
@@ -595,8 +616,8 @@ export default function Topstep() {
         >📅 Calendrier</button>
       </div>
 
-      {/* Tab selector */}
-      <div style={{ display: 'flex', gap: '0', marginBottom: '20px', background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: '8px', padding: '4px' }}>
+      {/* Tabs */}
+      <div style={{ display: 'flex', marginBottom: '20px', background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: '8px', padding: '4px' }}>
         {[
           { key: 'combine', label: '🎯 Trading Combine', desc: 'Compte démo · Validation' },
           { key: 'funded',  label: '💰 Express Funded',  desc: 'Compte live · Payout' },
