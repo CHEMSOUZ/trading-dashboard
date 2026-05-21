@@ -1,23 +1,13 @@
 const path = require('path');
 const fs   = require('fs');
 
-// ── Per-account DB instances ──────────────────────────────────
 const instances = {};
 let SQL = null;
 
 async function initSql() {
   if (!SQL) {
     const initSqlJs = require('sql.js');
-    const path = require('path');
-
-// En prod, le wasm est dans extraResources
-const wasmPath = process.env.NODE_ENV === 'development'
-  ? undefined
-  : path.join(process.resourcesPath, 'sql-wasm.wasm');
-
-SQL = await initSqlJs(
-  wasmPath ? { locateFile: () => wasmPath } : {}
-);
+    SQL = await initSqlJs();
   }
   return SQL;
 }
@@ -82,8 +72,7 @@ function initSchema(db) {
     );
   `);
 
-  // Migrations
-  const cols = [
+  const migrations = [
     "ALTER TABLE trades ADD COLUMN external_id TEXT",
     "ALTER TABLE trades ADD COLUMN exit_price REAL",
     "ALTER TABLE trades ADD COLUMN result_net REAL",
@@ -95,10 +84,9 @@ function initSchema(db) {
     "ALTER TABLE trades ADD COLUMN duration TEXT",
     "ALTER TABLE trades ADD COLUMN source TEXT DEFAULT 'manual'",
   ];
-  for (const sql of cols) { try { db.exec(sql); } catch (_) {} }
+  for (const sql of migrations) { try { db.exec(sql); } catch (_) {} }
 }
 
-// ── Helpers ───────────────────────────────────────────────────
 function runQ(db, dbPath, sql, params = {}) {
   db.run(sql, params);
   save(db, dbPath);
@@ -183,23 +171,26 @@ function updateTrade(db, dbPath, id, trade) {
       entered_at=:entered_at, exited_at=:exited_at, duration=:duration
     WHERE id=:id
   `, {
-    ':date':        trade.date,        ':pair':       trade.pair,
-    ':direction':   trade.direction,   ':entry':      trade.entry,
-    ':exit_price':  trade.exit_price  ?? null,
-    ':stop':        trade.stop        ?? null, ':tp':  trade.tp   ?? null,
-    ':rr':          trade.rr          ?? null,
-    ':result':      trade.result      ?? null,
-    ':result_net':  trade.result_net  ?? null,
-    ':fees':        trade.fees        ?? null,
-    ':commissions': trade.commissions ?? null,
-    ':size':        trade.size        ?? null,
-    ':outcome':     trade.outcome     ?? null,
-    ':emotion':     trade.emotion     ?? null,
-    ':screenshot':  trade.screenshot  ?? null,
-    ':notes':       trade.notes       ?? null,
-    ':entered_at':  trade.entered_at  ?? null,
-    ':exited_at':   trade.exited_at   ?? null,
-    ':duration':    trade.duration    ?? null,
+    ':date':        trade.date,
+    ':pair':        trade.pair,
+    ':direction':   trade.direction,
+    ':entry':       trade.entry,
+    ':exit_price':  trade.exit_price   ?? null,
+    ':stop':        trade.stop         ?? null,
+    ':tp':          trade.tp           ?? null,
+    ':rr':          trade.rr           ?? null,
+    ':result':      trade.result       ?? null,
+    ':result_net':  trade.result_net   ?? null,
+    ':fees':        trade.fees         ?? null,
+    ':commissions': trade.commissions  ?? null,
+    ':size':        trade.size         ?? null,
+    ':outcome':     trade.outcome      ?? null,
+    ':emotion':     trade.emotion      ?? null,
+    ':screenshot':  trade.screenshot   ?? null,
+    ':notes':       trade.notes        ?? null,
+    ':entered_at':  trade.entered_at   ?? null,
+    ':exited_at':   trade.exited_at    ?? null,
+    ':duration':    trade.duration     ?? null,
     ':id':          id,
   });
   return getTradeById(db, id);
@@ -212,8 +203,10 @@ function deleteTrade(db, dbPath, id) {
 // ── CSV IMPORT ────────────────────────────────────────────────
 function importCsvTrades(db, dbPath, rows) {
   let imported = 0, skipped = 0, errors = 0;
+
   for (const row of rows) {
     try {
+      // Date
       let date = '';
       if (row.TradeDay) {
         const d = new Date(row.TradeDay);
@@ -221,12 +214,20 @@ function importCsvTrades(db, dbPath, rows) {
       } else if (row.EnteredAt) {
         date = new Date(row.EnteredAt).toISOString().slice(0, 10);
       }
+
+      // Direction
       const direction = (row.Type ?? '').toUpperCase().includes('LONG') ? 'LONG' : 'SHORT';
-      const pnl  = parseFloat(row.PnL)        || 0;
-      const fees = parseFloat(row.Fees)        || 0;
-      const comm = parseFloat(row.Commissions) || 0;
-      const net  = pnl - Math.abs(fees) - Math.abs(comm);
-      const outcome = pnl > 0 ? 'WIN' : pnl < 0 ? 'LOSS' : 'BE';
+
+      // ── P&L NET = PnL - |Commissions| - |Fees| ──────────
+      const pnlGross   = parseFloat(row.PnL)          || 0;
+      const fees       = Math.abs(parseFloat(row.Fees)         || 0);
+      const comm       = Math.abs(parseFloat(row.Commissions)  || 0);
+      const totalCosts = fees + comm;
+      const pnlNet     = Math.round((pnlGross - totalCosts) * 100) / 100;
+
+      // Outcome based on NET P&L
+      const outcome = pnlNet > 0 ? 'WIN' : pnlNet < 0 ? 'LOSS' : 'BE';
+
       const trade = {
         external_id:  String(row.Id ?? ''),
         date,
@@ -234,67 +235,85 @@ function importCsvTrades(db, dbPath, rows) {
         direction,
         entry:        parseFloat(row.EntryPrice)  || 0,
         exit_price:   parseFloat(row.ExitPrice)   || null,
-        stop: 0, tp: 0, rr: null,
-        result:       pnl,
-        result_net:   Math.round(net * 100) / 100,
-        fees:         Math.abs(fees),
-        commissions:  Math.abs(comm),
-        size:         parseFloat(row.Size)        || null,
+        stop:         0,
+        tp:           0,
+        rr:           null,
+        result:       pnlGross,                    // P&L brut (pour référence)
+        result_net:   pnlNet,                      // P&L net (après frais)
+        fees,
+        commissions:  comm,
+        size:         parseFloat(row.Size)         || null,
         outcome,
-        entered_at:   row.EnteredAt        ?? null,
-        exited_at:    row.ExitedAt         ?? null,
-        duration:     row.TradeDuration    ?? null,
+        entered_at:   row.EnteredAt   ?? null,
+        exited_at:    row.ExitedAt    ?? null,
+        duration:     row.TradeDuration ?? null,
         source:       'topstepx_csv',
       };
+
       const result = insertTrade(db, dbPath, trade);
       if (result.skipped) skipped++; else imported++;
-    } catch { errors++; }
+    } catch (e) {
+      console.error('Import error:', e.message);
+      errors++;
+    }
   }
+
   return { imported, skipped, errors };
 }
 
 // ── STATS ─────────────────────────────────────────────────────
 function getStats(db) {
   const total   = getOne(db, 'SELECT COUNT(*) as n FROM trades').n ?? 0;
-  const wins    = getOne(db, "SELECT COUNT(*) as n FROM trades WHERE outcome='WIN'").n ?? 0;
-  const losses  = getOne(db, "SELECT COUNT(*) as n FROM trades WHERE outcome='LOSS'").n ?? 0;
-  const be      = getOne(db, "SELECT COUNT(*) as n FROM trades WHERE outcome='BE'").n ?? 0;
-  const totalPnl  = getOne(db, 'SELECT COALESCE(SUM(result),0) as v FROM trades').v ?? 0;
-  const totalNet  = getOne(db, 'SELECT COALESCE(SUM(result_net),0) as v FROM trades').v ?? 0;
-  const grossWin  = getOne(db, "SELECT COALESCE(SUM(result),0) as v FROM trades WHERE result > 0").v ?? 0;
-  const grossLoss = getOne(db, "SELECT COALESCE(ABS(SUM(result)),0) as v FROM trades WHERE result < 0").v ?? 0;
+
+  // Outcome basé sur result_net (P&L net)
+  // Pour les trades manuels sans result_net, on utilise result
+  const wins    = getOne(db, "SELECT COUNT(*) as n FROM trades WHERE COALESCE(result_net, result) > 0").n ?? 0;
+  const losses  = getOne(db, "SELECT COUNT(*) as n FROM trades WHERE COALESCE(result_net, result) < 0").n ?? 0;
+  const be      = getOne(db, "SELECT COUNT(*) as n FROM trades WHERE COALESCE(result_net, result) = 0").n ?? 0;
+
+  // Utilise result_net si disponible, sinon result
+  const totalPnl  = getOne(db, 'SELECT COALESCE(SUM(COALESCE(result_net, result)),0) as v FROM trades').v ?? 0;
+  const grossWin  = getOne(db, "SELECT COALESCE(SUM(COALESCE(result_net,result)),0) as v FROM trades WHERE COALESCE(result_net,result) > 0").v ?? 0;
+  const grossLoss = getOne(db, "SELECT COALESCE(ABS(SUM(COALESCE(result_net,result))),0) as v FROM trades WHERE COALESCE(result_net,result) < 0").v ?? 0;
   const avgRR     = getOne(db, 'SELECT COALESCE(AVG(rr),0) as v FROM trades WHERE rr IS NOT NULL').v ?? 0;
   const avgWin    = wins   > 0 ? grossWin  / wins   : 0;
   const avgLoss   = losses > 0 ? grossLoss / losses : 0;
   const totalFees = getOne(db, 'SELECT COALESCE(SUM(fees),0) as v FROM trades').v ?? 0;
   const totalComm = getOne(db, 'SELECT COALESCE(SUM(commissions),0) as v FROM trades').v ?? 0;
-  const winrate   = total > 0 ? (wins / total) * 100 : 0;
+
+  const winrate      = total > 0 ? (wins / total) * 100 : 0;
   const profitFactor = grossLoss > 0 ? grossWin / grossLoss : grossWin > 0 ? 999 : 0;
 
-  const recent = getAll(db, "SELECT outcome FROM trades ORDER BY date DESC, entered_at DESC LIMIT 50");
+  // Streak
+  const recent = getAll(db, "SELECT COALESCE(result_net, result) as pnl FROM trades ORDER BY date DESC, entered_at DESC LIMIT 50");
   let streak = 0;
   if (recent.length > 0) {
-    const first = recent[0].outcome;
-    for (const t of recent) { if (t.outcome === first) streak++; else break; }
-    if (first === 'LOSS') streak = -streak;
+    const firstPositive = recent[0].pnl > 0;
+    for (const t of recent) {
+      if ((t.pnl > 0) === firstPositive) streak++;
+      else break;
+    }
+    if (!firstPositive) streak = -streak;
   }
 
-  const allPnl = getAll(db, "SELECT result FROM trades WHERE result IS NOT NULL ORDER BY date ASC");
+  // Drawdown (basé sur P&L net)
+  const allPnl = getAll(db, "SELECT COALESCE(result_net, result) as pnl FROM trades WHERE COALESCE(result_net, result) IS NOT NULL ORDER BY date ASC, entered_at ASC");
   let peak = 0, cum = 0, maxDD = 0;
-  for (const { result } of allPnl) {
-    cum += result;
+  for (const { pnl } of allPnl) {
+    cum += pnl;
     if (cum > peak) peak = cum;
-    const dd = peak - cum; if (dd > maxDD) maxDD = dd;
+    const dd = peak - cum;
+    if (dd > maxDD) maxDD = dd;
   }
 
-  const bestTrade  = getOne(db, "SELECT * FROM trades WHERE result IS NOT NULL ORDER BY result DESC LIMIT 1");
-  const worstTrade = getOne(db, "SELECT * FROM trades WHERE result IS NOT NULL ORDER BY result ASC LIMIT 1");
-  const byDow = getAll(db, "SELECT strftime('%w',date) as dow, COUNT(*) as cnt, SUM(result) as pnl, SUM(CASE WHEN outcome='WIN' THEN 1 ELSE 0 END) as wins FROM trades GROUP BY dow");
+  const bestTrade  = getOne(db, "SELECT * FROM trades WHERE COALESCE(result_net,result) IS NOT NULL ORDER BY COALESCE(result_net,result) DESC LIMIT 1");
+  const worstTrade = getOne(db, "SELECT * FROM trades WHERE COALESCE(result_net,result) IS NOT NULL ORDER BY COALESCE(result_net,result) ASC LIMIT 1");
+  const byDow = getAll(db, "SELECT strftime('%w',date) as dow, COUNT(*) as cnt, SUM(COALESCE(result_net,result)) as pnl, SUM(CASE WHEN COALESCE(result_net,result)>0 THEN 1 ELSE 0 END) as wins FROM trades GROUP BY dow");
 
   return {
     total, wins, losses, be,
     totalPnl:     Math.round(totalPnl * 100) / 100,
-    totalNet:     Math.round(totalNet * 100) / 100,
+    totalNet:     Math.round(totalPnl * 100) / 100,
     grossWin:     Math.round(grossWin * 100) / 100,
     grossLoss:    Math.round(grossLoss * 100) / 100,
     avgRR:        Math.round(avgRR * 100) / 100,
@@ -303,8 +322,11 @@ function getStats(db) {
     totalFees:    Math.round((totalFees + totalComm) * 100) / 100,
     winrate:      Math.round(winrate * 10) / 10,
     profitFactor: Math.round(profitFactor * 100) / 100,
-    streak, maxDrawdown: Math.round(maxDD * 100) / 100,
-    bestTrade, worstTrade, byDow,
+    streak,
+    maxDrawdown:  Math.round(maxDD * 100) / 100,
+    bestTrade,
+    worstTrade,
+    byDow,
   };
 }
 
@@ -326,4 +348,7 @@ function getTodayEmotionalCheck(db) {
   return getOne(db, "SELECT * FROM emotional_checks WHERE date=? ORDER BY created_at DESC LIMIT 1", [today]);
 }
 
-module.exports = { getDb, getAllTrades, getTradeById, insertTrade, updateTrade, deleteTrade, importCsvTrades, getStats, insertEmotionalCheck, getTodayEmotionalCheck };
+module.exports = {
+  getDb, getAllTrades, getTradeById, insertTrade, updateTrade, deleteTrade,
+  importCsvTrades, getStats, insertEmotionalCheck, getTodayEmotionalCheck,
+};
