@@ -1,0 +1,33 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #060c10;
+  color: #c8d8c8;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #060c10;
+}
+::-webkit-scrollbar-thumb {
+  background: #1a3a22;
+  border-radius: 2px;
+}
+
+::selection {
+  background: rgba(0,255,136,0.2);
+  color: #00ff88;
+}
+
+select option {
+  background: #0a1c12;
+  color: #c8d8c8;
+}
