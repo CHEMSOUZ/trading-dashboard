@@ -1,15 +1,12 @@
 import { useState, useEffect } from 'react';
-import { HashRouter as BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './layout/Sidebar';
 import AccountSelect from './pages/AccountSelect';
 import Dashboard from './pages/Dashboard';
-import Journal from './pages/Journal';
 import NewTrade from './pages/NewTrade';
-import EmotionalCheck from './pages/EmotionalCheck';
 import Stats from './pages/Stats';
 import Topstep from './pages/Topstep';
-import Charts from './pages/Charts';
-import Calendar from './pages/Calendar';
+import EmotionalCheck from './pages/EmotionalCheck';
 
 export default function App() {
   const [activeAccount, setActiveAccount] = useState(null);
@@ -29,30 +26,26 @@ export default function App() {
     </div>
   );
 
-  // No account → show account selection screen
   if (!activeAccount) {
     return <AccountSelect onSelect={acc => setActiveAccount(acc)} />;
   }
 
   return (
-    <BrowserRouter>
+    <Router>
       <div style={{ display: 'flex', height: '100vh', background: '#060c10', color: '#c8d8c8', fontFamily: "'JetBrains Mono','Fira Code',monospace", overflow: 'hidden' }}>
         <Sidebar activeAccount={activeAccount} onSwitchAccount={() => setActiveAccount(null)} />
         <main style={{ flex: 1, overflowY: 'auto', background: '#070d12', backgroundImage: 'radial-gradient(ellipse 60% 40% at 80% 0%,rgba(0,40,20,0.4) 0%,transparent 60%)' }}>
           <Routes>
-            <Route path="/"            element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard"   element={<Dashboard />} />
-            <Route path="/journal"     element={<Journal />} />
-            <Route path="/journal/new" element={<NewTrade />} />
-            <Route path="/journal/:id" element={<NewTrade />} />
-            <Route path="/stats"       element={<Stats />} />
-            <Route path="/charts"      element={<Charts />} />
-            <Route path="/calendar"    element={<Calendar />} />
-            <Route path="/topstep"     element={<Topstep />} />
-            <Route path="/emotional"   element={<EmotionalCheck />} />
+            <Route path="/"              element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard"     element={<Dashboard />} />
+            <Route path="/dashboard/new" element={<NewTrade />} />
+            <Route path="/dashboard/:id" element={<NewTrade />} />
+            <Route path="/stats"         element={<Stats />} />
+            <Route path="/topstep"       element={<Topstep />} />
+            <Route path="/emotional"     element={<EmotionalCheck />} />
           </Routes>
         </main>
       </div>
-    </BrowserRouter>
+    </Router>
   );
 }
