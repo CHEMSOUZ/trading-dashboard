@@ -1,5 +1,91 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+// ── Resizable column header ───────────────────────────────────
+const DEFAULT_COLS = [
+  { key: 'date',       label: 'DATE',    width: 100 },
+  { key: 'pair',       label: 'PAIRE',   width: 90  },
+  { key: 'direction',  label: 'DIR.',    width: 70  },
+  { key: 'entry',      label: 'ENTRÉE',  width: 100 },
+  { key: 'exit_price', label: 'SORTIE',  width: 100 },
+  { key: 'size',       label: 'TAILLE',  width: 70  },
+  { key: 'pnl',        label: 'P&L NET', width: 120 },
+  { key: 'duration',   label: 'DURÉE',   width: 90  },
+  { key: 'notes',      label: 'NOTES',   width: 160 },
+  { key: 'actions',    label: '',        width: 36  },
+];
+
+function loadCols() {
+  try {
+    const saved = localStorage.getItem('journal_col_widths');
+    if (!saved) return DEFAULT_COLS;
+    const widths = JSON.parse(saved);
+    return DEFAULT_COLS.map(c => ({ ...c, width: widths[c.key] ?? c.width }));
+  } catch { return DEFAULT_COLS; }
+}
+function saveCols(cols) {
+  const widths = {};
+  cols.forEach(c => { widths[c.key] = c.width; });
+  localStorage.setItem('journal_col_widths', JSON.stringify(widths));
+}
+
+function ResizableTable({ cols, onColsChange, header, rows }) {
+  const dragging = useRef(null);
+  const startX   = useRef(0);
+  const startW   = useRef(0);
+
+  function onMouseDown(e, idx) {
+    e.preventDefault();
+    dragging.current = idx;
+    startX.current   = e.clientX;
+    startW.current   = cols[idx].width;
+
+    function onMove(ev) {
+      const delta  = ev.clientX - startX.current;
+      const newW   = Math.max(50, startW.current + delta);
+      const next   = cols.map((c, i) => i === dragging.current ? { ...c, width: newW } : c);
+      onColsChange(next);
+      saveCols(next);
+    }
+    function onUp() {
+      dragging.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  const templateCols = cols.map(c => `${c.width}px`).join(' ');
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      {/* Header */}
+      <div style={{ display: 'grid', gridTemplateColumns: templateCols, padding: '4px 10px', fontSize: '12px', color: '#2a5a32', letterSpacing: '1.5px', borderBottom: '1px solid rgba(0,255,136,0.06)', marginBottom: '4px', minWidth: 'max-content' }}>
+        {cols.map((col, idx) => (
+          <div key={col.key} style={{ position: 'relative', display: 'flex', alignItems: 'center', userSelect: 'none', overflow: 'hidden' }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{col.label}</span>
+            {idx < cols.length - 1 && (
+              <div
+                onMouseDown={e => onMouseDown(e, idx)}
+                style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '6px', cursor: 'col-resize', zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <div style={{ width: '1px', height: '60%', background: 'rgba(0,255,136,0.15)', transition: 'background 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#00ff88'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,255,136,0.15)'}
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {/* Rows */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 'max-content' }}>
+        {rows}
+      </div>
+    </div>
+  );
+}
 
 // ── Helpers ───────────────────────────────────────────────────
 function getNet(trade) {
@@ -191,6 +277,7 @@ export default function Dashboard() {
   const [filter, setFilter]   = useState('ALL');
   const [search, setSearch]   = useState('');
   const [showQuick, setShowQuick] = useState(false);
+  const [cols, setCols] = useState(loadCols);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -317,47 +404,43 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Table header */}
-        {filtered.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: '85px 80px 60px 85px 85px 55px 110px 75px 1fr 36px', gap: '6px', padding: '4px 10px', fontSize: '17px', color: '#2a5a32', letterSpacing: '1.5px', borderBottom: '1px solid rgba(0,255,136,0.06)', marginBottom: '4px' }}>
-            <span>DATE</span><span>PAIRE</span><span>DIR.</span><span>ENTRÉE</span><span>SORTIE</span><span>TAILLE</span><span>P&L NET</span><span>DURÉE</span><span>NOTES</span><span></span>
-          </div>
-        )}
-
-        {/* Trade rows */}
+        {/* Resizable table */}
         {filtered.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: '#2a4a30', fontSize: '17px', letterSpacing: '2px', border: '1px dashed #1a3a22', borderRadius: '6px' }}>
             {search ? 'Aucun résultat' : filter !== 'ALL' ? `Aucun trade ${filter}` : 'Aucun trade — ajoutez votre premier trade'}
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            {filtered.map(t => {
+          <ResizableTable
+            cols={cols}
+            onColsChange={setCols}
+            rows={filtered.map(t => {
               const net   = getNet(t);
               const color = pnlColor(net);
+              const templateCols = cols.map(c => `${c.width}px`).join(' ');
               return (
                 <div key={t.id}
                   onClick={() => navigate(`/dashboard/${t.id}`)}
-                  style={{ display: 'grid', gridTemplateColumns: '85px 80px 60px 85px 85px 55px 110px 75px 1fr 36px', gap: '6px', alignItems: 'center', padding: '9px 10px', background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.04)', borderLeft: `2px solid ${color}`, borderRadius: '4px', cursor: 'pointer', transition: 'all 0.12s', fontSize: '17px' }}
+                  style={{ display: 'grid', gridTemplateColumns: templateCols, alignItems: 'center', padding: '9px 10px', background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.04)', borderLeft: `2px solid ${color}`, borderRadius: '4px', cursor: 'pointer', transition: 'background 0.12s', fontSize: '14px' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.04)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'rgba(10,28,18,0.4)'}
                 >
-                  <span style={{ color: '#4a7a5a', fontSize: '17px' }}>{t.date}</span>
-                  <span style={{ color: '#c8d8c8', fontWeight: '600' }}>{t.pair}</span>
-                  <span style={{ color: t.direction==='LONG'?'#00ff88':'#ff4455', fontSize: '17px', background: `rgba(${t.direction==='LONG'?'0,255,136':'255,68,85'},0.08)`, border: `1px solid rgba(${t.direction==='LONG'?'0,255,136':'255,68,85'},0.2)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
-                  <span style={{ color: '#8aaa90' }}>{t.entry ?? '—'}</span>
-                  <span style={{ color: '#8aaa90' }}>{t.exit_price ?? '—'}</span>
-                  <span style={{ color: '#8aaa90' }}>{t.size ?? '—'}</span>
-                  <div onClick={e => e.stopPropagation()}><PnlCell trade={t} /></div>
-                  <span style={{ color: '#4a7a5a', fontSize: '17px' }}>{t.duration ?? '—'}</span>
-                  <span style={{ color: '#4a7a5a', fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.notes ?? '—'}</span>
-                  <button onClick={e => handleDelete(t.id, e)} style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '15px', padding: '0', transition: 'color 0.15s' }}
+                  <span style={{ color: '#4a7a5a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.date}</span>
+                  <span style={{ color: '#c8d8c8', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.pair}</span>
+                  <span style={{ color: t.direction==='LONG'?'#00ff88':'#ff4455', fontSize: '12px', background: `rgba(${t.direction==='LONG'?'0,255,136':'255,68,85'},0.08)`, border: `1px solid rgba(${t.direction==='LONG'?'0,255,136':'255,68,85'},0.2)`, padding: '2px 5px', borderRadius: '3px', textAlign: 'center', whiteSpace: 'nowrap' }}>{t.direction}</span>
+                  <span style={{ color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.entry ?? '—'}</span>
+                  <span style={{ color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.exit_price ?? '—'}</span>
+                  <span style={{ color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.size ?? '—'}</span>
+                  <div onClick={e => e.stopPropagation()} style={{ overflow: 'hidden' }}><PnlCell trade={t} /></div>
+                  <span style={{ color: '#4a7a5a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.duration ?? '—'}</span>
+                  <span style={{ color: '#4a7a5a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.notes ?? '—'}</span>
+                  <button onClick={e => handleDelete(t.id, e)} style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '16px', padding: '0', transition: 'color 0.15s' }}
                     onMouseEnter={e => e.currentTarget.style.color = '#ff4455'}
                     onMouseLeave={e => e.currentTarget.style.color = '#1a3a20'}
                   >×</button>
                 </div>
               );
             })}
-          </div>
+          />
         )}
       </div>
 

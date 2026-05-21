@@ -60,6 +60,7 @@ function initSchema(db) {
       source        TEXT DEFAULT 'manual',
       created_at    TEXT DEFAULT (datetime('now'))
     );
+
     CREATE TABLE IF NOT EXISTS emotional_checks (
       id              INTEGER PRIMARY KEY AUTOINCREMENT,
       date            TEXT NOT NULL,
@@ -70,8 +71,41 @@ function initSchema(db) {
       allowed         INTEGER,
       created_at      TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS daily_analysis (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      date        TEXT NOT NULL,
+      instrument  TEXT NOT NULL DEFAULT '',
+      timeframes  TEXT NOT NULL DEFAULT '[]',
+      bias        TEXT NOT NULL DEFAULT '',
+      notes       TEXT NOT NULL DEFAULT '',
+      key_levels  TEXT NOT NULL DEFAULT '',
+      screenshots TEXT NOT NULL DEFAULT '[]',
+      positives   TEXT NOT NULL DEFAULT '',
+      negatives   TEXT NOT NULL DEFAULT '',
+      created_at  TEXT DEFAULT (datetime('now')),
+      updated_at  TEXT DEFAULT (datetime('now')),
+      UNIQUE(date, instrument)
+    );
+
+    CREATE TABLE IF NOT EXISTS weekly_analysis (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      week_start  TEXT NOT NULL,
+      instrument  TEXT NOT NULL DEFAULT '',
+      macro_bias  TEXT NOT NULL DEFAULT '',
+      notes       TEXT NOT NULL DEFAULT '',
+      key_levels  TEXT NOT NULL DEFAULT '',
+      screenshots TEXT NOT NULL DEFAULT '[]',
+      positives   TEXT NOT NULL DEFAULT '',
+      negatives   TEXT NOT NULL DEFAULT '',
+      plan        TEXT NOT NULL DEFAULT '',
+      created_at  TEXT DEFAULT (datetime('now')),
+      updated_at  TEXT DEFAULT (datetime('now')),
+      UNIQUE(week_start, instrument)
+    );
   `);
 
+  // Migrations for existing DBs
   const migrations = [
     "ALTER TABLE trades ADD COLUMN external_id TEXT",
     "ALTER TABLE trades ADD COLUMN exit_price REAL",
@@ -87,11 +121,11 @@ function initSchema(db) {
   for (const sql of migrations) { try { db.exec(sql); } catch (_) {} }
 }
 
+// ── Helpers ───────────────────────────────────────────────────
 function runQ(db, dbPath, sql, params = {}) {
   db.run(sql, params);
   save(db, dbPath);
 }
-
 function getAll(db, sql, params = []) {
   const stmt = db.prepare(sql);
   stmt.bind(params);
@@ -100,11 +134,9 @@ function getAll(db, sql, params = []) {
   stmt.free();
   return rows;
 }
-
 function getOne(db, sql, params = []) {
   return getAll(db, sql, params)[0] ?? null;
 }
-
 function lastId(db) {
   return getOne(db, 'SELECT last_insert_rowid() as id').id;
 }
@@ -113,11 +145,9 @@ function lastId(db) {
 function getAllTrades(db) {
   return getAll(db, 'SELECT * FROM trades ORDER BY date DESC, entered_at DESC, created_at DESC');
 }
-
 function getTradeById(db, id) {
   return getOne(db, 'SELECT * FROM trades WHERE id = ?', [id]);
 }
-
 function insertTrade(db, dbPath, trade) {
   if (trade.external_id) {
     const exists = getOne(db, 'SELECT id FROM trades WHERE external_id = ?', [trade.external_id]);
@@ -125,77 +155,53 @@ function insertTrade(db, dbPath, trade) {
   }
   runQ(db, dbPath, `
     INSERT INTO trades (
-      external_id, date, pair, direction, entry, exit_price, stop, tp, rr,
-      result, result_net, fees, commissions, size, outcome, emotion,
-      screenshot, notes, entered_at, exited_at, duration, source
+      external_id,date,pair,direction,entry,exit_price,stop,tp,rr,
+      result,result_net,fees,commissions,size,outcome,emotion,
+      screenshot,notes,entered_at,exited_at,duration,source
     ) VALUES (
       :external_id,:date,:pair,:direction,:entry,:exit_price,:stop,:tp,:rr,
       :result,:result_net,:fees,:commissions,:size,:outcome,:emotion,
       :screenshot,:notes,:entered_at,:exited_at,:duration,:source
     )
   `, {
-    ':external_id':  trade.external_id  ?? null,
-    ':date':         trade.date,
-    ':pair':         trade.pair,
-    ':direction':    trade.direction,
-    ':entry':        trade.entry,
-    ':exit_price':   trade.exit_price   ?? null,
-    ':stop':         trade.stop         ?? null,
-    ':tp':           trade.tp           ?? null,
-    ':rr':           trade.rr           ?? null,
-    ':result':       trade.result       ?? null,
-    ':result_net':   trade.result_net   ?? null,
-    ':fees':         trade.fees         ?? null,
-    ':commissions':  trade.commissions  ?? null,
-    ':size':         trade.size         ?? null,
-    ':outcome':      trade.outcome      ?? null,
-    ':emotion':      trade.emotion      ?? null,
-    ':screenshot':   trade.screenshot   ?? null,
-    ':notes':        trade.notes        ?? null,
-    ':entered_at':   trade.entered_at   ?? null,
-    ':exited_at':    trade.exited_at    ?? null,
-    ':duration':     trade.duration     ?? null,
-    ':source':       trade.source       ?? 'manual',
+    ':external_id': trade.external_id ?? null, ':date': trade.date,
+    ':pair': trade.pair, ':direction': trade.direction, ':entry': trade.entry,
+    ':exit_price': trade.exit_price ?? null, ':stop': trade.stop ?? null,
+    ':tp': trade.tp ?? null, ':rr': trade.rr ?? null,
+    ':result': trade.result ?? null, ':result_net': trade.result_net ?? null,
+    ':fees': trade.fees ?? null, ':commissions': trade.commissions ?? null,
+    ':size': trade.size ?? null, ':outcome': trade.outcome ?? null,
+    ':emotion': trade.emotion ?? null, ':screenshot': trade.screenshot ?? null,
+    ':notes': trade.notes ?? null, ':entered_at': trade.entered_at ?? null,
+    ':exited_at': trade.exited_at ?? null, ':duration': trade.duration ?? null,
+    ':source': trade.source ?? 'manual',
   });
   return { id: lastId(db), ...trade };
 }
-
 function updateTrade(db, dbPath, id, trade) {
   runQ(db, dbPath, `
     UPDATE trades SET
-      date=:date, pair=:pair, direction=:direction,
-      entry=:entry, exit_price=:exit_price, stop=:stop, tp=:tp, rr=:rr,
-      result=:result, result_net=:result_net, fees=:fees, commissions=:commissions,
-      size=:size, outcome=:outcome, emotion=:emotion,
-      screenshot=:screenshot, notes=:notes,
-      entered_at=:entered_at, exited_at=:exited_at, duration=:duration
+      date=:date,pair=:pair,direction=:direction,entry=:entry,
+      exit_price=:exit_price,stop=:stop,tp=:tp,rr=:rr,
+      result=:result,result_net=:result_net,fees=:fees,commissions=:commissions,
+      size=:size,outcome=:outcome,emotion=:emotion,
+      screenshot=:screenshot,notes=:notes,
+      entered_at=:entered_at,exited_at=:exited_at,duration=:duration
     WHERE id=:id
   `, {
-    ':date':        trade.date,
-    ':pair':        trade.pair,
-    ':direction':   trade.direction,
-    ':entry':       trade.entry,
-    ':exit_price':  trade.exit_price   ?? null,
-    ':stop':        trade.stop         ?? null,
-    ':tp':          trade.tp           ?? null,
-    ':rr':          trade.rr           ?? null,
-    ':result':      trade.result       ?? null,
-    ':result_net':  trade.result_net   ?? null,
-    ':fees':        trade.fees         ?? null,
-    ':commissions': trade.commissions  ?? null,
-    ':size':        trade.size         ?? null,
-    ':outcome':     trade.outcome      ?? null,
-    ':emotion':     trade.emotion      ?? null,
-    ':screenshot':  trade.screenshot   ?? null,
-    ':notes':       trade.notes        ?? null,
-    ':entered_at':  trade.entered_at   ?? null,
-    ':exited_at':   trade.exited_at    ?? null,
-    ':duration':    trade.duration     ?? null,
-    ':id':          id,
+    ':date': trade.date, ':pair': trade.pair, ':direction': trade.direction,
+    ':entry': trade.entry, ':exit_price': trade.exit_price ?? null,
+    ':stop': trade.stop ?? null, ':tp': trade.tp ?? null, ':rr': trade.rr ?? null,
+    ':result': trade.result ?? null, ':result_net': trade.result_net ?? null,
+    ':fees': trade.fees ?? null, ':commissions': trade.commissions ?? null,
+    ':size': trade.size ?? null, ':outcome': trade.outcome ?? null,
+    ':emotion': trade.emotion ?? null, ':screenshot': trade.screenshot ?? null,
+    ':notes': trade.notes ?? null, ':entered_at': trade.entered_at ?? null,
+    ':exited_at': trade.exited_at ?? null, ':duration': trade.duration ?? null,
+    ':id': id,
   });
   return getTradeById(db, id);
 }
-
 function deleteTrade(db, dbPath, id) {
   runQ(db, dbPath, 'DELETE FROM trades WHERE id = ?', [id]);
 }
@@ -203,152 +209,212 @@ function deleteTrade(db, dbPath, id) {
 // ── CSV IMPORT ────────────────────────────────────────────────
 function importCsvTrades(db, dbPath, rows) {
   let imported = 0, skipped = 0, errors = 0;
-
   for (const row of rows) {
     try {
-      // Date
       let date = '';
       if (row.TradeDay) {
         const d = new Date(row.TradeDay);
-        date = isNaN(d) ? row.TradeDay.slice(0, 10) : d.toISOString().slice(0, 10);
+        date = isNaN(d) ? row.TradeDay.slice(0,10) : d.toISOString().slice(0,10);
       } else if (row.EnteredAt) {
-        date = new Date(row.EnteredAt).toISOString().slice(0, 10);
+        date = new Date(row.EnteredAt).toISOString().slice(0,10);
       }
-
-      // Direction
       const direction = (row.Type ?? '').toUpperCase().includes('LONG') ? 'LONG' : 'SHORT';
-
-      // ── P&L NET = PnL - |Commissions| - |Fees| ──────────
-      const pnlGross   = parseFloat(row.PnL)          || 0;
-      const fees       = Math.abs(parseFloat(row.Fees)         || 0);
-      const comm       = Math.abs(parseFloat(row.Commissions)  || 0);
-      const totalCosts = fees + comm;
-      const pnlNet     = Math.round((pnlGross - totalCosts) * 100) / 100;
-
-      // Outcome based on NET P&L
-      const outcome = pnlNet > 0 ? 'WIN' : pnlNet < 0 ? 'LOSS' : 'BE';
-
+      const pnlGross  = parseFloat(row.PnL) || 0;
+      const fees      = Math.abs(parseFloat(row.Fees) || 0);
+      const comm      = Math.abs(parseFloat(row.Commissions) || 0);
+      const pnlNet    = Math.round((pnlGross - fees - comm) * 100) / 100;
+      const outcome   = pnlNet > 0 ? 'WIN' : pnlNet < 0 ? 'LOSS' : 'BE';
       const trade = {
-        external_id:  String(row.Id ?? ''),
-        date,
-        pair:         row.ContractName ?? 'Unknown',
-        direction,
-        entry:        parseFloat(row.EntryPrice)  || 0,
-        exit_price:   parseFloat(row.ExitPrice)   || null,
-        stop:         0,
-        tp:           0,
-        rr:           null,
-        result:       pnlGross,                    // P&L brut (pour référence)
-        result_net:   pnlNet,                      // P&L net (après frais)
-        fees,
-        commissions:  comm,
-        size:         parseFloat(row.Size)         || null,
+        external_id: String(row.Id ?? ''), date,
+        pair: row.ContractName ?? 'Unknown', direction,
+        entry: parseFloat(row.EntryPrice) || 0,
+        exit_price: parseFloat(row.ExitPrice) || null,
+        stop: 0, tp: 0, rr: null,
+        result: pnlGross, result_net: pnlNet,
+        fees, commissions: comm,
+        size: parseFloat(row.Size) || null,
         outcome,
-        entered_at:   row.EnteredAt   ?? null,
-        exited_at:    row.ExitedAt    ?? null,
-        duration:     row.TradeDuration ?? null,
-        source:       'topstepx_csv',
+        entered_at: row.EnteredAt ?? null,
+        exited_at: row.ExitedAt ?? null,
+        duration: row.TradeDuration ?? null,
+        source: 'topstepx_csv',
       };
-
       const result = insertTrade(db, dbPath, trade);
       if (result.skipped) skipped++; else imported++;
-    } catch (e) {
-      console.error('Import error:', e.message);
-      errors++;
-    }
+    } catch { errors++; }
   }
-
   return { imported, skipped, errors };
 }
 
 // ── STATS ─────────────────────────────────────────────────────
 function getStats(db) {
-  const total   = getOne(db, 'SELECT COUNT(*) as n FROM trades').n ?? 0;
-
-  // Outcome basé sur result_net (P&L net)
-  // Pour les trades manuels sans result_net, on utilise result
-  const wins    = getOne(db, "SELECT COUNT(*) as n FROM trades WHERE COALESCE(result_net, result) > 0").n ?? 0;
-  const losses  = getOne(db, "SELECT COUNT(*) as n FROM trades WHERE COALESCE(result_net, result) < 0").n ?? 0;
-  const be      = getOne(db, "SELECT COUNT(*) as n FROM trades WHERE COALESCE(result_net, result) = 0").n ?? 0;
-
-  // Utilise result_net si disponible, sinon result
-  const totalPnl  = getOne(db, 'SELECT COALESCE(SUM(COALESCE(result_net, result)),0) as v FROM trades').v ?? 0;
-  const grossWin  = getOne(db, "SELECT COALESCE(SUM(COALESCE(result_net,result)),0) as v FROM trades WHERE COALESCE(result_net,result) > 0").v ?? 0;
-  const grossLoss = getOne(db, "SELECT COALESCE(ABS(SUM(COALESCE(result_net,result))),0) as v FROM trades WHERE COALESCE(result_net,result) < 0").v ?? 0;
-  const avgRR     = getOne(db, 'SELECT COALESCE(AVG(rr),0) as v FROM trades WHERE rr IS NOT NULL').v ?? 0;
-  const avgWin    = wins   > 0 ? grossWin  / wins   : 0;
-  const avgLoss   = losses > 0 ? grossLoss / losses : 0;
-  const totalFees = getOne(db, 'SELECT COALESCE(SUM(fees),0) as v FROM trades').v ?? 0;
-  const totalComm = getOne(db, 'SELECT COALESCE(SUM(commissions),0) as v FROM trades').v ?? 0;
-
-  const winrate      = total > 0 ? (wins / total) * 100 : 0;
+  const total    = getOne(db, 'SELECT COUNT(*) as n FROM trades').n ?? 0;
+  const wins     = getOne(db, "SELECT COUNT(*) as n FROM trades WHERE COALESCE(result_net,result) > 0").n ?? 0;
+  const losses   = getOne(db, "SELECT COUNT(*) as n FROM trades WHERE COALESCE(result_net,result) < 0").n ?? 0;
+  const be       = getOne(db, "SELECT COUNT(*) as n FROM trades WHERE COALESCE(result_net,result) = 0").n ?? 0;
+  const totalPnl = getOne(db, 'SELECT COALESCE(SUM(COALESCE(result_net,result)),0) as v FROM trades').v ?? 0;
+  const grossWin = getOne(db, "SELECT COALESCE(SUM(COALESCE(result_net,result)),0) as v FROM trades WHERE COALESCE(result_net,result) > 0").v ?? 0;
+  const grossLoss= getOne(db, "SELECT COALESCE(ABS(SUM(COALESCE(result_net,result))),0) as v FROM trades WHERE COALESCE(result_net,result) < 0").v ?? 0;
+  const avgRR    = getOne(db, 'SELECT COALESCE(AVG(rr),0) as v FROM trades WHERE rr IS NOT NULL').v ?? 0;
+  const avgWin   = wins   > 0 ? grossWin  / wins   : 0;
+  const avgLoss  = losses > 0 ? grossLoss / losses : 0;
+  const totalFees= getOne(db, 'SELECT COALESCE(SUM(fees),0)+COALESCE(SUM(commissions),0) as v FROM trades').v ?? 0;
+  const winrate  = total > 0 ? (wins / total) * 100 : 0;
   const profitFactor = grossLoss > 0 ? grossWin / grossLoss : grossWin > 0 ? 999 : 0;
-
-  // Streak
-  const recent = getAll(db, "SELECT COALESCE(result_net, result) as pnl FROM trades ORDER BY date DESC, entered_at DESC LIMIT 50");
+  const recent   = getAll(db, "SELECT COALESCE(result_net,result) as pnl FROM trades ORDER BY date DESC, entered_at DESC LIMIT 50");
   let streak = 0;
   if (recent.length > 0) {
-    const firstPositive = recent[0].pnl > 0;
-    for (const t of recent) {
-      if ((t.pnl > 0) === firstPositive) streak++;
-      else break;
-    }
-    if (!firstPositive) streak = -streak;
+    const firstPos = recent[0].pnl > 0;
+    for (const t of recent) { if ((t.pnl > 0) === firstPos) streak++; else break; }
+    if (!firstPos) streak = -streak;
   }
-
-  // Drawdown (basé sur P&L net)
-  const allPnl = getAll(db, "SELECT COALESCE(result_net, result) as pnl FROM trades WHERE COALESCE(result_net, result) IS NOT NULL ORDER BY date ASC, entered_at ASC");
+  const allPnl = getAll(db, "SELECT COALESCE(result_net,result) as pnl FROM trades WHERE COALESCE(result_net,result) IS NOT NULL ORDER BY date ASC");
   let peak = 0, cum = 0, maxDD = 0;
   for (const { pnl } of allPnl) {
     cum += pnl;
     if (cum > peak) peak = cum;
-    const dd = peak - cum;
-    if (dd > maxDD) maxDD = dd;
+    const dd = peak - cum; if (dd > maxDD) maxDD = dd;
   }
-
   const bestTrade  = getOne(db, "SELECT * FROM trades WHERE COALESCE(result_net,result) IS NOT NULL ORDER BY COALESCE(result_net,result) DESC LIMIT 1");
   const worstTrade = getOne(db, "SELECT * FROM trades WHERE COALESCE(result_net,result) IS NOT NULL ORDER BY COALESCE(result_net,result) ASC LIMIT 1");
   const byDow = getAll(db, "SELECT strftime('%w',date) as dow, COUNT(*) as cnt, SUM(COALESCE(result_net,result)) as pnl, SUM(CASE WHEN COALESCE(result_net,result)>0 THEN 1 ELSE 0 END) as wins FROM trades GROUP BY dow");
-
   return {
     total, wins, losses, be,
-    totalPnl:     Math.round(totalPnl * 100) / 100,
-    totalNet:     Math.round(totalPnl * 100) / 100,
-    grossWin:     Math.round(grossWin * 100) / 100,
-    grossLoss:    Math.round(grossLoss * 100) / 100,
-    avgRR:        Math.round(avgRR * 100) / 100,
-    avgWin:       Math.round(avgWin * 100) / 100,
-    avgLoss:      Math.round(avgLoss * 100) / 100,
-    totalFees:    Math.round((totalFees + totalComm) * 100) / 100,
-    winrate:      Math.round(winrate * 10) / 10,
-    profitFactor: Math.round(profitFactor * 100) / 100,
-    streak,
-    maxDrawdown:  Math.round(maxDD * 100) / 100,
-    bestTrade,
-    worstTrade,
-    byDow,
+    totalPnl: Math.round(totalPnl*100)/100,
+    totalNet: Math.round(totalPnl*100)/100,
+    grossWin: Math.round(grossWin*100)/100,
+    grossLoss: Math.round(grossLoss*100)/100,
+    avgRR: Math.round(avgRR*100)/100,
+    avgWin: Math.round(avgWin*100)/100,
+    avgLoss: Math.round(avgLoss*100)/100,
+    totalFees: Math.round(totalFees*100)/100,
+    winrate: Math.round(winrate*10)/10,
+    profitFactor: Math.round(profitFactor*100)/100,
+    streak, maxDrawdown: Math.round(maxDD*100)/100,
+    bestTrade, worstTrade, byDow,
   };
 }
 
 // ── EMOTIONAL CHECK ───────────────────────────────────────────
 function insertEmotionalCheck(db, dbPath, check) {
-  runQ(db, dbPath, `
-    INSERT INTO emotional_checks (date, slept_ok, frustrated, respected_plan, revenge, allowed)
-    VALUES (:date,:slept_ok,:frustrated,:respected_plan,:revenge,:allowed)
-  `, {
+  runQ(db, dbPath, `INSERT INTO emotional_checks (date,slept_ok,frustrated,respected_plan,revenge,allowed) VALUES (:date,:slept_ok,:frustrated,:respected_plan,:revenge,:allowed)`, {
     ':date': check.date, ':slept_ok': check.slept_ok,
     ':frustrated': check.frustrated, ':respected_plan': check.respected_plan,
     ':revenge': check.revenge, ':allowed': check.allowed,
   });
   return { id: lastId(db), ...check };
 }
-
 function getTodayEmotionalCheck(db) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0,10);
   return getOne(db, "SELECT * FROM emotional_checks WHERE date=? ORDER BY created_at DESC LIMIT 1", [today]);
 }
 
+// ── DAILY ANALYSIS ────────────────────────────────────────────
+function getDailyAnalyses(db) {
+  return getAll(db, 'SELECT * FROM daily_analysis ORDER BY date DESC');
+}
+function getDailyAnalysis(db, date, instrument) {
+  return getOne(db, 'SELECT * FROM daily_analysis WHERE date=? AND instrument=?', [date, instrument]);
+}
+function upsertDailyAnalysis(db, dbPath, analysis) {
+  const existing = getDailyAnalysis(db, analysis.date, analysis.instrument);
+  if (existing) {
+    runQ(db, dbPath, `
+      UPDATE daily_analysis SET
+        timeframes=:timeframes, bias=:bias, notes=:notes,
+        key_levels=:key_levels, screenshots=:screenshots,
+        positives=:positives, negatives=:negatives,
+        updated_at=datetime('now')
+      WHERE date=:date AND instrument=:instrument
+    `, {
+      ':timeframes':  analysis.timeframes  ?? '[]',
+      ':bias':        analysis.bias        ?? '',
+      ':notes':       analysis.notes       ?? '',
+      ':key_levels':  analysis.key_levels  ?? '',
+      ':screenshots': analysis.screenshots ?? '[]',
+      ':positives':   analysis.positives   ?? '',
+      ':negatives':   analysis.negatives   ?? '',
+      ':date':        analysis.date,
+      ':instrument':  analysis.instrument,
+    });
+    return getDailyAnalysis(db, analysis.date, analysis.instrument);
+  } else {
+    runQ(db, dbPath, `
+      INSERT INTO daily_analysis (date,instrument,timeframes,bias,notes,key_levels,screenshots,positives,negatives)
+      VALUES (:date,:instrument,:timeframes,:bias,:notes,:key_levels,:screenshots,:positives,:negatives)
+    `, {
+      ':date':        analysis.date,
+      ':instrument':  analysis.instrument,
+      ':timeframes':  analysis.timeframes  ?? '[]',
+      ':bias':        analysis.bias        ?? '',
+      ':notes':       analysis.notes       ?? '',
+      ':key_levels':  analysis.key_levels  ?? '',
+      ':screenshots': analysis.screenshots ?? '[]',
+      ':positives':   analysis.positives   ?? '',
+      ':negatives':   analysis.negatives   ?? '',
+    });
+    return getDailyAnalysis(db, analysis.date, analysis.instrument);
+  }
+}
+function deleteDailyAnalysis(db, dbPath, id) {
+  runQ(db, dbPath, 'DELETE FROM daily_analysis WHERE id=?', [id]);
+}
+
+// ── WEEKLY ANALYSIS ───────────────────────────────────────────
+function getWeeklyAnalyses(db) {
+  return getAll(db, 'SELECT * FROM weekly_analysis ORDER BY week_start DESC');
+}
+function getWeeklyAnalysis(db, weekStart, instrument) {
+  return getOne(db, 'SELECT * FROM weekly_analysis WHERE week_start=? AND instrument=?', [weekStart, instrument]);
+}
+function upsertWeeklyAnalysis(db, dbPath, analysis) {
+  const existing = getWeeklyAnalysis(db, analysis.week_start, analysis.instrument);
+  if (existing) {
+    runQ(db, dbPath, `
+      UPDATE weekly_analysis SET
+        macro_bias=:macro_bias, notes=:notes, key_levels=:key_levels,
+        screenshots=:screenshots, positives=:positives, negatives=:negatives,
+        plan=:plan, updated_at=datetime('now')
+      WHERE week_start=:week_start AND instrument=:instrument
+    `, {
+      ':macro_bias':  analysis.macro_bias  ?? '',
+      ':notes':       analysis.notes       ?? '',
+      ':key_levels':  analysis.key_levels  ?? '',
+      ':screenshots': analysis.screenshots ?? '[]',
+      ':positives':   analysis.positives   ?? '',
+      ':negatives':   analysis.negatives   ?? '',
+      ':plan':        analysis.plan        ?? '',
+      ':week_start':  analysis.week_start,
+      ':instrument':  analysis.instrument,
+    });
+    return getWeeklyAnalysis(db, analysis.week_start, analysis.instrument);
+  } else {
+    runQ(db, dbPath, `
+      INSERT INTO weekly_analysis (week_start,instrument,macro_bias,notes,key_levels,screenshots,positives,negatives,plan)
+      VALUES (:week_start,:instrument,:macro_bias,:notes,:key_levels,:screenshots,:positives,:negatives,:plan)
+    `, {
+      ':week_start':  analysis.week_start,
+      ':instrument':  analysis.instrument,
+      ':macro_bias':  analysis.macro_bias  ?? '',
+      ':notes':       analysis.notes       ?? '',
+      ':key_levels':  analysis.key_levels  ?? '',
+      ':screenshots': analysis.screenshots ?? '[]',
+      ':positives':   analysis.positives   ?? '',
+      ':negatives':   analysis.negatives   ?? '',
+      ':plan':        analysis.plan        ?? '',
+    });
+    return getWeeklyAnalysis(db, analysis.week_start, analysis.instrument);
+  }
+}
+function deleteWeeklyAnalysis(db, dbPath, id) {
+  runQ(db, dbPath, 'DELETE FROM weekly_analysis WHERE id=?', [id]);
+}
+
 module.exports = {
-  getDb, getAllTrades, getTradeById, insertTrade, updateTrade, deleteTrade,
-  importCsvTrades, getStats, insertEmotionalCheck, getTodayEmotionalCheck,
+  getDb,
+  getAllTrades, getTradeById, insertTrade, updateTrade, deleteTrade,
+  importCsvTrades, getStats,
+  insertEmotionalCheck, getTodayEmotionalCheck,
+  getDailyAnalyses, getDailyAnalysis, upsertDailyAnalysis, deleteDailyAnalysis,
+  getWeeklyAnalyses, getWeeklyAnalysis, upsertWeeklyAnalysis, deleteWeeklyAnalysis,
 };

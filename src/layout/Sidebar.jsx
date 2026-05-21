@@ -2,22 +2,16 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 
 const NAV = [
-  {
-    to: '/dashboard', label: 'Dashboard', sub: 'Stats & Journal',
-    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
-  },
-  {
-    to: '/stats', label: 'Statistiques', sub: 'Graphiques & Calendrier',
-    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>,
-  },
-  {
-    to: '/topstep', label: 'Topstep', sub: 'Combine & Funded', badge: 'LIVE',
-    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>,
-  },
-  {
-    to: '/emotional', label: 'État Mental', sub: 'Bilan pré-séance',
-    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
-  },
+  { to: '/dashboard', label: 'Dashboard',    sub: 'Stats & Journal',
+    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
+  { to: '/stats',     label: 'Statistiques', sub: 'Graphiques & Calendrier',
+    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg> },
+  { to: '/analysis',  label: 'Analyse',      sub: 'Notes & Screenshots',
+    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> },
+  { to: '/topstep',   label: 'Topstep',      sub: 'Combine & Funded', badge: 'LIVE',
+    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> },
+  { to: '/emotional', label: 'État Mental',  sub: 'Bilan pré-séance',
+    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
 ];
 
 const MIN_WIDTH = 180;
@@ -43,7 +37,6 @@ export default function Sidebar({ activeAccount, onSwitchAccount }) {
     })();
   }, [activeAccount]);
 
-  // ── Resize handlers ──────────────────────────────────────
   const onMouseDown = useCallback((e) => {
     e.preventDefault();
     dragStartX.current = e.clientX;
@@ -55,8 +48,8 @@ export default function Sidebar({ activeAccount, onSwitchAccount }) {
     if (!isDragging) return;
     function onMouseMove(e) {
       const delta = e.clientX - dragStartX.current;
-      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, dragStartWidth.current + delta));
-      setWidth(newWidth);
+      const newW  = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, dragStartWidth.current + delta));
+      setWidth(newW);
     }
     function onMouseUp() {
       setIsDragging(false);
@@ -75,37 +68,21 @@ export default function Sidebar({ activeAccount, onSwitchAccount }) {
   }
 
   return (
-    <aside style={{ width: `${width}px`, flexShrink: 0, background: '#060c10', borderRight: '1px solid rgba(0,255,136,0.08)', display: 'flex', flexDirection: 'column', position: 'relative', transition: isDragging ? 'none' : 'width 0.1s ease', userSelect: isDragging ? 'none' : 'auto' }}>
+    <aside style={{ width: `${width}px`, flexShrink: 0, background: '#060c10', borderRight: '1px solid rgba(0,255,136,0.08)', display: 'flex', flexDirection: 'column', position: 'relative', userSelect: isDragging ? 'none' : 'auto' }}>
 
       {/* Account selector */}
       <div style={{ padding: '10px', borderBottom: '1px solid rgba(0,255,136,0.06)' }}>
-        <div onClick={() => setShowSwitcher(s => !s)} style={{
-          display: 'flex', alignItems: 'center', gap: '8px',
-          padding: '9px 11px', borderRadius: '6px', cursor: 'pointer',
-          background: showSwitcher ? 'rgba(0,255,136,0.06)' : 'transparent',
-          border: `1px solid ${showSwitcher ? 'rgba(0,255,136,0.2)' : 'rgba(0,255,136,0.06)'}`,
-          transition: 'all 0.15s',
-        }}>
-          {/* Color dot */}
+        <div onClick={() => setShowSwitcher(s => !s)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 11px', borderRadius: '6px', cursor: 'pointer', background: showSwitcher ? 'rgba(0,255,136,0.06)' : 'transparent', border: `1px solid ${showSwitcher ? 'rgba(0,255,136,0.2)' : 'rgba(0,255,136,0.06)'}`, transition: 'all 0.15s' }}>
           <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: activeAccount?.color ?? '#00ff88', boxShadow: `0 0 7px ${activeAccount?.color ?? '#00ff88'}`, flexShrink: 0 }} />
-
-          {/* Account name — no overflow hidden so it wraps if needed */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '14px', fontWeight: '700', color: '#e8f8e8', wordBreak: 'break-word', lineHeight: '1.3' }}>
-              {activeAccount?.name ?? 'Aucun compte'}
-            </div>
-            <div style={{ fontSize: '12px', color: '#3a6a4a', marginTop: '2px', wordBreak: 'break-word' }}>
-              {activeAccount?.typeInfo?.label ?? '—'}
-            </div>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: '#e8f8e8', wordBreak: 'break-word', lineHeight: '1.3' }}>{activeAccount?.name ?? 'Aucun compte'}</div>
+            <div style={{ fontSize: '12px', color: '#3a6a4a', marginTop: '2px' }}>{activeAccount?.typeInfo?.label ?? '—'}</div>
           </div>
-
-          {/* Chevron */}
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3a6a4a" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
             <polyline points={showSwitcher ? "18 15 12 9 6 15" : "6 9 12 15 18 9"}/>
           </svg>
         </div>
 
-        {/* Dropdown */}
         {showSwitcher && (
           <div style={{ position: 'absolute', top: '90px', left: '8px', right: '8px', zIndex: 50, background: '#070d12', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '8px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
             <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '2px', padding: '4px 8px', marginBottom: '4px' }}>COMPTES</div>
@@ -119,7 +96,6 @@ export default function Sidebar({ activeAccount, onSwitchAccount }) {
                   <div style={{ fontSize: '13px', color: a.id === activeAccount?.id ? a.color : '#c8d8c8', fontWeight: a.id === activeAccount?.id ? '700' : '400', wordBreak: 'break-word' }}>{a.name}</div>
                   <div style={{ fontSize: '12px', color: '#3a6a4a' }}>{a.typeInfo?.label}</div>
                 </div>
-                {a.id === activeAccount?.id && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: a.color, flexShrink: 0 }} />}
               </div>
             ))}
             <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '6px 0' }} />
@@ -185,24 +161,12 @@ export default function Sidebar({ activeAccount, onSwitchAccount }) {
         <span style={{ fontSize: '12px', color: '#1a3a22', letterSpacing: '1px' }}>v1.1.0</span>
       </div>
 
-      {/* ── RESIZE HANDLE ── */}
-      <div
-        onMouseDown={onMouseDown}
-        style={{
-          position: 'absolute', right: 0, top: 0, bottom: 0,
-          width: '6px', cursor: 'col-resize', zIndex: 10,
-          background: isDragging ? 'rgba(0,255,136,0.3)' : 'transparent',
-          transition: 'background 0.15s',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
-        onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.15)'}
-        onMouseLeave={e => { if (!isDragging) e.currentTarget.style.background = 'transparent'; }}
-        title="Glisser pour redimensionner"
+      {/* Resize handle */}
+      <div onMouseDown={onMouseDown} style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '6px', cursor: 'col-resize', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        onMouseEnter={e => e.currentTarget.querySelector('.handle-bar').style.background = '#00ff88'}
+        onMouseLeave={e => { if (!isDragging) e.currentTarget.querySelector('.handle-bar').style.background = 'rgba(0,255,136,0.15)'; }}
       >
-        {/* Visual indicator — 3 dots */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-          {[0,1,2].map(i => <div key={i} style={{ width: '2px', height: '2px', borderRadius: '50%', background: isDragging ? '#00ff88' : 'rgba(0,255,136,0.3)' }} />)}
-        </div>
+        <div className="handle-bar" style={{ width: '2px', height: '40px', borderRadius: '2px', background: isDragging ? '#00ff88' : 'rgba(0,255,136,0.15)', transition: 'background 0.15s' }} />
       </div>
     </aside>
   );

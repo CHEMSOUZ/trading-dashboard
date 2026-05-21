@@ -7,6 +7,7 @@ import NewTrade from './pages/NewTrade';
 import Stats from './pages/Stats';
 import Topstep from './pages/Topstep';
 import EmotionalCheck from './pages/EmotionalCheck';
+import Analysis from './pages/Analysis';
 
 export default function App() {
   const [activeAccount, setActiveAccount] = useState(null);
@@ -21,14 +22,12 @@ export default function App() {
   }, []);
 
   if (loading) return (
-    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#060c10', color: '#3a6a4a', fontSize: '11px', letterSpacing: '2px', fontFamily: 'monospace' }}>
+    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#060c10', color: '#3a6a4a', fontSize: '13px', letterSpacing: '2px', fontFamily: 'monospace' }}>
       CHARGEMENT...
     </div>
   );
 
-  if (!activeAccount) {
-    return <AccountSelect onSelect={acc => setActiveAccount(acc)} />;
-  }
+  if (!activeAccount) return <AccountSelect onSelect={acc => setActiveAccount(acc)} />;
 
   return (
     <Router>
@@ -43,6 +42,7 @@ export default function App() {
             <Route path="/stats"         element={<Stats />} />
             <Route path="/topstep"       element={<Topstep />} />
             <Route path="/emotional"     element={<EmotionalCheck />} />
+            <Route path="/analysis"      element={<Analysis />} />
           </Routes>
         </main>
       </div>
