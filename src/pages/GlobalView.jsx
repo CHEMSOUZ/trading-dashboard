@@ -20,14 +20,18 @@ function pnlColor(v) {
 
 const DOW_LABELS    = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 const HOUR_SESSIONS = [
-  { label: 'Asie',      start: 0,  end: 8,  color: '#aa88ff' },
-  { label: 'Londres',   start: 8,  end: 13, color: '#00aaff' },
-  { label: 'New York',  start: 13, end: 18, color: '#00ff88' },
-  { label: 'Après NY',  start: 18, end: 24, color: '#f0a020' },
+  { label: 'Asie',     start: 0,  end: 9,  color: '#aa88ff' },
+  { label: 'Londres',  start: 8,  end: 15, color: '#00aaff' },
+  { label: 'New York', start: 13, end: 22, color: '#00ff88' },
+  { label: 'Hors séance', start: 22, end: 24, color: '#f0a020' },
 ];
 
 function getSession(hour) {
-  return HOUR_SESSIONS.find(s => hour >= s.start && hour < s.end) ?? HOUR_SESSIONS[3];
+  // Sessions overlap — priority: New York > Londres > Asie > Hors séance
+  if (hour >= 13 && hour < 22) return HOUR_SESSIONS[2]; // New York
+  if (hour >= 8  && hour < 15) return HOUR_SESSIONS[1]; // Londres
+  if (hour >= 0  && hour < 9)  return HOUR_SESSIONS[0]; // Asie
+  return HOUR_SESSIONS[3]; // Hors séance
 }
 
 // ── Custom Tooltip ────────────────────────────────────────────
@@ -169,12 +173,13 @@ export default function GlobalView() {
     return { label: `${h}h`, pnl: Math.round(hourPnl * 100) / 100, count: hourTrades.length, wr: hourWR, sessionColor: session.color };
   }).filter(h => h.count > 0);
 
-  // ── By session ────────────────────────────────────────────
+  // ── By session (chevauchements pris en compte) ───────────
   const bySessions = HOUR_SESSIONS.map(session => {
     const sessionTrades = trades.filter(t => {
       if (!t.entered_at) return false;
       const hour = new Date(t.entered_at).getHours();
-      return hour >= session.start && hour < session.end;
+      // Assign trade to its dominant session via getSession
+      return getSession(hour) === session;
     });
     const sessionPnl  = sessionTrades.reduce((s,t) => s + getNet(t), 0);
     const sessionWins = sessionTrades.filter(t => getNet(t) > 0).length;
@@ -386,10 +391,15 @@ export default function GlobalView() {
                 </BarChart>
               </ResponsiveContainer>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                {HOUR_SESSIONS.map(s => (
+                {[
+                  { label: 'Asie',        hours: '0h-9h',  color: '#aa88ff' },
+                  { label: 'Londres',     hours: '8h-15h', color: '#00aaff' },
+                  { label: 'New York',    hours: '13h-22h',color: '#00ff88' },
+                  { label: 'Hors séance', hours: '22h-0h', color: '#f0a020' },
+                ].map(s => (
                   <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: s.color }} />
-                    <span style={{ fontSize: '11px', color: '#4a7a5a' }}>{s.label} ({s.start}h-{s.end}h)</span>
+                    <span style={{ fontSize: '11px', color: '#4a7a5a' }}>{s.label} ({s.hours})</span>
                   </div>
                 ))}
               </div>
