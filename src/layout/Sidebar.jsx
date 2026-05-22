@@ -8,6 +8,8 @@ const NAV = [
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg> },
   { to: '/analysis',  label: 'Analyse',      sub: 'Notes & Screenshots',
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> },
+  { to: '/global',    label: 'Vue Globale',  sub: 'Tous les comptes',
+    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> },
   { to: '/topstep',   label: 'Topstep',      sub: 'Combine & Funded', badge: 'LIVE',
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> },
   { to: '/emotional', label: 'État Mental',  sub: 'Bilan pré-séance',
@@ -18,25 +20,31 @@ const MIN_WIDTH = 180;
 const MAX_WIDTH = 400;
 const DEFAULT_WIDTH = 220;
 
-export default function Sidebar({ activeAccount, onSwitchAccount }) {
+export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdated, onManageAccounts }) {
   const location = useLocation();
-  const [accounts, setAccounts] = useState([]);
+  const [accounts, setAccounts]         = useState([]);
   const [showSwitcher, setShowSwitcher] = useState(false);
+  const [renamingId, setRenamingId]     = useState(null);
+  const [renameValue, setRenameValue]   = useState('');
   const [width, setWidth] = useState(() => {
     const saved = localStorage.getItem('sidebar_width');
     return saved ? parseInt(saved) : DEFAULT_WIDTH;
   });
   const [isDragging, setIsDragging] = useState(false);
-  const dragStartX = useRef(0);
+  const dragStartX    = useRef(0);
   const dragStartWidth = useRef(0);
+  const renameInputRef = useRef(null);
 
   useEffect(() => {
-    (async () => {
-      const res = await window.accounts.getAll();
-      if (res.ok) setAccounts(res.data.accounts);
-    })();
+    loadAccounts();
   }, [activeAccount]);
 
+  async function loadAccounts() {
+    const res = await window.accounts.getAll();
+    if (res.ok) setAccounts(res.data.accounts);
+  }
+
+  // ── Resize ────────────────────────────────────────────────
   const onMouseDown = useCallback((e) => {
     e.preventDefault();
     dragStartX.current = e.clientX;
@@ -47,8 +55,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount }) {
   useEffect(() => {
     if (!isDragging) return;
     function onMouseMove(e) {
-      const delta = e.clientX - dragStartX.current;
-      const newW  = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, dragStartWidth.current + delta));
+      const newW = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, dragStartWidth.current + e.clientX - dragStartX.current));
       setWidth(newW);
     }
     function onMouseUp() {
@@ -60,12 +67,31 @@ export default function Sidebar({ activeAccount, onSwitchAccount }) {
     return () => { window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); };
   }, [isDragging]);
 
+  // ── Switch account (no redirect) ──────────────────────────
   async function switchTo(id) {
     if (id === activeAccount?.id) { setShowSwitcher(false); return; }
-    await window.accounts.setActive(id);
     setShowSwitcher(false);
-    onSwitchAccount();
+    await onSwitchAccount(id);
   }
+
+  // ── Rename account ────────────────────────────────────────
+  function startRename(acc, e) {
+    e.stopPropagation();
+    setRenamingId(acc.id);
+    setRenameValue(acc.name);
+    setTimeout(() => renameInputRef.current?.focus(), 50);
+  }
+
+  async function confirmRename(id) {
+    const name = renameValue.trim();
+    if (!name) { cancelRename(); return; }
+    await window.accounts.update(id, { name });
+    setRenamingId(null);
+    await loadAccounts();
+    if (id === activeAccount?.id) onAccountUpdated?.();
+  }
+
+  function cancelRename() { setRenamingId(null); setRenameValue(''); }
 
   return (
     <aside style={{ width: `${width}px`, flexShrink: 0, background: '#060c10', borderRight: '1px solid rgba(0,255,136,0.08)', display: 'flex', flexDirection: 'column', position: 'relative', userSelect: isDragging ? 'none' : 'auto' }}>
@@ -83,23 +109,52 @@ export default function Sidebar({ activeAccount, onSwitchAccount }) {
           </svg>
         </div>
 
+        {/* Dropdown */}
         {showSwitcher && (
-          <div style={{ position: 'absolute', top: '90px', left: '8px', right: '8px', zIndex: 50, background: '#070d12', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '8px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
-            <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '2px', padding: '4px 8px', marginBottom: '4px' }}>COMPTES</div>
+          <div style={{ position: 'absolute', top: '90px', left: '8px', right: '8px', zIndex: 50, background: '#070d12', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '8px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
+            <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', padding: '4px 8px', marginBottom: '4px' }}>COMPTES</div>
+
             {accounts.map(a => (
-              <div key={a.id} onClick={() => switchTo(a.id)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', borderRadius: '5px', cursor: 'pointer', background: a.id === activeAccount?.id ? 'rgba(0,255,136,0.06)' : 'transparent', transition: 'all 0.12s' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.06)'}
-                onMouseLeave={e => e.currentTarget.style.background = a.id === activeAccount?.id ? 'rgba(0,255,136,0.06)' : 'transparent'}
-              >
-                <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: a.color, flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '13px', color: a.id === activeAccount?.id ? a.color : '#c8d8c8', fontWeight: a.id === activeAccount?.id ? '700' : '400', wordBreak: 'break-word' }}>{a.name}</div>
-                  <div style={{ fontSize: '12px', color: '#3a6a4a' }}>{a.typeInfo?.label}</div>
-                </div>
+              <div key={a.id} style={{ borderRadius: '5px', marginBottom: '2px', overflow: 'hidden' }}>
+                {renamingId === a.id ? (
+                  // Rename mode
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '5px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: a.color, flexShrink: 0 }} />
+                    <input
+                      ref={renameInputRef}
+                      value={renameValue}
+                      onChange={e => setRenameValue(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') confirmRename(a.id); if (e.key === 'Escape') cancelRename(); }}
+                      style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#e8f8e8', fontSize: '13px', fontFamily: 'inherit', caretColor: '#00ff88' }}
+                    />
+                    <button onClick={() => confirmRename(a.id)} style={{ background: 'rgba(0,255,136,0.15)', border: 'none', color: '#00ff88', padding: '2px 7px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit' }}>✓</button>
+                    <button onClick={cancelRename} style={{ background: 'none', border: 'none', color: '#4a7a5a', padding: '2px 4px', cursor: 'pointer', fontSize: '13px' }}>✕</button>
+                  </div>
+                ) : (
+                  // Normal mode
+                  <div onClick={() => switchTo(a.id)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', cursor: 'pointer', background: a.id === activeAccount?.id ? 'rgba(0,255,136,0.06)' : 'transparent', transition: 'background 0.12s', borderRadius: '5px' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.06)'}
+                    onMouseLeave={e => e.currentTarget.style.background = a.id === activeAccount?.id ? 'rgba(0,255,136,0.06)' : 'transparent'}
+                  >
+                    <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: a.color, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', color: a.id === activeAccount?.id ? a.color : '#c8d8c8', fontWeight: a.id === activeAccount?.id ? '700' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</div>
+                      <div style={{ fontSize: '11px', color: '#3a6a4a' }}>{a.typeInfo?.label}</div>
+                    </div>
+                    {/* Rename button */}
+                    <button onClick={e => startRename(a, e)} title="Renommer" style={{ background: 'none', border: 'none', color: '#2a5a3a', cursor: 'pointer', fontSize: '13px', padding: '2px 4px', flexShrink: 0, opacity: 0.6, transition: 'all 0.15s' }}
+                      onMouseEnter={e => { e.stopPropagation(); e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#00ff88'; }}
+                      onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.color = '#2a5a3a'; }}
+                    >✏️</button>
+                  </div>
+                )}
               </div>
             ))}
+
             <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '6px 0' }} />
-            <div onClick={() => { setShowSwitcher(false); onSwitchAccount(); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', borderRadius: '5px', cursor: 'pointer', color: '#3a6a4a', fontSize: '13px', transition: 'all 0.12s' }}
+
+            {/* Manage accounts */}
+            <div onClick={() => { setShowSwitcher(false); onManageAccounts?.(); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', borderRadius: '5px', cursor: 'pointer', color: '#3a6a4a', fontSize: '12px', transition: 'all 0.12s' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,136,0.04)'; e.currentTarget.style.color = '#00ff88'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#3a6a4a'; }}
             >
@@ -144,7 +199,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount }) {
         })}
       </nav>
 
-      {/* New trade button */}
+      {/* New trade */}
       <div style={{ padding: '10px', borderTop: '1px solid rgba(0,255,136,0.06)' }}>
         <NavLink to="/dashboard/new" style={{ textDecoration: 'none' }} onClick={() => setShowSwitcher(false)}>
           <button style={{ width: '100%', padding: '10px 0', background: 'linear-gradient(135deg,rgba(0,255,136,0.15),rgba(0,170,85,0.1))', border: '1px solid rgba(0,255,136,0.25)', borderRadius: '6px', color: '#00ff88', fontSize: '13px', fontFamily: 'inherit', letterSpacing: '1.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
@@ -163,10 +218,10 @@ export default function Sidebar({ activeAccount, onSwitchAccount }) {
 
       {/* Resize handle */}
       <div onMouseDown={onMouseDown} style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '6px', cursor: 'col-resize', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        onMouseEnter={e => e.currentTarget.querySelector('.handle-bar').style.background = '#00ff88'}
-        onMouseLeave={e => { if (!isDragging) e.currentTarget.querySelector('.handle-bar').style.background = 'rgba(0,255,136,0.15)'; }}
+        onMouseEnter={e => e.currentTarget.querySelector('.hb').style.background = '#00ff88'}
+        onMouseLeave={e => { if (!isDragging) e.currentTarget.querySelector('.hb').style.background = 'rgba(0,255,136,0.15)'; }}
       >
-        <div className="handle-bar" style={{ width: '2px', height: '40px', borderRadius: '2px', background: isDragging ? '#00ff88' : 'rgba(0,255,136,0.15)', transition: 'background 0.15s' }} />
+        <div className="hb" style={{ width: '2px', height: '40px', borderRadius: '2px', background: isDragging ? '#00ff88' : 'rgba(0,255,136,0.15)', transition: 'background 0.15s' }} />
       </div>
     </aside>
   );
