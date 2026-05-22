@@ -273,14 +273,45 @@ export default function GlobalView() {
 
           {/* ── KEY INSIGHTS ── */}
           <div style={{ marginBottom: '20px' }}>
-            <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px', fontWeight: '700' }}>💡 TES POINTS FORTS & AXES D'AMÉLIORATION</div>
+
+            {/* Points forts */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <div style={{ height: '1px', flex: 1, background: 'rgba(0,255,136,0.1)' }} />
+              <span style={{ fontSize: '11px', color: '#00ff88', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>✅ TES POINTS FORTS</span>
+              <div style={{ height: '1px', flex: 1, background: 'rgba(0,255,136,0.1)' }} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '16px' }}>
+              {bestDow     && <InsightCard icon="📅" title="MEILLEUR JOUR"        value={bestDow.label}      desc={`${fmt(bestDow.pnl, true)} · ${bestDow.wr}% WR`}             color="#00ff88" />}
+              {bestSession && <InsightCard icon="⏰" title="MEILLEURE SESSION"     value={bestSession.label}  desc={`${bestSession.wr}% WR · ${bestSession.count} trades`}       color={bestSession.color} />}
+              {bestHour    && <InsightCard icon="🎯" title="HEURE OPTIMALE"        value={bestHour.label}     desc={`${fmt(bestHour.pnl, true)} · ${bestHour.wr}% WR`}           color="#00ff88" />}
+              {bestPair    && <InsightCard icon="📈" title="INSTRUMENT PHARE"      value={bestPair.pair}      desc={`${fmt(bestPair.pnl, true)} · ${bestPair.wr}% WR`}           color="#00aaff" />}
+              {bestEmotion && <InsightCard icon="🧠" title="MEILLEUR ÉTAT MENTAL"  value={bestEmotion.em}     desc={`${bestEmotion.wr}% WR sur ${bestEmotion.total} trades`}     color="#aa88ff" />}
+            </div>
+
+            {/* Points faibles */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <div style={{ height: '1px', flex: 1, background: 'rgba(255,68,85,0.1)' }} />
+              <span style={{ fontSize: '11px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>❌ TES POINTS FAIBLES</span>
+              <div style={{ height: '1px', flex: 1, background: 'rgba(255,68,85,0.1)' }} />
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px' }}>
-              {bestDow && <InsightCard icon="📅" title="MEILLEUR JOUR" value={bestDow.label} desc={`${fmt(bestDow.pnl, true)} · ${bestDow.wr}% WR`} color="#00ff88" />}
-              {worstDow && <InsightCard icon="⚠️" title="JOUR À ÉVITER" value={worstDow.label} desc={`${fmt(worstDow.pnl, true)} · ${worstDow.wr}% WR`} color="#ff4455" />}
-              {bestSession && <InsightCard icon="⏰" title="MEILLEURE SESSION" value={bestSession.label} desc={`${bestSession.wr}% WR · ${bestSession.count} trades`} color={bestSession.color} />}
-              {bestHour && <InsightCard icon="🎯" title="HEURE OPTIMALE" value={`${bestHour.label}`} desc={`${fmt(bestHour.pnl, true)} · ${bestHour.wr}% WR`} color="#00ff88" />}
-              {bestPair && <InsightCard icon="📈" title="INSTRUMENT PHARE" value={bestPair.pair} desc={`${fmt(bestPair.pnl, true)} · ${bestPair.wr}% WR`} color="#00aaff" />}
-              {bestEmotion && <InsightCard icon="🧠" title="MEILLEUR ÉTAT MENTAL" value={bestEmotion.em} desc={`${bestEmotion.wr}% WR sur ${bestEmotion.total} trades`} color="#aa88ff" />}
+              {worstDow     && <InsightCard icon="📅" title="PIRE JOUR"           value={worstDow.label}      desc={`${fmt(worstDow.pnl, true)} · ${worstDow.wr}% WR`}            color="#ff4455" />}
+              {(() => {
+                const worst = [...bySessions].filter(s => s.count > 0).sort((a,b) => a.wr - b.wr)[0];
+                return worst ? <InsightCard icon="⏰" title="PIRE SESSION"        value={worst.label}         desc={`${worst.wr}% WR · ${worst.count} trades`}                    color="#ff4455" /> : null;
+              })()}
+              {(() => {
+                const worst = [...byHour].filter(h => h.count >= 2).sort((a,b) => a.pnl - b.pnl)[0];
+                return worst ? <InsightCard icon="🕐" title="HEURE À ÉVITER"     value={worst.label}         desc={`${fmt(worst.pnl, true)} · ${worst.wr}% WR`}                 color="#ff4455" /> : null;
+              })()}
+              {(() => {
+                const worst = [...pairArr].filter(p => p.total >= 2).sort((a,b) => a.pnl - b.pnl)[0];
+                return worst ? <InsightCard icon="📉" title="INSTRUMENT À REVOIR" value={worst.pair}          desc={`${fmt(worst.pnl, true)} · ${worst.wr}% WR`}                 color="#ff4455" /> : null;
+              })()}
+              {(() => {
+                const worst = [...emotionArr].filter(e => e.total >= 2).sort((a,b) => a.wr - b.wr)[0];
+                return worst ? <InsightCard icon="😟" title="PIRE ÉTAT MENTAL"   value={worst.em}            desc={`${worst.wr}% WR sur ${worst.total} trades`}                  color="#ff4455" /> : null;
+              })()}
             </div>
           </div>
 
