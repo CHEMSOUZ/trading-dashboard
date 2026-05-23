@@ -18,6 +18,31 @@ const CURRENCY_FLAGS = {
   PLN: '🇵🇱', CZK: '🇨🇿', HUF: '🇭🇺', RUB: '🇷🇺', IDR: '🇮🇩',
 };
 
+// ── Timezones ─────────────────────────────────────────────────
+const TIMEZONES = [
+  { key: 'America/New_York',    label: 'New York',    abbr: 'ET',  flag: '🇺🇸' },
+  { key: 'America/Chicago',     label: 'Chicago',     abbr: 'CT',  flag: '🇺🇸' },
+  { key: 'America/Denver',      label: 'Denver',      abbr: 'MT',  flag: '🇺🇸' },
+  { key: 'America/Los_Angeles', label: 'Los Angeles', abbr: 'PT',  flag: '🇺🇸' },
+  { key: 'Europe/London',       label: 'Londres',     abbr: 'GMT', flag: '🇬🇧' },
+  { key: 'Europe/Paris',        label: 'Paris',       abbr: 'CET', flag: '🇫🇷' },
+  { key: 'Europe/Zurich',       label: 'Zurich',      abbr: 'CET', flag: '🇨🇭' },
+  { key: 'Asia/Tokyo',          label: 'Tokyo',       abbr: 'JST', flag: '🇯🇵' },
+  { key: 'Asia/Hong_Kong',      label: 'Hong Kong',   abbr: 'HKT', flag: '🇭🇰' },
+  { key: 'Asia/Singapore',      label: 'Singapore',   abbr: 'SGT', flag: '🇸🇬' },
+  { key: 'Australia/Sydney',    label: 'Sydney',      abbr: 'AEDT',flag: '🇦🇺' },
+  { key: 'UTC',                 label: 'UTC',         abbr: 'UTC', flag: '🌐' },
+];
+
+const DEFAULT_TZ = 'America/New_York';
+
+function getStoredTz() {
+  try { return localStorage.getItem('eco_calendar_tz') || DEFAULT_TZ; } catch { return DEFAULT_TZ; }
+}
+function storeTz(tz) {
+  try { localStorage.setItem('eco_calendar_tz', tz); } catch {}
+}
+
 function getImpact(event) {
   const imp = (event.impact ?? '').toLowerCase();
   if (imp === 'high' || imp === '3' || imp === 'high impact') return 'high';
@@ -26,19 +51,17 @@ function getImpact(event) {
   return 'na';
 }
 
-function formatTime(dateStr) {
+function formatTime(dateStr, tz = DEFAULT_TZ) {
   if (!dateStr) return '—';
   try {
-    const d = new Date(dateStr);
-    return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' });
+    return new Date(dateStr).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: tz });
   } catch { return '—'; }
 }
 
-function formatDate(dateStr) {
+function formatDate(dateStr, tz = DEFAULT_TZ) {
   if (!dateStr) return '—';
   try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Paris' });
+    return new Date(dateStr).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: tz });
   } catch { return '—'; }
 }
 
@@ -153,7 +176,7 @@ function Countdown({ dateStr }) {
 }
 
 // ── Event Row ─────────────────────────────────────────────────
-function EventRow({ event, isGroupFirst, showDate }) {
+function EventRow({ event, isGroupFirst, showDate, tz = DEFAULT_TZ }) {
   const [expanded, setExpanded] = useState(false);
   const impact = getImpact(event);
   const cfg    = IMPACT_CONFIG[impact];
@@ -166,7 +189,7 @@ function EventRow({ event, isGroupFirst, showDate }) {
       {isGroupFirst && showDate && (
         <div style={{ padding: '10px 16px 4px', fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.15)', borderTop: '1px solid rgba(0,255,136,0.04)' }}>
           <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#3a6a4a' }} />
-          {formatDate(event.time ?? event.date).toUpperCase()}
+          {formatDate(event.time ?? event.date, tz).toUpperCase()}
           {isToday(event.time ?? event.date) && <span style={{ color: '#00ff88', background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)', padding: '1px 6px', borderRadius: '3px', fontSize: '9px', fontWeight: '700' }}>AUJOURD'HUI</span>}
         </div>
       )}
@@ -197,7 +220,7 @@ function EventRow({ event, isGroupFirst, showDate }) {
         {/* Time */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           <span style={{ fontSize: '12px', color: upcoming30 ? '#f0a020' : '#8aaa90', fontWeight: upcoming30 ? '700' : '400', letterSpacing: '0.5px' }}>
-            {formatTime(event.time ?? event.date)}
+            {formatTime(event.time ?? event.date, tz)}
           </span>
           {upcoming30 && <Countdown dateStr={event.time ?? event.date} />}
         </div>
@@ -274,7 +297,7 @@ function EventRow({ event, isGroupFirst, showDate }) {
           )}
           <div>
             <div style={{ fontSize: '9px', color: '#2a5a32', letterSpacing: '1.5px', marginBottom: '4px' }}>DATE / HEURE (FR)</div>
-            <div style={{ fontSize: '12px', color: '#c8d8c8' }}>{formatDate(event.time ?? event.date)} · {formatTime(event.time ?? event.date)}</div>
+            <div style={{ fontSize: '12px', color: '#c8d8c8' }}>{formatDate(event.time ?? event.date, tz)} · {formatTime(event.time ?? event.date, tz)}</div>
           </div>
         </div>
       )}
@@ -289,6 +312,9 @@ export default function EconomicCalendar() {
   const [error, setError]         = useState('');
   const [lastUpdate, setLastUpdate] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Timezone
+  const [tz, setTz] = useState(getStoredTz);
 
   // Filters
   const [dateMode, setDateMode]   = useState('week');
@@ -401,7 +427,9 @@ export default function EconomicCalendar() {
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: refreshing ? '#f0a020' : '#00ff88', boxShadow: refreshing ? '0 0 6px #f0a020' : '0 0 6px #00ff88', animation: 'blink 2s infinite' }} />
                 <span>{refreshing ? 'Actualisation...' : `MAJ ${lastUpdate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`}</span>
               </div>
-              <div style={{ color: '#1a3a22', marginTop: '2px' }}>Auto-refresh 60s</div>
+              <div style={{ color: '#1a3a22', marginTop: '2px' }}>
+                Auto-refresh 60s · {TIMEZONES.find(z => z.key === tz)?.label ?? 'New York'}
+              </div>
             </div>
           )}
           <button onClick={() => fetchEvents(false)}
@@ -478,6 +506,20 @@ export default function EconomicCalendar() {
             <button onClick={() => setCurrencyFilter([])} style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #1a3a22', background: 'transparent', color: '#3a5a3a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>✕ Reset</button>
           )}
         </div>
+        {/* Row 4: Timezone selector */}
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '9px', color: '#2a5a32', letterSpacing: '1.5px', marginRight: '4px' }}>FUSEAU</span>
+          {TIMEZONES.map(zone => (
+            <button key={zone.key}
+              onClick={() => { setTz(zone.key); storeTz(zone.key); }}
+              style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '3px 8px', borderRadius: '4px', border: `1px solid ${tz === zone.key ? '#aa88ff' : '#1a3a22'}`, background: tz === zone.key ? 'rgba(170,136,255,0.12)' : 'transparent', color: tz === zone.key ? '#aa88ff' : '#4a7a5a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s', fontWeight: tz === zone.key ? '700' : '400' }}
+            >
+              <span style={{ fontSize: '11px' }}>{zone.flag}</span>
+              <span>{zone.abbr}</span>
+              {tz === zone.key && <span style={{ fontSize: '9px', opacity: 0.8 }}>· {zone.label}</span>}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── Stats bar ── */}
@@ -500,7 +542,7 @@ export default function EconomicCalendar() {
       {/* ── Table header ── */}
       {!loading && filtered.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: '52px 52px 36px 1fr 90px 90px 90px 16px', gap: '8px', padding: '6px 16px', fontSize: '8px', color: '#2a5a32', letterSpacing: '1.5px', borderBottom: '1px solid rgba(0,255,136,0.06)', marginBottom: '2px' }}>
-          <span>HEURE</span><span>DEVISE</span><span>IMP.</span><span>ANNONCE</span>
+          <span>HEURE ({TIMEZONES.find(z => z.key === tz)?.abbr ?? 'ET'})</span><span>DEVISE</span><span>IMP.</span><span>ANNONCE</span>
           <span style={{ textAlign: 'right' }}>PRÉC.</span>
           <span style={{ textAlign: 'right' }}>ESTIMÉ</span>
           <span style={{ textAlign: 'right' }}>RÉEL</span>
@@ -533,6 +575,7 @@ export default function EconomicCalendar() {
                 event={ev}
                 isGroupFirst={idx === 0}
                 showDate={Object.keys(grouped).length > 1}
+                tz={tz}
               />
             ))
           )}
