@@ -9,7 +9,7 @@ import Topstep from './pages/Topstep';
 import EmotionalCheck from './pages/EmotionalCheck';
 import Analysis from './pages/Analysis';
 import GlobalView from './pages/GlobalView';
-import CsvImport from './pages/CsvImport';
+import EconomicCalendar from './pages/EconomicCalendar';
 
 export default function App() {
   const [activeAccount, setActiveAccount] = useState(null);
@@ -91,7 +91,7 @@ export default function App() {
             <Route path="/global"        element={<GlobalView />} />
             <Route path="/topstep"       element={<Topstep />} />
             <Route path="/emotional"     element={<EmotionalCheck />} />
-            <Route path="/import"         element={<CsvImport />} />
+            <Route path="/calendar"       element={<EconomicCalendar />} />
           </Routes>
         </main>
       </div>
