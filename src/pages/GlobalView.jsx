@@ -215,7 +215,8 @@ export default function GlobalView() {
   // ── Key insights ──────────────────────────────────────────
   const bestDow     = [...byDow].filter(d => d.count > 0).sort((a,b) => b.pnl - a.pnl)[0];
   const worstDow    = [...byDow].filter(d => d.count > 0).sort((a,b) => a.pnl - b.pnl)[0];
-  const bestSession = [...bySessions].filter(s => s.count > 0).sort((a,b) => b.wr - a.wr)[0];
+  const bestSession  = [...bySessions].filter(s => s.count >= 3).sort((a,b) => b.wr - a.wr)[0];
+  const worstSession = [...bySessions].filter(s => s.count >= 3).sort((a,b) => a.wr - b.wr)[0];
   const bestPair    = [...pairArr].sort((a,b) => b.pnl - a.pnl)[0];
   const bestEmotion = [...emotionArr].filter(e => e.total >= 2).sort((a,b) => b.wr - a.wr)[0];
   const bestHour    = [...byHour].filter(h => h.count >= 2).sort((a,b) => b.pnl - a.pnl)[0];
@@ -301,10 +302,7 @@ export default function GlobalView() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px' }}>
               {worstDow     && <InsightCard icon="📅" title="PIRE JOUR"           value={worstDow.label}      desc={`${fmt(worstDow.pnl, true)} · ${worstDow.wr}% WR`}            color="#ff4455" />}
-              {(() => {
-                const worst = [...bySessions].filter(s => s.count > 0).sort((a,b) => a.wr - b.wr)[0];
-                return worst ? <InsightCard icon="⏰" title="PIRE SESSION"        value={worst.label}         desc={`${worst.wr}% WR · ${worst.count} trades`}                    color="#ff4455" /> : null;
-              })()}
+              {worstSession && <InsightCard icon="⏰" title="PIRE SESSION" value={worstSession.label} desc={`${worstSession.wr}% WR · ${worstSession.count} trades`} color="#ff4455" />}
               {(() => {
                 const worst = [...byHour].filter(h => h.count >= 2).sort((a,b) => a.pnl - b.pnl)[0];
                 return worst ? <InsightCard icon="🕐" title="HEURE À ÉVITER"     value={worst.label}         desc={`${fmt(worst.pnl, true)} · ${worst.wr}% WR`}                 color="#ff4455" /> : null;
