@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -79,6 +79,143 @@ function PnlCell({ trade }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Trade Table (resizable cols + sortable headers + HEURE) ───
+const DEFAULT_COL_WIDTHS = { date: 90, heure: 65, pair: 80, dir: 60, entry: 82, exit: 82, size: 55, pnl: 110, dur: 72, notes: 140 };
+
+function TradeTable({ trades, onNavigate, onDelete }) {
+  const [sortCol, setSortCol]   = useState('date');
+  const [sortDir, setSortDir]   = useState('desc');
+  const [colWidths, setColWidths] = useState(() => {
+    try { return { ...DEFAULT_COL_WIDTHS, ...JSON.parse(localStorage.getItem('dash_trade_cols') ?? '{}') }; }
+    catch { return DEFAULT_COL_WIDTHS; }
+  });
+  const dragging = useRef(null);
+  const startX   = useRef(0);
+  const startW   = useRef(0);
+
+  function onColMouseDown(e, col) {
+    e.preventDefault();
+    dragging.current = col;
+    startX.current   = e.clientX;
+    startW.current   = colWidths[col];
+    function onMove(ev) {
+      const newW = Math.max(36, startW.current + ev.clientX - startX.current);
+      setColWidths(prev => { const n = { ...prev, [dragging.current]: newW }; localStorage.setItem('dash_trade_cols', JSON.stringify(n)); return n; });
+    }
+    function onUp() { dragging.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  function handleSort(col) {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('desc'); }
+  }
+
+  function sortVal(t, col) {
+    switch (col) {
+      case 'date':  return t.entered_at || t.date || '';
+      case 'heure': return t.entered_at ? new Date(t.entered_at).getHours() * 60 + new Date(t.entered_at).getMinutes() : -1;
+      case 'pair':  return t.pair ?? '';
+      case 'dir':   return t.direction ?? '';
+      case 'entry': return t.entry ?? 0;
+      case 'exit':  return t.exit_price ?? 0;
+      case 'size':  return t.size ?? 0;
+      case 'pnl':   return getNet(t);
+      case 'dur':   return t.duration ?? '';
+      case 'notes': return t.notes ?? '';
+      default:      return '';
+    }
+  }
+
+  const sorted = trades.slice().sort((a, b) => {
+    const va = sortVal(a, sortCol), vb = sortVal(b, sortCol);
+    const cmp = typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb));
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  const COLS = [
+    { key: 'date',  label: 'DATE' },
+    { key: 'heure', label: 'HEURE' },
+    { key: 'pair',  label: 'PAIRE' },
+    { key: 'dir',   label: 'DIR.' },
+    { key: 'entry', label: 'ENTRÉE' },
+    { key: 'exit',  label: 'SORTIE' },
+    { key: 'size',  label: 'TAILLE' },
+    { key: 'pnl',   label: 'P&L NET' },
+    { key: 'dur',   label: 'DURÉE' },
+    { key: 'notes', label: 'NOTES' },
+  ];
+
+  const templateCols = COLS.map(c => `${colWidths[c.key]}px`).join(' ') + ' 36px';
+
+  function SortIcon({ col }) {
+    if (sortCol !== col) return <span style={{ color: '#1a3a22', fontSize: '9px' }}>⇅</span>;
+    return <span style={{ color: '#00ff88', fontSize: '9px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
+  }
+
+  if (sorted.length === 0) return null;
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      {/* Header */}
+      <div style={{ display: 'grid', gridTemplateColumns: templateCols, minWidth: 'max-content', padding: '4px 10px', fontSize: '7px', color: '#2a5a32', letterSpacing: '1.5px', borderBottom: '1px solid rgba(0,255,136,0.06)', marginBottom: '4px', userSelect: 'none' }}>
+        {COLS.map((col, idx) => (
+          <div key={col.key} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer', overflow: 'hidden' }}
+            onClick={() => handleSort(col.key)}
+            onMouseEnter={e => e.currentTarget.style.color = '#00ff88'}
+            onMouseLeave={e => e.currentTarget.style.color = '#2a5a32'}
+          >
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{col.label}</span>
+            <SortIcon col={col.key} />
+            {idx < COLS.length - 1 && (
+              <div onMouseDown={e => { e.stopPropagation(); onColMouseDown(e, col.key); }}
+                style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '6px', cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div style={{ width: '1px', height: '60%', background: 'rgba(0,255,136,0.2)' }} />
+              </div>
+            )}
+          </div>
+        ))}
+        <span />
+      </div>
+
+      {/* Rows */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 'max-content' }}>
+        {sorted.map(t => {
+          const net   = getNet(t);
+          const color = pnlColor(net);
+          const hour  = t.entered_at ? new Date(t.entered_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—';
+          return (
+            <div key={t.id}
+              onClick={() => onNavigate(t.id)}
+              style={{ display: 'grid', gridTemplateColumns: templateCols, alignItems: 'center', padding: '9px 10px', background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.04)', borderLeft: `2px solid ${color}`, borderRadius: '4px', cursor: 'pointer', transition: 'background 0.12s', fontSize: '11px' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.04)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(10,28,18,0.4)'}
+            >
+              <span style={{ color: '#4a7a5a', fontSize: '9px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.date}</span>
+              <span style={{ color: '#6a8a7a', fontSize: '9px' }}>{hour}</span>
+              <span style={{ color: '#c8d8c8', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.pair}</span>
+              <span style={{ color: t.direction === 'LONG' ? '#00ff88' : '#ff4455', fontSize: '9px', background: `rgba(${t.direction === 'LONG' ? '0,255,136' : '255,68,85'},0.08)`, border: `1px solid rgba(${t.direction === 'LONG' ? '0,255,136' : '255,68,85'},0.2)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
+              <span style={{ color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.entry ?? '—'}</span>
+              <span style={{ color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.exit_price ?? '—'}</span>
+              <span style={{ color: '#8aaa90' }}>{t.size ?? '—'}</span>
+              <div onClick={e => e.stopPropagation()}><PnlCell trade={t} /></div>
+              <span style={{ color: '#4a7a5a', fontSize: '9px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.duration ?? '—'}</span>
+              <span style={{ color: '#4a7a5a', fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.notes ?? '—'}</span>
+              <button onClick={e => onDelete(t.id, e)} style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '15px', padding: '0', transition: 'color 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#ff4455'}
+                onMouseLeave={e => e.currentTarget.style.color = '#1a3a20'}
+              >×</button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -317,47 +454,17 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Table header */}
-        {filtered.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: '85px 80px 60px 85px 85px 55px 110px 75px 1fr 36px', gap: '6px', padding: '4px 10px', fontSize: '7px', color: '#2a5a32', letterSpacing: '1.5px', borderBottom: '1px solid rgba(0,255,136,0.06)', marginBottom: '4px' }}>
-            <span>DATE</span><span>PAIRE</span><span>DIR.</span><span>ENTRÉE</span><span>SORTIE</span><span>TAILLE</span><span>P&L NET</span><span>DURÉE</span><span>NOTES</span><span></span>
-          </div>
-        )}
-
-        {/* Trade rows */}
+        {/* Table */}
         {filtered.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: '#2a4a30', fontSize: '11px', letterSpacing: '2px', border: '1px dashed #1a3a22', borderRadius: '6px' }}>
             {search ? 'Aucun résultat' : filter !== 'ALL' ? `Aucun trade ${filter}` : 'Aucun trade — ajoutez votre premier trade'}
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            {filtered.map(t => {
-              const net   = getNet(t);
-              const color = pnlColor(net);
-              return (
-                <div key={t.id}
-                  onClick={() => navigate(`/dashboard/${t.id}`)}
-                  style={{ display: 'grid', gridTemplateColumns: '85px 80px 60px 85px 85px 55px 110px 75px 1fr 36px', gap: '6px', alignItems: 'center', padding: '9px 10px', background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.04)', borderLeft: `2px solid ${color}`, borderRadius: '4px', cursor: 'pointer', transition: 'all 0.12s', fontSize: '11px' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.04)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(10,28,18,0.4)'}
-                >
-                  <span style={{ color: '#4a7a5a', fontSize: '9px' }}>{t.date}</span>
-                  <span style={{ color: '#c8d8c8', fontWeight: '600' }}>{t.pair}</span>
-                  <span style={{ color: t.direction==='LONG'?'#00ff88':'#ff4455', fontSize: '9px', background: `rgba(${t.direction==='LONG'?'0,255,136':'255,68,85'},0.08)`, border: `1px solid rgba(${t.direction==='LONG'?'0,255,136':'255,68,85'},0.2)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
-                  <span style={{ color: '#8aaa90' }}>{t.entry ?? '—'}</span>
-                  <span style={{ color: '#8aaa90' }}>{t.exit_price ?? '—'}</span>
-                  <span style={{ color: '#8aaa90' }}>{t.size ?? '—'}</span>
-                  <div onClick={e => e.stopPropagation()}><PnlCell trade={t} /></div>
-                  <span style={{ color: '#4a7a5a', fontSize: '9px' }}>{t.duration ?? '—'}</span>
-                  <span style={{ color: '#4a7a5a', fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.notes ?? '—'}</span>
-                  <button onClick={e => handleDelete(t.id, e)} style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '15px', padding: '0', transition: 'color 0.15s' }}
-                    onMouseEnter={e => e.currentTarget.style.color = '#ff4455'}
-                    onMouseLeave={e => e.currentTarget.style.color = '#1a3a20'}
-                  >×</button>
-                </div>
-              );
-            })}
-          </div>
+          <TradeTable
+            trades={filtered}
+            onNavigate={id => navigate(`/dashboard/${id}`)}
+            onDelete={handleDelete}
+          />
         )}
       </div>
 
