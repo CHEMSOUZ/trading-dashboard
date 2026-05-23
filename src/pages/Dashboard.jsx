@@ -390,6 +390,13 @@ export default function Dashboard() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={() => navigate('/import')}
+            style={{ background: 'transparent', border: '1px solid #1a3a22', color: '#4a7a5a', padding: '8px 14px', borderRadius: '5px', fontSize: '10px', fontFamily: 'inherit', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#00ff88'; e.currentTarget.style.borderColor = '#00ff88'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#4a7a5a'; e.currentTarget.style.borderColor = '#1a3a22'; }}
+          >
+            📂 Import CSV
+          </button>
           <button onClick={() => setShowQuick(true)} style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.25)', color: '#00ff88', padding: '8px 14px', borderRadius: '5px', fontSize: '10px', fontFamily: 'inherit', letterSpacing: '1px', cursor: 'pointer', fontWeight: '700' }}>
             ⚡ Trade Express
           </button>
