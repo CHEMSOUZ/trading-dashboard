@@ -37,10 +37,228 @@ const TIMEZONES = [
 const DEFAULT_TZ = 'America/New_York';
 
 function getStoredTz() {
-  try { return localStorage.getItem('eco_calendar_tz') || DEFAULT_TZ; } catch { return DEFAULT_TZ; }
+  return loadPref(STORAGE_KEYS.tz, DEFAULT_TZ) || DEFAULT_TZ;
 }
 function storeTz(tz) {
-  try { localStorage.setItem('eco_calendar_tz', tz); } catch {}
+  savePref(STORAGE_KEYS.tz, tz);
+}
+
+// -- Translation dictionary (EN -> FR) -----------------------
+const EVENT_TRANSLATIONS = {
+  // -- US --
+  "Non-Farm Payrolls": "Créations emplois non-agricoles",
+  "Nonfarm Payrolls": "Créations emplois non-agricoles",
+  "Unemployment Rate": "Taux de chômage",
+  "CPI m/m": "IPC mensuel",
+  "CPI y/y": "IPC annuel",
+  "Core CPI m/m": "IPC core mensuel",
+  "Core CPI y/y": "IPC core annuel",
+  "CPI": "Indice des prix à la consommation",
+  "Core CPI": "IPC hors alimentation & énergie",
+  "PPI m/m": "IPP mensuel",
+  "PPI y/y": "IPP annuel",
+  "Core PPI m/m": "IPP core mensuel",
+  "GDP q/q": "PIB trimestriel",
+  "GDP": "Produit Intérieur Brut",
+  "Advance GDP q/q": "PIB avancé trimestriel",
+  "Preliminary GDP q/q": "PIB préliminaire trimestriel",
+  "Federal Funds Rate": "Taux directeur Fed",
+  "Fed Interest Rate Decision": "Décision taux Fed",
+  "FOMC Statement": "Communiqué FOMC",
+  "FOMC Meeting Minutes": "Minutes réunion FOMC",
+  "FOMC Press Conference": "Conférence presse FOMC",
+  "ISM Manufacturing PMI": "PMI manufacturier ISM",
+  "ISM Non-Manufacturing PMI": "PMI services ISM",
+  "ISM Services PMI": "PMI services ISM",
+  "Manufacturing PMI": "PMI manufacturier",
+  "Services PMI": "PMI services",
+  "Composite PMI": "PMI composite",
+  "S&P Global Manufacturing PMI": "PMI manufacturier S&P Global",
+  "S&P Global Services PMI": "PMI services S&P Global",
+  "Retail Sales m/m": "Ventes au détail mensuel",
+  "Core Retail Sales m/m": "Ventes au détail core mensuel",
+  "Retail Sales": "Ventes au détail",
+  "Durable Goods Orders m/m": "Commandes biens durables mensuel",
+  "Core Durable Goods Orders m/m": "Commandes biens durables core mensuel",
+  "Industrial Production m/m": "Production industrielle mensuel",
+  "Capacity Utilization Rate": "Taux utilisation capacité",
+  "Trade Balance": "Balance commerciale",
+  "Current Account": "Compte courant",
+  "Consumer Confidence": "Confiance des consommateurs",
+  "CB Consumer Confidence": "Confiance consommateurs CB",
+  "Michigan Consumer Sentiment": "Sentiment consommateurs Michigan",
+  "UoM Consumer Sentiment": "Sentiment consommateurs Michigan",
+  "Building Permits": "Permis de construire",
+  "Housing Starts": "Mises en chantier",
+  "Existing Home Sales": "Ventes logements existants",
+  "New Home Sales": "Ventes de logements neufs",
+  "Pending Home Sales m/m": "Ventes logements en attente mensuel",
+  "Initial Jobless Claims": "Inscriptions chômage hebdo",
+  "Continuing Jobless Claims": "Demandeurs emploi continus",
+  "ADP Nonfarm Employment Change": "Emploi privé ADP",
+  "Average Hourly Earnings m/m": "Salaire horaire moyen mensuel",
+  "Average Hourly Earnings y/y": "Salaire horaire moyen annuel",
+  "PCE Price Index m/m": "Déflateur PCE mensuel",
+  "Core PCE Price Index m/m": "PCE core mensuel",
+  "PCE Price Index y/y": "Déflateur PCE annuel",
+  "Core PCE Price Index y/y": "PCE core annuel",
+  "Personal Income m/m": "Revenus des ménages mensuel",
+  "Personal Spending m/m": "Dépenses des ménages mensuel",
+  "Empire State Manufacturing Index": "Indice manufacturier Empire State",
+  "Philadelphia Fed Manufacturing Index": "Indice manufacturier Philly Fed",
+  "Chicago PMI": "PMI Chicago",
+  "Dallas Fed Manufacturing Index": "Indice manufacturier Dallas Fed",
+  "Richmond Manufacturing Index": "Indice manufacturier Richmond",
+  "Factory Orders m/m": "Commandes usines mensuel",
+  "Wholesale Inventories m/m": "Stocks grossistes mensuel",
+  "Business Inventories m/m": "Stocks entreprises mensuel",
+  "Job Openings": "Offres d'emploi (JOLTS)",
+  "JOLTS Job Openings": "Offres d'emploi JOLTS",
+  "Challenger Job Cuts y/y": "Suppressions emplois Challenger",
+  "Natural Gas Storage": "Stocks gaz naturel",
+  "Crude Oil Inventories": "Stocks brut pétrole",
+  "EIA Crude Oil Inventories": "Stocks pétrole EIA",
+  "Baker Hughes Oil Rig Count": "Nombre plateformes pétrolières",
+  "Treasury Secretary Speech": "Discours Secrétaire Trésor",
+  "Fed Chair Powell Speech": "Discours Président Fed Powell",
+  "Fed Chair Speech": "Discours Président Fed",
+
+  // -- EUR / BCE --
+  "ECB Interest Rate Decision": "Décision taux BCE",
+  "ECB Monetary Policy Statement": "Déclaration politique monétaire BCE",
+  "ECB Press Conference": "Conférence presse BCE",
+  "ECB President Lagarde Speech": "Discours Présidente BCE Lagarde",
+  "German GDP q/q": "PIB Allemagne trimestriel",
+  "German CPI m/m": "IPC Allemagne mensuel",
+  "German CPI y/y": "IPC Allemagne annuel",
+  "German Unemployment Change": "Variation chômage Allemagne",
+  "German Unemployment Rate": "Taux chômage Allemagne",
+  "German Manufacturing PMI": "PMI manufacturier Allemagne",
+  "German Services PMI": "PMI services Allemagne",
+  "German Ifo Business Climate": "Climat affaires Ifo Allemagne",
+  "German ZEW Economic Sentiment": "Sentiment économique ZEW Allemagne",
+  "French GDP q/q": "PIB France trimestriel",
+  "French CPI m/m": "IPC France mensuel",
+  "French Manufacturing PMI": "PMI manufacturier France",
+  "Eurozone GDP q/q": "PIB Zone Euro trimestriel",
+  "Eurozone CPI y/y": "IPC Zone Euro annuel",
+  "Eurozone Core CPI y/y": "IPC core Zone Euro annuel",
+  "Eurozone Unemployment Rate": "Taux chômage Zone Euro",
+  "Eurozone Trade Balance": "Balance commerciale Zone Euro",
+  "Eurozone Retail Sales m/m": "Ventes au détail Zone Euro mensuel",
+  "Eurozone Manufacturing PMI": "PMI manufacturier Zone Euro",
+  "Eurozone Services PMI": "PMI services Zone Euro",
+  "ZEW Economic Sentiment": "Sentiment économique ZEW",
+  "Sentix Investor Confidence": "Confiance investisseurs Sentix",
+
+  // -- GBP / BOE --
+  "BOE Interest Rate Decision": "Décision taux Banque d'Angleterre",
+  "BOE Monetary Policy Report": "Rapport politique monétaire BOE",
+  "BOE Governor Bailey Speech": "Discours Gouverneur BOE Bailey",
+  "UK GDP m/m": "PIB Royaume-Uni mensuel",
+  "UK GDP q/q": "PIB Royaume-Uni trimestriel",
+  "UK CPI y/y": "IPC Royaume-Uni annuel",
+  "UK CPI m/m": "IPC Royaume-Uni mensuel",
+  "UK Unemployment Rate": "Taux chômage Royaume-Uni",
+  "UK Retail Sales m/m": "Ventes au détail UK mensuel",
+  "UK Manufacturing PMI": "PMI manufacturier UK",
+  "UK Services PMI": "PMI services UK",
+
+  // -- JPY / BOJ --
+  "BOJ Interest Rate Decision": "Décision taux Banque du Japon",
+  "BOJ Monetary Policy Statement": "Déclaration politique monétaire BOJ",
+  "BOJ Press Conference": "Conférence presse BOJ",
+  "Japanese GDP q/q": "PIB Japon trimestriel",
+  "Japanese CPI y/y": "IPC Japon annuel",
+  "Tokyo CPI y/y": "IPC Tokyo annuel",
+  "Japanese Unemployment Rate": "Taux chômage Japon",
+  "Japanese Trade Balance": "Balance commerciale Japon",
+  "Tankan Manufacturing Index": "Indice Tankan manufacturier",
+
+  // -- CAD / BOC --
+  "BOC Interest Rate Decision": "Décision taux Banque Canada",
+  "BOC Rate Statement": "Communiqué taux Banque Canada",
+  "Canadian GDP m/m": "PIB Canada mensuel",
+  "Canadian CPI m/m": "IPC Canada mensuel",
+  "Canadian Employment Change": "Variation emploi Canada",
+  "Canadian Unemployment Rate": "Taux chômage Canada",
+  "Canadian Trade Balance": "Balance commerciale Canada",
+  "Ivey PMI": "PMI Ivey",
+
+  // -- AUD / RBA --
+  "RBA Interest Rate Decision": "Décision taux RBA",
+  "RBA Rate Statement": "Communiqué taux RBA",
+  "Australian GDP q/q": "PIB Australie trimestriel",
+  "Australian CPI q/q": "IPC Australie trimestriel",
+  "Australian Employment Change": "Variation emploi Australie",
+  "Australian Unemployment Rate": "Taux chômage Australie",
+  "Australian Trade Balance": "Balance commerciale Australie",
+
+  // -- CNY --
+  "Chinese GDP q/q": "PIB Chine trimestriel",
+  "Chinese GDP y/y": "PIB Chine annuel",
+  "Chinese CPI y/y": "IPC Chine annuel",
+  "Chinese Manufacturing PMI": "PMI manufacturier Chine",
+  "Chinese Non-Manufacturing PMI": "PMI non-manufacturier Chine",
+  "Caixin Manufacturing PMI": "PMI manufacturier Caixin",
+  "Caixin Services PMI": "PMI services Caixin",
+  "Chinese Trade Balance": "Balance commerciale Chine",
+  "Chinese Industrial Production y/y": "Production industrielle Chine annuel",
+  "Chinese Retail Sales y/y": "Ventes au détail Chine annuel",
+
+  // -- Generic --
+  "Interest Rate Decision": "Décision de taux directeur",
+  "Monetary Policy Statement": "Déclaration de politique monétaire",
+  "Press Conference": "Conférence de presse",
+  "GDP Growth Rate": "Taux de croissance PIB",
+  "Inflation Rate": "Taux d'inflation",
+  "Bank Holiday": "Jour férié",
+  "Public Holiday": "Jour férié",
+  "Market Holiday": "Fermeture marché",
+  "Victoria Day": "Fête de Victoria",
+  "Constitution Day": "Fête de la Constitution",
+  "Ascension Day": "Ascension",
+  "Labour Day": "Fête du Travail",
+  "Independence Day": "Fête Nationale",
+  "Christmas Day": "Noël",
+  "New Year's Day": "Jour de l'An",
+};
+
+/**
+ * Translate event name: exact match first, then partial match, then original
+ */
+function translateEvent(name) {
+  if (!name) return name;
+  // 1. Exact match
+  if (EVENT_TRANSLATIONS[name]) return EVENT_TRANSLATIONS[name];
+  // 2. Partial match — check if any key is contained in the name
+  for (const [en, fr] of Object.entries(EVENT_TRANSLATIONS)) {
+    if (name.toLowerCase().includes(en.toLowerCase())) {
+      return name.replace(new RegExp(en, 'i'), fr);
+    }
+  }
+  // 3. No match — return original
+  return name;
+}
+
+// -- Persistent filter helpers -------------------------------
+const STORAGE_KEYS = {
+  tz:           'eco_tz',
+  dateMode:     'eco_dateMode',
+  impactFilter: 'eco_impactFilter',
+  currencyFilter:'eco_currencyFilter',
+  showUpcoming: 'eco_showUpcoming',
+};
+
+function loadPref(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
+    return JSON.parse(raw);
+  } catch { return fallback; }
+}
+function savePref(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
 
 function getImpact(event) {
@@ -237,7 +455,7 @@ function EventRow({ event, isGroupFirst, showDate, tz = DEFAULT_TZ }) {
         {/* Event name */}
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: '13px', color: past ? '#6a8a7a' : '#e8f8e8', fontWeight: impact === 'high' ? '600' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {event.event ?? event.name ?? '—'}
+            {translateEvent(event.event ?? event.name) ?? '—'}
           </div>
           {upcoming30 && (
             <div style={{ fontSize: '10px', color: '#f0a020', marginTop: '2px', letterSpacing: '1px' }}>⚡ IMMINENTE</div>
@@ -316,12 +534,12 @@ export default function EconomicCalendar() {
   // Timezone
   const [tz, setTz] = useState(getStoredTz);
 
-  // Filters
-  const [dateMode, setDateMode]   = useState('week');
-  const [impactFilter, setImpactFilter] = useState([]); // [] = all
-  const [currencyFilter, setCurrencyFilter] = useState([]); // [] = all
-  const [searchQ, setSearchQ]     = useState('');
-  const [showOnlyUpcoming, setShowOnlyUpcoming] = useState(false);
+  // Filters — persisted in localStorage
+  const [dateMode, setDateMode]         = useState(() => loadPref(STORAGE_KEYS.dateMode, 'week'));
+  const [impactFilter, setImpactFilter] = useState(() => loadPref(STORAGE_KEYS.impactFilter, []));
+  const [currencyFilter, setCurrencyFilter] = useState(() => loadPref(STORAGE_KEYS.currencyFilter, []));
+  const [searchQ, setSearchQ]           = useState('');
+  const [showOnlyUpcoming, setShowOnlyUpcoming] = useState(() => loadPref(STORAGE_KEYS.showUpcoming, false));
 
   const intervalRef = useRef(null);
 
@@ -392,11 +610,37 @@ export default function EconomicCalendar() {
   const upcoming30   = filtered.filter(e => isUpcoming(e.time ?? e.date, 30)).length;
   const withActual   = filtered.filter(e => e.actual != null && e.actual !== '').length;
 
+  function setDateModePersist(val) {
+    setDateMode(val);
+    savePref(STORAGE_KEYS.dateMode, val);
+  }
   function toggleImpact(val) {
-    setImpactFilter(prev => prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]);
+    setImpactFilter(prev => {
+      const next = prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val];
+      savePref(STORAGE_KEYS.impactFilter, next);
+      return next;
+    });
   }
   function toggleCurrency(cur) {
-    setCurrencyFilter(prev => prev.includes(cur) ? prev.filter(x => x !== cur) : [...prev, cur]);
+    setCurrencyFilter(prev => {
+      const next = prev.includes(cur) ? prev.filter(x => x !== cur) : [...prev, cur];
+      savePref(STORAGE_KEYS.currencyFilter, next);
+      return next;
+    });
+  }
+  function toggleUpcoming() {
+    setShowOnlyUpcoming(prev => {
+      savePref(STORAGE_KEYS.showUpcoming, !prev);
+      return !prev;
+    });
+  }
+  function resetImpact() {
+    setImpactFilter([]);
+    savePref(STORAGE_KEYS.impactFilter, []);
+  }
+  function resetCurrency() {
+    setCurrencyFilter([]);
+    savePref(STORAGE_KEYS.currencyFilter, []);
   }
 
   return (
@@ -457,7 +701,7 @@ export default function EconomicCalendar() {
               { key: 'next7', label: '7 prochains j.' },
               { key: 'month', label: 'Ce mois' },
             ].map(({ key, label }) => (
-              <button key={key} onClick={() => setDateMode(key)}
+              <button key={key} onClick={() => setDateModePersist(key)}
                 style={{ padding: '5px 10px', borderRadius: '4px', border: `1px solid ${dateMode === key ? '#00ff88' : '#1a3a22'}`, background: dateMode === key ? 'rgba(0,255,136,0.12)' : 'transparent', color: dateMode === key ? '#00ff88' : '#3a6a4a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '0.5px', transition: 'all 0.12s' }}
               >{label}</button>
             ))}
@@ -469,7 +713,7 @@ export default function EconomicCalendar() {
             style={{ background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: '4px', padding: '5px 10px', color: '#c8d8c8', fontSize: '10px', fontFamily: 'inherit', outline: 'none', width: '200px', caretColor: '#00ff88' }}
           />
           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '10px', color: showOnlyUpcoming ? '#f0a020' : '#3a6a4a', marginLeft: 'auto' }}>
-            <div onClick={() => setShowOnlyUpcoming(s => !s)}
+            <div onClick={toggleUpcoming}
               style={{ width: '28px', height: '16px', borderRadius: '8px', background: showOnlyUpcoming ? 'rgba(240,160,32,0.3)' : 'rgba(0,255,136,0.08)', border: `1px solid ${showOnlyUpcoming ? '#f0a020' : 'rgba(0,255,136,0.15)'}`, position: 'relative', transition: 'all 0.2s', cursor: 'pointer' }}>
               <div style={{ position: 'absolute', top: '2px', left: showOnlyUpcoming ? '14px' : '2px', width: '10px', height: '10px', borderRadius: '50%', background: showOnlyUpcoming ? '#f0a020' : '#3a6a4a', transition: 'left 0.2s' }} />
             </div>
@@ -488,7 +732,7 @@ export default function EconomicCalendar() {
             </button>
           ))}
           {impactFilter.length > 0 && (
-            <button onClick={() => setImpactFilter([])} style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #1a3a22', background: 'transparent', color: '#3a5a3a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>✕ Reset</button>
+            <button onClick={resetImpact} style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #1a3a22', background: 'transparent', color: '#3a5a3a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>✕ Reset</button>
           )}
         </div>
 
@@ -503,7 +747,7 @@ export default function EconomicCalendar() {
             </button>
           ))}
           {currencyFilter.length > 0 && (
-            <button onClick={() => setCurrencyFilter([])} style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #1a3a22', background: 'transparent', color: '#3a5a3a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>✕ Reset</button>
+            <button onClick={resetCurrency} style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #1a3a22', background: 'transparent', color: '#3a5a3a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>✕ Reset</button>
           )}
         </div>
         {/* Row 4: Timezone selector */}
