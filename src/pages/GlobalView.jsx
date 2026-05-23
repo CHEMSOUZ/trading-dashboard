@@ -23,11 +23,14 @@ const HOUR_SESSIONS = [
   { label: 'New York',    start: 13, end: 22, color: '#00ff88' },
   { label: 'Hors séance', start: 22, end: 24, color: '#f0a020' },
 ];
-function getSession(h) {
-  if (h >= 13 && h < 22) return HOUR_SESSIONS[2];
-  if (h >= 8  && h < 15) return HOUR_SESSIONS[1];
-  if (h >= 0  && h < 9)  return HOUR_SESSIONS[0];
-  return HOUR_SESSIONS[3];
+function getSessionLabel(h) {
+  if (h >= 13 && h < 22) return 'New York';
+  if (h >= 8  && h < 15) return 'Londres';
+  if (h >= 0  && h < 9)  return 'Asie';
+  return 'Hors séance';
+}
+function getSessionObj(label) {
+  return HOUR_SESSIONS.find(s => s.label === label) ?? HOUR_SESSIONS[3];
 }
 
 // ── Tooltip ───────────────────────────────────────────────────
@@ -66,7 +69,7 @@ function Section({ title, children }) {
   );
 }
 
-// ── Insight Card (clickable) ──────────────────────────────────
+// ── Insight Card ──────────────────────────────────────────────
 function InsightCard({ icon, title, value, desc, color, onClick }) {
   const rgb = color === '#00ff88' ? '0,255,136'
     : color === '#ff4455' ? '255,68,85'
@@ -89,97 +92,97 @@ function InsightCard({ icon, title, value, desc, color, onClick }) {
   );
 }
 
-// ── Session Trades Modal ──────────────────────────────────────
-function SessionModal({ session, trades, onClose }) {
-  const sessionTrades = trades.filter(t => {
-    if (!t.entered_at) return false;
-    return getSession(new Date(t.entered_at).getHours()) === session;
-  }).sort((a,b) => new Date(b.entered_at || b.date) - new Date(a.entered_at || a.date));
-
-  const wins   = sessionTrades.filter(t => getNet(t) > 0);
-  const losses = sessionTrades.filter(t => getNet(t) < 0);
-  const pnl    = sessionTrades.reduce((s,t) => s + getNet(t), 0);
-  const wr     = sessionTrades.length > 0 ? Math.round((wins.length / sessionTrades.length) * 100) : 0;
-
+// ── Trade Table (shared) ──────────────────────────────────────
+function TradeTable({ trades }) {
   const [filter, setFilter] = useState('ALL');
-  const filtered = filter === 'WIN' ? wins : filter === 'LOSS' ? losses : sessionTrades;
+  const filtered = filter === 'WIN' ? trades.filter(t => getNet(t) > 0)
+    : filter === 'LOSS' ? trades.filter(t => getNet(t) < 0)
+    : trades;
+  const pnl  = filtered.reduce((s,t) => s + getNet(t), 0);
+  const wins = filtered.filter(t => getNet(t) > 0).length;
+  const wr   = filtered.length > 0 ? Math.round((wins / filtered.length) * 100) : 0;
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#070d12', border: `1px solid ${session.color}40`, borderRadius: '10px', width: '100%', maxWidth: '800px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div>
+      {/* Mini stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '12px' }}>
+        {[
+          { label: 'P&L NET', value: fmt(pnl, true), color: pnlColor(pnl) },
+          { label: 'WIN / LOSS', value: `${trades.filter(t=>getNet(t)>0).length}W / ${trades.filter(t=>getNet(t)<0).length}L`, color: '#c8d8c8' },
+          { label: 'WINRATE', value: `${wr}%`, color: wr >= 50 ? '#00ff88' : '#ff4455' },
+          { label: 'TRADES', value: filtered.length, color: '#c8d8c8' },
+        ].map(({ label, value, color }) => (
+          <div key={label} style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '5px', padding: '8px 12px', borderTop: `2px solid ${color}` }}>
+            <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '3px' }}>{label}</div>
+            <div style={{ fontSize: '14px', fontWeight: '700', color }}>{value}</div>
+          </div>
+        ))}
+      </div>
 
+      {/* Filter buttons */}
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+        {['ALL','WIN','LOSS'].map(f => {
+          const c = f === 'WIN' ? '#00ff88' : f === 'LOSS' ? '#ff4455' : '#00ff88';
+          return (
+            <button key={f} onClick={() => setFilter(f)} style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${filter===f?c:'#1a3a22'}`, background: filter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':'0,255,136'},0.1)`:'transparent', color: filter===f?c:'#3a6a4a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>
+          );
+        })}
+      </div>
+
+      {/* Header */}
+      <div style={{ display: 'grid', gridTemplateColumns: '100px 75px 58px 88px 88px 100px 78px 1fr', gap: '6px', padding: '5px 10px', fontSize: '10px', color: '#2a5a32', letterSpacing: '1.5px', borderBottom: '1px solid rgba(0,255,136,0.06)', marginBottom: '4px' }}>
+        <span>DATE</span><span>PAIRE</span><span>DIR.</span><span>ENTRÉE</span><span>SORTIE</span><span>P&L NET</span><span>DURÉE</span><span>COMPTE</span>
+      </div>
+
+      {/* Rows */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {filtered.length === 0 ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: '#2a4a30', fontSize: '12px' }}>Aucun trade</div>
+        ) : filtered.map(t => {
+          const net = getNet(t);
+          return (
+            <div key={`${t._accountId}-${t.id}`} style={{ display: 'grid', gridTemplateColumns: '100px 75px 58px 88px 88px 100px 78px 1fr', gap: '6px', alignItems: 'center', padding: '8px 10px', background: 'rgba(10,28,18,0.4)', borderLeft: `2px solid ${pnlColor(net)}`, borderRadius: '4px', fontSize: '12px', transition: 'background 0.1s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.04)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(10,28,18,0.4)'}
+            >
+              <span style={{ color: '#4a7a5a', fontSize: '11px' }}>{t.date}</span>
+              <span style={{ color: '#c8d8c8', fontWeight: '600' }}>{t.pair}</span>
+              <span style={{ color: t.direction==='LONG'?'#00ff88':'#ff4455', fontSize: '11px', background: `rgba(${t.direction==='LONG'?'0,255,136':'255,68,85'},0.08)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
+              <span style={{ color: '#8aaa90' }}>{t.entry ?? '—'}</span>
+              <span style={{ color: '#8aaa90' }}>{t.exit_price ?? '—'}</span>
+              <span style={{ color: pnlColor(net), fontWeight: '700' }}>{fmt(net, true)}</span>
+              <span style={{ color: '#4a7a5a', fontSize: '11px' }}>{t.duration ?? '—'}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: t._accountColor ?? '#3a6a4a', flexShrink: 0 }} />
+                <span style={{ color: '#4a7a5a', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t._accountName ?? '—'}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Generic Modal ─────────────────────────────────────────────
+function TradeModal({ title, subtitle, color, trades, onClose }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#070d12', border: `1px solid ${color}40`, borderRadius: '10px', width: '100%', maxWidth: '860px', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Header */}
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(0,255,136,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div style={{ padding: '18px 24px', borderBottom: '1px solid rgba(0,255,136,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: session.color }} />
-              <span style={{ fontSize: '18px', fontWeight: '700', color: '#e8f8e8' }}>Session {session.label}</span>
-              <span style={{ fontSize: '12px', color: '#4a7a5a' }}>{session.start}h – {session.end}h</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color }} />
+              <span style={{ fontSize: '18px', fontWeight: '700', color: '#e8f8e8' }}>{title}</span>
             </div>
-            <div style={{ display: 'flex', gap: '16px' }}>
-              <span style={{ fontSize: '13px', color: pnlColor(pnl), fontWeight: '700' }}>{fmt(pnl, true)}</span>
-              <span style={{ fontSize: '13px', color: wr >= 50 ? '#00ff88' : '#ff4455' }}>{wr}% WR</span>
-              <span style={{ fontSize: '13px', color: '#4a7a5a' }}>{sessionTrades.length} trades</span>
-            </div>
+            <span style={{ fontSize: '12px', color: '#4a7a5a' }}>{subtitle}</span>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: '1px solid #1a3a22', color: '#4a7a5a', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
         </div>
-
-        {/* Summary */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', padding: '14px 24px', borderBottom: '1px solid rgba(0,255,136,0.06)', flexShrink: 0 }}>
-          {[
-            { label: 'GAGNANTS', value: wins.length, pnl: wins.reduce((s,t) => s+getNet(t),0), color: '#00ff88' },
-            { label: 'PERDANTS', value: losses.length, pnl: losses.reduce((s,t) => s+getNet(t),0), color: '#ff4455' },
-            { label: 'FRAIS', value: `${sessionTrades.reduce((s,t)=>s+(t.fees??0)+(t.commissions??0),0).toFixed(2)}$`, color: '#f0a020' },
-          ].map(({ label, value, pnl: p, color }) => (
-            <div key={label} style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '6px', padding: '10px 14px', borderTop: `2px solid ${color}` }}>
-              <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '1.5px', marginBottom: '4px' }}>{label}</div>
-              <div style={{ fontSize: '18px', fontWeight: '700', color }}>{value}</div>
-              {p != null && <div style={{ fontSize: '11px', color, marginTop: '2px' }}>{fmt(p, true)}</div>}
-            </div>
-          ))}
-        </div>
-
-        {/* Filter */}
-        <div style={{ display: 'flex', gap: '6px', padding: '10px 24px', borderBottom: '1px solid rgba(0,255,136,0.06)', flexShrink: 0 }}>
-          {['ALL','WIN','LOSS'].map(f => {
-            const c = f === 'WIN' ? '#00ff88' : f === 'LOSS' ? '#ff4455' : '#00ff88';
-            return (
-              <button key={f} onClick={() => setFilter(f)} style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${filter===f?c:'#1a3a22'}`, background: filter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':'0,255,136'},0.1)`:'transparent', color: filter===f?c:'#3a6a4a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>
-            );
-          })}
-        </div>
-
-        {/* Trade list */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '10px 24px' }}>
-          {filtered.length === 0 ? (
-            <div style={{ padding: '30px', textAlign: 'center', color: '#2a4a30', fontSize: '12px' }}>Aucun trade</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {/* Header row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '100px 70px 60px 90px 90px 90px 80px 1fr', gap: '8px', padding: '6px 10px', fontSize: '10px', color: '#2a5a32', letterSpacing: '1.5px', borderBottom: '1px solid rgba(0,255,136,0.06)' }}>
-                <span>DATE</span><span>PAIRE</span><span>DIR.</span><span>ENTRÉE</span><span>SORTIE</span><span>P&L NET</span><span>DURÉE</span><span>COMPTE</span>
-              </div>
-              {filtered.map(t => {
-                const net = getNet(t);
-                return (
-                  <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '100px 70px 60px 90px 90px 90px 80px 1fr', gap: '8px', alignItems: 'center', padding: '9px 10px', background: 'rgba(10,28,18,0.4)', borderLeft: `2px solid ${pnlColor(net)}`, borderRadius: '4px', fontSize: '12px' }}>
-                    <span style={{ color: '#4a7a5a', fontSize: '11px' }}>{t.date}</span>
-                    <span style={{ color: '#c8d8c8', fontWeight: '600' }}>{t.pair}</span>
-                    <span style={{ color: t.direction==='LONG'?'#00ff88':'#ff4455', fontSize: '11px', background: `rgba(${t.direction==='LONG'?'0,255,136':'255,68,85'},0.08)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
-                    <span style={{ color: '#8aaa90' }}>{t.entry ?? '—'}</span>
-                    <span style={{ color: '#8aaa90' }}>{t.exit_price ?? '—'}</span>
-                    <span style={{ color: pnlColor(net), fontWeight: '700' }}>{fmt(net, true)}</span>
-                    <span style={{ color: '#4a7a5a', fontSize: '11px' }}>{t.duration ?? '—'}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: t._accountColor ?? '#3a6a4a', flexShrink: 0 }} />
-                      <span style={{ color: '#4a7a5a', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t._accountName ?? '—'}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+        {/* Content */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '16px 24px' }}>
+          <TradeTable trades={trades} />
         </div>
       </div>
     </div>
@@ -192,9 +195,9 @@ export default function GlobalView() {
   const [accounts, setAccounts]     = useState([]);
   const [loading, setLoading]       = useState(true);
   const [selectedAccounts, setSelectedAccounts] = useState([]);
-  const [sessionModal, setSessionModal] = useState(null); // session object to show in modal
-  const [tradeFilter, setTradeFilter]   = useState('ALL');
-  const [tradeSearch, setTradeSearch]   = useState('');
+  const [modal, setModal]           = useState(null); // { title, subtitle, color, trades }
+  const [tradeFilter, setTradeFilter] = useState('ALL');
+  const [tradeSearch, setTradeSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -203,84 +206,77 @@ export default function GlobalView() {
       if (!accRes.ok) return;
       const accs = accRes.data.accounts;
       setAccounts(accs);
-
       const activeRes = await window.accounts.getActive();
-      const currentActiveId = activeRes.ok ? activeRes.data?.id : null;
-
+      const currentId = activeRes.ok ? activeRes.data?.id : null;
       const allT = [];
       for (const acc of accs) {
         await window.accounts.setActive(acc.id);
         const tRes = await window.db.getAllTrades();
-        if (tRes.ok) {
-          tRes.data.forEach(t => allT.push({ ...t, _accountId: acc.id, _accountName: acc.name, _accountColor: acc.color }));
-        }
+        if (tRes.ok) tRes.data.forEach(t => allT.push({ ...t, _accountId: acc.id, _accountName: acc.name, _accountColor: acc.color }));
       }
-      if (currentActiveId) await window.accounts.setActive(currentActiveId);
+      if (currentId) await window.accounts.setActive(currentId);
       setAllTrades(allT);
-    } catch (e) { console.error('GlobalView:', e); }
+    } catch(e) { console.error('GlobalView:', e); }
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const trades = selectedAccounts.length === 0
-    ? allTrades
-    : allTrades.filter(t => selectedAccounts.includes(t._accountId));
+  const trades = selectedAccounts.length === 0 ? allTrades : allTrades.filter(t => selectedAccounts.includes(t._accountId));
 
   // ── Global stats ──────────────────────────────────────────
   const total   = trades.length;
-  const pnl     = trades.reduce((s, t) => s + getNet(t), 0);
+  const pnl     = trades.reduce((s,t) => s + getNet(t), 0);
   const wins    = trades.filter(t => getNet(t) > 0).length;
   const losses  = trades.filter(t => getNet(t) < 0).length;
   const winrate = total > 0 ? (wins / total) * 100 : 0;
-  const grossW  = trades.filter(t => getNet(t) > 0).reduce((s,t) => s + getNet(t), 0);
-  const grossL  = trades.filter(t => getNet(t) < 0).reduce((s,t) => s + Math.abs(getNet(t)), 0);
+  const grossW  = trades.filter(t => getNet(t) > 0).reduce((s,t) => s+getNet(t), 0);
+  const grossL  = trades.filter(t => getNet(t) < 0).reduce((s,t) => s+Math.abs(getNet(t)), 0);
   const pf      = grossL > 0 ? grossW / grossL : grossW > 0 ? 999 : 0;
-  const fees    = trades.reduce((s,t) => s + (t.fees ?? 0) + (t.commissions ?? 0), 0);
+  const fees    = trades.reduce((s,t) => s+(t.fees??0)+(t.commissions??0), 0);
 
-  // ── By account (detect blown) ─────────────────────────────
-  const TOPSTEP_FLOOR = { topstep_50k: 48000, topstep_100k: 97000, topstep_150k: 145500 };
+  // ── By account ────────────────────────────────────────────
+  const FLOORS = { topstep_50k: 48000, topstep_100k: 97000, topstep_150k: 145500 };
   const byAccount = accounts.map(acc => {
-    const accTrades = allTrades.filter(t => t._accountId === acc.id);
-    const accPnl    = accTrades.reduce((s,t) => s + getNet(t), 0);
-    const accWins   = accTrades.filter(t => getNet(t) > 0).length;
-    const accWR     = accTrades.length > 0 ? (accWins / accTrades.length) * 100 : 0;
-    const floor     = TOPSTEP_FLOOR[acc.type] ?? null;
-    const balance   = 50000 + accPnl; // estimated
-    const isBlown   = floor != null && balance <= floor;
-    return { name: acc.name, color: acc.color, type: acc.type, total: accTrades.length, pnl: accPnl, wr: accWR, isBlown, balance };
+    const at = allTrades.filter(t => t._accountId === acc.id);
+    const ap = at.reduce((s,t) => s+getNet(t), 0);
+    const aw = at.filter(t => getNet(t) > 0).length;
+    const floor = FLOORS[acc.type] ?? null;
+    const balance = 50000 + ap;
+    const isBlown = floor != null && balance <= floor;
+    return { name: acc.name, color: acc.color, type: acc.type, total: at.length, pnl: ap, wr: at.length > 0 ? (aw/at.length)*100 : 0, isBlown, balance };
   }).filter(a => a.total > 0);
 
   // ── By DOW ────────────────────────────────────────────────
   const byDow = DOW_LABELS.map((label, i) => {
-    const dt  = trades.filter(t => new Date(t.date).getDay() === i);
-    const dp  = dt.reduce((s,t) => s + getNet(t), 0);
-    const dw  = dt.filter(t => getNet(t) > 0).length;
-    return { label, pnl: Math.round(dp * 100) / 100, count: dt.length, wr: dt.length > 0 ? Math.round((dw/dt.length)*100) : 0 };
+    const dt = trades.filter(t => new Date(t.date).getDay() === i);
+    const dp = dt.reduce((s,t) => s+getNet(t), 0);
+    const dw = dt.filter(t => getNet(t) > 0).length;
+    return { label, pnl: Math.round(dp*100)/100, count: dt.length, wr: dt.length > 0 ? Math.round((dw/dt.length)*100) : 0 };
   });
 
-  // ── By hour (all 24h with trades) ────────────────────────
+  // ── By hour ───────────────────────────────────────────────
   const byHour = Array.from({ length: 24 }, (_, h) => {
-    const ht  = trades.filter(t => t.entered_at && new Date(t.entered_at).getHours() === h);
-    const hp  = ht.reduce((s,t) => s + getNet(t), 0);
-    const hw  = ht.filter(t => getNet(t) > 0).length;
-    const ses = getSession(h);
+    const ht = trades.filter(t => t.entered_at && new Date(t.entered_at).getHours() === h);
+    const hp = ht.reduce((s,t) => s+getNet(t), 0);
+    const hw = ht.filter(t => getNet(t) > 0).length;
+    const ses = getSessionObj(getSessionLabel(h));
     return { label: `${h}h`, hour: h, pnl: Math.round(hp*100)/100, count: ht.length, wr: ht.length > 0 ? Math.round((hw/ht.length)*100) : 0, sessionColor: ses.color };
   });
-  // Show all hours 0-22 even if empty (for readability), filter out late night empties
   const hourDataFull = byHour.filter(h => h.count > 0 || (h.hour >= 1 && h.hour <= 22));
 
-  // ── By session ────────────────────────────────────────────
+  // ── By session (by LABEL to avoid object ref issues) ─────
   const bySessions = HOUR_SESSIONS.map(session => {
-    const st  = trades.filter(t => t.entered_at && getSession(new Date(t.entered_at).getHours()) === session);
-    const sp  = st.reduce((s,t) => s + getNet(t), 0);
-    const sw  = st.filter(t => getNet(t) > 0).length;
-    return { ...session, pnl: sp, count: st.length, wr: st.length > 0 ? Math.round((sw/st.length)*100) : 0 };
+    // Use label-based matching
+    const st = trades.filter(t => t.entered_at && getSessionLabel(new Date(t.entered_at).getHours()) === session.label);
+    const sp = st.reduce((s,t) => s+getNet(t), 0);
+    const sw = st.filter(t => getNet(t) > 0).length;
+    return { ...session, pnl: Math.round(sp*100)/100, count: st.length, wr: st.length > 0 ? Math.round((sw/st.length)*100) : 0 };
   });
 
   // ── By pair ───────────────────────────────────────────────
   const byPair = trades.reduce((acc, t) => {
-    if (!acc[t.pair]) acc[t.pair] = { total: 0, wins: 0, pnl: 0 };
+    if (!acc[t.pair]) acc[t.pair] = { total:0, wins:0, pnl:0 };
     acc[t.pair].total++;
     if (getNet(t) > 0) acc[t.pair].wins++;
     acc[t.pair].pnl += getNet(t);
@@ -291,7 +287,7 @@ export default function GlobalView() {
   // ── By emotion ────────────────────────────────────────────
   const byEmotion = trades.reduce((acc, t) => {
     const em = t.emotion ?? 'Inconnu';
-    if (!acc[em]) acc[em] = { total: 0, wins: 0, pnl: 0 };
+    if (!acc[em]) acc[em] = { total:0, wins:0, pnl:0 };
     acc[em].total++;
     if (getNet(t) > 0) acc[em].wins++;
     acc[em].pnl += getNet(t);
@@ -299,29 +295,47 @@ export default function GlobalView() {
   }, {});
   const emotionArr = Object.entries(byEmotion).sort(([,a],[,b]) => b.total - a.total).map(([em, d]) => ({ em, ...d, wr: Math.round(d.wins/d.total*100) }));
 
-  // ── Insights ──────────────────────────────────────────────
+  // ── Insights — sorted by P&L ──────────────────────────────
   const bestDow      = [...byDow].filter(d => d.count > 0).sort((a,b) => b.pnl - a.pnl)[0];
   const worstDow     = [...byDow].filter(d => d.count > 0).sort((a,b) => a.pnl - b.pnl)[0];
-  const bestSession  = [...bySessions].filter(s => s.count >= 3).sort((a,b) => b.wr - a.wr)[0];
-  const worstSession = [...bySessions].filter(s => s.count >= 3).sort((a,b) => a.wr - b.wr)[0];
+  const bestSession  = [...bySessions].filter(s => s.count >= 3).sort((a,b) => b.pnl - a.pnl)[0];
+  const worstSession = [...bySessions].filter(s => s.count >= 3).sort((a,b) => a.pnl - b.pnl)[0];
   const bestHour     = [...byHour].filter(h => h.count >= 2).sort((a,b) => b.pnl - a.pnl)[0];
   const worstHour    = [...byHour].filter(h => h.count >= 2).sort((a,b) => a.pnl - b.pnl)[0];
   const bestPair     = [...pairArr].sort((a,b) => b.pnl - a.pnl)[0];
   const worstPair    = [...pairArr].filter(p => p.total >= 2).sort((a,b) => a.pnl - b.pnl)[0];
-  const bestEmotion  = [...emotionArr].filter(e => e.total >= 2).sort((a,b) => b.wr - a.wr)[0];
-  const worstEmotion = [...emotionArr].filter(e => e.total >= 2).sort((a,b) => a.wr - b.wr)[0];
+  const bestEmotion  = [...emotionArr].filter(e => e.total >= 2).sort((a,b) => b.pnl - a.pnl)[0];
+  const worstEmotion = [...emotionArr].filter(e => e.total >= 2).sort((a,b) => a.pnl - b.pnl)[0];
 
-  // ── All trades filtered ───────────────────────────────────
+  // ── Modal openers ─────────────────────────────────────────
+  function openDow(dow) {
+    const dowIndex = DOW_LABELS.indexOf(dow.label);
+    const t = trades.filter(t => new Date(t.date).getDay() === dowIndex);
+    setModal({ title: `Trades du ${dow.label}`, subtitle: `${t.length} trades · ${fmt(dow.pnl, true)} · ${dow.wr}% WR`, color: pnlColor(dow.pnl), trades: t.sort((a,b) => b.date.localeCompare(a.date)) });
+  }
+
+  function openSession(session) {
+    // Match by label string — fix for object ref issue
+    const t = trades.filter(t => t.entered_at && getSessionLabel(new Date(t.entered_at).getHours()) === session.label);
+    setModal({ title: `Session ${session.label}`, subtitle: `${session.start}h – ${session.end}h · ${t.length} trades · ${fmt(session.pnl, true)} · ${session.wr}% WR`, color: session.color, trades: t.sort((a,b) => (b.entered_at||b.date).localeCompare(a.entered_at||a.date)) });
+  }
+
+  function openHour(hour) {
+    const t = trades.filter(t => t.entered_at && new Date(t.entered_at).getHours() === hour.hour);
+    setModal({ title: `Trades à ${hour.label}`, subtitle: `Session ${getSessionLabel(hour.hour)} · ${t.length} trades · ${fmt(hour.pnl, true)} · ${hour.wr}% WR`, color: hour.pnl >= 0 ? '#00ff88' : '#ff4455', trades: t.sort((a,b) => (b.entered_at||b.date).localeCompare(a.entered_at||a.date)) });
+  }
+
+  // ── All trades filtered list ──────────────────────────────
   const allTradesFiltered = trades.filter(t => {
     const net = getNet(t);
     if (tradeFilter === 'WIN'  && net <= 0) return false;
     if (tradeFilter === 'LOSS' && net >= 0) return false;
     if (tradeSearch) {
       const q = tradeSearch.toLowerCase();
-      return (t.pair ?? '').toLowerCase().includes(q) || (t.date ?? '').includes(q) || (t._accountName ?? '').toLowerCase().includes(q);
+      return (t.pair??'').toLowerCase().includes(q) || (t.date??'').includes(q) || (t._accountName??'').toLowerCase().includes(q);
     }
     return true;
-  }).sort((a,b) => (b.date).localeCompare(a.date));
+  }).sort((a,b) => b.date.localeCompare(a.date));
 
   const inp = { background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: '4px', padding: '5px 10px', color: '#c8d8c8', fontSize: '12px', fontFamily: 'inherit', outline: 'none' };
 
@@ -338,7 +352,7 @@ export default function GlobalView() {
           <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '6px' }}>ANALYSE GLOBALE</div>
           <h1 style={{ fontSize: '23px', fontWeight: '700', color: '#e8f8e8', margin: 0 }}>Vue Globale</h1>
           <div style={{ fontSize: '12px', color: '#3a6a4a', marginTop: '3px' }}>
-            {accounts.length} compte{accounts.length > 1 ? 's' : ''} · {total} trades · P&L net: <span style={{ color: pnlColor(pnl), fontWeight: '700' }}>{fmt(pnl, true)}</span>
+            {accounts.length} compte{accounts.length > 1 ? 's' : ''} · {total} trades · <span style={{ color: pnlColor(pnl), fontWeight: '700' }}>{fmt(pnl, true)}</span>
           </div>
         </div>
         <button onClick={load} style={{ background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.2)', color: '#00ff88', padding: '8px 14px', borderRadius: '5px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>🔄 Actualiser</button>
@@ -348,12 +362,12 @@ export default function GlobalView() {
       {accounts.length > 1 && (
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '1px' }}>FILTRER :</span>
-          <button onClick={() => setSelectedAccounts([])} style={{ padding: '5px 12px', borderRadius: '4px', border: `1px solid ${selectedAccounts.length === 0 ? '#00ff88' : '#1a3a22'}`, background: selectedAccounts.length === 0 ? 'rgba(0,255,136,0.1)' : 'transparent', color: selectedAccounts.length === 0 ? '#00ff88' : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>Tous</button>
+          <button onClick={() => setSelectedAccounts([])} style={{ padding: '5px 12px', borderRadius: '4px', border: `1px solid ${selectedAccounts.length===0?'#00ff88':'#1a3a22'}`, background: selectedAccounts.length===0?'rgba(0,255,136,0.1)':'transparent', color: selectedAccounts.length===0?'#00ff88':'#3a6a4a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>Tous</button>
           {accounts.map(acc => {
             const active = selectedAccounts.includes(acc.id);
             return (
               <button key={acc.id} onClick={() => setSelectedAccounts(p => active ? p.filter(id => id !== acc.id) : [...p, acc.id])}
-                style={{ padding: '5px 12px', borderRadius: '4px', border: `1px solid ${active ? acc.color : '#1a3a22'}`, background: active ? `${acc.color}15` : 'transparent', color: active ? acc.color : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                style={{ padding: '5px 12px', borderRadius: '4px', border: `1px solid ${active?acc.color:'#1a3a22'}`, background: active?`${acc.color}15`:'transparent', color: active?acc.color:'#3a6a4a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: acc.color }} />
                 {acc.name}
               </button>
@@ -368,11 +382,11 @@ export default function GlobalView() {
         <>
           {/* KPI */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '10px', marginBottom: '20px' }}>
-            <StatCard label="P&L NET TOTAL" value={fmt(pnl, true)} color={pnlColor(pnl)} sub={`Frais: -${fees.toFixed(2)}$`} />
-            <StatCard label="WINRATE GLOBAL" value={`${winrate.toFixed(1)}%`} color={winrate >= 50 ? '#00ff88' : '#ff4455'} sub={`${wins}W / ${losses}L`} />
-            <StatCard label="PROFIT FACTOR" value={pf === 999 ? '∞' : pf.toFixed(2)} color={pf >= 1.5 ? '#00ff88' : '#f0a020'} />
-            <StatCard label="TOTAL TRADES" value={total} color="#c8d8c8" sub={`${accounts.length} compte${accounts.length > 1 ? 's' : ''}`} />
-            <StatCard label="MOYENNE / TRADE" value={fmt(pnl / Math.max(total, 1), true)} color={pnlColor(pnl / Math.max(total, 1))} />
+            <StatCard label="P&L NET TOTAL"  value={fmt(pnl, true)}                color={pnlColor(pnl)}                  sub={`Frais: -${fees.toFixed(2)}$`} />
+            <StatCard label="WINRATE GLOBAL" value={`${winrate.toFixed(1)}%`}       color={winrate>=50?'#00ff88':'#ff4455'} sub={`${wins}W / ${losses}L`} />
+            <StatCard label="PROFIT FACTOR"  value={pf===999?'∞':pf.toFixed(2)}     color={pf>=1.5?'#00ff88':'#f0a020'} />
+            <StatCard label="TOTAL TRADES"   value={total}                          color="#c8d8c8"                        sub={`${accounts.length} compte${accounts.length>1?'s':''}`} />
+            <StatCard label="MOY / TRADE"    value={fmt(pnl/Math.max(total,1),true)} color={pnlColor(pnl/Math.max(total,1))} />
           </div>
 
           {/* ── POINTS FORTS ── */}
@@ -382,11 +396,11 @@ export default function GlobalView() {
             <div style={{ height: '1px', flex: 1, background: 'rgba(0,255,136,0.1)' }} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '20px' }}>
-            {bestDow     && <InsightCard icon="📅" title="MEILLEUR JOUR" value={bestDow.label} desc={`${fmt(bestDow.pnl, true)} · ${bestDow.wr}% WR`} color="#00ff88" />}
-            {bestSession && <InsightCard icon="⏰" title="MEILLEURE SESSION" value={bestSession.label} desc={`${bestSession.wr}% WR · ${bestSession.count} trades`} color={bestSession.color} onClick={() => setSessionModal(bestSession)} />}
-            {bestHour    && <InsightCard icon="🎯" title="HEURE OPTIMALE" value={bestHour.label} desc={`${fmt(bestHour.pnl, true)} · ${bestHour.wr}% WR`} color="#00ff88" />}
-            {bestPair    && <InsightCard icon="📈" title="INSTRUMENT PHARE" value={bestPair.pair} desc={`${fmt(bestPair.pnl, true)} · ${bestPair.wr}% WR`} color="#00aaff" />}
-            {bestEmotion && <InsightCard icon="🧠" title="MEILLEUR ÉTAT MENTAL" value={bestEmotion.em} desc={`${bestEmotion.wr}% WR sur ${bestEmotion.total} trades`} color="#aa88ff" />}
+            {bestDow     && <InsightCard icon="📅" title="MEILLEUR JOUR"          value={bestDow.label}     desc={`${fmt(bestDow.pnl,true)} · ${bestDow.wr}% WR`}        color="#00ff88" onClick={() => openDow(bestDow)} />}
+            {bestSession && <InsightCard icon="⏰" title="MEILLEURE SESSION (P&L)" value={bestSession.label} desc={`${fmt(bestSession.pnl,true)} · ${bestSession.wr}% WR · ${bestSession.count}T`} color={bestSession.color} onClick={() => openSession(bestSession)} />}
+            {bestHour    && <InsightCard icon="🎯" title="HEURE OPTIMALE"          value={bestHour.label}    desc={`${fmt(bestHour.pnl,true)} · ${bestHour.wr}% WR`}       color="#00ff88" onClick={() => openHour(bestHour)} />}
+            {bestPair    && <InsightCard icon="📈" title="INSTRUMENT PHARE"        value={bestPair.pair}     desc={`${fmt(bestPair.pnl,true)} · ${bestPair.wr}% WR`}       color="#00aaff" />}
+            {bestEmotion && <InsightCard icon="🧠" title="MEILLEUR ÉTAT MENTAL"    value={bestEmotion.em}    desc={`${fmt(bestEmotion.pnl,true)} · ${bestEmotion.total}T`} color="#aa88ff" />}
           </div>
 
           {/* ── POINTS FAIBLES ── */}
@@ -396,11 +410,11 @@ export default function GlobalView() {
             <div style={{ height: '1px', flex: 1, background: 'rgba(255,68,85,0.1)' }} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '24px' }}>
-            {worstDow     && <InsightCard icon="📅" title="PIRE JOUR" value={worstDow.label} desc={`${fmt(worstDow.pnl, true)} · ${worstDow.wr}% WR`} color="#ff4455" />}
-            {worstSession && <InsightCard icon="⏰" title="PIRE SESSION" value={worstSession.label} desc={`${worstSession.wr}% WR · ${worstSession.count} trades`} color="#ff4455" onClick={() => setSessionModal(worstSession)} />}
-            {worstHour    && <InsightCard icon="🕐" title="HEURE À ÉVITER" value={worstHour.label} desc={`${fmt(worstHour.pnl, true)} · ${worstHour.wr}% WR`} color="#ff4455" />}
-            {worstPair    && <InsightCard icon="📉" title="INSTRUMENT À REVOIR" value={worstPair.pair} desc={`${fmt(worstPair.pnl, true)} · ${worstPair.wr}% WR`} color="#ff4455" />}
-            {worstEmotion && <InsightCard icon="😟" title="PIRE ÉTAT MENTAL" value={worstEmotion.em} desc={`${worstEmotion.wr}% WR sur ${worstEmotion.total} trades`} color="#ff4455" />}
+            {worstDow     && <InsightCard icon="📅" title="PIRE JOUR"              value={worstDow.label}     desc={`${fmt(worstDow.pnl,true)} · ${worstDow.wr}% WR`}         color="#ff4455" onClick={() => openDow(worstDow)} />}
+            {worstSession && <InsightCard icon="⏰" title="PIRE SESSION (P&L)"      value={worstSession.label} desc={`${fmt(worstSession.pnl,true)} · ${worstSession.wr}% WR · ${worstSession.count}T`} color="#ff4455" onClick={() => openSession(worstSession)} />}
+            {worstHour    && <InsightCard icon="🕐" title="HEURE À ÉVITER"          value={worstHour.label}    desc={`${fmt(worstHour.pnl,true)} · ${worstHour.wr}% WR`}        color="#ff4455" onClick={() => openHour(worstHour)} />}
+            {worstPair    && <InsightCard icon="📉" title="INSTRUMENT À REVOIR"     value={worstPair.pair}     desc={`${fmt(worstPair.pnl,true)} · ${worstPair.wr}% WR`}        color="#ff4455" />}
+            {worstEmotion && <InsightCard icon="😟" title="PIRE ÉTAT MENTAL"        value={worstEmotion.em}    desc={`${fmt(worstEmotion.pnl,true)} · ${worstEmotion.total}T`}  color="#ff4455" />}
           </div>
 
           {/* ── CHARTS ── */}
@@ -409,20 +423,26 @@ export default function GlobalView() {
             {/* DOW */}
             <Section title="📅 P&L NET PAR JOUR DE LA SEMAINE">
               <ResponsiveContainer width="100%" height={160}>
-                <BarChart data={byDow.filter(d => d.count > 0)} barSize={28} barCategoryGap="35%" margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
+                <BarChart data={byDow.filter(d => d.count > 0)} barSize={28} barCategoryGap="35%" margin={{ top:5, right:5, bottom:0, left:5 }}>
                   <CartesianGrid stroke="rgba(0,255,136,0.04)" strokeDasharray="3 3" />
-                  <XAxis dataKey="label" tick={{ fill: '#3a6a4a', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#3a6a4a', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} width={55} />
+                  <XAxis dataKey="label" tick={{ fill:'#3a6a4a', fontSize:11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill:'#3a6a4a', fontSize:10 }} axisLine={false} tickLine={false} tickFormatter={v=>`${v}$`} width={55} />
                   <Tooltip content={<CTooltip />} />
                   <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
-                  <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} maxBarSize={32} isAnimationActive>
+                  <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} maxBarSize={32} isAnimationActive
+                    onClick={(data) => { const d = byDow.find(x => x.label === data.label); if (d) openDow(d); }}
+                    style={{ cursor: 'pointer' }}
+                  >
                     {byDow.filter(d => d.count > 0).map((d, i) => <Cell key={i} fill={pnlColor(d.pnl)} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {byDow.filter(d => d.count > 0).map(d => (
-                  <div key={d.label} style={{ background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.06)', borderRadius: '4px', padding: '5px 8px', textAlign: 'center' }}>
+                  <div key={d.label} onClick={() => openDow(d)} style={{ background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.06)', borderRadius: '4px', padding: '5px 8px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.06)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(10,28,18,0.5)'}
+                  >
                     <div style={{ fontSize: '11px', color: '#4a7a5a', marginBottom: '2px' }}>{d.label}</div>
                     <div style={{ fontSize: '12px', fontWeight: '700', color: pnlColor(d.pnl) }}>{fmt(d.pnl, true)}</div>
                     <div style={{ fontSize: '10px', color: d.wr >= 50 ? '#00ff88' : '#ff4455' }}>{d.wr}% WR</div>
@@ -431,13 +451,13 @@ export default function GlobalView() {
               </div>
             </Section>
 
-            {/* Sessions — cliquable */}
+            {/* Sessions */}
             <Section title="⏰ PERFORMANCE PAR SESSION (cliquer pour voir les trades)">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {bySessions.filter(s => s.count > 0).map(s => (
-                  <div key={s.label} onClick={() => setSessionModal(s)} style={{ cursor: 'pointer', padding: '8px', borderRadius: '6px', transition: 'background 0.15s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.04)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  <div key={s.label} onClick={() => openSession(s)} style={{ cursor: 'pointer', padding: '8px 10px', borderRadius: '6px', transition: 'background 0.15s', border: '1px solid transparent' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,136,0.04)'; e.currentTarget.style.borderColor = 'rgba(0,255,136,0.1)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -447,7 +467,7 @@ export default function GlobalView() {
                       </div>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <span style={{ fontSize: '12px', color: pnlColor(s.pnl), fontWeight: '700' }}>{fmt(s.pnl, true)}</span>
-                        <span style={{ fontSize: '12px', color: s.wr >= 50 ? '#00ff88' : '#ff4455' }}>{s.wr}% WR</span>
+                        <span style={{ fontSize: '12px', color: s.wr>=50?'#00ff88':'#ff4455' }}>{s.wr}% WR</span>
                         <span style={{ fontSize: '11px', color: '#3a6a4a' }}>{s.count}T</span>
                         <span style={{ fontSize: '13px', color: '#3a6a4a' }}>›</span>
                       </div>
@@ -466,25 +486,28 @@ export default function GlobalView() {
 
           {/* By hour */}
           {hourDataFull.filter(h => h.count > 0).length > 0 && (
-            <Section title="🕐 P&L NET PAR HEURE D'ENTRÉE">
+            <Section title="🕐 P&L NET PAR HEURE D'ENTRÉE (cliquer sur une barre)">
               <ResponsiveContainer width="100%" height={170}>
-                <BarChart data={hourDataFull} barSize={14} barCategoryGap="20%" margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
+                <BarChart data={hourDataFull} barSize={14} barCategoryGap="20%" margin={{ top:5, right:5, bottom:0, left:5 }}>
                   <CartesianGrid stroke="rgba(0,255,136,0.04)" strokeDasharray="3 3" />
-                  <XAxis dataKey="label" tick={{ fill: '#3a6a4a', fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
-                  <YAxis tick={{ fill: '#3a6a4a', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} width={55} />
+                  <XAxis dataKey="label" tick={{ fill:'#3a6a4a', fontSize:10 }} axisLine={false} tickLine={false} interval={0} />
+                  <YAxis tick={{ fill:'#3a6a4a', fontSize:10 }} axisLine={false} tickLine={false} tickFormatter={v=>`${v}$`} width={55} />
                   <Tooltip content={<CTooltip />} />
                   <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
-                  <Bar dataKey="pnl" name="P&L net" radius={[2,2,0,0]} maxBarSize={16} isAnimationActive>
+                  <Bar dataKey="pnl" name="P&L net" radius={[2,2,0,0]} maxBarSize={16} isAnimationActive
+                    onClick={(data) => { const h = byHour.find(x => x.label === data.label); if (h && h.count > 0) openHour(h); }}
+                    style={{ cursor: 'pointer' }}
+                  >
                     {hourDataFull.map((h, i) => <Cell key={i} fill={h.count > 0 ? h.sessionColor : 'rgba(0,255,136,0.05)'} fillOpacity={h.count > 0 ? 1 : 0.2} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 {[
-                  { label: 'Asie', hours: '0h-9h', color: '#aa88ff' },
-                  { label: 'Londres', hours: '8h-15h', color: '#00aaff' },
-                  { label: 'New York', hours: '13h-22h', color: '#00ff88' },
-                  { label: 'Hors séance', hours: '22h-0h', color: '#f0a020' },
+                  { label:'Asie',        hours:'0h-9h',   color:'#aa88ff' },
+                  { label:'Londres',     hours:'8h-15h',  color:'#00aaff' },
+                  { label:'New York',    hours:'13h-22h', color:'#00ff88' },
+                  { label:'Hors séance', hours:'22h-0h',  color:'#f0a020' },
                 ].map(s => (
                   <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: s.color }} />
@@ -495,22 +518,22 @@ export default function GlobalView() {
             </Section>
           )}
 
-          {/* By pair + emotion */}
+          {/* Pair + Emotion */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
             <Section title="📊 PERFORMANCE PAR INSTRUMENT">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {pairArr.slice(0, 8).map(p => (
+                {pairArr.slice(0,8).map(p => (
                   <div key={p.pair}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
                       <span style={{ fontSize: '13px', color: '#c8d8c8', fontWeight: '600' }}>{p.pair}</span>
                       <div style={{ display: 'flex', gap: '10px' }}>
                         <span style={{ fontSize: '12px', color: pnlColor(p.pnl), fontWeight: '700' }}>{fmt(p.pnl, true)}</span>
-                        <span style={{ fontSize: '12px', color: p.wr >= 50 ? '#00ff88' : '#ff4455' }}>{p.wr}% WR</span>
+                        <span style={{ fontSize: '12px', color: p.wr>=50?'#00ff88':'#ff4455' }}>{p.wr}% WR</span>
                         <span style={{ fontSize: '11px', color: '#3a6a4a' }}>{p.total}T</span>
                       </div>
                     </div>
                     <div style={{ height: '4px', background: 'rgba(0,255,136,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${p.wr}%`, background: p.pnl >= 0 ? '#00ff88' : '#ff4455', borderRadius: '2px' }} />
+                      <div style={{ height: '100%', width: `${p.wr}%`, background: p.pnl>=0?'#00ff88':'#ff4455', borderRadius: '2px' }} />
                     </div>
                   </div>
                 ))}
@@ -526,15 +549,15 @@ export default function GlobalView() {
                   <div key={e.em} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'rgba(10,28,18,0.4)', borderRadius: '5px', border: '1px solid rgba(0,255,136,0.06)' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '13px', color: '#c8d8c8', fontWeight: '600', marginBottom: '2px' }}>{e.em}</div>
-                      <div style={{ fontSize: '11px', color: '#4a7a5a' }}>{e.total} trade{e.total > 1 ? 's' : ''}</div>
+                      <div style={{ fontSize: '11px', color: '#4a7a5a' }}>{e.total} trade{e.total>1?'s':''}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: '13px', fontWeight: '700', color: pnlColor(e.pnl) }}>{fmt(e.pnl, true)}</div>
-                      <div style={{ fontSize: '12px', color: e.wr >= 50 ? '#00ff88' : '#ff4455' }}>{e.wr}% WR</div>
+                      <div style={{ fontSize: '12px', color: e.wr>=50?'#00ff88':'#ff4455' }}>{e.wr}% WR</div>
                     </div>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: `conic-gradient(${e.wr >= 50 ? '#00ff88' : '#ff4455'} ${e.wr * 3.6}deg, rgba(10,28,18,0.8) 0deg)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: `conic-gradient(${e.wr>=50?'#00ff88':'#ff4455'} ${e.wr*3.6}deg, rgba(10,28,18,0.8) 0deg)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#060c10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '11px', fontWeight: '700', color: e.wr >= 50 ? '#00ff88' : '#ff4455' }}>{e.wr}%</span>
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: e.wr>=50?'#00ff88':'#ff4455' }}>{e.wr}%</span>
                       </div>
                     </div>
                   </div>
@@ -543,24 +566,20 @@ export default function GlobalView() {
             </Section>
           </div>
 
-          {/* ── BY ACCOUNT (with blown detection) ── */}
+          {/* By account */}
           {byAccount.length > 1 && (
             <div style={{ marginTop: '16px' }}>
               <Section title="🏦 PERFORMANCE PAR COMPTE">
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: '10px' }}>
                   {byAccount.map(acc => (
-                    <div key={acc.name} style={{ background: acc.isBlown ? 'rgba(255,68,85,0.06)' : 'rgba(10,28,18,0.5)', border: `1px solid ${acc.isBlown ? 'rgba(255,68,85,0.3)' : acc.color + '25'}`, borderLeft: `3px solid ${acc.isBlown ? '#ff4455' : acc.color}`, borderRadius: '6px', padding: '12px 14px', position: 'relative', opacity: acc.isBlown ? 0.75 : 1 }}>
-                      {acc.isBlown && (
-                        <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,68,85,0.15)', border: '1px solid rgba(255,68,85,0.4)', borderRadius: '3px', padding: '2px 6px', fontSize: '9px', color: '#ff4455', fontWeight: '700', letterSpacing: '1px' }}>
-                          💀 CRAMÉ
-                        </div>
-                      )}
+                    <div key={acc.name} style={{ background: acc.isBlown?'rgba(255,68,85,0.06)':'rgba(10,28,18,0.5)', border: `1px solid ${acc.isBlown?'rgba(255,68,85,0.3)':acc.color+'25'}`, borderLeft: `3px solid ${acc.isBlown?'#ff4455':acc.color}`, borderRadius: '6px', padding: '12px 14px', position: 'relative', opacity: acc.isBlown?0.75:1 }}>
+                      {acc.isBlown && <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,68,85,0.15)', border: '1px solid rgba(255,68,85,0.4)', borderRadius: '3px', padding: '2px 6px', fontSize: '9px', color: '#ff4455', fontWeight: '700', letterSpacing: '1px' }}>💀 CRAMÉ</div>}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: acc.isBlown ? '#ff4455' : acc.color }} />
-                        <span style={{ fontSize: '13px', color: acc.isBlown ? '#8a5a5a' : '#c8d8c8', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{acc.name}</span>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: acc.isBlown?'#ff4455':acc.color }} />
+                        <span style={{ fontSize: '13px', color: acc.isBlown?'#8a5a5a':'#c8d8c8', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{acc.name}</span>
                       </div>
-                      <div style={{ fontSize: '18px', fontWeight: '700', color: acc.isBlown ? '#ff4455' : pnlColor(acc.pnl), marginBottom: '4px' }}>{fmt(acc.pnl, true)}</div>
-                      <div style={{ fontSize: '12px', color: acc.isBlown ? '#6a3a3a' : (acc.wr >= 50 ? '#00ff88' : '#ff4455') }}>{acc.wr.toFixed(1)}% WR · {acc.total}T</div>
+                      <div style={{ fontSize: '18px', fontWeight: '700', color: acc.isBlown?'#ff4455':pnlColor(acc.pnl), marginBottom: '4px' }}>{fmt(acc.pnl, true)}</div>
+                      <div style={{ fontSize: '12px', color: acc.isBlown?'#6a3a3a':(acc.wr>=50?'#00ff88':'#ff4455') }}>{acc.wr.toFixed(1)}% WR · {acc.total}T</div>
                       {acc.isBlown && <div style={{ fontSize: '11px', color: '#ff4455', marginTop: '4px' }}>Balance estimée: {acc.balance.toFixed(0)}$</div>}
                     </div>
                   ))}
@@ -572,68 +591,33 @@ export default function GlobalView() {
           {/* ── ALL TRADES ── */}
           <div style={{ marginTop: '16px' }}>
             <Section title={`📋 TOUS LES TRADES (${allTradesFiltered.length}/${total})`}>
-              {/* Filters */}
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <input placeholder="Rechercher par paire, date, compte..." value={tradeSearch} onChange={e => setTradeSearch(e.target.value)}
-                  style={{ ...inp, width: '240px' }} />
+                <input placeholder="Rechercher paire, date, compte..." value={tradeSearch} onChange={e => setTradeSearch(e.target.value)} style={{ ...inp, width: '240px' }} />
                 {['ALL','WIN','LOSS'].map(f => {
-                  const c = f === 'WIN' ? '#00ff88' : f === 'LOSS' ? '#ff4455' : '#00ff88';
-                  return (
-                    <button key={f} onClick={() => setTradeFilter(f)} style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${tradeFilter===f?c:'#1a3a22'}`, background: tradeFilter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':'0,255,136'},0.1)`:'transparent', color: tradeFilter===f?c:'#3a6a4a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>
-                  );
+                  const c = f==='WIN'?'#00ff88':f==='LOSS'?'#ff4455':'#00ff88';
+                  return <button key={f} onClick={() => setTradeFilter(f)} style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${tradeFilter===f?c:'#1a3a22'}`, background: tradeFilter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':'0,255,136'},0.1)`:'transparent', color: tradeFilter===f?c:'#3a6a4a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>;
                 })}
                 <span style={{ fontSize: '11px', color: '#3a6a4a', marginLeft: 'auto' }}>
-                  P&L filtré: <span style={{ color: pnlColor(allTradesFiltered.reduce((s,t)=>s+getNet(t),0)), fontWeight: '700' }}>{fmt(allTradesFiltered.reduce((s,t)=>s+getNet(t),0), true)}</span>
+                  P&L: <span style={{ color: pnlColor(allTradesFiltered.reduce((s,t)=>s+getNet(t),0)), fontWeight: '700' }}>{fmt(allTradesFiltered.reduce((s,t)=>s+getNet(t),0), true)}</span>
                 </span>
               </div>
-
-              {/* Table header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '100px 80px 60px 90px 90px 100px 80px 1fr', gap: '8px', padding: '5px 10px', fontSize: '10px', color: '#2a5a32', letterSpacing: '1.5px', borderBottom: '1px solid rgba(0,255,136,0.06)' }}>
-                <span>DATE</span><span>PAIRE</span><span>DIR.</span><span>ENTRÉE</span><span>SORTIE</span><span>P&L NET</span><span>DURÉE</span><span>COMPTE</span>
+              <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                <TradeTable trades={allTradesFiltered.slice(0, 200)} />
               </div>
-
-              {/* Rows (max 100 for perf) */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: '400px', overflowY: 'auto' }}>
-                {allTradesFiltered.length === 0 ? (
-                  <div style={{ padding: '30px', textAlign: 'center', color: '#2a4a30', fontSize: '12px' }}>Aucun trade</div>
-                ) : allTradesFiltered.slice(0, 200).map(t => {
-                  const net = getNet(t);
-                  return (
-                    <div key={`${t._accountId}-${t.id}`} style={{ display: 'grid', gridTemplateColumns: '100px 80px 60px 90px 90px 100px 80px 1fr', gap: '8px', alignItems: 'center', padding: '8px 10px', background: 'rgba(10,28,18,0.4)', borderLeft: `2px solid ${pnlColor(net)}`, borderRadius: '4px', fontSize: '12px', transition: 'background 0.1s' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.04)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(10,28,18,0.4)'}
-                    >
-                      <span style={{ color: '#4a7a5a', fontSize: '11px' }}>{t.date}</span>
-                      <span style={{ color: '#c8d8c8', fontWeight: '600' }}>{t.pair}</span>
-                      <span style={{ color: t.direction==='LONG'?'#00ff88':'#ff4455', fontSize: '11px', background: `rgba(${t.direction==='LONG'?'0,255,136':'255,68,85'},0.08)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
-                      <span style={{ color: '#8aaa90' }}>{t.entry ?? '—'}</span>
-                      <span style={{ color: '#8aaa90' }}>{t.exit_price ?? '—'}</span>
-                      <span style={{ color: pnlColor(net), fontWeight: '700' }}>{fmt(net, true)}</span>
-                      <span style={{ color: '#4a7a5a', fontSize: '11px' }}>{t.duration ?? '—'}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: t._accountColor ?? '#3a6a4a', flexShrink: 0 }} />
-                        <span style={{ color: '#4a7a5a', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t._accountName ?? '—'}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-                {allTradesFiltered.length > 200 && (
-                  <div style={{ padding: '10px', textAlign: 'center', color: '#3a6a4a', fontSize: '11px' }}>
-                    Affichage limité à 200 trades — utilise les filtres pour affiner
-                  </div>
-                )}
-              </div>
+              {allTradesFiltered.length > 200 && <div style={{ textAlign: 'center', color: '#3a6a4a', fontSize: '11px', padding: '8px' }}>Limité à 200 — utilisez les filtres</div>}
             </Section>
           </div>
         </>
       )}
 
-      {/* Session Modal */}
-      {sessionModal && (
-        <SessionModal
-          session={sessionModal}
-          trades={trades}
-          onClose={() => setSessionModal(null)}
+      {/* Generic Modal */}
+      {modal && (
+        <TradeModal
+          title={modal.title}
+          subtitle={modal.subtitle}
+          color={modal.color}
+          trades={modal.trades}
+          onClose={() => setModal(null)}
         />
       )}
     </div>
