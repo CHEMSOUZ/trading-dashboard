@@ -194,7 +194,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                   </div>
                 ) : (
                   // Normal mode
-                  {(() => {
+                  (() => {
                     const st = accountStatuses[a.id];
                     const isBlown = st?.isBlown ?? false;
                     const isActive = a.id === activeAccount?.id;
@@ -224,7 +224,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         >✏️</button>
                       </div>
                     );
-                  })()}
+                  })()
                 )}
               </div>
             ))}
