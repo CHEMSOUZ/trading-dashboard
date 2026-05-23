@@ -40,7 +40,7 @@ function parseCsv(content) {
 function CTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: 'rgba(6,18,12,0.97)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '4px', padding: '8px 12px', fontSize: '17px', fontFamily: 'inherit' }}>
+    <div style={{ background: 'rgba(6,18,12,0.97)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '4px', padding: '8px 12px', fontSize: '11px', fontFamily: 'inherit' }}>
       <div style={{ color: '#3a6a4a', marginBottom: '4px' }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ color: (p.value ?? 0) >= 0 ? '#00ff88' : '#ff4455', fontWeight: '700' }}>
@@ -55,9 +55,9 @@ function CTooltip({ active, payload, label }) {
 function StatCard({ label, value, sub, color = '#c8d8c8' }) {
   return (
     <div style={{ background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.08)', borderTop: `2px solid ${color}`, borderRadius: '6px', padding: '12px 14px' }}>
-      <div style={{ fontSize: '17px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '5px' }}>{label}</div>
-      <div style={{ fontSize: '19px', fontWeight: '700', color, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '17px', color: '#4a7a5a', marginTop: '4px' }}>{sub}</div>}
+      <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '5px' }}>{label}</div>
+      <div style={{ fontSize: '18px', fontWeight: '700', color, lineHeight: 1 }}>{value}</div>
+      {sub && <div style={{ fontSize: '9px', color: '#4a7a5a', marginTop: '4px' }}>{sub}</div>}
     </div>
   );
 }
@@ -99,10 +99,10 @@ function ImportModal({ onClose, onImported }) {
       <div onClick={e => e.stopPropagation()} style={{ background: '#070d12', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '10px', width: '100%', maxWidth: '480px', padding: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div>
-            <div style={{ fontSize: '17px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>TOPSTEPX</div>
-            <div style={{ fontSize: '19px', fontWeight: '700', color: '#e8f8e8' }}>Import CSV</div>
+            <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>TOPSTEPX</div>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: '#e8f8e8' }}>Import CSV</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: '1px solid #1a3a22', color: '#4a7a5a', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '17px' }}>×</button>
+          <button onClick={onClose} style={{ background: 'none', border: '1px solid #1a3a22', color: '#4a7a5a', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
         </div>
         {status === 'idle' && (
           <div onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop}
@@ -110,32 +110,32 @@ function ImportModal({ onClose, onImported }) {
             onClick={handleDialog}
           >
             <div style={{ fontSize: '32px', marginBottom: '8px' }}>📂</div>
-            <div style={{ fontSize: '17px', color: '#c8d8c8', marginBottom: '4px' }}>Glisse ton fichier CSV ici</div>
-            <div style={{ fontSize: '15px', color: '#3a6a4a' }}>ou clique pour ouvrir</div>
+            <div style={{ fontSize: '12px', color: '#c8d8c8', marginBottom: '4px' }}>Glisse ton fichier CSV ici</div>
+            <div style={{ fontSize: '10px', color: '#3a6a4a' }}>ou clique pour ouvrir</div>
           </div>
         )}
-        {status === 'loading' && <div style={{ padding: '40px', textAlign: 'center', color: '#3a6a4a', fontSize: '17px', letterSpacing: '2px' }}>IMPORTATION...</div>}
+        {status === 'loading' && <div style={{ padding: '40px', textAlign: 'center', color: '#3a6a4a', fontSize: '12px', letterSpacing: '2px' }}>IMPORTATION...</div>}
         {status === 'done' && result && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
-            <div style={{ fontSize: '17px', fontWeight: '700', color: '#00ff88', marginBottom: '16px' }}>Import réussi !</div>
+            <div style={{ fontSize: '16px', fontWeight: '700', color: '#00ff88', marginBottom: '16px' }}>Import réussi !</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '20px' }}>
               {[['IMPORTÉS', result.imported, '#00ff88'], ['IGNORÉS', result.skipped, '#f0a020'], ['ERREURS', result.errors, '#ff4455']].map(([l,v,c]) => (
                 <div key={l} style={{ background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.06)', borderRadius: '5px', padding: '12px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '17px', color: '#3a6a4a', marginBottom: '4px' }}>{l}</div>
-                  <div style={{ fontSize: '21px', fontWeight: '700', color: c }}>{v}</div>
+                  <div style={{ fontSize: '8px', color: '#3a6a4a', marginBottom: '4px' }}>{l}</div>
+                  <div style={{ fontSize: '20px', fontWeight: '700', color: c }}>{v}</div>
                 </div>
               ))}
             </div>
-            <button onClick={onClose} style={{ background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', padding: '10px 24px', borderRadius: '5px', fontSize: '17px', fontFamily: 'inherit', cursor: 'pointer' }}>FERMER</button>
+            <button onClick={onClose} style={{ background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', padding: '10px 24px', borderRadius: '5px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>FERMER</button>
           </div>
         )}
         {status === 'error' && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>❌</div>
-            <div style={{ fontSize: '17px', color: '#ff4455', marginBottom: '12px' }}>Erreur d'import</div>
-            <div style={{ fontSize: '17px', color: '#8aaa90', marginBottom: '20px' }}>{result?.error}</div>
-            <button onClick={() => setStatus('idle')} style={{ background: 'transparent', border: '1px solid #1a3a22', color: '#4a7a5a', padding: '8px 16px', borderRadius: '5px', fontSize: '17px', fontFamily: 'inherit', cursor: 'pointer' }}>RÉESSAYER</button>
+            <div style={{ fontSize: '14px', color: '#ff4455', marginBottom: '12px' }}>Erreur d'import</div>
+            <div style={{ fontSize: '11px', color: '#8aaa90', marginBottom: '20px' }}>{result?.error}</div>
+            <button onClick={() => setStatus('idle')} style={{ background: 'transparent', border: '1px solid #1a3a22', color: '#4a7a5a', padding: '8px 16px', borderRadius: '5px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>RÉESSAYER</button>
           </div>
         )}
       </div>
@@ -218,18 +218,18 @@ function Calendar({ trades }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
         <div>
-          <div style={{ fontSize: '17px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '3px' }}>CALENDRIER</div>
+          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '3px' }}>CALENDRIER</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: '#4a7a5a', cursor: 'pointer', fontSize: '17px' }}>‹</button>
-            <span style={{ fontSize: '17px', fontWeight: '700', color: '#e8f8e8' }}>{MONTHS[month]} {year}</span>
-            <button onClick={nextMonth} style={{ background: 'none', border: 'none', color: '#4a7a5a', cursor: 'pointer', fontSize: '17px' }}>›</button>
+            <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: '#4a7a5a', cursor: 'pointer', fontSize: '14px' }}>‹</button>
+            <span style={{ fontSize: '14px', fontWeight: '700', color: '#e8f8e8' }}>{MONTHS[month]} {year}</span>
+            <button onClick={nextMonth} style={{ background: 'none', border: 'none', color: '#4a7a5a', cursor: 'pointer', fontSize: '14px' }}>›</button>
             <button onClick={() => { setYear(new Date().getFullYear()); setMonth(new Date().getMonth()); }}
-              style={{ background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.15)', color: '#00ff88', padding: '3px 8px', borderRadius: '4px', fontSize: '17px', fontFamily: 'inherit', cursor: 'pointer' }}>Aujourd'hui</button>
+              style={{ background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.15)', color: '#00ff88', padding: '3px 8px', borderRadius: '4px', fontSize: '9px', fontFamily: 'inherit', cursor: 'pointer' }}>Aujourd'hui</button>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '17px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '3px' }}>P&L MENSUEL</div>
-          <div style={{ fontSize: '17px', fontWeight: '700', color: pnlColor(monthTotal) }}>{fmt(monthTotal, true)}</div>
+          <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '3px' }}>P&L MENSUEL</div>
+          <div style={{ fontSize: '16px', fontWeight: '700', color: pnlColor(monthTotal) }}>{fmt(monthTotal, true)}</div>
         </div>
       </div>
 
@@ -237,9 +237,9 @@ function Calendar({ trades }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr) 90px', gap: '2px' }}>
         {/* DOW headers */}
         {['D','L','Ma','Me','J','V','S'].map(d => (
-          <div key={d} style={{ textAlign: 'center', fontSize: '17px', color: '#3a6a4a', padding: '4px 0', letterSpacing: '1px' }}>{d}</div>
+          <div key={d} style={{ textAlign: 'center', fontSize: '9px', color: '#3a6a4a', padding: '4px 0', letterSpacing: '1px' }}>{d}</div>
         ))}
-        <div style={{ textAlign: 'center', fontSize: '17px', color: '#3a6a4a', padding: '4px 0' }}>SEMAINE</div>
+        <div style={{ textAlign: 'center', fontSize: '9px', color: '#3a6a4a', padding: '4px 0' }}>SEMAINE</div>
 
         {/* Weeks */}
         {weeks.map((week, wi) => {
@@ -258,16 +258,16 @@ function Calendar({ trades }) {
               const style = cellStyle(day);
               return (
                 <div key={key} style={{ ...style, minHeight: '52px', borderRadius: '3px', padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <div style={{ fontSize: '17px', color: isToday ? '#00aaff' : '#4a7a5a', fontWeight: isToday ? '700' : '400', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: '9px', color: isToday ? '#00aaff' : '#4a7a5a', fontWeight: isToday ? '700' : '400', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{day}</span>
                     {isToday && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00aaff' }} />}
                   </div>
                   {data && (
                     <>
-                      <div style={{ fontSize: '15px', fontWeight: '700', color: pnlColor(data.pnl), lineHeight: 1 }}>
+                      <div style={{ fontSize: '10px', fontWeight: '700', color: pnlColor(data.pnl), lineHeight: 1 }}>
                         {fmt(data.pnl, true)}
                       </div>
-                      <div style={{ fontSize: '17px', color: '#3a6a4a' }}>{data.count} trade{data.count > 1 ? 's' : ''}</div>
+                      <div style={{ fontSize: '8px', color: '#3a6a4a' }}>{data.count} trade{data.count > 1 ? 's' : ''}</div>
                     </>
                   )}
                 </div>
@@ -275,9 +275,9 @@ function Calendar({ trades }) {
             }),
             // Week summary
             <div key={`week-${wi}`} style={{ background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.06)', borderRadius: '3px', minHeight: '52px', padding: '6px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
-              <div style={{ fontSize: '17px', color: '#3a6a4a', letterSpacing: '0.5px' }}>S{wi+1}</div>
-              <div style={{ fontSize: '17px', fontWeight: '700', color: pnlColor(weekData.total) }}>{weekData.total !== 0 ? fmt(weekData.total, true) : '$0.00'}</div>
-              <div style={{ fontSize: '17px', color: '#3a6a4a' }}>{weekData.count} trade{weekData.count > 1 ? 's' : ''}</div>
+              <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '0.5px' }}>S{wi+1}</div>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: pnlColor(weekData.total) }}>{weekData.total !== 0 ? fmt(weekData.total, true) : '$0.00'}</div>
+              <div style={{ fontSize: '8px', color: '#3a6a4a' }}>{weekData.count} trade{weekData.count > 1 ? 's' : ''}</div>
             </div>
           ];
         })}
@@ -305,7 +305,7 @@ export default function Stats() {
   useEffect(() => { load(); }, [load]);
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#3a6a4a', fontSize: '17px', letterSpacing: '2px' }}>CALCUL EN COURS...</div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#3a6a4a', fontSize: '11px', letterSpacing: '2px' }}>CALCUL EN COURS...</div>
   );
 
   const s = stats ?? {};
@@ -387,19 +387,19 @@ export default function Stats() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ fontSize: '15px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '6px' }}>ANALYSE</div>
-          <h1 style={{ fontSize: '23px', fontWeight: '700', color: '#e8f8e8', margin: 0 }}>Statistiques & Performance</h1>
-          <div style={{ fontSize: '17px', color: '#3a6a4a', marginTop: '4px' }}>
+          <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '6px' }}>ANALYSE</div>
+          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8f8e8', margin: 0 }}>Statistiques & Performance</h1>
+          <div style={{ fontSize: '11px', color: '#3a6a4a', marginTop: '4px' }}>
             {fTotal} trade{fTotal > 1 ? 's' : ''} · P&L net: <span style={{ color: pnlColor(fPnl), fontWeight: '700' }}>{fmt(fPnl, true)}</span>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <button onClick={() => setShowImport(true)} style={{ background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.25)', color: '#00ff88', padding: '7px 13px', borderRadius: '5px', fontSize: '15px', fontFamily: 'inherit', cursor: 'pointer' }}>
+          <button onClick={() => setShowImport(true)} style={{ background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.25)', color: '#00ff88', padding: '7px 13px', borderRadius: '5px', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>
             📥 Import CSV TopstepX
           </button>
           <div style={{ display: 'flex', gap: '4px' }}>
             {['TODAY','7D','30D','ALL'].map(p => (
-              <button key={p} onClick={() => setPeriod(p)} style={{ padding: '6px 10px', borderRadius: '4px', border: `1px solid ${period===p?'#00ff88':'#1a3a22'}`, background: period===p?'rgba(0,255,136,0.1)':'transparent', color: period===p?'#00ff88':'#3a6a4a', fontSize: '17px', fontFamily: 'inherit', cursor: 'pointer' }}>{p}</button>
+              <button key={p} onClick={() => setPeriod(p)} style={{ padding: '6px 10px', borderRadius: '4px', border: `1px solid ${period===p?'#00ff88':'#1a3a22'}`, background: period===p?'rgba(0,255,136,0.1)':'transparent', color: period===p?'#00ff88':'#3a6a4a', fontSize: '9px', fontFamily: 'inherit', cursor: 'pointer' }}>{p}</button>
             ))}
           </div>
         </div>
@@ -422,17 +422,17 @@ export default function Stats() {
           { label: 'PIRE TRADE (NET)',     trade: worstTrade, c: '#ff4455' },
         ].map(({ label, trade, c }) => (
           <div key={label} style={{ background: 'rgba(10,28,18,0.4)', border: `1px solid ${c}20`, borderLeft: `3px solid ${c}`, borderRadius: '6px', padding: '12px 16px' }}>
-            <div style={{ fontSize: '17px', color: '#3a6a4a', letterSpacing: '1.5px', marginBottom: '8px' }}>{label}</div>
+            <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1.5px', marginBottom: '8px' }}>{label}</div>
             {trade ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                 <div>
-                  <span style={{ fontSize: '15px', fontWeight: '700', color: '#c8d8c8' }}>{trade.pair}</span>
-                  <span style={{ fontSize: '17px', color: trade.direction==='LONG'?'#00ff88':'#ff4455', marginLeft: '8px', background: `rgba(${trade.direction==='LONG'?'0,255,136':'255,68,85'},0.1)`, padding: '1px 5px', borderRadius: '3px' }}>{trade.direction}</span>
-                  <div style={{ fontSize: '17px', color: '#3a6a4a', marginTop: '3px' }}>{trade.date}{trade.entered_at ? ` · ${new Date(trade.entered_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : ''}</div>
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#c8d8c8' }}>{trade.pair}</span>
+                  <span style={{ fontSize: '9px', color: trade.direction==='LONG'?'#00ff88':'#ff4455', marginLeft: '8px', background: `rgba(${trade.direction==='LONG'?'0,255,136':'255,68,85'},0.1)`, padding: '1px 5px', borderRadius: '3px' }}>{trade.direction}</span>
+                  <div style={{ fontSize: '9px', color: '#3a6a4a', marginTop: '3px' }}>{trade.date}{trade.entered_at ? ` · ${new Date(trade.entered_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : ''}</div>
                 </div>
-                <div style={{ fontSize: '19px', fontWeight: '700', color: c }}>{fmt(getNet(trade), true)}</div>
+                <div style={{ fontSize: '18px', fontWeight: '700', color: c }}>{fmt(getNet(trade), true)}</div>
               </div>
-            ) : <div style={{ color: '#2a4a30', fontSize: '15px' }}>Aucun trade</div>}
+            ) : <div style={{ color: '#2a4a30', fontSize: '10px' }}>Aucun trade</div>}
           </div>
         ))}
       </div>
@@ -441,7 +441,7 @@ export default function Stats() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
         {/* Equity curve */}
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '17px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L CUMULÉ NET</div>
+          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L CUMULÉ NET</div>
           {equityData.length > 1 ? (
             <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={equityData} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
@@ -459,24 +459,24 @@ export default function Stats() {
                 <Area type="monotone" dataKey="pnl" name="P&L net" stroke={fPnl >= 0 ? '#00ff88' : '#ff4455'} strokeWidth={2} fill="url(#eqG)" dot={false} activeDot={{ r: 3 }} />
               </AreaChart>
             </ResponsiveContainer>
-          ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '15px' }}>Aucun trade</div>}
+          ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '10px' }}>Aucun trade</div>}
         </div>
 
         {/* Daily bars */}
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '17px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
+          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
           {dailyArr.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={dailyArr} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
+              <BarChart barCategoryGap="35%" data={dailyArr} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
                 <CartesianGrid stroke="rgba(0,255,136,0.04)" strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fill: '#3a6a4a', fontSize: 8 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#3a6a4a', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
                 <Tooltip content={<CTooltip />} />
                 <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
-                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#00ff88" isAnimationActive />
+                <Bar dataKey="pnl" name="P&L net" maxBarSize={28} radius={[3,3,0,0]} fill="#00ff88" isAnimationActive />
               </BarChart>
             </ResponsiveContainer>
-          ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '15px' }}>Aucun trade</div>}
+          ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '10px' }}>Aucun trade</div>}
         </div>
       </div>
 
@@ -484,16 +484,16 @@ export default function Stats() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
         {/* By pair */}
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '17px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>PERFORMANCE PAR INSTRUMENT (NET)</div>
+          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>PERFORMANCE PAR INSTRUMENT (NET)</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {pairArr.slice(0, 6).map(p => (
               <div key={p.pair}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                  <span style={{ fontSize: '17px', color: '#c8d8c8', fontWeight: '600' }}>{p.pair}</span>
+                  <span style={{ fontSize: '11px', color: '#c8d8c8', fontWeight: '600' }}>{p.pair}</span>
                   <div style={{ display: 'flex', gap: '10px' }}>
-                    <span style={{ fontSize: '15px', color: pnlColor(p.pnl), fontWeight: '700' }}>{fmt(p.pnl, true)}</span>
-                    <span style={{ fontSize: '15px', color: p.wr >= 50 ? '#00ff88' : '#ff4455' }}>{p.wr}% WR</span>
-                    <span style={{ fontSize: '17px', color: '#3a6a4a' }}>{p.total}T</span>
+                    <span style={{ fontSize: '10px', color: pnlColor(p.pnl), fontWeight: '700' }}>{fmt(p.pnl, true)}</span>
+                    <span style={{ fontSize: '10px', color: p.wr >= 50 ? '#00ff88' : '#ff4455' }}>{p.wr}% WR</span>
+                    <span style={{ fontSize: '9px', color: '#3a6a4a' }}>{p.total}T</span>
                   </div>
                 </div>
                 <div style={{ height: '4px', background: 'rgba(0,255,136,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
@@ -501,7 +501,7 @@ export default function Stats() {
                 </div>
               </div>
             ))}
-            {pairArr.length === 0 && <div style={{ color: '#2a4a30', fontSize: '15px', textAlign: 'center', padding: '20px 0' }}>Aucune donnée</div>}
+            {pairArr.length === 0 && <div style={{ color: '#2a4a30', fontSize: '10px', textAlign: 'center', padding: '20px 0' }}>Aucune donnée</div>}
           </div>
         </div>
 
@@ -509,7 +509,7 @@ export default function Stats() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {/* Direction */}
           <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px', flex: 1 }}>
-            <div style={{ fontSize: '17px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>DIRECTION</div>
+            <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>DIRECTION</div>
             {dirPie.length > 0 ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <PieChart width={80} height={80}>
@@ -521,26 +521,26 @@ export default function Stats() {
                   {dirPie.map(d => (
                     <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: d.color }} />
-                      <span style={{ fontSize: '17px', color: '#8aaa90' }}>{d.name}</span>
-                      <span style={{ fontSize: '15px', fontWeight: '700', color: d.color }}>{d.value}</span>
-                      <span style={{ fontSize: '17px', color: '#3a6a4a' }}>{fTotal > 0 ? Math.round(d.value/fTotal*100) : 0}%</span>
+                      <span style={{ fontSize: '11px', color: '#8aaa90' }}>{d.name}</span>
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: d.color }}>{d.value}</span>
+                      <span style={{ fontSize: '9px', color: '#3a6a4a' }}>{fTotal > 0 ? Math.round(d.value/fTotal*100) : 0}%</span>
                     </div>
                   ))}
                 </div>
               </div>
-            ) : <div style={{ color: '#2a4a30', fontSize: '15px' }}>Aucune donnée</div>}
+            ) : <div style={{ color: '#2a4a30', fontSize: '10px' }}>Aucune donnée</div>}
           </div>
 
           {/* DOW */}
           <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px', flex: 1 }}>
-            <div style={{ fontSize: '17px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>P&L NET PAR JOUR DE LA SEMAINE</div>
+            <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>P&L NET PAR JOUR DE LA SEMAINE</div>
             <ResponsiveContainer width="100%" height={80}>
-              <BarChart data={dowArr.filter(d => d.count > 0)} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+              <BarChart barCategoryGap="35%" data={dowArr.filter(d => d.count > 0)} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
                 <XAxis dataKey="label" tick={{ fill: '#3a6a4a', fontSize: 8 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#3a6a4a', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
                 <Tooltip content={<CTooltip />} />
                 <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
-                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#00ff88" isAnimationActive />
+                <Bar dataKey="pnl" name="P&L net" maxBarSize={28} radius={[3,3,0,0]} fill="#00ff88" isAnimationActive />
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine, Cell,
@@ -92,25 +92,95 @@ function InsightCard({ icon, title, value, desc, color, onClick }) {
   );
 }
 
-// ── Trade Table (shared) ──────────────────────────────────────
-function TradeTable({ trades }) {
-  const [filter, setFilter] = useState('ALL');
-  const filtered = filter === 'WIN' ? trades.filter(t => getNet(t) > 0)
-    : filter === 'LOSS' ? trades.filter(t => getNet(t) < 0)
-    : trades;
+// ── Trade Table with resizable cols, sortable headers, entry time ──
+const DEFAULT_COL_WIDTHS = { date:95, heure:65, pair:75, dir:58, entry:82, exit:82, pnl:100, dur:72, account:120 };
+
+function TradeTable({ trades, storageKey = 'global_trade_cols' }) {
+  const [filter, setFilter]     = useState('ALL');
+  const [sortCol, setSortCol]   = useState('date');
+  const [sortDir, setSortDir]   = useState('desc'); // 'asc' | 'desc'
+  const [colWidths, setColWidths] = useState(() => {
+    try { return { ...DEFAULT_COL_WIDTHS, ...JSON.parse(localStorage.getItem(storageKey) ?? '{}') }; }
+    catch { return DEFAULT_COL_WIDTHS; }
+  });
+  const dragging = useRef(null);
+  const startX   = useRef(0);
+  const startW   = useRef(0);
+
+  function onColMouseDown(e, col) {
+    e.preventDefault();
+    dragging.current = col;
+    startX.current   = e.clientX;
+    startW.current   = colWidths[col];
+    function onMove(ev) {
+      const newW = Math.max(40, startW.current + ev.clientX - startX.current);
+      setColWidths(prev => { const n = { ...prev, [dragging.current]: newW }; localStorage.setItem(storageKey, JSON.stringify(n)); return n; });
+    }
+    function onUp() { dragging.current = null; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  function handleSort(col) {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('desc'); }
+  }
+
+  function sortVal(t, col) {
+    switch(col) {
+      case 'date':    return t.entered_at || t.date || '';
+      case 'heure':   return t.entered_at ? new Date(t.entered_at).getHours() * 60 + new Date(t.entered_at).getMinutes() : -1;
+      case 'pair':    return t.pair ?? '';
+      case 'dir':     return t.direction ?? '';
+      case 'entry':   return t.entry ?? 0;
+      case 'exit':    return t.exit_price ?? 0;
+      case 'pnl':     return getNet(t);
+      case 'dur':     return t.duration ?? '';
+      case 'account': return t._accountName ?? '';
+      default:        return '';
+    }
+  }
+
+  const filtered = (filter === 'WIN' ? trades.filter(t => getNet(t) > 0)
+    : filter === 'LOSS' ? trades.filter(t => getNet(t) < 0) : trades)
+    .slice().sort((a, b) => {
+      const va = sortVal(a, sortCol), vb = sortVal(b, sortCol);
+      const cmp = typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb));
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+
   const pnl  = filtered.reduce((s,t) => s + getNet(t), 0);
   const wins = filtered.filter(t => getNet(t) > 0).length;
   const wr   = filtered.length > 0 ? Math.round((wins / filtered.length) * 100) : 0;
+
+  const COLS = [
+    { key: 'date',    label: 'DATE' },
+    { key: 'heure',   label: 'HEURE' },
+    { key: 'pair',    label: 'PAIRE' },
+    { key: 'dir',     label: 'DIR.' },
+    { key: 'entry',   label: 'ENTRÉE' },
+    { key: 'exit',    label: 'SORTIE' },
+    { key: 'pnl',     label: 'P&L NET' },
+    { key: 'dur',     label: 'DURÉE' },
+    { key: 'account', label: 'COMPTE' },
+  ];
+
+  const templateCols = COLS.map(c => `${colWidths[c.key]}px`).join(' ');
+
+  function SortIcon({ col }) {
+    if (sortCol !== col) return <span style={{ color: '#1a3a22', fontSize: '9px' }}>⇅</span>;
+    return <span style={{ color: '#00ff88', fontSize: '9px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
+  }
 
   return (
     <div>
       {/* Mini stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '12px' }}>
         {[
-          { label: 'P&L NET', value: fmt(pnl, true), color: pnlColor(pnl) },
+          { label: 'P&L NET',   value: fmt(pnl, true), color: pnlColor(pnl) },
           { label: 'WIN / LOSS', value: `${trades.filter(t=>getNet(t)>0).length}W / ${trades.filter(t=>getNet(t)<0).length}L`, color: '#c8d8c8' },
-          { label: 'WINRATE', value: `${wr}%`, color: wr >= 50 ? '#00ff88' : '#ff4455' },
-          { label: 'TRADES', value: filtered.length, color: '#c8d8c8' },
+          { label: 'WINRATE',   value: `${wr}%`, color: wr >= 50 ? '#00ff88' : '#ff4455' },
+          { label: 'TRADES',    value: filtered.length, color: '#c8d8c8' },
         ].map(({ label, value, color }) => (
           <div key={label} style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '5px', padding: '8px 12px', borderTop: `2px solid ${color}` }}>
             <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '3px' }}>{label}</div>
@@ -123,42 +193,63 @@ function TradeTable({ trades }) {
       <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
         {['ALL','WIN','LOSS'].map(f => {
           const c = f === 'WIN' ? '#00ff88' : f === 'LOSS' ? '#ff4455' : '#00ff88';
-          return (
-            <button key={f} onClick={() => setFilter(f)} style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${filter===f?c:'#1a3a22'}`, background: filter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':'0,255,136'},0.1)`:'transparent', color: filter===f?c:'#3a6a4a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>
-          );
+          return <button key={f} onClick={() => setFilter(f)} style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${filter===f?c:'#1a3a22'}`, background: filter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':'0,255,136'},0.1)`:'transparent', color: filter===f?c:'#3a6a4a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>;
         })}
       </div>
 
-      {/* Header */}
-      <div style={{ display: 'grid', gridTemplateColumns: '100px 75px 58px 88px 88px 100px 78px 1fr', gap: '6px', padding: '5px 10px', fontSize: '10px', color: '#2a5a32', letterSpacing: '1.5px', borderBottom: '1px solid rgba(0,255,136,0.06)', marginBottom: '4px' }}>
-        <span>DATE</span><span>PAIRE</span><span>DIR.</span><span>ENTRÉE</span><span>SORTIE</span><span>P&L NET</span><span>DURÉE</span><span>COMPTE</span>
-      </div>
-
-      {/* Rows */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        {filtered.length === 0 ? (
-          <div style={{ padding: '24px', textAlign: 'center', color: '#2a4a30', fontSize: '12px' }}>Aucun trade</div>
-        ) : filtered.map(t => {
-          const net = getNet(t);
-          return (
-            <div key={`${t._accountId}-${t.id}`} style={{ display: 'grid', gridTemplateColumns: '100px 75px 58px 88px 88px 100px 78px 1fr', gap: '6px', alignItems: 'center', padding: '8px 10px', background: 'rgba(10,28,18,0.4)', borderLeft: `2px solid ${pnlColor(net)}`, borderRadius: '4px', fontSize: '12px', transition: 'background 0.1s' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.04)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(10,28,18,0.4)'}
+      {/* Scrollable table */}
+      <div style={{ overflowX: 'auto' }}>
+        {/* Header */}
+        <div style={{ display: 'grid', gridTemplateColumns: templateCols, minWidth: 'max-content', padding: '5px 10px', fontSize: '10px', color: '#2a5a32', letterSpacing: '1.5px', borderBottom: '1px solid rgba(0,255,136,0.06)', marginBottom: '4px', userSelect: 'none' }}>
+          {COLS.map((col, idx) => (
+            <div key={col.key} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', overflow: 'hidden' }}
+              onClick={() => handleSort(col.key)}
+              onMouseEnter={e => e.currentTarget.style.color = '#00ff88'}
+              onMouseLeave={e => e.currentTarget.style.color = '#2a5a32'}
             >
-              <span style={{ color: '#4a7a5a', fontSize: '11px' }}>{t.date}</span>
-              <span style={{ color: '#c8d8c8', fontWeight: '600' }}>{t.pair}</span>
-              <span style={{ color: t.direction==='LONG'?'#00ff88':'#ff4455', fontSize: '11px', background: `rgba(${t.direction==='LONG'?'0,255,136':'255,68,85'},0.08)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
-              <span style={{ color: '#8aaa90' }}>{t.entry ?? '—'}</span>
-              <span style={{ color: '#8aaa90' }}>{t.exit_price ?? '—'}</span>
-              <span style={{ color: pnlColor(net), fontWeight: '700' }}>{fmt(net, true)}</span>
-              <span style={{ color: '#4a7a5a', fontSize: '11px' }}>{t.duration ?? '—'}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden' }}>
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: t._accountColor ?? '#3a6a4a', flexShrink: 0 }} />
-                <span style={{ color: '#4a7a5a', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t._accountName ?? '—'}</span>
-              </div>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{col.label}</span>
+              <SortIcon col={col.key} />
+              {idx < COLS.length - 1 && (
+                <div onMouseDown={e => { e.stopPropagation(); onColMouseDown(e, col.key); }}
+                  style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '6px', cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div style={{ width: '1px', height: '60%', background: 'rgba(0,255,136,0.2)' }} />
+                </div>
+              )}
             </div>
-          );
-        })}
+          ))}
+        </div>
+
+        {/* Rows */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 'max-content' }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: '#2a4a30', fontSize: '12px' }}>Aucun trade</div>
+          ) : filtered.map(t => {
+            const net  = getNet(t);
+            const hour = t.entered_at ? new Date(t.entered_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—';
+            return (
+              <div key={`${t._accountId}-${t.id}`}
+                style={{ display: 'grid', gridTemplateColumns: templateCols, alignItems: 'center', padding: '8px 10px', background: 'rgba(10,28,18,0.4)', borderLeft: `2px solid ${pnlColor(net)}`, borderRadius: '4px', fontSize: '12px', transition: 'background 0.1s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.04)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(10,28,18,0.4)'}
+              >
+                <span style={{ color: '#4a7a5a', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.date}</span>
+                <span style={{ color: '#6a8a7a', fontSize: '11px' }}>{hour}</span>
+                <span style={{ color: '#c8d8c8', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.pair}</span>
+                <span style={{ color: t.direction==='LONG'?'#00ff88':'#ff4455', fontSize: '11px', background: `rgba(${t.direction==='LONG'?'0,255,136':'255,68,85'},0.08)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
+                <span style={{ color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.entry ?? '—'}</span>
+                <span style={{ color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.exit_price ?? '—'}</span>
+                <span style={{ color: pnlColor(net), fontWeight: '700' }}>{fmt(net, true)}</span>
+                <span style={{ color: '#4a7a5a', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.duration ?? '—'}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: t._accountColor ?? '#3a6a4a', flexShrink: 0 }} />
+                  <span style={{ color: '#4a7a5a', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t._accountName ?? '—'}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -236,15 +327,25 @@ export default function GlobalView() {
   const fees    = trades.reduce((s,t) => s+(t.fees??0)+(t.commissions??0), 0);
 
   // ── By account ────────────────────────────────────────────
-  const FLOORS = { topstep_50k: 48000, topstep_100k: 97000, topstep_150k: 145500 };
+  const ACCOUNT_SIZES = { topstep_50k: 50000, topstep_100k: 100000, topstep_150k: 150000 };
+  const FLOORS        = { topstep_50k: 48000, topstep_100k: 97000,  topstep_150k: 145500 };
   const byAccount = accounts.map(acc => {
-    const at = allTrades.filter(t => t._accountId === acc.id);
-    const ap = at.reduce((s,t) => s+getNet(t), 0);
-    const aw = at.filter(t => getNet(t) > 0).length;
+    const at    = allTrades.filter(t => t._accountId === acc.id);
+    const ap    = at.reduce((s,t) => s+getNet(t), 0);
+    const aw    = at.filter(t => getNet(t) > 0).length;
     const floor = FLOORS[acc.type] ?? null;
-    const balance = 50000 + ap;
-    const isBlown = floor != null && balance <= floor;
-    return { name: acc.name, color: acc.color, type: acc.type, total: at.length, pnl: ap, wr: at.length > 0 ? (aw/at.length)*100 : 0, isBlown, balance };
+    const startBalance = ACCOUNT_SIZES[acc.type] ?? 50000;
+    // Simule le trailing drawdown — cramé si balance a JAMAIS touché le floor
+    const sorted = [...at].sort((a,b) => (a.entered_at||a.date).localeCompare(b.entered_at||b.date));
+    let cum = startBalance, hwm = startBalance, everBlown = false;
+    const maxLoss = startBalance - (floor ?? startBalance - 2000);
+    for (const t of sorted) {
+      cum += getNet(t);
+      if (cum > hwm) hwm = cum;
+      const trailingFloor = hwm - maxLoss;
+      if (floor != null && (cum <= trailingFloor || cum <= floor)) { everBlown = true; break; }
+    }
+    return { name: acc.name, color: acc.color, type: acc.type, total: at.length, pnl: ap, wr: at.length > 0 ? (aw/at.length)*100 : 0, isBlown: everBlown, balance: startBalance + ap, floor };
   }).filter(a => a.total > 0);
 
   // ── By DOW ────────────────────────────────────────────────
@@ -580,7 +681,7 @@ export default function GlobalView() {
                       </div>
                       <div style={{ fontSize: '18px', fontWeight: '700', color: acc.isBlown?'#ff4455':pnlColor(acc.pnl), marginBottom: '4px' }}>{fmt(acc.pnl, true)}</div>
                       <div style={{ fontSize: '12px', color: acc.isBlown?'#6a3a3a':(acc.wr>=50?'#00ff88':'#ff4455') }}>{acc.wr.toFixed(1)}% WR · {acc.total}T</div>
-                      {acc.isBlown && <div style={{ fontSize: '11px', color: '#ff4455', marginTop: '4px' }}>Balance estimée: {acc.balance.toFixed(0)}$</div>}
+                      {acc.isBlown && <div style={{ fontSize: '11px', color: '#ff4455', marginTop: '4px' }}>⚠️ Floor {acc.floor}$ franchi</div>}
                     </div>
                   ))}
                 </div>
