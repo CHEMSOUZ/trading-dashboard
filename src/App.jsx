@@ -12,6 +12,7 @@ import GlobalView from './pages/GlobalView';
 import CsvImport from './pages/CsvImport';
 import EconomicCalendar from './pages/EconomicCalendar';
 import Payout from './pages/Payout';
+import TradingPlan from './pages/TradingPlan';
 
 export default function App() {
   const [activeAccount, setActiveAccount] = useState(null);
@@ -96,6 +97,7 @@ export default function App() {
             <Route path="/calendar"       element={<EconomicCalendar />} />
             <Route path="/import"         element={<CsvImport />} />
             <Route path="/payout"         element={<Payout />} />
+            <Route path="/plan"           element={<TradingPlan />} />
           </Routes>
         </main>
       </div>
