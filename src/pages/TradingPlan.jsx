@@ -230,6 +230,46 @@ const ICT_LONDON_ROUTINE = [
   { time: "11h00", action: "Arrêt Londres", detail: "Réduire fortement ou arrêter complètement", color: "#ff4455" },
 ];
 
+// -- ICT New York data ----------------------------------------
+const ICT_NY_STEPS = [
+  { step: 1, label: "Liquidité prise",  color: "#f0a020", icon: "💧", desc: "Asian High/Low ou London High/Low sweepé. Stop hunt clair, bougie impulsive, rejet.", critical: true  },
+  { step: 2, label: "MSS / CHOCH",      color: "#aa88ff", icon: "🔄", desc: "Changement de structure clair après le sweep. Sans MSS → PAS DE TRADE. Règle absolue.", critical: true  },
+  { step: 3, label: "Displacement",     color: "#00aaff", icon: "⚡", desc: "Grosse impulsion, bougies agressives, déséquilibre. Valide l'intention institutionnelle.", critical: true  },
+  { step: 4, label: "FVG propre",       color: "#00ff88", icon: "📦", desc: "Attendre le retracement dans le Fair Value Gap. Impulsion + retracement + entrée.", critical: false },
+  { step: 5, label: "Entrée + SL",      color: "#00ff88", icon: "🎯", desc: "Entrée dans le FVG après confirmation. SL toujours derrière le sweep, jamais aléatoire.", critical: false },
+];
+
+const ICT_NY_RULES = [
+  { icon: "❌", text: "Pas de trade sans liquidité prise",                   critical: true  },
+  { icon: "❌", text: "Pas de trade au milieu du range",                      critical: true  },
+  { icon: "❌", text: "Pas de revenge trade après 16h30",                     critical: true  },
+  { icon: "❌", text: "Pas de FOMO après impulsion — laisser partir le move", critical: true  },
+  { icon: "❌", text: "Pas de scalping émotionnel pendant Lunch",             critical: true  },
+  { icon: "📊", text: "Risque max : 0.5% à 1% par trade",                    critical: false },
+  { icon: "🎯", text: "1 à 2 setups MAX par session",                        critical: false },
+  { icon: "🏆", text: "1 bon trade > 10 mauvais trades",                     critical: false },
+];
+
+const ICT_NY_ROUTINE = [
+  { time: "13h00", action: "Préparation",        detail: "London H/L, Asian H/L, PDH/PDL, DOL, news", color: "#aa88ff" },
+  { time: "15h30", action: "Opening Drive",       detail: "Observer sweep + manipulation sans entrer",   color: "#f0a020" },
+  { time: "16h00", action: "Silver Bullet",       detail: "Fenêtre principale — sweep+MSS+displacement+FVG", color: "#00ff88" },
+  { time: "17h00", action: "Continuation",        detail: "Second push possible — réduire le risque",   color: "#8aaa90" },
+  { time: "18h00", action: "NY Lunch — STOP",     detail: "Chop dangereux — arrêter ou risque minimal", color: "#ff4455" },
+  { time: "19h30", action: "PM Silver Bullet",    detail: "Seulement si rentable + mentalement stable", color: "#f0a020" },
+  { time: "22h00", action: "Fin de session",      detail: "Arrêt complet, bilan de journée",            color: "#3a6a4a" },
+];
+
+const ICT_NY_EXAMPLE = [
+  { time: "15h30", label: "London H/L identifiés",  color: "#4488ff" },
+  { time: "15h40", label: "Opening Drive sweep",     color: "#f0a020" },
+  { time: "15h55", label: "Réintégration",           color: "#f0a020" },
+  { time: "16h05", label: "MSS bullish",             color: "#aa88ff" },
+  { time: "16h15", label: "Displacement",            color: "#00aaff" },
+  { time: "16h25", label: "Retrace dans FVG",        color: "#00ff88" },
+  { time: "16h30", label: "Entrée LONG",             color: "#00ff88" },
+];
+
 const PLANS = {
   payout5j: {
     id: 'payout5j',
@@ -756,42 +796,109 @@ function SessionCard({ session }) {
   );
 }
 
-function DisciplineTab() {
+function NewYorkTab() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+      {/* Timeline header */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '6px' }}>
         {ICT_SESSIONS.map(s => (
           <div key={s.id} style={{ padding: '10px 12px', background: `${s.color}08`, border: `1px solid ${s.color}20`, borderRadius: '6px', borderTop: `2px solid ${s.color}` }}>
             <div style={{ fontSize: '16px', marginBottom: '4px' }}>{s.emoji}</div>
             <div style={{ fontSize: '11px', color: s.color, fontWeight: '700', marginBottom: '2px' }}>{s.label}</div>
             <div style={{ fontSize: '10px', color: '#3a6a4a' }}>{s.time}</div>
+            {s.badge && <div style={{ fontSize: '9px', color: s.color, marginTop: '3px', opacity: 0.8 }}>{s.badge}</div>}
             {s.danger && <div style={{ fontSize: '9px', color: '#ff4455', marginTop: '3px' }}>⚠ DANGER</div>}
           </div>
         ))}
       </div>
+
+      {/* Sessions */}
       <div>
-        <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>SESSIONS ICT — MNQ (HEURE FRANÇAISE)</div>
+        <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>SESSIONS ICT — NEW YORK (HEURE FRANÇAISE)</div>
         {ICT_SESSIONS.map(s => <SessionCard key={s.id} session={s} />)}
       </div>
+
+      {/* Entry model */}
       <div>
-        <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>DISCIPLINE ICT — TOPSTEP</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          {ICT_TOPSTEP_RULES.map((r, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '28px 140px 1fr', gap: '10px', alignItems: 'center', padding: '10px 14px', background: r.critical ? 'rgba(255,68,85,0.04)' : 'rgba(10,28,18,0.3)', border: `1px solid ${r.critical ? 'rgba(255,68,85,0.1)' : 'rgba(0,255,136,0.04)'}`, borderLeft: `2px solid ${r.critical ? '#ff4455' : '#2a5a32'}`, borderRadius: '5px' }}>
-              <span style={{ fontSize: '15px' }}>{r.icon}</span>
-              <span style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '1px' }}>{r.label.toUpperCase()}</span>
-              <span style={{ fontSize: '12px', color: r.critical ? '#e8c8c8' : '#8aaa90' }}>{r.text}</span>
+        <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>MODELE D'ENTREE ICT — 5 ETAPES</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {ICT_NY_STEPS.map((s, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '28px 28px 120px 1fr', gap: '10px', alignItems: 'center', padding: '10px 14px', background: s.critical ? 'rgba(255,68,85,0.04)' : 'rgba(10,28,18,0.3)', border: `1px solid ${s.critical ? 'rgba(255,68,85,0.1)' : 'rgba(0,255,136,0.05)'}`, borderLeft: `2px solid ${s.color}`, borderRadius: '5px' }}>
+              <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: `${s.color}15`, border: `1px solid ${s.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: s.color, fontWeight: '700' }}>{s.step}</div>
+              <span style={{ fontSize: '16px' }}>{s.icon}</span>
+              <span style={{ fontSize: '11px', color: s.color, fontWeight: '700' }}>{s.label}</span>
+              <span style={{ fontSize: '11px', color: s.critical ? '#e8c8c8' : '#8aaa90', lineHeight: '1.5' }}>{s.desc}</span>
             </div>
           ))}
         </div>
+        <div style={{ marginTop: '10px', padding: '10px 14px', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '6px', fontSize: '11px', color: '#00ff88', fontWeight: '700', textAlign: 'center', letterSpacing: '0.5px' }}>
+          🔥 La liquidité d'abord. Le déplacement ensuite.
+        </div>
       </div>
-      <div style={{ padding: '16px', background: 'rgba(170,136,255,0.06)', border: '1px solid rgba(170,136,255,0.2)', borderRadius: '8px', borderLeft: '3px solid #aa88ff' }}>
-        <div style={{ fontSize: '9px', color: '#aa88ff', letterSpacing: '2px', marginBottom: '8px' }}>MENTALITE ICT PROFESSIONNELLE</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ fontSize: '12px', color: '#6a5a8a' }}>Le travail <span style={{ color: '#ff4455', fontWeight: '700' }}>N'EST PAS</span> :</div>
-          <div style={{ fontSize: '13px', color: '#aa6aaa', paddingLeft: '12px' }}>→ Trader souvent</div>
-          <div style={{ fontSize: '12px', color: '#aa88ff', marginTop: '4px' }}>Le travail <span style={{ color: '#00ff88', fontWeight: '700' }}>EST</span> :</div>
-          <div style={{ fontSize: '13px', color: '#c8d8c8', fontWeight: '700', paddingLeft: '12px' }}>→ Attendre le bon moment institutionnel.</div>
+
+      {/* Routine + Rules */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <div>
+          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>ROUTINE IDEALE NEW YORK</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {ICT_NY_ROUTINE.map((r, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '55px 1fr', gap: '10px', alignItems: 'center', padding: '9px 12px', background: 'rgba(10,28,18,0.4)', border: `1px solid ${r.color}15`, borderLeft: `2px solid ${r.color}`, borderRadius: '5px' }}>
+                <span style={{ fontSize: '11px', color: r.color, fontWeight: '700' }}>{r.time}</span>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#c8d8c8', fontWeight: '600', marginBottom: '2px' }}>{r.action}</div>
+                  <div style={{ fontSize: '10px', color: '#3a6a4a' }}>{r.detail}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>INTERDICTIONS & RISK MANAGEMENT</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {ICT_NY_RULES.map((r, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '8px 12px', background: r.critical ? 'rgba(255,68,85,0.04)' : 'rgba(10,28,18,0.3)', border: `1px solid ${r.critical ? 'rgba(255,68,85,0.1)' : 'rgba(0,255,136,0.05)'}`, borderLeft: `2px solid ${r.critical ? '#ff4455' : '#2a5a32'}`, borderRadius: '4px' }}>
+                <span style={{ fontSize: '13px', flexShrink: 0 }}>{r.icon}</span>
+                <span style={{ fontSize: '11px', color: r.critical ? '#e8c8c8' : '#8aaa90', lineHeight: '1.5' }}>{r.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Example trade */}
+      <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.07)', borderRadius: '8px', padding: '14px 16px' }}>
+        <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>EXEMPLE COMPLET MNQ — SESSION NEW YORK</div>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {ICT_NY_EXAMPLE.map((e, i, arr) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ textAlign: 'center', padding: '6px 10px', background: `${e.color}10`, border: `1px solid ${e.color}30`, borderRadius: '5px' }}>
+                <div style={{ fontSize: '9px', color: '#2a5a32', marginBottom: '2px' }}>{e.time}</div>
+                <div style={{ fontSize: '11px', color: e.color, fontWeight: '600' }}>{e.label}</div>
+              </div>
+              {i < arr.length - 1 && <span style={{ color: '#2a5a32', fontSize: '14px' }}>→</span>}
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: '10px', display: 'flex', gap: '16px', fontSize: '11px' }}>
+          <span style={{ color: '#ff4455' }}>SL : sous le sweep / derrière la liquidité prise</span>
+          <span style={{ color: '#00ff88' }}>TP : London H/L · PDH/PDL · imbalance suivante</span>
+        </div>
+      </div>
+
+      {/* Mindset */}
+      <div style={{ padding: '14px 16px', background: 'rgba(0,255,136,0.05)', border: '1px solid rgba(0,255,136,0.15)', borderRadius: '8px', borderLeft: '3px solid #00ff88' }}>
+        <div style={{ fontSize: '9px', color: '#00ff88', letterSpacing: '2px', marginBottom: '8px' }}>MENTALITE ICT NEW YORK</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          {["Patient", "Sélectif", "Peu de trades", "Exécution mécanique", "Stop si qualité baisse"].map((m, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#8aaa90' }}>
+              <span style={{ color: '#00ff88' }}>✔</span>{m}
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: '10px', padding: '8px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
+          <div style={{ fontSize: '12px', color: '#6a8a6a' }}>Le travail <span style={{ color: '#ff4455', fontWeight: '700' }}>N'EST PAS</span> trader souvent.</div>
+          <div style={{ fontSize: '13px', color: '#c8d8c8', fontWeight: '700', marginTop: '4px' }}>Le travail <span style={{ color: '#00ff88' }}>EST</span> attendre le bon moment institutionnel.</div>
         </div>
       </div>
     </div>
@@ -799,8 +906,8 @@ function DisciplineTab() {
 }
 
 export default function TradingPlan() {
-  const [activeTab, setActiveTab] = useState('discipline');
-  const plan = PLANS[activeTab] ?? PLANS.payout5j;
+  const [activeTab, setActiveTab] = useState('newyork');
+  const plan = (activeTab !== 'newyork' && activeTab !== 'london') ? (PLANS[activeTab] ?? PLANS.payout5j) : PLANS.payout5j;
 
   return (
     <div style={{ padding: '24px 28px', maxWidth: '1000px', fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>
@@ -828,10 +935,10 @@ export default function TradingPlan() {
 
       {/* -- Tabs -- */}
       <div style={{ display: 'flex', gap: '6px', marginBottom: '22px', background: 'rgba(10,28,18,0.4)', padding: '5px', borderRadius: '8px', border: '1px solid rgba(0,255,136,0.07)' }}>
-        <button onClick={() => setActiveTab('discipline')}
-          style={{ flex: 1.2, padding: '10px 6px', borderRadius: '5px', border: activeTab === 'discipline' ? '1px solid #aa88ff40' : '1px solid transparent', background: activeTab === 'discipline' ? '#aa88ff12' : 'transparent', color: activeTab === 'discipline' ? '#aa88ff' : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', fontWeight: activeTab === 'discipline' ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s' }}>
-          <div style={{ fontSize: '13px', marginBottom: '2px' }}>🧠</div>
-          <div style={{ fontSize: '10px', opacity: 0.8 }}>Discipline</div>
+        <button onClick={() => setActiveTab('newyork')}
+          style={{ flex: 1.2, padding: '10px 6px', borderRadius: '5px', border: activeTab === 'newyork' ? '1px solid #00ff8840' : '1px solid transparent', background: activeTab === 'newyork' ? '#00ff8812' : 'transparent', color: activeTab === 'newyork' ? '#00ff88' : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', fontWeight: activeTab === 'newyork' ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s' }}>
+          <div style={{ fontSize: '13px', marginBottom: '2px' }}>🇺🇸</div>
+          <div style={{ fontSize: '10px', opacity: 0.8 }}>New York</div>
         </button>
         <button onClick={() => setActiveTab('london')}
           style={{ flex: 1.2, padding: '10px 6px', borderRadius: '5px', border: activeTab === 'london' ? '1px solid #4488ff40' : '1px solid transparent', background: activeTab === 'london' ? '#4488ff12' : 'transparent', color: activeTab === 'london' ? '#4488ff' : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', fontWeight: activeTab === 'london' ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s' }}>
@@ -848,11 +955,11 @@ export default function TradingPlan() {
       </div>
 
       {/* -- Discipline tab -- */}
-      {activeTab === 'discipline' && <DisciplineTab />}
+      {activeTab === 'newyork' && <NewYorkTab />}
       {activeTab === 'london' && <LondonTab />}
 
       {/* -- Plan tabs content -- */}
-      {activeTab !== 'discipline' && activeTab !== 'london' && (
+      {activeTab !== 'newyork' && activeTab !== 'london' && (
       <div>
       {/* Plan header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
