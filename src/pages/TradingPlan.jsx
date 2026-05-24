@@ -1,3 +1,96 @@
+// -- ICT Sessions ------------------------------------------------
+const ICT_SESSIONS = [
+  {
+    id: "premarket",
+    label: "NY Pre-Market",
+    time: "13h00 - 15h30",
+    color: "#aa88ff",
+    emoji: "🌅",
+    danger: false,
+    badge: null,
+    objective: "Préparer l'open US, construire la liquidité, identifier le biais initial.",
+    observe: [
+      { label: "London High / Low",  note: "Souvent ciblés plus tard" },
+      { label: "Asian High / Low",   note: "Toujours importants" },
+      { label: "PDH / PDL",          note: "Previous Day High / Low" },
+      { label: "Equal Highs / Lows", note: "Consolidations & équilibres" },
+    ],
+    doList:   ["Tracer les niveaux clés", "Attendre la prise de liquidité", "Définir le Draw On Liquidity (DOL)"],
+    dontList: ["Entrer trop tôt", "Anticiper le move", "FOMO avant 15h30"],
+    subsessions: null,
+    checklist: null,
+    mindset: null,
+  },
+  {
+    id: "nyam",
+    label: "NY AM Session",
+    time: "15h30 - 18h00",
+    color: "#00ff88",
+    emoji: "🚀",
+    danger: false,
+    badge: "LA PLUS IMPORTANTE",
+    objective: "C'est LE coeur du trading ICT sur MNQ. La majorité des setups A+ arrivent ici.",
+    observe: null,
+    doList:   ["Trader uniquement dans le sens du DOL", "Entrer après sweep de liquidité", "Attendre un displacement clair"],
+    dontList: ["Pas de trade au milieu du range", "Pas de revenge trade après 16h30", "Pas de setup sans liquidité prise"],
+    subsessions: [
+      { label: "Opening Drive",              time: "15h30 - 16h00", color: "#f0a020", hot: false, desc: "Sweep violent, Judas Swing, faux départ, prise de liquidité Londres." },
+      { label: "Silver Bullet Principal",    time: "16h00 - 17h00", color: "#00ff88", hot: true,  desc: "Fenêtre la plus importante. Chercher MSS/CHOCH, displacement, FVG, retracement propre." },
+      { label: "Continuation / Distribution",time: "17h00 - 18h00", color: "#8aaa90", hot: false, desc: "Extension du move, prise de profits, second push possible." },
+    ],
+    checklist: [
+      { step: 1, question: "Quelle liquidité a été prise ?", items: ["Asian High ?", "London Low ?", "PDH / PDL ?"] },
+      { step: 2, question: "Où est le Draw On Liquidity ?",  items: ["Highs visibles ?", "Lows visibles ?", "Imbalance ?", "Daily target ?"] },
+      { step: 3, question: "Y a-t-il un displacement ?",     items: ["Sans displacement → PAS DE TRADE"] },
+      { step: 4, question: "Le FVG est-il propre ?",         items: ["Attendre l'impulsion", "Retracement propre", "Entrée sur le FVG"] },
+    ],
+    mindset: null,
+  },
+  {
+    id: "lunch",
+    label: "NY Lunch",
+    time: "18h00 - 19h30",
+    color: "#ff4455",
+    emoji: "🍽",
+    danger: true,
+    badge: null,
+    objective: "Session dangereuse : chop, ranges, faux signaux, faible volatilité.",
+    observe: null,
+    doList:   ["Terminer ta journée si objectif atteint", "Réduire énormément le risque", "Observer sans trader"],
+    dontList: ["Overtrading", "Vouloir se refaire", "Scalping émotionnel"],
+    subsessions: null,
+    checklist: null,
+    mindset: "La majorité des pertes arrivent souvent après NY AM — fatigue, euphorie, frustration, baisse de qualité des setups.",
+  },
+  {
+    id: "nypm",
+    label: "NY PM Session",
+    time: "19h30 - 22h00",
+    color: "#f0a020",
+    emoji: "🌆",
+    danger: false,
+    badge: null,
+    objective: "Le marché redistribue, clôture les positions. Mouvements moins fiables, algos erratiques.",
+    observe: null,
+    doList:   ["Seulement si déjà rentable sur la journée", "Seulement si mentalement stable", "Seulement si encore concentré"],
+    dontList: ["Si tu es en perte → STOP TRADING", "Si tu es fatigué → STOP TRADING", "Forcer un setup de qualité B-"],
+    subsessions: [
+      { label: "PM Silver Bullet", time: "20h00 - 21h00", color: "#f0a020", hot: false, desc: "Setup possible mais moins puissant que NY AM. Seulement setups A+." },
+    ],
+    checklist: null,
+    mindset: "Autorisé seulement si tu es déjà rentable et mentalement stable. Sinon → STOP TRADING.",
+  },
+];
+
+const ICT_TOPSTEP_RULES = [
+  { icon: "🎯", label: "Objectif principal", text: "1 à 2 trades MAX par jour.",                    critical: true  },
+  { icon: "💧", label: "Règle d'or",          text: "Attendre la liquidité.",                        critical: true  },
+  { icon: "🧠", label: "Règle mentale",        text: "Le marché sera encore là demain.",             critical: false },
+  { icon: "🛑", label: "Après 2 pertes",       text: "STOP. Sans exception.",                        critical: true  },
+  { icon: "✅", label: "Après target",          text: "STOP. Protège ton gain.",                      critical: true  },
+  { icon: "❌", label: "Pas de trade si",       text: "Émotions, frustration, besoin de rattraper.", critical: true  },
+];
+
 import { useState } from 'react';
 
 // ── Data ──────────────────────────────────────────────────────
@@ -68,7 +161,7 @@ const PLANS = {
       { icon: '🎯', text: 'Zone idéale : 400$–600$/jour', critical: false },
       { icon: '📦', text: '3–5 MNQ maximum (5 seulement si A+ setup)', critical: false },
       { icon: '🚫', text: 'Ne pas viser 1000$ si ça dépasse 40%', critical: true },
-      { icon: '✅', text: 'Objectif atteint = STOP, pas d\'avidité', critical: false },
+      { icon: "✅", text: "Objectif atteint = STOP, pas d'avidité", critical: false },
     ],
     phases: null,
   },
@@ -123,7 +216,7 @@ const PLANS = {
         range: '+8 000$ et +',
         color: '#aa88ff',
         risk: '500$ max (1%)',
-        target: 'Jusqu\'à 1000$/jour',
+        target: "Jusqu'à 1000$/jour",
         contracts: '5–7 MNQ',
         note: 'Toujours max 1% — scale progressif',
       },
@@ -132,8 +225,8 @@ const PLANS = {
 };
 
 const GOLD_RULES = [
-  'Ce n\'est PAS ta capacité à faire 1000$ qui compte.',
-  'C\'est ta capacité à faire 500$ tous les jours sans craquer.',
+  "Ce n'est PAS ta capacité à faire 1000$ qui compte.",
+  "C'est ta capacité à faire 500$ tous les jours sans craquer.",
   'Petit mais constant = cash régulier, pas gros coup rapide.',
   'Tu protèges le compte avant de gagner.',
 ];
@@ -298,9 +391,157 @@ function PhaseTable({ phases }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────
+
+// -- SessionCard -----------------------------------------------
+function SessionCard({ session }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ border: `1px solid ${session.color}25`, borderRadius: '8px', overflow: 'hidden', marginBottom: '8px' }}>
+      <div onClick={() => setOpen(o => !o)}
+        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: session.danger ? 'rgba(255,68,85,0.06)' : 'rgba(10,28,18,0.5)', cursor: 'pointer', borderLeft: `3px solid ${session.color}`, transition: 'background 0.15s' }}
+        onMouseEnter={e => e.currentTarget.style.background = `${session.color}08`}
+        onMouseLeave={e => e.currentTarget.style.background = session.danger ? 'rgba(255,68,85,0.06)' : 'rgba(10,28,18,0.5)'}
+      >
+        <span style={{ fontSize: '18px' }}>{session.emoji}</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: '700', color: session.color }}>{session.label}</span>
+            {session.badge && <span style={{ fontSize: '8px', background: `${session.color}20`, border: `1px solid ${session.color}40`, color: session.color, padding: '1px 6px', borderRadius: '2px', letterSpacing: '0.5px', fontWeight: '700' }}>{session.badge}</span>}
+            {session.danger && <span style={{ fontSize: '8px', background: 'rgba(255,68,85,0.15)', border: '1px solid rgba(255,68,85,0.35)', color: '#ff4455', padding: '1px 6px', borderRadius: '2px', letterSpacing: '0.5px', fontWeight: '700' }}>DANGER</span>}
+          </div>
+          <div style={{ fontSize: '11px', color: '#4a7a5a', marginTop: '2px' }}>🕒 {session.time}</div>
+        </div>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={session.color} strokeWidth="2" strokeLinecap="round">
+          <polyline points={open ? '18 15 12 9 6 15' : '6 9 12 15 18 9'} />
+        </svg>
+      </div>
+      {open && (
+        <div style={{ padding: '14px 16px', background: 'rgba(5,12,8,0.6)', borderTop: `1px solid ${session.color}15` }}>
+          <div style={{ fontSize: '12px', color: '#8aaa90', marginBottom: '14px', lineHeight: '1.6', fontStyle: 'italic', padding: '8px 12px', background: `${session.color}06`, borderRadius: '4px', borderLeft: `2px solid ${session.color}40` }}>
+            {session.objective}
+          </div>
+          {session.subsessions && (
+            <div style={{ marginBottom: '14px' }}>
+              <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '8px' }}>DÉCOUPAGE INTERNE</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                {session.subsessions.map((s, i) => (
+                  <div key={i} style={{ padding: '9px 12px', background: s.hot ? `${s.color}10` : 'rgba(10,28,18,0.4)', border: `1px solid ${s.hot ? s.color + '30' : 'rgba(0,255,136,0.05)'}`, borderRadius: '5px', borderLeft: `2px solid ${s.color}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: s.color }}>{s.label}</span>
+                      {s.hot && <span style={{ fontSize: '8px', color: s.color, background: `${s.color}15`, padding: '1px 5px', borderRadius: '2px' }}>HOT</span>}
+                      <span style={{ fontSize: '10px', color: '#4a7a5a' }}>{s.time}</span>
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#8aaa90', lineHeight: '1.5' }}>{s.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {session.observe && (
+            <div style={{ marginBottom: '14px' }}>
+              <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '8px' }}>CE QU'IL FAUT OBSERVER</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
+                {session.observe.map((o, i) => (
+                  <div key={i} style={{ padding: '7px 10px', background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.06)', borderRadius: '4px' }}>
+                    <div style={{ fontSize: '11px', color: '#c8d8c8', fontWeight: '600' }}>{o.label}</div>
+                    <div style={{ fontSize: '10px', color: '#3a6a4a', marginTop: '2px' }}>{o.note}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: session.checklist || session.mindset ? '14px' : 0 }}>
+            <div>
+              <div style={{ fontSize: '9px', color: '#00ff88', letterSpacing: '2px', marginBottom: '6px' }}>FAIRE ✓</div>
+              {session.doList.map((d, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '11px', color: '#6aaa7a', marginBottom: '3px' }}>
+                  <span style={{ color: '#00ff88', flexShrink: 0 }}>▸</span>{d}
+                </div>
+              ))}
+            </div>
+            <div>
+              <div style={{ fontSize: '9px', color: '#ff4455', letterSpacing: '2px', marginBottom: '6px' }}>EVITER ✗</div>
+              {session.dontList.map((d, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '11px', color: '#aa6a6a', marginBottom: '3px' }}>
+                  <span style={{ color: '#ff4455', flexShrink: 0 }}>✗</span>{d}
+                </div>
+              ))}
+            </div>
+          </div>
+          {session.checklist && (
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '8px' }}>CHECKLIST ICT AVANT ENTREE</div>
+              {session.checklist.map((c, i) => (
+                <div key={i} style={{ padding: '8px 12px', background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '5px', marginBottom: '5px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#00ff88', flexShrink: 0, fontWeight: '700' }}>{c.step}</div>
+                    <span style={{ fontSize: '12px', color: '#c8d8c8', fontWeight: '600' }}>{c.question}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', paddingLeft: '28px' }}>
+                    {c.items.map((item, j) => (
+                      <span key={j} style={{ fontSize: '10px', color: item.includes('PAS DE TRADE') ? '#ff4455' : '#5a8a6a', background: item.includes('PAS DE TRADE') ? 'rgba(255,68,85,0.1)' : 'rgba(0,255,136,0.05)', border: `1px solid ${item.includes('PAS DE TRADE') ? 'rgba(255,68,85,0.25)' : 'rgba(0,255,136,0.1)'}`, padding: '2px 7px', borderRadius: '3px', fontWeight: item.includes('PAS DE TRADE') ? '700' : '400' }}>{item}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {session.mindset && (
+            <div style={{ padding: '8px 12px', background: 'rgba(240,160,32,0.06)', border: '1px solid rgba(240,160,32,0.2)', borderRadius: '5px', fontSize: '11px', color: '#c8a060', lineHeight: '1.5' }}>
+              🧠 {session.mindset}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DisciplineTab() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '6px' }}>
+        {ICT_SESSIONS.map(s => (
+          <div key={s.id} style={{ padding: '10px 12px', background: `${s.color}08`, border: `1px solid ${s.color}20`, borderRadius: '6px', borderTop: `2px solid ${s.color}` }}>
+            <div style={{ fontSize: '16px', marginBottom: '4px' }}>{s.emoji}</div>
+            <div style={{ fontSize: '11px', color: s.color, fontWeight: '700', marginBottom: '2px' }}>{s.label}</div>
+            <div style={{ fontSize: '10px', color: '#3a6a4a' }}>{s.time}</div>
+            {s.danger && <div style={{ fontSize: '9px', color: '#ff4455', marginTop: '3px' }}>⚠ DANGER</div>}
+          </div>
+        ))}
+      </div>
+      <div>
+        <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>SESSIONS ICT — MNQ (HEURE FRANÇAISE)</div>
+        {ICT_SESSIONS.map(s => <SessionCard key={s.id} session={s} />)}
+      </div>
+      <div>
+        <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>DISCIPLINE ICT — TOPSTEP</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          {ICT_TOPSTEP_RULES.map((r, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '28px 140px 1fr', gap: '10px', alignItems: 'center', padding: '10px 14px', background: r.critical ? 'rgba(255,68,85,0.04)' : 'rgba(10,28,18,0.3)', border: `1px solid ${r.critical ? 'rgba(255,68,85,0.1)' : 'rgba(0,255,136,0.04)'}`, borderLeft: `2px solid ${r.critical ? '#ff4455' : '#2a5a32'}`, borderRadius: '5px' }}>
+              <span style={{ fontSize: '15px' }}>{r.icon}</span>
+              <span style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '1px' }}>{r.label.toUpperCase()}</span>
+              <span style={{ fontSize: '12px', color: r.critical ? '#e8c8c8' : '#8aaa90' }}>{r.text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ padding: '16px', background: 'rgba(170,136,255,0.06)', border: '1px solid rgba(170,136,255,0.2)', borderRadius: '8px', borderLeft: '3px solid #aa88ff' }}>
+        <div style={{ fontSize: '9px', color: '#aa88ff', letterSpacing: '2px', marginBottom: '8px' }}>MENTALITE ICT PROFESSIONNELLE</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ fontSize: '12px', color: '#6a5a8a' }}>Le travail <span style={{ color: '#ff4455', fontWeight: '700' }}>N'EST PAS</span> :</div>
+          <div style={{ fontSize: '13px', color: '#aa6aaa', paddingLeft: '12px' }}>→ Trader souvent</div>
+          <div style={{ fontSize: '12px', color: '#aa88ff', marginTop: '4px' }}>Le travail <span style={{ color: '#00ff88', fontWeight: '700' }}>EST</span> :</div>
+          <div style={{ fontSize: '13px', color: '#c8d8c8', fontWeight: '700', paddingLeft: '12px' }}>→ Attendre le bon moment institutionnel.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TradingPlan() {
-  const [activeTab, setActiveTab] = useState('payout5j');
-  const plan = PLANS[activeTab];
+  const [activeTab, setActiveTab] = useState('discipline');
+  const plan = PLANS[activeTab] ?? PLANS.payout5j;
 
   return (
     <div style={{ padding: '24px 28px', maxWidth: '1000px', fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>
@@ -326,8 +567,13 @@ export default function TradingPlan() {
         </div>
       </div>
 
-      {/* ── Tabs ── */}
+      {/* -- Tabs -- */}
       <div style={{ display: 'flex', gap: '6px', marginBottom: '22px', background: 'rgba(10,28,18,0.4)', padding: '5px', borderRadius: '8px', border: '1px solid rgba(0,255,136,0.07)' }}>
+        <button onClick={() => setActiveTab('discipline')}
+          style={{ flex: 1.2, padding: '10px 6px', borderRadius: '5px', border: activeTab === 'discipline' ? '1px solid #aa88ff40' : '1px solid transparent', background: activeTab === 'discipline' ? '#aa88ff12' : 'transparent', color: activeTab === 'discipline' ? '#aa88ff' : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', fontWeight: activeTab === 'discipline' ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s' }}>
+          <div style={{ fontSize: '13px', marginBottom: '2px' }}>🧠</div>
+          <div style={{ fontSize: '10px', opacity: 0.8 }}>Discipline</div>
+        </button>
         {Object.values(PLANS).map(p => (
           <button key={p.id} onClick={() => setActiveTab(p.id)}
             style={{ flex: 1, padding: '10px 6px', borderRadius: '5px', border: activeTab === p.id ? `1px solid ${p.color}40` : '1px solid transparent', background: activeTab === p.id ? `${p.color}12` : 'transparent', color: activeTab === p.id ? p.color : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', fontWeight: activeTab === p.id ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '0.5px' }}>
@@ -337,7 +583,13 @@ export default function TradingPlan() {
         ))}
       </div>
 
-      {/* ── Plan header ── */}
+      {/* -- Discipline tab -- */}
+      {activeTab === 'discipline' && <DisciplineTab />}
+
+      {/* -- Plan tabs content -- */}
+      {activeTab !== 'discipline' && (
+      <div>
+      {/* Plan header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: plan.color, boxShadow: `0 0 8px ${plan.color}`, animation: 'pulse 2s infinite' }} />
         <div>
@@ -440,6 +692,8 @@ export default function TradingPlan() {
             ))}
           </div>
         </div>
+      )}
+      </div>
       )}
     </div>
   );
