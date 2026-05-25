@@ -341,8 +341,10 @@ export default function Dashboard() {
 
   const s = stats ?? {};
 
-  // Filter
+  // Filter — exclude micro-trades (|P&L| < 10, non-zero)
   const filtered = trades.filter(t => {
+    const rawNet = t.result_net ?? t.result;
+    if (rawNet != null && rawNet !== 0 && Math.abs(rawNet) < 10) return false;
     const net = getNet(t);
     if (filter === 'WIN'  && net <= 0) return false;
     if (filter === 'LOSS' && net >= 0) return false;

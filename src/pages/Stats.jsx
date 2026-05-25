@@ -319,9 +319,11 @@ export default function Stats() {
 
   const s = stats ?? {};
 
-  // Filter by period
+  // Filter by period + exclude micro-trades (|P&L| < 10, non-zero)
   const now = new Date();
   const filtered = trades.filter(t => {
+    const net = t.result_net ?? t.result;
+    if (net != null && net !== 0 && Math.abs(net) < 10) return false;
     if (period === 'ALL')   return true;
     const d = new Date(t.date);
     if (period === 'TODAY') return t.date === now.toISOString().slice(0,10);
