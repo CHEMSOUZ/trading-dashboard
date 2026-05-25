@@ -150,8 +150,25 @@ function getTradeById(db, id) {
 }
 function insertTrade(db, dbPath, trade) {
   if (trade.external_id) {
-    const exists = getOne(db, 'SELECT id FROM trades WHERE external_id = ?', [trade.external_id]);
-    if (exists) return { id: exists.id, ...trade, skipped: true };
+    const exists = getOne(db, 'SELECT id,entered_at,exited_at,size,duration,exit_price FROM trades WHERE external_id = ?', [trade.external_id]);
+    if (exists) {
+      // Auto-patch: si les nouvelles données ont un timestamp ISO mais l'existant non, on corrige
+      const isIso = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(s);
+      if (isIso(trade.entered_at) && !isIso(exists.entered_at)) {
+        runQ(db, dbPath, `
+          UPDATE trades SET
+            entered_at=:ea, exited_at=:xa,
+            size=COALESCE(size,:size),
+            duration=COALESCE(duration,:dur),
+            exit_price=COALESCE(exit_price,:ep)
+          WHERE id=:id
+        `, { ':ea': trade.entered_at, ':xa': trade.exited_at ?? null,
+             ':size': trade.size ?? null, ':dur': trade.duration ?? null,
+             ':ep': trade.exit_price ?? null, ':id': exists.id });
+        return { id: exists.id, ...trade, patched: true };
+      }
+      return { id: exists.id, ...trade, skipped: true };
+    }
   }
   runQ(db, dbPath, `
     INSERT INTO trades (
@@ -209,35 +226,58 @@ function deleteTrade(db, dbPath, id) {
 // ── CSV IMPORT ────────────────────────────────────────────────
 function importCsvTrades(db, dbPath, rows) {
   let imported = 0, skipped = 0, errors = 0;
+
+  function parseIso(str) {
+    if (!str) return null;
+    try {
+      const m = str.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2}:\d{2})\s+([+-]\d{2}:\d{2})$/);
+      if (m) return new Date(`${m[3]}-${m[1]}-${m[2]}T${m[4]}${m[5]}`).toISOString();
+      return new Date(str).toISOString();
+    } catch { return null; }
+  }
+  function fmtDur(str) {
+    if (!str) return null;
+    const p = str.split(':');
+    if (p.length < 3) return str;
+    const h = parseInt(p[0], 10), mn = parseInt(p[1], 10), s = parseInt(p[2], 10);
+    if (h > 0) return `${h}h ${mn}m`;
+    if (mn > 0) return `${mn}m ${s}s`;
+    return `${s}s`;
+  }
+  function normPair(name) {
+    if (!name) return 'Autre';
+    const clean = name.replace(/[A-Z]\d+$/, '').replace(/\d+$/, '');
+    const MAP = { MNQ:'MNQ', NQ:'NQ', MES:'MES', ES:'ES', MGC:'MGC', GC:'GC', M2K:'M2K', RTY:'RTY', MCL:'MCL', CL:'CL' };
+    return MAP[clean] ?? clean;
+  }
+
   for (const row of rows) {
     try {
-      let date = '';
-      if (row.TradeDay) {
-        const d = new Date(row.TradeDay);
-        date = isNaN(d) ? row.TradeDay.slice(0,10) : d.toISOString().slice(0,10);
-      } else if (row.EnteredAt) {
-        date = new Date(row.EnteredAt).toISOString().slice(0,10);
-      }
-      const direction = (row.Type ?? '').toUpperCase().includes('LONG') ? 'LONG' : 'SHORT';
+      const enteredAt = parseIso(row.EnteredAt);
+      const exitedAt  = parseIso(row.ExitedAt);
+      const date      = enteredAt ? enteredAt.slice(0, 10) : '';
+      const direction = (row.Type ?? '').toLowerCase() === 'short' ? 'SHORT' : 'LONG';
       const pnlGross  = parseFloat(row.PnL) || 0;
       const fees      = Math.abs(parseFloat(row.Fees) || 0);
       const comm      = Math.abs(parseFloat(row.Commissions) || 0);
       const pnlNet    = Math.round((pnlGross - fees - comm) * 100) / 100;
       const outcome   = pnlNet > 0 ? 'WIN' : pnlNet < 0 ? 'LOSS' : 'BE';
+      const sizeVal   = parseFloat(row.Size);
+      const exitVal   = parseFloat(row.ExitPrice);
       const trade = {
-        external_id: String(row.Id ?? ''), date,
-        pair: row.ContractName ?? 'Unknown', direction,
-        entry: parseFloat(row.EntryPrice) || 0,
-        exit_price: parseFloat(row.ExitPrice) || null,
+        external_id: row.Id ? String(row.Id) : null,
+        date, pair: normPair(row.ContractName), direction,
+        entry:      parseFloat(row.EntryPrice) || 0,
+        exit_price: !isNaN(exitVal) && exitVal !== 0 ? exitVal : null,
         stop: 0, tp: 0, rr: null,
         result: pnlGross, result_net: pnlNet,
         fees, commissions: comm,
-        size: parseFloat(row.Size) || null,
+        size:      !isNaN(sizeVal) && sizeVal !== 0 ? sizeVal : null,
         outcome,
-        entered_at: row.EnteredAt ?? null,
-        exited_at: row.ExitedAt ?? null,
-        duration: row.TradeDuration ?? null,
-        source: 'topstepx_csv',
+        entered_at: enteredAt,
+        exited_at:  exitedAt,
+        duration:   fmtDur(row.TradeDuration),
+        source:     'topstep_csv',
       };
       const result = insertTrade(db, dbPath, trade);
       if (result.skipped) skipped++; else imported++;

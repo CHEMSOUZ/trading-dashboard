@@ -329,19 +329,32 @@ export default function CsvImport() {
   async function handleImport(skipDuplicates = true) {
     setStep('importing');
     let imported = 0, skipped = 0, errors = 0;
-    const toImport = skipDuplicates
-      ? trades.filter(t => !duplicates.has(t.external_id))
-      : trades;
 
-    for (let i = 0; i < toImport.length; i++) {
-      setProgress(Math.round(((i + 1) / toImport.length) * 100));
+    // Toujours passer TOUS les trades à la DB :
+    // - nouveaux  → INSERT
+    // - doublons avec champs manquants → auto-patch (UPDATE timestamps/taille/durée)
+    // - doublons complets → SKIP (si skipDuplicates=true et données déjà OK)
+    for (let i = 0; i < trades.length; i++) {
+      setProgress(Math.round(((i + 1) / trades.length) * 100));
+      const t = trades[i];
+      const isDup = duplicates.has(t.external_id);
+      // Sauter les vrais doublons seulement si l'utilisateur a choisi skipDuplicates
+      // Mais on laisse passer si le doublon pourrait être patché (pas de entered_at ISO en DB)
+      if (skipDuplicates && isDup) {
+        // On appelle quand même insertTrade : il auto-patchera si nécessaire et retournera patched=true
+        try {
+          const res = await window.db.insertTrade(t);
+          if (res.ok && res.data?.patched) imported++;
+          else skipped++;
+        } catch { skipped++; }
+        continue;
+      }
       try {
-        const res = await window.db.insertTrade(toImport[i]);
-        if (res.ok) imported++;
-        else errors++;
+        const res = await window.db.insertTrade(t);
+        if (res.ok && !res.data?.skipped) imported++;
+        else skipped++;
       } catch { errors++; }
     }
-    skipped = trades.length - toImport.length;
     setResult({ imported, skipped, errors });
     setStep('done');
   }
