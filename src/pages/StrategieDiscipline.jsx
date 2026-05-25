@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // -- ICT Sessions (New York) ------------------------------------
 const ICT_SESSIONS = [
@@ -539,7 +539,7 @@ function NewYorkTab() {
 
 // -- Main -------------------------------------------------------
 export default function StrategieDiscipline() {
-  const [activeTab, setActiveTab] = useState('newyork');
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('strategie_tab') || 'newyork');
 
   return (
     <div style={{ padding: '24px 28px', maxWidth: '1000px', fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>
@@ -551,12 +551,12 @@ export default function StrategieDiscipline() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '6px', marginBottom: '22px', background: 'rgba(10,28,18,0.4)', padding: '5px', borderRadius: '8px', border: '1px solid rgba(0,255,136,0.07)' }}>
-        <button onClick={() => setActiveTab('newyork')}
+        <button onClick={() => { setActiveTab('newyork'); localStorage.setItem('strategie_tab', 'newyork'); }}
           style={{ flex: 1, padding: '10px 6px', borderRadius: '5px', border: activeTab === 'newyork' ? '1px solid #00ff8840' : '1px solid transparent', background: activeTab === 'newyork' ? '#00ff8812' : 'transparent', color: activeTab === 'newyork' ? '#00ff88' : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', fontWeight: activeTab === 'newyork' ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s' }}>
           <div style={{ fontSize: '13px', marginBottom: '2px' }}>🇺🇸</div>
           <div style={{ fontSize: '10px', opacity: 0.8 }}>US New York</div>
         </button>
-        <button onClick={() => setActiveTab('london')}
+        <button onClick={() => { setActiveTab('london'); localStorage.setItem('strategie_tab', 'london'); }}
           style={{ flex: 1, padding: '10px 6px', borderRadius: '5px', border: activeTab === 'london' ? '1px solid #4488ff40' : '1px solid transparent', background: activeTab === 'london' ? '#4488ff12' : 'transparent', color: activeTab === 'london' ? '#4488ff' : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', fontWeight: activeTab === 'london' ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s' }}>
           <div style={{ fontSize: '13px', marginBottom: '2px' }}>🇬🇧</div>
           <div style={{ fontSize: '10px', opacity: 0.8 }}>GB London</div>

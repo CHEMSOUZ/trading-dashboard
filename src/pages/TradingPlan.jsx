@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // ── Data ──────────────────────────────────────────────────────
 
@@ -212,7 +212,12 @@ function DayCycleTable({ plan }) {
 }
 
 function Simulator({ plan }) {
-  const [days, setDays] = useState(plan.cycle ? plan.cycle.map(d => String(d.target)) : ['500', '400', '500']);
+  const key = `sim_days_${plan.id}`;
+  const [days, setDays] = useState(() => {
+    try { const s = localStorage.getItem(key); if (s) return JSON.parse(s); } catch {}
+    return plan.cycle ? plan.cycle.map(d => String(d.target)) : ['500', '400', '500'];
+  });
+  useEffect(() => { localStorage.setItem(key, JSON.stringify(days)); }, [days]);
   const values = days.map(d => parseFloat(d.replace(',', '.')) || 0);
   const total = values.reduce((s, v) => s + v, 0);
   const max = Math.max(...values);
@@ -258,9 +263,12 @@ function Simulator({ plan }) {
         </div>
         <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '5px', padding: '8px 10px', borderTop: `2px solid ${plan.color}` }}>
           <div style={{ fontSize: '9px', color: '#2a5a32', letterSpacing: '1px', marginBottom: '3px' }}>PAYOUT POSSIBLE</div>
-          <div style={{ fontSize: '15px', fontWeight: '700', color: plan.color }}>
-            {total > 0 && consistencyOk ? fmt(Math.round(total * 0.5)) : '—'}
-          </div>
+          {total > 0 && consistencyOk ? (
+            <>
+              <div style={{ fontSize: '15px', fontWeight: '700', color: plan.color }}>{fmt(Math.round(total * 0.5 * 0.9))}</div>
+              <div style={{ fontSize: '9px', color: '#3a6a4a', marginTop: '2px' }}>-10% FRAIS TOPSTEP</div>
+            </>
+          ) : <div style={{ fontSize: '15px', fontWeight: '700', color: plan.color }}>—</div>}
         </div>
       </div>
 
@@ -300,7 +308,7 @@ function PhaseTable({ phases }) {
 // ── Main ──────────────────────────────────────────────────────
 
 export default function TradingPlan() {
-  const [activeTab, setActiveTab] = useState('payout5j');
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('trading_plan_tab') || 'payout5j');
   const plan = PLANS[activeTab] ?? PLANS.payout5j;
 
   return (
@@ -330,7 +338,7 @@ export default function TradingPlan() {
       {/* -- Tabs -- */}
       <div style={{ display: 'flex', gap: '6px', marginBottom: '22px', background: 'rgba(10,28,18,0.4)', padding: '5px', borderRadius: '8px', border: '1px solid rgba(0,255,136,0.07)' }}>
         {Object.values(PLANS).map(p => (
-          <button key={p.id} onClick={() => setActiveTab(p.id)}
+          <button key={p.id} onClick={() => { setActiveTab(p.id); localStorage.setItem('trading_plan_tab', p.id); }}
             style={{ flex: 1, padding: '10px 6px', borderRadius: '5px', border: activeTab === p.id ? `1px solid ${p.color}40` : '1px solid transparent', background: activeTab === p.id ? `${p.color}12` : 'transparent', color: activeTab === p.id ? p.color : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', fontWeight: activeTab === p.id ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '0.5px' }}>
             <div style={{ fontSize: '13px', marginBottom: '2px' }}>{p.abbr}</div>
             <div style={{ fontSize: '10px', opacity: 0.8 }}>{p.label}</div>
