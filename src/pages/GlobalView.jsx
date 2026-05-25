@@ -327,8 +327,8 @@ export default function GlobalView() {
   const fees    = trades.reduce((s,t) => s+(t.fees??0)+(t.commissions??0), 0);
 
   // ── By account ────────────────────────────────────────────
-  const ACCOUNT_SIZES = { topstep_50k: 50000, topstep_100k: 100000, topstep_150k: 150000 };
-  const FLOORS        = { topstep_50k: 48000, topstep_100k: 97000,  topstep_150k: 145500 };
+  const ACCOUNT_SIZES = { topstep_50k: 50000, topstep_100k: 100000, topstep_150k: 150000, topstep_ef_50k: 50000, topstep_ef_100k: 100000, topstep_ef_150k: 150000 };
+  const FLOORS        = { topstep_50k: 48000, topstep_100k: 97000,  topstep_150k: 145500, topstep_ef_50k: 48000, topstep_ef_100k: 97000,  topstep_ef_150k: 145500 };
   const byAccount = accounts.map(acc => {
     const at    = allTrades.filter(t => t._accountId === acc.id);
     const ap    = at.reduce((s,t) => s+getNet(t), 0);

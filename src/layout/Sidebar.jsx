@@ -16,31 +16,40 @@ const NAV = [
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
   { to: '/calendar',  label: 'Annonces',     sub: 'Calendrier économique',
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="8" cy="15" r="1" fill="currentColor"/><circle cx="12" cy="15" r="1" fill="currentColor"/><circle cx="16" cy="15" r="1" fill="currentColor"/></svg> },
-  { to: '/plan',      label: 'Règles & Plan', sub: 'Stratégie & discipline',
+  { to: '/plan',      label: 'Règles & Plan', sub: 'Plans Payout · Funded',
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
+  { to: '/strategie', label: 'Stratégie ICT',  sub: 'Sessions NY · London',
+    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
   { to: '/payout',    label: 'Payout',        sub: 'Investissements & revenus',
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> },
 ];
 
-// -- Blown detection -----------------------------------------
+// -- Status detection ----------------------------------------
 const ACCOUNT_RULES = {
-  topstep_50k:    { size: 50000,  maxLoss: 2000 },
-  topstep_100k:   { size: 100000, maxLoss: 3000 },
-  topstep_150k:   { size: 150000, maxLoss: 4500 },
-  tradovate_live: { size: null,   maxLoss: null  },
-  tradovate_demo: { size: null,   maxLoss: null  },
-  perso:          { size: null,   maxLoss: null  },
-  autre:          { size: null,   maxLoss: null  },
+  topstep_50k:       { size: 50000,  maxLoss: 2000 },
+  topstep_100k:      { size: 100000, maxLoss: 3000 },
+  topstep_150k:      { size: 150000, maxLoss: 4500 },
+  topstep_ef_50k:    { size: 50000,  maxLoss: 2000 },
+  topstep_ef_100k:   { size: 100000, maxLoss: 3000 },
+  topstep_ef_150k:   { size: 150000, maxLoss: 4500 },
+  tradovate_live:    { size: null,   maxLoss: null  },
+  tradovate_demo:    { size: null,   maxLoss: null  },
+  perso:             { size: null,   maxLoss: null  },
+  autre:             { size: null,   maxLoss: null  },
 };
+
+const CHALLENGE_TYPES = new Set(['topstep_50k','topstep_100k','topstep_150k']);
+const EXPRESS_FUNDED_TYPES = new Set(['topstep_ef_50k','topstep_ef_100k','topstep_ef_150k']);
 
 async function computeBlownStatus(acc, currentActiveId) {
   const rules = ACCOUNT_RULES[acc.type];
-  if (!rules?.size || !rules?.maxLoss) return { isBlown: false, pnl: null };
+  const isExpressFunded = EXPRESS_FUNDED_TYPES.has(acc.type);
+  if (!rules?.size || !rules?.maxLoss) return { isBlown: false, pnl: null, isValidated: false, isExpressFunded };
   try {
     await window.accounts.setActive(acc.id);
     const res = await window.db.getAllTrades();
     if (currentActiveId) await window.accounts.setActive(currentActiveId);
-    if (!res.ok) return { isBlown: false, pnl: null };
+    if (!res.ok) return { isBlown: false, pnl: null, isValidated: false, isExpressFunded };
     const trades = res.data;
     const sorted = [...trades]
       .filter(t => (t.result_net ?? t.result) != null)
@@ -51,13 +60,26 @@ async function computeBlownStatus(acc, currentActiveId) {
       if (bal > hwm) { hwm = bal; floor = hwm - rules.maxLoss; }
     }
     const totalPnl = trades.reduce((s, t) => s + (t.result_net ?? t.result ?? 0), 0);
+
+    // Validated: challenge + pnl >= 3000 + first day respected consistency (< 1500)
+    let isValidated = false;
+    if (CHALLENGE_TYPES.has(acc.type) && sorted.length > 0) {
+      const firstDate = sorted[0].entered_at?.slice(0, 10) ?? sorted[0].date ?? '';
+      const firstDayPnl = sorted
+        .filter(t => (t.entered_at?.slice(0, 10) ?? t.date ?? '') === firstDate)
+        .reduce((s, t) => s + (t.result_net ?? t.result ?? 0), 0);
+      isValidated = totalPnl >= 3000 && firstDayPnl < 1500;
+    }
+
     return {
       isBlown: rules.size + totalPnl <= floor,
       pnl: Math.round(totalPnl * 100) / 100,
+      isValidated,
+      isExpressFunded,
     };
   } catch {
     if (currentActiveId) { try { await window.accounts.setActive(currentActiveId); } catch {} }
-    return { isBlown: false, pnl: null };
+    return { isBlown: false, pnl: null, isValidated: false, isExpressFunded };
   }
 }
 
@@ -155,7 +177,11 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
       {/* Account selector */}
       <div style={{ padding: '10px', borderBottom: '1px solid rgba(0,255,136,0.06)' }}>
         <div onClick={() => setShowSwitcher(s => !s)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 11px', borderRadius: '6px', cursor: 'pointer', background: showSwitcher ? 'rgba(0,255,136,0.06)' : 'transparent', border: `1px solid ${showSwitcher ? 'rgba(0,255,136,0.2)' : 'rgba(0,255,136,0.06)'}`, transition: 'all 0.15s' }}>
-          <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: accountStatuses[activeAccount?.id]?.isBlown ? '#ff4455' : '#00ff88', boxShadow: `0 0 7px ${accountStatuses[activeAccount?.id]?.isBlown ? '#ff4455' : '#00ff88'}`, flexShrink: 0 }} />
+          {(() => {
+            const st = accountStatuses[activeAccount?.id];
+            const dc = st?.isBlown ? '#ff4455' : st?.isExpressFunded ? '#f0c020' : '#00ff88';
+            return <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: dc, boxShadow: `0 0 7px ${dc}`, flexShrink: 0 }} />;
+          })()}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '14px', fontWeight: '700', color: '#e8f8e8', wordBreak: 'break-word', lineHeight: '1.3' }}>{activeAccount?.name ?? 'Aucun compte'}</div>
             <div style={{ fontSize: '12px', color: '#3a6a4a', marginTop: '2px' }}>{activeAccount?.typeInfo?.label ?? '—'}</div>
@@ -168,57 +194,111 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
         {/* Dropdown */}
         {showSwitcher && (
           <div style={{ position: 'absolute', top: '90px', left: '8px', right: '8px', zIndex: 50, background: '#070d12', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '8px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
-            <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', padding: '4px 8px', marginBottom: '4px' }}>COMPTES</div>
 
-            {accounts.map(a => {
-              const st = accountStatuses[a.id];
-              const isBlown = st?.isBlown ?? false;
-              const isActive = a.id === activeAccount?.id;
-              const dotColor = isBlown ? '#ff4455' : '#00ff88';
-              const bgNormal = isBlown ? 'rgba(255,68,85,0.06)' : 'rgba(0,255,136,0.06)';
-              return (
-                <div key={a.id} style={{ borderRadius: '5px', marginBottom: '2px', overflow: 'hidden' }}>
-                  {renamingId === a.id ? (
-                    // Rename mode
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '5px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: a.color, flexShrink: 0 }} />
-                      <input
-                        ref={renameInputRef}
-                        value={renameValue}
-                        onChange={e => setRenameValue(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') confirmRename(a.id); if (e.key === 'Escape') cancelRename(); }}
-                        style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#e8f8e8', fontSize: '13px', fontFamily: 'inherit', caretColor: '#00ff88' }}
-                      />
-                      <button onClick={() => confirmRename(a.id)} style={{ background: 'rgba(0,255,136,0.15)', border: 'none', color: '#00ff88', padding: '2px 7px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit' }}>✓</button>
-                      <button onClick={cancelRename} style={{ background: 'none', border: 'none', color: '#4a7a5a', padding: '2px 4px', cursor: 'pointer', fontSize: '13px' }}>✕</button>
-                    </div>
-                  ) : (
-                    // Normal mode
-                    <div onClick={() => switchTo(a.id)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', cursor: 'pointer', background: isActive ? bgNormal : 'transparent', transition: 'background 0.12s', borderRadius: '5px', borderLeft: isBlown ? '2px solid rgba(255,68,85,0.4)' : '2px solid transparent' }}
-                      onMouseEnter={e => e.currentTarget.style.background = bgNormal}
-                      onMouseLeave={e => e.currentTarget.style.background = isActive ? bgNormal : 'transparent'}
-                    >
-                      <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: dotColor, boxShadow: `0 0 5px ${dotColor}`, flexShrink: 0 }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <span style={{ fontSize: '13px', color: isBlown ? '#ff7777' : isActive ? a.color : '#c8d8c8', fontWeight: isActive ? '700' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
-                          {isBlown && <span style={{ fontSize: '8px', background: 'rgba(255,68,85,0.2)', border: '1px solid rgba(255,68,85,0.4)', color: '#ff4455', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>CRAME</span>}
-                        </div>
-                        <div style={{ fontSize: '11px', color: isBlown ? '#6a3a3a' : '#3a6a4a', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <span>{a.typeInfo?.label}</span>
-                          {st?.pnl != null && <span style={{ color: st.pnl >= 0 ? '#00aa55' : '#ff4455' }}>{st.pnl >= 0 ? '+' : ''}{st.pnl.toFixed(0)}$</span>}
-                        </div>
+            {(() => {
+              const liveAccts      = accounts.filter(a => accountStatuses[a.id]?.isExpressFunded && !accountStatuses[a.id]?.isBlown);
+              const validatedAccts = accounts.filter(a => accountStatuses[a.id]?.isValidated && !accountStatuses[a.id]?.isExpressFunded && !accountStatuses[a.id]?.isBlown);
+              const regularAccts   = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isExpressFunded && !accountStatuses[a.id]?.isValidated);
+              const blownAccts     = accounts.filter(a => accountStatuses[a.id]?.isBlown);
+
+              function renderAccItem(a) {
+                const st = accountStatuses[a.id];
+                const isBlown = st?.isBlown ?? false;
+                const isActive = a.id === activeAccount?.id;
+                const isEF = st?.isExpressFunded ?? false;
+                const isVal = st?.isValidated ?? false;
+                const dotColor = isBlown ? '#ff4455' : isEF ? '#f0c020' : '#00ff88';
+                const bgNormal = isBlown ? 'rgba(255,68,85,0.06)' : isEF ? 'rgba(240,192,32,0.06)' : 'rgba(0,255,136,0.06)';
+                const borderAccent = isBlown ? 'rgba(255,68,85,0.4)' : isEF ? 'rgba(240,192,32,0.4)' : 'transparent';
+                return (
+                  <div key={a.id} style={{ borderRadius: '5px', marginBottom: '2px', overflow: 'hidden' }}>
+                    {renamingId === a.id ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '5px' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: a.color, flexShrink: 0 }} />
+                        <input
+                          ref={renameInputRef}
+                          value={renameValue}
+                          onChange={e => setRenameValue(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') confirmRename(a.id); if (e.key === 'Escape') cancelRename(); }}
+                          style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#e8f8e8', fontSize: '13px', fontFamily: 'inherit', caretColor: '#00ff88' }}
+                        />
+                        <button onClick={() => confirmRename(a.id)} style={{ background: 'rgba(0,255,136,0.15)', border: 'none', color: '#00ff88', padding: '2px 7px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit' }}>✓</button>
+                        <button onClick={cancelRename} style={{ background: 'none', border: 'none', color: '#4a7a5a', padding: '2px 4px', cursor: 'pointer', fontSize: '13px' }}>✕</button>
                       </div>
-                      <button onClick={e => startRename(a, e)} title="Renommer" style={{ background: 'none', border: 'none', color: '#2a5a3a', cursor: 'pointer', fontSize: '13px', padding: '2px 4px', flexShrink: 0, opacity: 0.6, transition: 'all 0.15s' }}
-                        onMouseEnter={e => { e.stopPropagation(); e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#00ff88'; }}
-                        onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.color = '#2a5a3a'; }}
-                      >✏️</button>
-                    </div>
+                    ) : (
+                      <div onClick={() => switchTo(a.id)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', cursor: 'pointer', background: isActive ? bgNormal : 'transparent', transition: 'background 0.12s', borderRadius: '5px', borderLeft: `2px solid ${isBlown || isEF ? borderAccent : 'transparent'}` }}
+                        onMouseEnter={e => e.currentTarget.style.background = bgNormal}
+                        onMouseLeave={e => e.currentTarget.style.background = isActive ? bgNormal : 'transparent'}
+                      >
+                        <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: dotColor, boxShadow: `0 0 5px ${dotColor}`, flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <span style={{ fontSize: '13px', color: isBlown ? '#ff7777' : isEF ? '#f0c020' : isActive ? a.color : '#c8d8c8', fontWeight: isActive ? '700' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
+                            {isBlown && <span style={{ fontSize: '8px', background: 'rgba(255,68,85,0.2)', border: '1px solid rgba(255,68,85,0.4)', color: '#ff4455', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>CRAMÉ</span>}
+                            {!isBlown && isEF && <span style={{ fontSize: '8px', background: 'rgba(240,192,32,0.2)', border: '1px solid rgba(240,192,32,0.4)', color: '#f0c020', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>FUNDED</span>}
+                            {!isBlown && !isEF && isVal && <span style={{ fontSize: '8px', background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>VALIDÉ</span>}
+                          </div>
+                          <div style={{ fontSize: '11px', color: isBlown ? '#6a3a3a' : '#3a6a4a', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <span>{a.typeInfo?.label}</span>
+                            {st?.pnl != null && <span style={{ color: st.pnl >= 0 ? '#00aa55' : '#ff4455' }}>{st.pnl >= 0 ? '+' : ''}{st.pnl.toFixed(0)}$</span>}
+                          </div>
+                        </div>
+                        <button onClick={e => startRename(a, e)} title="Renommer" style={{ background: 'none', border: 'none', color: '#2a5a3a', cursor: 'pointer', fontSize: '13px', padding: '2px 4px', flexShrink: 0, opacity: 0.6, transition: 'all 0.15s' }}
+                          onMouseEnter={e => { e.stopPropagation(); e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#00ff88'; }}
+                          onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.color = '#2a5a3a'; }}
+                        >✏️</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <>
+                  {/* COMPTE LIVE */}
+                  {liveAccts.length > 0 && (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#f0c020', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
+                        <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#f0c020', boxShadow: '0 0 4px #f0c020' }} />
+                        COMPTE LIVE
+                      </div>
+                      {liveAccts.map(renderAccItem)}
+                      {(validatedAccts.length > 0 || regularAccts.length > 0 || blownAccts.length > 0) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
+                    </>
                   )}
-                </div>
+
+                  {/* COMPTES VALIDÉS */}
+                  {validatedAccts.length > 0 && (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#00ff88', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
+                        <span style={{ fontSize: '9px' }}>✅</span>
+                        VALIDÉ
+                      </div>
+                      {validatedAccts.map(renderAccItem)}
+                      {(regularAccts.length > 0 || blownAccts.length > 0) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
+                    </>
+                  )}
+
+                  {/* COMPTES RÉGULIERS */}
+                  {regularAccts.length > 0 && (
+                    <>
+                      <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', padding: '4px 8px', marginBottom: '4px' }}>COMPTES</div>
+                      {regularAccts.map(renderAccItem)}
+                      {blownAccts.length > 0 && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
+                    </>
+                  )}
+
+                  {/* CRAMÉS */}
+                  {blownAccts.length > 0 && (
+                    <>
+                      <div style={{ fontSize: '10px', color: '#ff4455', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px', opacity: 0.8 }}>CRAMÉS</div>
+                      {blownAccts.map(renderAccItem)}
+                    </>
+                  )}
+                </>
               );
-            })}
+            })()}
 
             <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '6px 0' }} />
 
@@ -282,7 +362,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
       </div>
 
       <div style={{ padding: '6px', textAlign: 'center' }}>
-        <span style={{ fontSize: '12px', color: '#1a3a22', letterSpacing: '1px' }}>v1.1.0</span>
+        <span style={{ fontSize: '12px', color: '#1a3a22', letterSpacing: '1px' }}>v1.4.0</span>
       </div>
 
       {/* Resize handle */}

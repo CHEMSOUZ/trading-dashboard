@@ -5,11 +5,14 @@ const { app } = require('electron');
 const ACCOUNTS_FILE = path.join(app.getPath('userData'), 'accounts.json');
 
 const ACCOUNT_TYPES = {
-  'topstep_50k':  { label: 'Topstep Express 50K',  size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
-  'topstep_100k': { label: 'Topstep Express 100K', size: 100000, maxLoss: 3000, dailyLoss: 2000 },
-  'topstep_150k': { label: 'Topstep Express 150K', size: 150000, maxLoss: 4500, dailyLoss: 3000 },
-  'perso':        { label: 'Compte Personnel',      size: null,   maxLoss: null, dailyLoss: null },
-  'autre':        { label: 'Autre compte',          size: null,   maxLoss: null, dailyLoss: null },
+  'topstep_50k':    { label: 'Topstep Express 50K',   size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
+  'topstep_100k':   { label: 'Topstep Express 100K',  size: 100000, maxLoss: 3000, dailyLoss: 2000 },
+  'topstep_150k':   { label: 'Topstep Express 150K',  size: 150000, maxLoss: 4500, dailyLoss: 3000 },
+  'topstep_ef_50k':    { label: 'Funded 50K',  size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
+  'topstep_ef_100k':   { label: 'Funded 100K', size: 100000, maxLoss: 3000, dailyLoss: 2000 },
+  'topstep_ef_150k':   { label: 'Funded 150K', size: 150000, maxLoss: 4500, dailyLoss: 3000 },
+  'perso':          { label: 'Compte Personnel', size: null, maxLoss: null, dailyLoss: null },
+  'autre':          { label: 'Autre compte',     size: null, maxLoss: null, dailyLoss: null },
 };
 
 const COLORS = ['#00ff88','#00aaff','#ff6644','#aa88ff','#ffcc00','#ff4488','#44ffcc'];

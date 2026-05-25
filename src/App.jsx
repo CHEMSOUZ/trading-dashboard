@@ -13,6 +13,7 @@ import CsvImport from './pages/CsvImport';
 import EconomicCalendar from './pages/EconomicCalendar';
 import Payout from './pages/Payout';
 import TradingPlan from './pages/TradingPlan';
+import StrategieDiscipline from './pages/StrategieDiscipline';
 
 export default function App() {
   const [activeAccount, setActiveAccount] = useState(null);
@@ -98,6 +99,7 @@ export default function App() {
             <Route path="/import"         element={<CsvImport />} />
             <Route path="/payout"         element={<Payout />} />
             <Route path="/plan"           element={<TradingPlan />} />
+            <Route path="/strategie"      element={<StrategieDiscipline />} />
           </Routes>
         </main>
       </div>

@@ -4,33 +4,45 @@ import { useState, useEffect } from 'react';
 const COLORS = ['#00ff88','#00aaff','#aa88ff','#ffcc00','#ff6644','#ff4488','#44ffcc'];
 
 const TYPE_LABELS = {
-  topstep_50k:    { label: 'Topstep 50K',     color: '#00ff88', platform: 'topstep' },
-  topstep_100k:   { label: 'Topstep 100K',    color: '#00aaff', platform: 'topstep' },
-  topstep_150k:   { label: 'Topstep 150K',    color: '#aa88ff', platform: 'topstep' },
-  tradovate_live: { label: 'Tradovate Live',   color: '#00aaff', platform: 'tradovate' },
-  tradovate_demo: { label: 'Tradovate Demo',   color: '#4488ff', platform: 'tradovate' },
-  perso:          { label: 'Compte Personnel', color: '#ffcc00', platform: 'perso' },
-  autre:          { label: 'Autre compte',     color: '#ff6644', platform: 'perso' },
+  topstep_50k:       { label: 'Topstep 50K',     color: '#00ff88', platform: 'topstep' },
+  topstep_100k:      { label: 'Topstep 100K',    color: '#00aaff', platform: 'topstep' },
+  topstep_150k:      { label: 'Topstep 150K',    color: '#aa88ff', platform: 'topstep' },
+  topstep_ef_50k:    { label: 'Funded 50K',      color: '#f0c020', platform: 'topstep' },
+  topstep_ef_100k:   { label: 'Funded 100K',     color: '#f0c020', platform: 'topstep' },
+  topstep_ef_150k:   { label: 'Funded 150K',     color: '#f0c020', platform: 'topstep' },
+  tradovate_live:    { label: 'Tradovate Live',   color: '#00aaff', platform: 'tradovate' },
+  tradovate_demo:    { label: 'Tradovate Demo',   color: '#4488ff', platform: 'tradovate' },
+  perso:             { label: 'Compte Personnel', color: '#ffcc00', platform: 'perso' },
+  autre:             { label: 'Autre compte',     color: '#ff6644', platform: 'perso' },
 };
 
 const ACCOUNT_RULES = {
-  topstep_50k:    { size: 50000,  maxLoss: 2000 },
-  topstep_100k:   { size: 100000, maxLoss: 3000 },
-  topstep_150k:   { size: 150000, maxLoss: 4500 },
-  tradovate_live: { size: null,   maxLoss: null },
-  tradovate_demo: { size: null,   maxLoss: null },
-  perso:          { size: null,   maxLoss: null },
-  autre:          { size: null,   maxLoss: null },
+  topstep_50k:       { size: 50000,  maxLoss: 2000 },
+  topstep_100k:      { size: 100000, maxLoss: 3000 },
+  topstep_150k:      { size: 150000, maxLoss: 4500 },
+  topstep_ef_50k:    { size: 50000,  maxLoss: 2000 },
+  topstep_ef_100k:   { size: 100000, maxLoss: 3000 },
+  topstep_ef_150k:   { size: 150000, maxLoss: 4500 },
+  tradovate_live:    { size: null,   maxLoss: null },
+  tradovate_demo:    { size: null,   maxLoss: null },
+  perso:             { size: null,   maxLoss: null },
+  autre:             { size: null,   maxLoss: null },
 };
+
+const CHALLENGE_TYPES = new Set(['topstep_50k','topstep_100k','topstep_150k']);
+const EXPRESS_FUNDED_TYPES = new Set(['topstep_ef_50k','topstep_ef_100k','topstep_ef_150k']);
 
 const PLATFORMS = {
   topstep: {
     label: 'Topstep', color: '#00ff88',
     desc: 'Express Funded · Trading Combine',
     types: {
-      topstep_50k:  { label: 'Express 50K',  desc: 'Trailing DD -2 000$' },
-      topstep_100k: { label: 'Express 100K', desc: 'Trailing DD -3 000$' },
-      topstep_150k: { label: 'Express 150K', desc: 'Trailing DD -4 500$' },
+      topstep_50k:     { label: 'Combine 50K',  desc: 'Trading Combine · Trailing DD -2 000$' },
+      topstep_100k:    { label: 'Combine 100K', desc: 'Trading Combine · Trailing DD -3 000$' },
+      topstep_150k:    { label: 'Combine 150K', desc: 'Trading Combine · Trailing DD -4 500$' },
+      topstep_ef_50k:  { label: 'Funded 50K',   desc: 'Express Funded · Trailing DD -2 000$', funded: true },
+      topstep_ef_100k: { label: 'Funded 100K',  desc: 'Express Funded · Trailing DD -3 000$', funded: true },
+      topstep_ef_150k: { label: 'Funded 150K',  desc: 'Express Funded · Trailing DD -4 500$', funded: true },
     },
   },
   tradovate: {
@@ -95,14 +107,15 @@ function PlatformLogo({ platform, size = 28 }) {
 // ── Status computation ────────────────────────────────────────
 async function computeAccountStatus(acc, currentActiveId) {
   const rules = ACCOUNT_RULES[acc.type];
+  const isExpressFunded = EXPRESS_FUNDED_TYPES.has(acc.type);
   if (!rules?.size || !rules?.maxLoss) {
-    return { pnl: null, isBlown: false, floor: null, tradeCount: 0, winrate: 0 };
+    return { pnl: null, isBlown: false, floor: null, tradeCount: 0, winrate: 0, isValidated: false, isExpressFunded };
   }
   try {
     await window.accounts.setActive(acc.id);
     const res = await window.db.getAllTrades();
     if (currentActiveId) await window.accounts.setActive(currentActiveId);
-    if (!res.ok) return { pnl: null, isBlown: false, floor: null, tradeCount: 0, winrate: 0 };
+    if (!res.ok) return { pnl: null, isBlown: false, floor: null, tradeCount: 0, winrate: 0, isValidated: false, isExpressFunded };
     const trades = res.data;
     const sorted = [...trades]
       .filter(t => (t.result_net ?? t.result) != null)
@@ -114,16 +127,29 @@ async function computeAccountStatus(acc, currentActiveId) {
     }
     const totalPnl = trades.reduce((s, t) => s + (t.result_net ?? t.result ?? 0), 0);
     const wins = trades.filter(t => (t.result_net ?? t.result ?? 0) > 0).length;
+
+    // Validated: challenge + total pnl >= 3000 + first day respected consistency (< 1500)
+    let isValidated = false;
+    if (CHALLENGE_TYPES.has(acc.type) && sorted.length > 0) {
+      const firstDate = sorted[0].entered_at?.slice(0, 10) ?? sorted[0].date ?? '';
+      const firstDayPnl = sorted
+        .filter(t => (t.entered_at?.slice(0, 10) ?? t.date ?? '') === firstDate)
+        .reduce((s, t) => s + (t.result_net ?? t.result ?? 0), 0);
+      isValidated = totalPnl >= 3000 && firstDayPnl < 1500;
+    }
+
     return {
       pnl:        Math.round(totalPnl * 100) / 100,
       isBlown:    rules.size + totalPnl <= floor,
       floor:      Math.round(floor * 100) / 100,
       tradeCount: trades.length,
       winrate:    trades.length > 0 ? Math.round((wins / trades.length) * 100) : 0,
+      isValidated,
+      isExpressFunded,
     };
   } catch {
     if (currentActiveId) { try { await window.accounts.setActive(currentActiveId); } catch {} }
-    return { pnl: null, isBlown: false, floor: null, tradeCount: 0, winrate: 0 };
+    return { pnl: null, isBlown: false, floor: null, tradeCount: 0, winrate: 0, isValidated: false, isExpressFunded };
   }
 }
 
@@ -217,16 +243,33 @@ function CreateAccountModal({ onClose, onCreate }) {
             <div>
               <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '8px' }}>TYPE</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                {Object.entries(plat.types).map(([key, info]) => (
-                  <div key={key} onClick={() => setForm(p => ({ ...p, type: key, color: TYPE_LABELS[key]?.color ?? plat.color }))}
-                    style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', background: form.type === key ? `${plat.color}10` : 'rgba(10,28,18,0.4)', border: `1px solid ${form.type === key ? plat.color + '40' : 'rgba(0,255,136,0.08)'}`, transition: 'all 0.12s' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', color: form.type === key ? plat.color : '#c8d8c8', fontWeight: form.type === key ? '700' : '400' }}>{info.label}</div>
-                      <div style={{ fontSize: '11px', color: '#3a6a4a' }}>{info.desc}</div>
+                {Object.entries(plat.types).map(([key, info], idx, arr) => {
+                  const typeColor = TYPE_LABELS[key]?.color ?? plat.color;
+                  const prevInfo = arr[idx - 1]?.[1];
+                  const showSeparator = idx > 0 && !!info.funded !== !!prevInfo?.funded;
+                  return (
+                    <div key={key}>
+                      {showSeparator && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0 6px' }}>
+                          <div style={{ flex: 1, height: '1px', background: 'rgba(0,255,136,0.08)' }} />
+                          <span style={{ fontSize: '9px', color: '#f0c020', letterSpacing: '2px' }}>EXPRESS FUNDED</span>
+                          <div style={{ flex: 1, height: '1px', background: 'rgba(0,255,136,0.08)' }} />
+                        </div>
+                      )}
+                      <div onClick={() => setForm(p => ({ ...p, type: key, color: typeColor }))}
+                        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '6px', cursor: 'pointer', background: form.type === key ? `${typeColor}10` : 'rgba(10,28,18,0.4)', border: `1px solid ${form.type === key ? typeColor + '40' : 'rgba(0,255,136,0.08)'}`, transition: 'all 0.12s' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '13px', color: form.type === key ? typeColor : '#c8d8c8', fontWeight: form.type === key ? '700' : '400' }}>{info.label}</span>
+                            {info.funded && <span style={{ fontSize: '8px', background: 'rgba(240,192,32,0.15)', border: '1px solid rgba(240,192,32,0.3)', color: '#f0c020', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>LIVE</span>}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#3a6a4a' }}>{info.desc}</div>
+                        </div>
+                        <div style={{ width: '15px', height: '15px', borderRadius: '50%', border: `2px solid ${form.type === key ? typeColor : '#2a5a3a'}`, background: form.type === key ? typeColor : 'transparent', flexShrink: 0 }} />
+                      </div>
                     </div>
-                    <div style={{ width: '15px', height: '15px', borderRadius: '50%', border: `2px solid ${form.type === key ? plat.color : '#2a5a3a'}`, background: form.type === key ? plat.color : 'transparent', flexShrink: 0 }} />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
             <div>
@@ -270,14 +313,20 @@ function AccountCard({ acc, isActive, status, onSelect, onDelete }) {
       onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = isBlown ? '0 0 20px rgba(255,68,85,0.12)' : isActive ? `0 0 24px ${acc.color}20` : 'none'; }}
     >
       {/* Badges top-right */}
-      <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '4px', alignItems: 'center' }}>
+      <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '160px' }}>
         {isBlown && (
           <div style={{ background: 'rgba(255,68,85,0.2)', border: '1px solid rgba(255,68,85,0.5)', borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: '#ff4455', letterSpacing: '1px', fontWeight: '700' }}>💀 CRAMÉ</div>
+        )}
+        {!isBlown && status?.isExpressFunded && (
+          <div style={{ background: 'rgba(240,192,32,0.2)', border: '1px solid rgba(240,192,32,0.5)', borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: '#f0c020', letterSpacing: '1px', fontWeight: '700' }}>💰 FUNDED</div>
+        )}
+        {!isBlown && status?.isValidated && (
+          <div style={{ background: 'rgba(0,255,136,0.2)', border: '1px solid rgba(0,255,136,0.5)', borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: '#00ff88', letterSpacing: '1px', fontWeight: '700' }}>✅ VALIDÉ</div>
         )}
         {!isBlown && isActive && (
           <div style={{ background: `${acc.color}20`, border: `1px solid ${acc.color}40`, borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: acc.color, letterSpacing: '1px', fontWeight: '700' }}>ACTIF</div>
         )}
-        {!isBlown && !isActive && hasStats && (
+        {!isBlown && !isActive && hasStats && !status?.isExpressFunded && !status?.isValidated && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 6px #00ff88' }} />
             <span style={{ fontSize: '8px', color: '#00ff88', letterSpacing: '1px', fontWeight: '700' }}>LIVE</span>
@@ -377,8 +426,23 @@ export default function AccountSelect({ onSelect, onBack }) {
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#060c10', color: '#3a6a4a', fontSize: '12px', letterSpacing: '2px', fontFamily: 'monospace' }}>CHARGEMENT...</div>
   );
 
-  const blown = data.accounts.filter(a => statuses[a.id]?.isBlown);
-  const live  = data.accounts.filter(a => !statuses[a.id]?.isBlown);
+  const blownAccounts     = data.accounts.filter(a => statuses[a.id]?.isBlown);
+  const liveAccounts      = data.accounts.filter(a => !statuses[a.id]?.isBlown && statuses[a.id]?.isExpressFunded);
+  const validatedAccounts = data.accounts.filter(a => !statuses[a.id]?.isBlown && !statuses[a.id]?.isExpressFunded && statuses[a.id]?.isValidated);
+  const activeAccounts    = data.accounts.filter(a => !statuses[a.id]?.isBlown && !statuses[a.id]?.isExpressFunded && !statuses[a.id]?.isValidated);
+
+  function renderSection(accounts, header) {
+    return (
+      <div style={{ marginBottom: '28px' }}>
+        {header}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: '14px' }}>
+          {accounts.map(acc => (
+            <AccountCard key={acc.id} acc={acc} isActive={acc.id === data.activeId} status={statuses[acc.id]} onSelect={handleSelect} onDelete={handleDelete} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#060c10', backgroundImage: 'radial-gradient(ellipse 60% 50% at 50% 0%, rgba(0,40,20,0.5) 0%, transparent 70%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono','Fira Code',monospace", color: '#c8d8c8', padding: '40px 20px' }}>
@@ -418,35 +482,39 @@ export default function AccountSelect({ onSelect, onBack }) {
           </div>
         ) : (
           <>
-            {/* ── Comptes LIVE ── */}
-            {live.length > 0 && (
-              <div style={{ marginBottom: '28px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                  <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 8px #00ff88' }} />
-                  <span style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', fontWeight: '700' }}>COMPTES ACTIFS — {live.length}</span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: '14px' }}>
-                  {live.map(acc => (
-                    <AccountCard key={acc.id} acc={acc} isActive={acc.id === data.activeId} status={statuses[acc.id]} onSelect={handleSelect} onDelete={handleDelete} />
-                  ))}
-                </div>
+            {/* ── COMPTE LIVE (Express Funded) ── */}
+            {liveAccounts.length > 0 && renderSection(liveAccounts, (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f0c020', boxShadow: '0 0 10px #f0c020' }} />
+                <span style={{ fontSize: '10px', color: '#f0c020', letterSpacing: '2px', fontWeight: '700' }}>COMPTE LIVE — {liveAccounts.length}</span>
+                <span style={{ fontSize: '9px', color: '#8a7a30', letterSpacing: '1px' }}>Express Funded</span>
               </div>
-            )}
+            ))}
 
-            {/* ── Comptes CRAMÉS ── */}
-            {blown.length > 0 && (
-              <div style={{ marginBottom: '28px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                  <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#ff4455', boxShadow: '0 0 8px #ff4455' }} />
-                  <span style={{ fontSize: '10px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', opacity: 0.8 }}>COMPTES CRAMÉS — {blown.length}</span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: '14px' }}>
-                  {blown.map(acc => (
-                    <AccountCard key={acc.id} acc={acc} isActive={acc.id === data.activeId} status={statuses[acc.id]} onSelect={handleSelect} onDelete={handleDelete} />
-                  ))}
-                </div>
+            {/* ── COMPTES VALIDÉS ── */}
+            {validatedAccounts.length > 0 && renderSection(validatedAccounts, (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 10px #00ff88' }} />
+                <span style={{ fontSize: '10px', color: '#00ff88', letterSpacing: '2px', fontWeight: '700' }}>COMPTES VALIDÉS — {validatedAccounts.length}</span>
+                <span style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '1px' }}>Challenge réussi ✓</span>
               </div>
-            )}
+            ))}
+
+            {/* ── COMPTES ACTIFS ── */}
+            {activeAccounts.length > 0 && renderSection(activeAccounts, (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 8px #00ff88' }} />
+                <span style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', fontWeight: '700' }}>COMPTES ACTIFS — {activeAccounts.length}</span>
+              </div>
+            ))}
+
+            {/* ── COMPTES CRAMÉS ── */}
+            {blownAccounts.length > 0 && renderSection(blownAccounts, (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#ff4455', boxShadow: '0 0 8px #ff4455' }} />
+                <span style={{ fontSize: '10px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', opacity: 0.8 }}>COMPTES CRAMÉS — {blownAccounts.length}</span>
+              </div>
+            ))}
           </>
         )}
 
