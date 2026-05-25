@@ -228,6 +228,12 @@ function TradeTable({ trades, storageKey = 'global_trade_cols' }) {
           ) : filtered.map(t => {
             const net  = getNet(t);
             const hour = t.entered_at ? new Date(t.entered_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—';
+            const isWin  = t.outcome === 'WIN' || net > 0;
+            const isLoss = t.outcome === 'LOSS' || net < 0;
+            const exitVal = isWin  ? (t.tp   && t.tp   !== 0 ? t.tp   : t.exit_price)
+                          : isLoss ? (t.stop && t.stop !== 0 ? t.stop : t.exit_price)
+                          : t.exit_price;
+            const exitDisplay = exitVal != null ? exitVal.toFixed(2) : '—';
             return (
               <div key={`${t._accountId}-${t.id}`}
                 style={{ display: 'grid', gridTemplateColumns: templateCols, alignItems: 'center', padding: '8px 10px', background: 'rgba(10,28,18,0.4)', borderLeft: `2px solid ${pnlColor(net)}`, borderRadius: '4px', fontSize: '12px', transition: 'background 0.1s' }}
@@ -239,7 +245,7 @@ function TradeTable({ trades, storageKey = 'global_trade_cols' }) {
                 <span style={{ color: '#c8d8c8', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.pair}</span>
                 <span style={{ color: t.direction==='LONG'?'#00ff88':'#ff4455', fontSize: '11px', background: `rgba(${t.direction==='LONG'?'0,255,136':'255,68,85'},0.08)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
                 <span style={{ color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.entry ?? '—'}</span>
-                <span style={{ color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.exit_price ?? '—'}</span>
+                <span style={{ color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exitDisplay}</span>
                 <span style={{ color: pnlColor(net), fontWeight: '700' }}>{fmt(net, true)}</span>
                 <span style={{ color: '#4a7a5a', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.duration ?? '—'}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden' }}>

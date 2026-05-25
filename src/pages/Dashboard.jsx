@@ -193,6 +193,12 @@ function TradeTable({ trades, onNavigate, onDelete }) {
           const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : null;
           const entryTime = fmtTime(t.entered_at);
           const exitTime  = fmtTime(t.exited_at);
+          const isWin  = t.outcome === 'WIN' || net > 0;
+          const isLoss = t.outcome === 'LOSS' || net < 0;
+          const exitVal = isWin  ? (t.tp   && t.tp   !== 0 ? t.tp   : t.exit_price)
+                        : isLoss ? (t.stop && t.stop !== 0 ? t.stop : t.exit_price)
+                        : t.exit_price;
+          const exitDisplay = exitVal != null ? exitVal.toFixed(2) : '—';
           return (
             <div key={t.id}
               onClick={() => onNavigate(t.id)}
@@ -208,7 +214,7 @@ function TradeTable({ trades, onNavigate, onDelete }) {
               <span style={{ color: '#c8d8c8', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.pair}</span>
               <span style={{ color: t.direction === 'LONG' ? '#00ff88' : '#ff4455', fontSize: '9px', background: `rgba(${t.direction === 'LONG' ? '0,255,136' : '255,68,85'},0.08)`, border: `1px solid rgba(${t.direction === 'LONG' ? '0,255,136' : '255,68,85'},0.2)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
               <span style={{ color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.entry ?? '—'}</span>
-              <span style={{ color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.exit_price ?? '—'}</span>
+              <span style={{ color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exitDisplay}</span>
               <span style={{ color: '#8aaa90' }}>{t.size ?? '—'}</span>
               <div onClick={e => e.stopPropagation()}><PnlCell trade={t} /></div>
               <span style={{ color: '#4a7a5a', fontSize: '9px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.duration ?? '—'}</span>
