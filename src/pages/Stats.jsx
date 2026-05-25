@@ -386,10 +386,17 @@ export default function Stats() {
   }, {});
   const dirPie = Object.entries(byDir).map(([d, v]) => ({ name: d, value: v.total, color: d === 'LONG' ? '#00ff88' : '#ff4455' }));
 
-  // By DOW (net)
+  // By DOW (net) — computed from filtered so micro-trades are excluded
+  const dowMap = {};
+  filtered.forEach(t => {
+    const i = new Date(t.date).getDay();
+    if (!dowMap[i]) dowMap[i] = { cnt: 0, pnl: 0 };
+    dowMap[i].cnt++;
+    dowMap[i].pnl += getNet(t);
+  });
   const dowArr = DOW.map((label, i) => {
-    const data = (s.byDow ?? []).find(d => parseInt(d.dow) === i) ?? { cnt: 0, pnl: 0 };
-    return { label, count: Number(data.cnt ?? 0), pnl: Math.round(Number(data.pnl ?? 0) * 100) / 100 };
+    const d = dowMap[i] ?? { cnt: 0, pnl: 0 };
+    return { label, count: d.cnt, pnl: Math.round(d.pnl * 100) / 100 };
   });
 
   // Duration analysis (computed from entered_at / exited_at timestamps)

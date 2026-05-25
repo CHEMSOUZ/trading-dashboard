@@ -313,7 +313,8 @@ export default function GlobalView() {
 
   useEffect(() => { load(); }, [load]);
 
-  const trades = selectedAccounts.length === 0 ? allTrades : allTrades.filter(t => selectedAccounts.includes(t._accountId));
+  const isMicro = t => { const n = t.result_net ?? t.result; return n != null && n !== 0 && Math.abs(n) < 10; };
+  const trades = (selectedAccounts.length === 0 ? allTrades : allTrades.filter(t => selectedAccounts.includes(t._accountId))).filter(t => !isMicro(t));
 
   // ── Global stats ──────────────────────────────────────────
   const total   = trades.length;

@@ -288,37 +288,36 @@ function importCsvTrades(db, dbPath, rows) {
 
 // ── STATS ─────────────────────────────────────────────────────
 function getStats(db) {
-  const MF = "(COALESCE(result_net,result) IS NULL OR COALESCE(result_net,result) = 0 OR ABS(COALESCE(result_net,result)) >= 10)";
-  const total    = getOne(db, `SELECT COUNT(*) as n FROM trades WHERE ${MF}`).n ?? 0;
-  const wins     = getOne(db, `SELECT COUNT(*) as n FROM trades WHERE COALESCE(result_net,result) > 0 AND ${MF}`).n ?? 0;
-  const losses   = getOne(db, `SELECT COUNT(*) as n FROM trades WHERE COALESCE(result_net,result) < 0 AND ${MF}`).n ?? 0;
-  const be       = getOne(db, `SELECT COUNT(*) as n FROM trades WHERE COALESCE(result_net,result) = 0 AND ${MF}`).n ?? 0;
-  const totalPnl = getOne(db, `SELECT COALESCE(SUM(COALESCE(result_net,result)),0) as v FROM trades WHERE ${MF}`).v ?? 0;
-  const grossWin = getOne(db, `SELECT COALESCE(SUM(COALESCE(result_net,result)),0) as v FROM trades WHERE COALESCE(result_net,result) > 0 AND ${MF}`).v ?? 0;
-  const grossLoss= getOne(db, `SELECT COALESCE(ABS(SUM(COALESCE(result_net,result))),0) as v FROM trades WHERE COALESCE(result_net,result) < 0 AND ${MF}`).v ?? 0;
-  const avgRR    = getOne(db, `SELECT COALESCE(AVG(rr),0) as v FROM trades WHERE rr IS NOT NULL AND ${MF}`).v ?? 0;
+  const total    = getOne(db, 'SELECT COUNT(*) as n FROM trades').n ?? 0;
+  const wins     = getOne(db, "SELECT COUNT(*) as n FROM trades WHERE COALESCE(result_net,result) > 0").n ?? 0;
+  const losses   = getOne(db, "SELECT COUNT(*) as n FROM trades WHERE COALESCE(result_net,result) < 0").n ?? 0;
+  const be       = getOne(db, "SELECT COUNT(*) as n FROM trades WHERE COALESCE(result_net,result) = 0").n ?? 0;
+  const totalPnl = getOne(db, 'SELECT COALESCE(SUM(COALESCE(result_net,result)),0) as v FROM trades').v ?? 0;
+  const grossWin = getOne(db, "SELECT COALESCE(SUM(COALESCE(result_net,result)),0) as v FROM trades WHERE COALESCE(result_net,result) > 0").v ?? 0;
+  const grossLoss= getOne(db, "SELECT COALESCE(ABS(SUM(COALESCE(result_net,result))),0) as v FROM trades WHERE COALESCE(result_net,result) < 0").v ?? 0;
+  const avgRR    = getOne(db, 'SELECT COALESCE(AVG(rr),0) as v FROM trades WHERE rr IS NOT NULL').v ?? 0;
   const avgWin   = wins   > 0 ? grossWin  / wins   : 0;
   const avgLoss  = losses > 0 ? grossLoss / losses : 0;
-  const totalFees= getOne(db, `SELECT COALESCE(SUM(fees),0)+COALESCE(SUM(commissions),0) as v FROM trades WHERE ${MF}`).v ?? 0;
+  const totalFees= getOne(db, 'SELECT COALESCE(SUM(fees),0)+COALESCE(SUM(commissions),0) as v FROM trades').v ?? 0;
   const winrate  = total > 0 ? (wins / total) * 100 : 0;
   const profitFactor = grossLoss > 0 ? grossWin / grossLoss : grossWin > 0 ? 999 : 0;
-  const recent   = getAll(db, `SELECT COALESCE(result_net,result) as pnl FROM trades WHERE ${MF} ORDER BY date DESC, entered_at DESC LIMIT 50`);
+  const recent   = getAll(db, "SELECT COALESCE(result_net,result) as pnl FROM trades ORDER BY date DESC, entered_at DESC LIMIT 50");
   let streak = 0;
   if (recent.length > 0) {
     const firstPos = recent[0].pnl > 0;
     for (const t of recent) { if ((t.pnl > 0) === firstPos) streak++; else break; }
     if (!firstPos) streak = -streak;
   }
-  const allPnl = getAll(db, `SELECT COALESCE(result_net,result) as pnl FROM trades WHERE COALESCE(result_net,result) IS NOT NULL AND ${MF} ORDER BY date ASC`);
+  const allPnl = getAll(db, "SELECT COALESCE(result_net,result) as pnl FROM trades WHERE COALESCE(result_net,result) IS NOT NULL ORDER BY date ASC");
   let peak = 0, cum = 0, maxDD = 0;
   for (const { pnl } of allPnl) {
     cum += pnl;
     if (cum > peak) peak = cum;
     const dd = peak - cum; if (dd > maxDD) maxDD = dd;
   }
-  const bestTrade  = getOne(db, `SELECT * FROM trades WHERE COALESCE(result_net,result) IS NOT NULL AND ${MF} ORDER BY COALESCE(result_net,result) DESC LIMIT 1`);
-  const worstTrade = getOne(db, `SELECT * FROM trades WHERE COALESCE(result_net,result) IS NOT NULL AND ${MF} ORDER BY COALESCE(result_net,result) ASC LIMIT 1`);
-  const byDow = getAll(db, `SELECT strftime('%w',date) as dow, COUNT(*) as cnt, SUM(COALESCE(result_net,result)) as pnl, SUM(CASE WHEN COALESCE(result_net,result)>0 THEN 1 ELSE 0 END) as wins FROM trades WHERE ${MF} GROUP BY dow`);
+  const bestTrade  = getOne(db, "SELECT * FROM trades WHERE COALESCE(result_net,result) IS NOT NULL ORDER BY COALESCE(result_net,result) DESC LIMIT 1");
+  const worstTrade = getOne(db, "SELECT * FROM trades WHERE COALESCE(result_net,result) IS NOT NULL ORDER BY COALESCE(result_net,result) ASC LIMIT 1");
+  const byDow = getAll(db, "SELECT strftime('%w',date) as dow, COUNT(*) as cnt, SUM(COALESCE(result_net,result)) as pnl, SUM(CASE WHEN COALESCE(result_net,result)>0 THEN 1 ELSE 0 END) as wins FROM trades GROUP BY dow");
   return {
     total, wins, losses, be,
     totalPnl: Math.round(totalPnl*100)/100,
