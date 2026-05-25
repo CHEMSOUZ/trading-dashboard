@@ -27,6 +27,7 @@ export default function App() {
   const [activeAccount, setActiveAccount] = useState(null);
   const [loading, setLoading]             = useState(true);
   const [showAccountSelect, setShowAccountSelect] = useState(false);
+  const [reloadKey, setReloadKey]         = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -54,10 +55,12 @@ export default function App() {
   }
 
   async function handleSwitchAccount(id) {
-    // Switch without going back to account select screen
     await window.accounts.setActive(id);
     const res = await window.accounts.getActive();
-    if (res.ok && res.data) setActiveAccount(res.data);
+    if (res.ok && res.data) {
+      setActiveAccount(res.data);
+      setReloadKey(k => k + 1);
+    }
   }
 
   async function handleAccountUpdated() {
@@ -93,7 +96,7 @@ export default function App() {
           onAccountUpdated={handleAccountUpdated}
           onManageAccounts={handleManageAccounts}
         />
-        <main style={{ flex: 1, overflowY: 'auto', background: '#070d12', backgroundImage: 'radial-gradient(ellipse 60% 40% at 80% 0%,rgba(0,40,20,0.4) 0%,transparent 60%)' }}>
+        <main key={reloadKey} style={{ flex: 1, overflowY: 'auto', background: '#070d12', backgroundImage: 'radial-gradient(ellipse 60% 40% at 80% 0%,rgba(0,40,20,0.4) 0%,transparent 60%)' }}>
           <Routes>
             <Route path="/"              element={<Navigate to={localStorage.getItem('lastRoute') || '/dashboard'} replace />} />
             <Route path="/dashboard"     element={<Dashboard />} />

@@ -84,7 +84,7 @@ function PnlCell({ trade }) {
 }
 
 // ── Trade Table (resizable cols + sortable headers + HEURE) ───
-const DEFAULT_COL_WIDTHS = { date: 90, heure: 65, pair: 80, dir: 60, entry: 82, exit: 82, size: 55, pnl: 110, dur: 72, notes: 140 };
+const DEFAULT_COL_WIDTHS = { date: 90, heure: 100, pair: 80, dir: 60, entry: 82, exit: 82, size: 55, pnl: 110, dur: 72, notes: 140 };
 
 function TradeTable({ trades, onNavigate, onDelete }) {
   const [sortCol, setSortCol]   = useState('date');
@@ -140,7 +140,7 @@ function TradeTable({ trades, onNavigate, onDelete }) {
 
   const COLS = [
     { key: 'date',  label: 'DATE' },
-    { key: 'heure', label: 'HEURE' },
+    { key: 'heure', label: 'H.ENTRÉE / SORTIE' },
     { key: 'pair',  label: 'PAIRE' },
     { key: 'dir',   label: 'DIR.' },
     { key: 'entry', label: 'ENTRÉE' },
@@ -190,7 +190,9 @@ function TradeTable({ trades, onNavigate, onDelete }) {
         {sorted.map(t => {
           const net   = getNet(t);
           const color = pnlColor(net);
-          const hour  = t.entered_at ? new Date(t.entered_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—';
+          const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : null;
+          const entryTime = fmtTime(t.entered_at);
+          const exitTime  = fmtTime(t.exited_at);
           return (
             <div key={t.id}
               onClick={() => onNavigate(t.id)}
@@ -199,7 +201,10 @@ function TradeTable({ trades, onNavigate, onDelete }) {
               onMouseLeave={e => e.currentTarget.style.background = 'rgba(10,28,18,0.4)'}
             >
               <span style={{ color: '#4a7a5a', fontSize: '9px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.date}</span>
-              <span style={{ color: '#6a8a7a', fontSize: '9px' }}>{hour}</span>
+              <span style={{ color: '#6a8a7a', fontSize: '9px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                <span>{entryTime ?? '—'}</span>
+                {exitTime && <span style={{ color: '#4a6a5a' }}>↓{exitTime}</span>}
+              </span>
               <span style={{ color: '#c8d8c8', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.pair}</span>
               <span style={{ color: t.direction === 'LONG' ? '#00ff88' : '#ff4455', fontSize: '9px', background: `rgba(${t.direction === 'LONG' ? '0,255,136' : '255,68,85'},0.08)`, border: `1px solid rgba(${t.direction === 'LONG' ? '0,255,136' : '255,68,85'},0.2)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
               <span style={{ color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.entry ?? '—'}</span>
