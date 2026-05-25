@@ -273,6 +273,7 @@ export default function NewTrade() {
     pair: 'MNQ', direction: 'LONG',
     entry: '', stop: '', tp: '', rr: '',
     result: '', outcome: '', emotion: 'Calme', notes: '',
+    entered_time: '', exited_time: '', size: '', duration: '',
   });
 
   const [screenshots, setScreenshots]       = useState([]);
@@ -301,6 +302,11 @@ export default function NewTrade() {
       const res = await window.db.getTradeById(Number(id));
       if (res.ok && res.data) {
         const t = res.data;
+        const toTime = iso => {
+          if (!iso) return '';
+          const d = new Date(iso);
+          return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        };
         setForm({
           date: t.date ?? '', pair: t.pair ?? 'MNQ',
           direction: t.direction ?? 'LONG',
@@ -308,6 +314,10 @@ export default function NewTrade() {
           tp: String(t.tp ?? ''), rr: String(t.rr ?? ''),
           result: String(t.result ?? ''), outcome: t.outcome ?? '',
           emotion: t.emotion ?? 'Calme', notes: t.notes ?? '',
+          entered_time: toTime(t.entered_at),
+          exited_time:  toTime(t.exited_at),
+          size:     String(t.size ?? ''),
+          duration: t.duration ?? '',
         });
         // Load screenshots from screenshot field (stored as JSON)
         if (t.screenshot) {
@@ -347,8 +357,11 @@ export default function NewTrade() {
       outcome:    form.outcome || null,
       emotion:    form.emotion || null,
       notes: form.notes ? `${form.notes}\n\nChecklist: ${checklistSummary}` : `Checklist: ${checklistSummary}`,
-      // Store screenshots as JSON in screenshot field
       screenshot: screenshots.length > 0 ? JSON.stringify(screenshots) : null,
+      entered_at: form.entered_time ? `${form.date}T${form.entered_time}:00` : null,
+      exited_at:  form.exited_time  ? `${form.date}T${form.exited_time}:00`  : null,
+      size:       form.size !== '' ? parseFloat(form.size) : null,
+      duration:   form.duration || null,
     };
 
     const res = isEdit
@@ -416,6 +429,34 @@ export default function NewTrade() {
             </Field>
             <Field label="RR (AUTO)">
               <input readOnly value={form.rr ? `1:${form.rr}` : ''} style={{ ...inputStyle, color: '#00ff88', fontWeight: '700', background: 'rgba(0,255,136,0.05)' }} />
+            </Field>
+          </div>
+
+          {/* Heure, Sortie, Taille, Durée */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '14px' }}>
+            <Field label="HEURE D'ENTRÉE">
+              <input type="time" value={form.entered_time} onChange={set('entered_time')}
+                style={{ ...inputStyle, colorScheme: 'dark' }}
+                onFocus={e => e.target.style.borderColor = '#00ff88'}
+                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+            </Field>
+            <Field label="HEURE DE SORTIE">
+              <input type="time" value={form.exited_time} onChange={set('exited_time')}
+                style={{ ...inputStyle, colorScheme: 'dark' }}
+                onFocus={e => e.target.style.borderColor = '#00aaff'}
+                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+            </Field>
+            <Field label="TAILLE (CONTRATS)">
+              <input type="number" placeholder="1" min="0.01" step="0.01" value={form.size} onChange={set('size')}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = '#00ff88'}
+                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+            </Field>
+            <Field label="DURÉE">
+              <input type="text" placeholder="2h 30m" value={form.duration} onChange={set('duration')}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = '#00ff88'}
+                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
             </Field>
           </div>
 
