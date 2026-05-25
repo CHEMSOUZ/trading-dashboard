@@ -19,8 +19,17 @@ function pnlColor(v) {
   if (v < 0) return '#ff4455';
   return '#8aaa90';
 }
+function fmtDur(sec) {
+  if (!sec || sec <= 0) return '—';
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
 
-const DOW = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+const DOW =['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
 // ── CSV Parser ────────────────────────────────────────────────
@@ -381,6 +390,34 @@ export default function Stats() {
     return { label, count: Number(data.cnt ?? 0), pnl: Math.round(Number(data.pnl ?? 0) * 100) / 100 };
   });
 
+  // Duration analysis (computed from entered_at / exited_at timestamps)
+  const withDur = filtered.filter(t => t.entered_at && t.exited_at);
+  const _avgDur = arr => arr.length > 0 ? arr.reduce((s, t) => s + (new Date(t.exited_at) - new Date(t.entered_at)) / 1000, 0) / arr.length : 0;
+  const avgDurSec     = _avgDur(withDur);
+  const avgDurWinSec  = _avgDur(withDur.filter(t => getNet(t) > 0));
+  const avgDurLossSec = _avgDur(withDur.filter(t => getNet(t) < 0));
+
+  // Size analysis
+  const withSize    = filtered.filter(t => t.size && t.size > 0);
+  const _avgSize = arr => arr.length > 0 ? arr.reduce((s, t) => s + t.size, 0) / arr.length : 0;
+  const avgSize     = _avgSize(withSize);
+  const avgSizeWin  = _avgSize(withSize.filter(t => getNet(t) > 0));
+  const avgSizeLoss = _avgSize(withSize.filter(t => getNet(t) < 0));
+
+  // By hour of entry
+  const byHourMap = {};
+  filtered.forEach(t => {
+    if (!t.entered_at) return;
+    const h = new Date(t.entered_at).getHours();
+    if (!byHourMap[h]) byHourMap[h] = { cnt: 0, pnl: 0, wins: 0 };
+    byHourMap[h].cnt++;
+    byHourMap[h].pnl += getNet(t);
+    if (getNet(t) > 0) byHourMap[h].wins++;
+  });
+  const byHourArr = Object.entries(byHourMap)
+    .sort(([a], [b]) => +a - +b)
+    .map(([h, d]) => ({ label: `${h}h`, pnl: Math.round(d.pnl * 100) / 100, cnt: d.cnt, wr: Math.round(d.wins / d.cnt * 100) }));
+
   return (
     <div style={{ padding: '24px 28px', maxWidth: '1200px' }}>
 
@@ -543,6 +580,82 @@ export default function Stats() {
                 <Bar dataKey="pnl" name="P&L net" maxBarSize={28} radius={[3,3,0,0]} fill="#00ff88" isAnimationActive />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* ── CHARTS ROW 3: ANALYSE PAR HEURE & DURÉE/TAILLE ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+
+        {/* P&L par heure d'entrée */}
+        <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
+          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR HEURE D'ENTRÉE</div>
+          {byHourArr.length > 0 ? (
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart barCategoryGap="30%" data={byHourArr} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
+                <CartesianGrid stroke="rgba(0,255,136,0.04)" strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fill: '#3a6a4a', fontSize: 8 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#3a6a4a', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
+                <Tooltip content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0]?.payload;
+                  return (
+                    <div style={{ background: 'rgba(6,18,12,0.97)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '4px', padding: '8px 12px', fontSize: '11px', fontFamily: 'inherit' }}>
+                      <div style={{ color: '#3a6a4a', marginBottom: '4px' }}>{d?.label}</div>
+                      <div style={{ color: (d?.pnl ?? 0) >= 0 ? '#00ff88' : '#ff4455', fontWeight: '700' }}>P&L: {fmt(d?.pnl ?? 0, true)}</div>
+                      <div style={{ color: '#8aaa90', marginTop: '2px' }}>{d?.cnt} trade{d?.cnt > 1 ? 's' : ''} · {d?.wr}% WR</div>
+                    </div>
+                  );
+                }} />
+                <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
+                <Bar dataKey="pnl" maxBarSize={30} radius={[3,3,0,0]} isAnimationActive>
+                  {byHourArr.map((entry, i) => <Cell key={i} fill={entry.pnl >= 0 ? '#00ff88' : '#ff4455'} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : <div style={{ height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '10px' }}>Aucune donnée horaire disponible</div>}
+        </div>
+
+        {/* Durée + Taille */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {/* Durée */}
+          <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '14px 16px', flex: 1 }}>
+            <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>DURÉE DES POSITIONS</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
+              {[
+                { label: 'MOYENNE', sec: avgDurSec, color: '#c8d8c8' },
+                { label: 'WIN AVG', sec: avgDurWinSec, color: '#00ff88' },
+                { label: 'LOSS AVG', sec: avgDurLossSec, color: '#ff4455' },
+              ].map(({ label, sec, color }) => (
+                <div key={label} style={{ textAlign: 'center', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
+                  <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '6px' }}>{label}</div>
+                  <div style={{ fontSize: '16px', fontWeight: '700', color }}>{fmtDur(sec)}</div>
+                </div>
+              ))}
+            </div>
+            {withDur.length === 0 && (
+              <div style={{ fontSize: '9px', color: '#2a4a30', textAlign: 'center', marginTop: '8px' }}>Disponible avec les imports CSV</div>
+            )}
+          </div>
+
+          {/* Taille */}
+          <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '14px 16px', flex: 1 }}>
+            <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>TAILLE DES POSITIONS</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
+              {[
+                { label: 'MOYENNE', val: avgSize, color: '#c8d8c8' },
+                { label: 'WIN AVG', val: avgSizeWin, color: '#00ff88' },
+                { label: 'LOSS AVG', val: avgSizeLoss, color: '#ff4455' },
+              ].map(({ label, val, color }) => (
+                <div key={label} style={{ textAlign: 'center', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
+                  <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '6px' }}>{label}</div>
+                  <div style={{ fontSize: '16px', fontWeight: '700', color }}>{val > 0 ? val.toFixed(2) : '—'}</div>
+                </div>
+              ))}
+            </div>
+            {withSize.length === 0 && (
+              <div style={{ fontSize: '9px', color: '#2a4a30', textAlign: 'center', marginTop: '8px' }}>Aucune donnée de taille disponible</div>
+            )}
           </div>
         </div>
       </div>
