@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+
+function RouteTracker() {
+  const location = useLocation();
+  useEffect(() => {
+    if (location.pathname !== '/') localStorage.setItem('lastRoute', location.pathname);
+  }, [location.pathname]);
+  return null;
+}
 import Sidebar from './layout/Sidebar';
 import AccountSelect from './pages/AccountSelect';
 import Dashboard from './pages/Dashboard';
@@ -77,6 +85,7 @@ export default function App() {
 
   return (
     <Router>
+      <RouteTracker />
       <div style={{ display: 'flex', height: '100vh', background: '#060c10', color: '#c8d8c8', fontFamily: "'JetBrains Mono','Fira Code',monospace", overflow: 'hidden' }}>
         <Sidebar
           activeAccount={activeAccount}
@@ -86,7 +95,7 @@ export default function App() {
         />
         <main style={{ flex: 1, overflowY: 'auto', background: '#070d12', backgroundImage: 'radial-gradient(ellipse 60% 40% at 80% 0%,rgba(0,40,20,0.4) 0%,transparent 60%)' }}>
           <Routes>
-            <Route path="/"              element={<Navigate to="/dashboard" replace />} />
+            <Route path="/"              element={<Navigate to={localStorage.getItem('lastRoute') || '/dashboard'} replace />} />
             <Route path="/dashboard"     element={<Dashboard />} />
             <Route path="/dashboard/new" element={<NewTrade />} />
             <Route path="/dashboard/:id" element={<NewTrade />} />

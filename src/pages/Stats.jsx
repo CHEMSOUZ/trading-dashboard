@@ -300,7 +300,7 @@ export default function Stats() {
   const [trades, setTrades]     = useState([]);
   const [stats, setStats]       = useState(null);
   const [loading, setLoading]   = useState(true);
-  const [period, setPeriod]     = useState('ALL');
+  const [period, setPeriod]     = useState(() => localStorage.getItem('stats_period') || 'ALL');
   const [showImport, setShowImport] = useState(false);
 
   const load = useCallback(async () => {
@@ -436,7 +436,7 @@ export default function Stats() {
           </button>
           <div style={{ display: 'flex', gap: '4px' }}>
             {['TODAY','7D','30D','ALL'].map(p => (
-              <button key={p} onClick={() => setPeriod(p)} style={{ padding: '6px 10px', borderRadius: '4px', border: `1px solid ${period===p?'#00ff88':'#1a3a22'}`, background: period===p?'rgba(0,255,136,0.1)':'transparent', color: period===p?'#00ff88':'#3a6a4a', fontSize: '9px', fontFamily: 'inherit', cursor: 'pointer' }}>{p}</button>
+              <button key={p} onClick={() => { setPeriod(p); localStorage.setItem('stats_period', p); }} style={{ padding: '6px 10px', borderRadius: '4px', border: `1px solid ${period===p?'#00ff88':'#1a3a22'}`, background: period===p?'rgba(0,255,136,0.1)':'transparent', color: period===p?'#00ff88':'#3a6a4a', fontSize: '9px', fontFamily: 'inherit', cursor: 'pointer' }}>{p}</button>
             ))}
           </div>
         </div>

@@ -11,6 +11,8 @@ let accounts;
 let dbModule;
 let activeDb     = null;
 let activeDbPath = null;
+let globalDb     = null;
+let globalDbPath = null;
 
 async function init() {
   accounts = require('./accounts.cjs');
@@ -23,6 +25,30 @@ async function loadActiveDb() {
   activeDbPath = active.dbPath;
   activeDb     = await dbModule.getDb(activeDbPath);
   return activeDb;
+}
+
+async function loadGlobalDb() {
+  globalDbPath = path.join(app.getPath('userData'), 'global.db');
+  globalDb     = await dbModule.getDb(globalDbPath);
+  // One-time migration: copy analyses from all account DBs
+  const migFlag = path.join(app.getPath('userData'), '.analyses_migrated');
+  if (!fs.existsSync(migFlag)) {
+    try {
+      const { accounts: accs } = accounts.getAllAccounts();
+      for (const acc of accs) {
+        try {
+          const accDb = await dbModule.getDb(acc.dbPath);
+          for (const a of dbModule.getDailyAnalyses(accDb)) {
+            try { dbModule.upsertDailyAnalysis(globalDb, globalDbPath, a); } catch(_) {}
+          }
+          for (const a of dbModule.getWeeklyAnalyses(accDb)) {
+            try { dbModule.upsertWeeklyAnalysis(globalDb, globalDbPath, a); } catch(_) {}
+          }
+        } catch(_) {}
+      }
+    } catch(_) {}
+    fs.writeFileSync(migFlag, new Date().toISOString());
+  }
 }
 
 function createWindow() {
@@ -48,6 +74,7 @@ function createWindow() {
 app.whenReady().then(async () => {
   await init();
   await loadActiveDb();
+  await loadGlobalDb();
   registerHandlers();
   createWindow();
 
@@ -91,6 +118,18 @@ function registerHandlers() {
     });
   };
 
+  const globalDbHandle = (channel, fn) => {
+    ipcMain.handle(channel, async (_, ...args) => {
+      try {
+        if (!globalDb || !globalDbPath) return { ok: false, error: 'Global DB non initialisée' };
+        return { ok: true, data: fn(globalDb, globalDbPath, ...args) };
+      } catch(e) {
+        console.error(`[IPC] ${channel}:`, e.message);
+        return { ok: false, error: e.message };
+      }
+    });
+  };
+
   dbHandle('db:getAllTrades',           (db) => dbModule.getAllTrades(db));
   dbHandle('db:getTradeById',           (db, _, id) => dbModule.getTradeById(db, id));
   dbHandle('db:insertTrade',            (db, dbp, t) => dbModule.insertTrade(db, dbp, t));
@@ -101,13 +140,13 @@ function registerHandlers() {
   dbHandle('db:insertEmotionalCheck',   (db, dbp, c) => dbModule.insertEmotionalCheck(db, dbp, c));
   dbHandle('db:getTodayEmotionalCheck', (db) => dbModule.getTodayEmotionalCheck(db));
 
-  // Analysis handlers
-  dbHandle('db:getDailyAnalyses',    (db) => dbModule.getDailyAnalyses(db));
-  dbHandle('db:upsertDailyAnalysis', (db, dbp, a) => dbModule.upsertDailyAnalysis(db, dbp, a));
-  dbHandle('db:deleteDailyAnalysis', (db, dbp, id) => dbModule.deleteDailyAnalysis(db, dbp, id));
-  dbHandle('db:getWeeklyAnalyses',   (db) => dbModule.getWeeklyAnalyses(db));
-  dbHandle('db:upsertWeeklyAnalysis',(db, dbp, a) => dbModule.upsertWeeklyAnalysis(db, dbp, a));
-  dbHandle('db:deleteWeeklyAnalysis',(db, dbp, id) => dbModule.deleteWeeklyAnalysis(db, dbp, id));
+  // Analysis handlers (global DB — shared across all accounts)
+  globalDbHandle('db:getDailyAnalyses',    (db) => dbModule.getDailyAnalyses(db));
+  globalDbHandle('db:upsertDailyAnalysis', (db, dbp, a) => dbModule.upsertDailyAnalysis(db, dbp, a));
+  globalDbHandle('db:deleteDailyAnalysis', (db, dbp, id) => dbModule.deleteDailyAnalysis(db, dbp, id));
+  globalDbHandle('db:getWeeklyAnalyses',   (db) => dbModule.getWeeklyAnalyses(db));
+  globalDbHandle('db:upsertWeeklyAnalysis',(db, dbp, a) => dbModule.upsertWeeklyAnalysis(db, dbp, a));
+  globalDbHandle('db:deleteWeeklyAnalysis',(db, dbp, id) => dbModule.deleteWeeklyAnalysis(db, dbp, id));
 
   // ── File dialogs ──────────────────────────────────────────
   ipcMain.handle('dialog:openCsv', async () => {

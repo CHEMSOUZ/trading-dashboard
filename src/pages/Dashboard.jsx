@@ -325,7 +325,7 @@ export default function Dashboard() {
   const [trades, setTrades]   = useState([]);
   const [stats, setStats]     = useState(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter]   = useState('ALL');
+  const [filter, setFilter]   = useState(() => localStorage.getItem('dash_filter') || 'ALL');
   const [search, setSearch]   = useState('');
   const [showQuick, setShowQuick] = useState(false);
 
@@ -438,7 +438,7 @@ export default function Dashboard() {
             {['ALL','WIN','LOSS','BE'].map(f => {
               const c = f==='WIN'?'#00ff88':f==='LOSS'?'#ff4455':f==='BE'?'#f0a020':'#00ff88';
               return (
-                <button key={f} onClick={() => setFilter(f)} style={{ padding: '4px 10px', borderRadius: '4px', border: `1px solid ${filter===f?c:'#1a3a22'}`, background: filter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':f==='BE'?'240,160,32':'0,255,136'},0.1)`:'transparent', color: filter===f?c:'#3a6a4a', fontSize: '9px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>
+                <button key={f} onClick={() => { setFilter(f); localStorage.setItem('dash_filter', f); }} style={{ padding: '4px 10px', borderRadius: '4px', border: `1px solid ${filter===f?c:'#1a3a22'}`, background: filter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':f==='BE'?'240,160,32':'0,255,136'},0.1)`:'transparent', color: filter===f?c:'#3a6a4a', fontSize: '9px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>
               );
             })}
           </div>
