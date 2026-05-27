@@ -15,6 +15,61 @@ function fmtPnl(n) {
   return `${n >= 0 ? '+' : ''}${n.toFixed(2)}$`;
 }
 
+// ── Frais Cell avec tooltip détail ───────────────────────────
+function FraisCell({ trade }) {
+  const [hover, setHover] = useState(false);
+  const fees = trade.fees ?? 0;
+  const commissions = trade.commissions ?? 0;
+  const total = fees + commissions;
+  const hasBoth = fees > 0 && commissions > 0;
+
+  if (total === 0) return <span style={{ color: '#2a4a30', fontSize: '10px' }}>—</span>;
+
+  return (
+    <div
+      style={{ position: 'relative', display: 'inline-block' }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <span style={{ fontSize: '11px', fontWeight: '600', color: '#f0a020', cursor: hasBoth ? 'help' : 'default' }}>
+        -{total.toFixed(2)}$
+      </span>
+
+      {hover && hasBoth && (
+        <div style={{
+          position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+          marginBottom: '6px', zIndex: 100,
+          background: 'rgba(6,18,12,0.98)',
+          border: '1px solid rgba(240,160,32,0.25)',
+          borderRadius: '5px', padding: '10px 12px',
+          minWidth: '160px', pointerEvents: 'none',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+        }}>
+          <div style={{ fontSize: '8px', color: '#5a4a20', letterSpacing: '1px', marginBottom: '8px' }}>DÉTAIL FRAIS</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {commissions > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+                <span style={{ fontSize: '10px', color: '#8aaa90' }}>Commissions</span>
+                <span style={{ fontSize: '10px', color: '#f0a020' }}>-{commissions.toFixed(2)}$</span>
+              </div>
+            )}
+            {fees > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+                <span style={{ fontSize: '10px', color: '#8aaa90' }}>Frais</span>
+                <span style={{ fontSize: '10px', color: '#f0a020' }}>-{fees.toFixed(2)}$</span>
+              </div>
+            )}
+            <div style={{ borderTop: '1px solid rgba(240,160,32,0.15)', marginTop: '4px', paddingTop: '4px', display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+              <span style={{ fontSize: '10px', color: '#c8d8c8', fontWeight: '600' }}>Total</span>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#f0a020' }}>-{total.toFixed(2)}$</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── P&L Cell avec tooltip frais ───────────────────────────────
 function PnlCell({ trade }) {
   const [hover, setHover] = useState(false);
@@ -193,14 +248,16 @@ export default function Journal() {
       {filtered.length > 0 && (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '90px 90px 70px 90px 90px 60px 120px 80px 1fr 40px',
+          gridTemplateColumns: '90px 90px 70px 90px 90px 60px 120px 90px 80px 1fr 40px',
           gap: '8px', padding: '6px 14px',
           fontSize: '8px', color: '#2a5a32', letterSpacing: '1.5px',
           borderBottom: '1px solid rgba(0,255,136,0.06)', marginBottom: '4px',
         }}>
           <span>DATE</span><span>PAIRE</span><span>DIR.</span>
           <span>ENTRÉE</span><span>SORTIE</span><span>TAILLE</span>
-          <span>P&L NET ▼</span><span>DURÉE</span><span>NOTES</span><span></span>
+          <span>P&L NET ▼</span>
+          <span style={{ color: '#5a4a20' }}>FRAIS</span>
+          <span>DURÉE</span><span>NOTES</span><span></span>
         </div>
       )}
 
@@ -221,7 +278,7 @@ export default function Journal() {
                 onClick={() => navigate(`/journal/${t.id}`)}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '90px 90px 70px 90px 90px 60px 120px 80px 1fr 40px',
+                  gridTemplateColumns: '90px 90px 70px 90px 90px 60px 120px 90px 80px 1fr 40px',
                   gap: '8px', alignItems: 'center',
                   padding: '10px 14px',
                   background: 'rgba(10,28,18,0.4)',
@@ -249,6 +306,11 @@ export default function Journal() {
                 {/* P&L net avec tooltip */}
                 <div onClick={e => e.stopPropagation()}>
                   <PnlCell trade={t} />
+                </div>
+
+                {/* Frais avec tooltip détail */}
+                <div onClick={e => e.stopPropagation()}>
+                  <FraisCell trade={t} />
                 </div>
 
                 <span style={{ color: '#4a7a5a', fontSize: '10px' }}>{t.duration ?? '—'}</span>
