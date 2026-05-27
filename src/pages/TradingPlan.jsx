@@ -217,64 +217,221 @@ function Simulator({ plan }) {
     try { const s = localStorage.getItem(key); if (s) return JSON.parse(s); } catch {}
     return plan.cycle ? plan.cycle.map(d => String(d.target)) : ['500', '400', '500'];
   });
+  const [showSim, setShowSim] = useState(false);
   useEffect(() => { localStorage.setItem(key, JSON.stringify(days)); }, [days]);
-  const values = days.map(d => parseFloat(d.replace(',', '.')) || 0);
-  const total = values.reduce((s, v) => s + v, 0);
-  const max = Math.max(...values);
-  const consistency = total > 0 ? (max / total * 100).toFixed(1) : 0;
-  const consistencyOk = total > 0 && max / total <= 0.40;
 
-  function addDay() { if (days.length < 10) setDays(d => [...d, '0']); }
-  function removeDay() { if (days.length > 1) setDays(d => d.slice(0, -1)); }
+  const values = days.map(d => parseFloat(String(d).replace(',', '.')) || 0);
+  const total = values.reduce((s, v) => s + v, 0);
+  const positiveVals = values.filter(v => v > 0);
+  const maxDay = positiveVals.length > 0 ? Math.max(...positiveVals) : 0;
+  const consistency = total > 0 && maxDay > 0 ? (maxDay / total * 100).toFixed(1) : 0;
+  const consistencyOk = total > 0 && maxDay > 0 && maxDay / total <= 0.40;
+
+  // ── Simulation payout calculations ───────────────────────────
+  const minTotal   = maxDay > 0 ? Math.ceil(maxDay / 0.40) : 0;
+  const gap        = Math.max(0, minTotal - total);
+  const maxPerDay  = maxDay > 1 ? maxDay - 1 : maxDay;
+  const daysNeeded = gap > 0 && maxPerDay > 0 ? Math.ceil(gap / maxPerDay) : 0;
+  const suggestedAmt = daysNeeded > 0 ? Math.ceil(gap / daysNeeded) : 0;
+
+  const suggestedDays = (() => {
+    if (daysNeeded === 0 || suggestedAmt === 0) return [];
+    const arr = [];
+    let remaining = gap;
+    for (let i = 0; i < daysNeeded; i++) {
+      const isLast = i === daysNeeded - 1;
+      arr.push(isLast ? Math.max(1, Math.ceil(remaining)) : suggestedAmt);
+      remaining -= suggestedAmt;
+    }
+    return arr;
+  })();
+
+  const totalAfter = total + suggestedDays.reduce((s, v) => s + v, 0);
+  const maxAfter   = Math.max(maxDay, ...suggestedDays);
+  const pctAfter   = totalAfter > 0 && maxAfter > 0 ? (maxAfter / totalAfter * 100).toFixed(1) : 0;
+  const payoutAfter = parseFloat(pctAfter) <= 40 && totalAfter > 0
+    ? fmt(Math.round(totalAfter * 0.5 * 0.9)) : '—';
+
+  function addDay() { if (days.length < 14) { setDays(d => [...d, '']); setShowSim(false); } }
+  function removeDay() { if (days.length > 1) { setDays(d => d.slice(0, -1)); setShowSim(false); } }
+  function reset() { setDays(plan.cycle ? plan.cycle.map(d => String(d.target)) : ['500', '400', '500']); setShowSim(false); }
 
   return (
-    <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.07)', borderRadius: '8px', padding: '14px' }}>
-      <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>SIMULATEUR DE CYCLE</div>
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px', alignItems: 'center' }}>
-        {days.map((d, i) => (
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '9px', color: '#2a5a32', letterSpacing: '1px' }}>J{i + 1}</span>
-            <input
-              type="number"
-              value={d}
-              onChange={e => setDays(prev => { const n = [...prev]; n[i] = e.target.value; return n; })}
-              style={{ width: '72px', background: 'rgba(10,28,18,0.6)', border: `1px solid ${parseFloat(d) < 0 ? 'rgba(255,68,85,0.3)' : 'rgba(0,255,136,0.15)'}`, borderRadius: '4px', padding: '6px 8px', color: parseFloat(d) < 0 ? '#ff4455' : '#00ff88', fontSize: '13px', fontFamily: 'inherit', outline: 'none', textAlign: 'center', caretColor: '#00ff88' }}
-            />
-          </div>
-        ))}
+    <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.07)', borderRadius: '8px', padding: '16px' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+        <div>
+          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px' }}>SIMULATEUR DE CYCLE</div>
+          <div style={{ fontSize: '10px', color: '#2a4a30', marginTop: '2px' }}>Entre tes P&L réels ou simulés — règle des 40% calculée en temps réel</div>
+        </div>
+        <button onClick={reset} style={{ background: 'none', border: '1px solid #1a3a22', color: '#3a5a32', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '9px', fontFamily: 'inherit', letterSpacing: '1px' }}>RESET</button>
+      </div>
+
+      {/* Day inputs */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px', alignItems: 'center' }}>
+        {days.map((d, i) => {
+          const v = parseFloat(String(d).replace(',', '.')) || 0;
+          const isMax = v === maxDay && v > 0 && positiveVals.filter(x => x === maxDay).length === 1;
+          return (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '9px', color: isMax ? '#f0a020' : '#2a5a32', letterSpacing: '1px' }}>
+                J{i + 1}{isMax ? ' ★' : ''}
+              </span>
+              <input
+                type="number"
+                value={d}
+                onChange={e => { setDays(prev => { const n = [...prev]; n[i] = e.target.value; return n; }); setShowSim(false); }}
+                style={{ width: '72px', background: 'rgba(10,28,18,0.6)', border: `1px solid ${v < 0 ? 'rgba(255,68,85,0.3)' : isMax ? 'rgba(240,160,32,0.4)' : 'rgba(0,255,136,0.15)'}`, borderRadius: '4px', padding: '6px 8px', color: v < 0 ? '#ff4455' : isMax ? '#f0a020' : '#00ff88', fontSize: '13px', fontFamily: 'inherit', outline: 'none', textAlign: 'center', caretColor: '#00ff88' }}
+              />
+            </div>
+          );
+        })}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <button onClick={addDay} style={{ background: 'none', border: '1px solid #1a3a22', color: '#3a6a4a', width: '28px', height: '28px', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontFamily: 'inherit', lineHeight: 1 }}>+</button>
-          <button onClick={removeDay} style={{ background: 'none', border: '1px solid #1a3a22', color: '#3a6a4a', width: '28px', height: '28px', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontFamily: 'inherit', lineHeight: 1 }}>−</button>
+          <button onClick={addDay} title="Ajouter un jour" style={{ background: 'none', border: '1px solid #1a3a22', color: '#3a6a4a', width: '28px', height: '28px', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontFamily: 'inherit', lineHeight: 1 }}>+</button>
+          <button onClick={removeDay} title="Retirer un jour" style={{ background: 'none', border: '1px solid #1a3a22', color: '#3a6a4a', width: '28px', height: '28px', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontFamily: 'inherit', lineHeight: 1 }}>−</button>
         </div>
       </div>
 
-      {/* Results */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
+      {/* KPI row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginBottom: '12px' }}>
         <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '5px', padding: '8px 10px', borderTop: `2px solid ${pnlColor(total)}` }}>
           <div style={{ fontSize: '9px', color: '#2a5a32', letterSpacing: '1px', marginBottom: '3px' }}>TOTAL CYCLE</div>
           <div style={{ fontSize: '15px', fontWeight: '700', color: pnlColor(total) }}>{fmt(total)}</div>
+          {minTotal > 0 && !consistencyOk && (
+            <div style={{ fontSize: '9px', color: '#3a4a32', marginTop: '2px' }}>min requis : {fmt(minTotal)}</div>
+          )}
         </div>
-        <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '5px', padding: '8px 10px', borderTop: `2px solid ${consistencyOk ? '#00ff88' : '#ff4455'}` }}>
+        <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '5px', padding: '8px 10px', borderTop: `2px solid ${consistencyOk ? '#00ff88' : maxDay > 0 ? '#ff4455' : '#2a5a32'}` }}>
           <div style={{ fontSize: '9px', color: '#2a5a32', letterSpacing: '1px', marginBottom: '3px' }}>MEILLEUR JOUR / TOTAL</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ fontSize: '15px', fontWeight: '700', color: consistencyOk ? '#00ff88' : '#ff4455' }}>{consistency}%</span>
-            <span style={{ fontSize: '10px', color: consistencyOk ? '#00ff88' : '#ff4455' }}>{consistencyOk ? '✓ OK' : '✗ >40%'}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '15px', fontWeight: '700', color: consistencyOk ? '#00ff88' : maxDay > 0 ? '#ff4455' : '#3a6a4a' }}>
+              {total > 0 && maxDay > 0 ? `${consistency}%` : '—'}
+            </span>
+            {total > 0 && maxDay > 0 && (
+              <span style={{ fontSize: '10px', color: consistencyOk ? '#00ff88' : '#ff4455' }}>{consistencyOk ? '✓ OK' : '✗ >40%'}</span>
+            )}
           </div>
+          {maxDay > 0 && <div style={{ fontSize: '9px', color: '#3a4a32', marginTop: '2px' }}>max jour : {fmt(maxDay)}</div>}
         </div>
         <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '5px', padding: '8px 10px', borderTop: `2px solid ${plan.color}` }}>
           <div style={{ fontSize: '9px', color: '#2a5a32', letterSpacing: '1px', marginBottom: '3px' }}>PAYOUT POSSIBLE</div>
           {total > 0 && consistencyOk ? (
             <>
               <div style={{ fontSize: '15px', fontWeight: '700', color: plan.color }}>{fmt(Math.round(total * 0.5 * 0.9))}</div>
-              <div style={{ fontSize: '9px', color: '#3a6a4a', marginTop: '2px' }}>-10% FRAIS TOPSTEP</div>
+              <div style={{ fontSize: '9px', color: '#3a6a4a', marginTop: '2px' }}>50% · -10% frais</div>
             </>
-          ) : <div style={{ fontSize: '15px', fontWeight: '700', color: plan.color }}>—</div>}
+          ) : <div style={{ fontSize: '15px', fontWeight: '700', color: '#2a4a30' }}>—</div>}
         </div>
       </div>
 
-      {!consistencyOk && total > 0 && (
-        <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(255,68,85,0.06)', border: '1px solid rgba(255,68,85,0.2)', borderRadius: '4px', fontSize: '11px', color: '#ff8888' }}>
-          ⚠ Ton meilleur jour ({fmt(max)}) dépasse 40% du total → payout bloqué
+      {/* Bloqué → bouton simulation */}
+      {!consistencyOk && total > 0 && maxDay > 0 && (
+        <div style={{ marginBottom: '10px' }}>
+          <div style={{ padding: '8px 12px', background: 'rgba(255,68,85,0.06)', border: '1px solid rgba(255,68,85,0.18)', borderRadius: '5px', fontSize: '11px', color: '#ff8888', marginBottom: '8px' }}>
+            ⚠ J_max ({fmt(maxDay)}) = {consistency}% du total → payout bloqué · il manque encore{' '}
+            <strong style={{ color: '#f0a020' }}>{fmt(gap)}</strong> pour atteindre le minimum de {fmt(minTotal)}
+          </div>
+
+          {daysNeeded > 0 && (
+            <button
+              onClick={() => setShowSim(s => !s)}
+              style={{ width: '100%', padding: '11px 16px', background: showSim ? 'rgba(240,160,32,0.12)' : 'rgba(240,160,32,0.07)', border: `1px solid ${showSim ? 'rgba(240,160,32,0.5)' : 'rgba(240,160,32,0.25)'}`, borderRadius: '6px', color: '#f0a020', fontSize: '11px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1.5px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              <span>📊</span>
+              <span>SIMULATION PAYOUT — Calculer les jours suivants</span>
+              <span style={{ fontSize: '9px', opacity: 0.7 }}>{showSim ? '▲' : '▼'}</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {consistencyOk && total > 0 && (
+        <div style={{ padding: '9px 12px', background: 'rgba(0,255,136,0.05)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '5px', fontSize: '11px', color: '#00ff88' }}>
+          ✓ Règle des 40% respectée — payout débloqué
+        </div>
+      )}
+
+      {/* ── Simulation payout panel ── */}
+      {showSim && daysNeeded > 0 && (
+        <div style={{ marginTop: '12px', background: 'rgba(240,160,32,0.04)', border: '1px solid rgba(240,160,32,0.2)', borderRadius: '8px', padding: '14px' }}>
+
+          {/* Info banner */}
+          <div style={{ fontSize: '9px', color: '#f0a020', letterSpacing: '2px', marginBottom: '10px' }}>SIMULATION PAYOUT · JOURS SUIVANTS</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+            <div style={{ padding: '8px 10px', background: 'rgba(0,0,0,0.25)', borderRadius: '5px', borderTop: '2px solid #f0a020' }}>
+              <div style={{ fontSize: '9px', color: '#5a4a20', letterSpacing: '1px', marginBottom: '3px' }}>MAX PAR JOUR</div>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: '#f0d090' }}>{fmt(maxPerDay)}</div>
+              <div style={{ fontSize: '9px', color: '#4a3a18', marginTop: '2px' }}>sans créer de nouveau max</div>
+            </div>
+            <div style={{ padding: '8px 10px', background: 'rgba(0,0,0,0.25)', borderRadius: '5px', borderTop: '2px solid #aa88ff' }}>
+              <div style={{ fontSize: '9px', color: '#5a4a20', letterSpacing: '1px', marginBottom: '3px' }}>JOURS REQUIS</div>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: '#aa88ff' }}>{daysNeeded} jour{daysNeeded > 1 ? 's' : ''}</div>
+              <div style={{ fontSize: '9px', color: '#4a3a18', marginTop: '2px' }}>à ~{fmt(suggestedAmt)}/jour</div>
+            </div>
+            <div style={{ padding: '8px 10px', background: 'rgba(0,0,0,0.25)', borderRadius: '5px', borderTop: '2px solid #00ff88' }}>
+              <div style={{ fontSize: '9px', color: '#2a5a32', letterSpacing: '1px', marginBottom: '3px' }}>PAYOUT ESTIMÉ</div>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: '#00ff88' }}>{payoutAfter}</div>
+              <div style={{ fontSize: '9px', color: '#2a4a30', marginTop: '2px' }}>50% · -10% frais</div>
+            </div>
+          </div>
+
+          {/* Timeline table */}
+          <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '6px', overflow: 'hidden', marginBottom: '10px' }}>
+            {/* Header */}
+            <div style={{ display: 'grid', gridTemplateColumns: '50px 90px 90px 90px 1fr', gap: '6px', padding: '6px 12px', fontSize: '9px', color: '#2a5a32', letterSpacing: '1.5px', borderBottom: '1px solid rgba(0,255,136,0.06)', background: 'rgba(0,0,0,0.2)' }}>
+              <span>JOUR</span><span>P&L</span><span>TOTAL</span><span>%</span><span>STATUT</span>
+            </div>
+            {/* Real days */}
+            {values.map((v, i) => {
+              const runTotal = values.slice(0, i + 1).reduce((s, x) => s + x, 0);
+              const runMax = Math.max(0, ...values.slice(0, i + 1).filter(x => x > 0));
+              const runPct = runTotal > 0 && runMax > 0 ? (runMax / runTotal * 100).toFixed(0) : '—';
+              const isMaxDay = v === maxDay && v > 0;
+              return (
+                <div key={`r${i}`} style={{ display: 'grid', gridTemplateColumns: '50px 90px 90px 90px 1fr', gap: '6px', padding: '7px 12px', fontSize: '11px', alignItems: 'center', borderBottom: '1px solid rgba(0,255,136,0.03)', background: i % 2 === 0 ? 'rgba(10,28,18,0.3)' : 'transparent', borderLeft: `2px solid ${v < 0 ? '#ff4455' : '#2a5a32'}` }}>
+                  <span style={{ color: '#4a7a5a', fontWeight: '700' }}>J{i + 1}</span>
+                  <span style={{ color: pnlColor(v), fontWeight: '600' }}>{fmt(v)}{isMaxDay ? ' ★' : ''}</span>
+                  <span style={{ color: pnlColor(runTotal) }}>{fmt(runTotal)}</span>
+                  <span style={{ color: runPct === '—' ? '#2a4a30' : parseFloat(runPct) > 40 ? '#ff4455' : '#00ff88', fontSize: '10px' }}>{runPct !== '—' ? `${runPct}%` : '—'}</span>
+                  <span style={{ fontSize: '10px', color: '#3a5a32' }}>réel</span>
+                </div>
+              );
+            })}
+            {/* Suggested days */}
+            {suggestedDays.map((v, i) => {
+              const allSoFar = [...values, ...suggestedDays.slice(0, i + 1)];
+              const runTotal = allSoFar.reduce((s, x) => s + x, 0);
+              const runMax = Math.max(0, ...allSoFar.filter(x => x > 0));
+              const runPct = runTotal > 0 && runMax > 0 ? (runMax / runTotal * 100).toFixed(0) : '—';
+              const compliant = runPct !== '—' && parseFloat(runPct) <= 40;
+              return (
+                <div key={`s${i}`} style={{ display: 'grid', gridTemplateColumns: '50px 90px 90px 90px 1fr', gap: '6px', padding: '7px 12px', fontSize: '11px', alignItems: 'center', borderBottom: i < suggestedDays.length - 1 ? '1px solid rgba(240,160,32,0.08)' : 'none', background: 'rgba(240,160,32,0.05)', borderLeft: '2px solid #f0a020' }}>
+                  <span style={{ color: '#f0a020', fontWeight: '700' }}>J{values.length + i + 1}</span>
+                  <span style={{ color: '#f0d090', fontWeight: '600' }}>{fmt(v)}</span>
+                  <span style={{ color: pnlColor(runTotal) }}>{fmt(runTotal)}</span>
+                  <span style={{ color: runPct === '—' ? '#2a4a30' : compliant ? '#00ff88' : '#f0a020', fontSize: '10px' }}>{runPct !== '—' ? `${runPct}%` : '—'}</span>
+                  <span style={{ fontSize: '10px', color: compliant ? '#00ff88' : '#f0a020' }}>{compliant ? '✓ OK' : 'suggéré'}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Final summary */}
+          <div style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.25)', borderRadius: '5px', borderTop: `2px solid ${parseFloat(pctAfter) <= 40 ? '#00ff88' : '#f0a020'}`, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+            <div>
+              <div style={{ fontSize: '9px', color: '#2a5a32', letterSpacing: '1px', marginBottom: '2px' }}>TOTAL FINAL</div>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: pnlColor(totalAfter) }}>{fmt(totalAfter)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '9px', color: '#2a5a32', letterSpacing: '1px', marginBottom: '2px' }}>CONSISTANCE</div>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: parseFloat(pctAfter) <= 40 ? '#00ff88' : '#f0a020' }}>{pctAfter}%</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '9px', color: '#2a5a32', letterSpacing: '1px', marginBottom: '2px' }}>PAYOUT NET</div>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: plan.color }}>{payoutAfter}</div>
+            </div>
+          </div>
         </div>
       )}
     </div>
