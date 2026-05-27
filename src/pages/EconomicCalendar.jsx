@@ -72,17 +72,29 @@ function getImpact(event) {
   return 'na';
 }
 
+// Finnhub returns times as "YYYY-MM-DD HH:MM:SS" UTC without timezone indicator.
+// Without explicit 'Z', browsers parse it as local time causing an offset equal to the local UTC offset.
+function parseEventDate(str) {
+  if (!str) return new Date(0);
+  if (typeof str === 'number') return new Date(str < 1e10 ? str * 1000 : str);
+  const s = String(str).trim();
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(s)) {
+    return new Date(s.replace(' ', 'T') + 'Z');
+  }
+  return new Date(s);
+}
+
 function formatTime(dateStr, tz = DEFAULT_TZ) {
   if (!dateStr) return '—';
   try {
-    return new Date(dateStr).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: tz });
+    return parseEventDate(dateStr).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: tz });
   } catch { return '—'; }
 }
 
 function formatDate(dateStr, tz = DEFAULT_TZ) {
   if (!dateStr) return '—';
   try {
-    return new Date(dateStr).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: tz });
+    return parseEventDate(dateStr).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: tz });
   } catch { return '—'; }
 }
 
@@ -94,19 +106,19 @@ function formatValue(val, unit) {
 
 function isToday(dateStr) {
   if (!dateStr) return false;
-  const d = new Date(dateStr);
+  const d = parseEventDate(dateStr);
   const now = new Date();
   return d.toDateString() === now.toDateString();
 }
 
 function isPast(dateStr) {
   if (!dateStr) return false;
-  return new Date(dateStr) < new Date();
+  return parseEventDate(dateStr) < new Date();
 }
 
 function isUpcoming(dateStr, minutesWindow = 30) {
   if (!dateStr) return false;
-  const d = new Date(dateStr);
+  const d = parseEventDate(dateStr);
   const now = new Date();
   const diff = (d - now) / 60000;
   return diff >= 0 && diff <= minutesWindow;
@@ -178,7 +190,7 @@ function Countdown({ dateStr }) {
   const [label, setLabel] = useState('');
   useEffect(() => {
     function update() {
-      const diff = new Date(dateStr) - new Date();
+      const diff = parseEventDate(dateStr) - new Date();
       if (diff <= 0) { setLabel(''); return; }
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
@@ -360,7 +372,7 @@ export default function EconomicCalendar() {
       const raw = data.economicCalendar ?? data.economic_calendar ?? data ?? [];
       // Normalize and sort by time
       const normalized = raw
-        .map(e => ({ ...e, _time: new Date(e.time ?? e.date ?? 0).getTime() }))
+        .map(e => ({ ...e, _time: parseEventDate(e.time ?? e.date ?? 0).getTime() }))
         .sort((a, b) => a._time - b._time);
       setEvents(normalized);
       setLastUpdate(new Date());
@@ -402,7 +414,7 @@ export default function EconomicCalendar() {
 
   // Group by date for display
   const grouped = filtered.reduce((acc, ev) => {
-    const key = new Date(ev.time ?? ev.date).toDateString();
+    const key = parseEventDate(ev.time ?? ev.date).toDateString();
     if (!acc[key]) acc[key] = [];
     acc[key].push(ev);
     return acc;
