@@ -150,21 +150,30 @@ function getTradeById(db, id) {
 }
 function insertTrade(db, dbPath, trade) {
   if (trade.external_id) {
-    const exists = getOne(db, 'SELECT id,entered_at,exited_at,size,duration,exit_price FROM trades WHERE external_id = ?', [trade.external_id]);
+    const exists = getOne(db, 'SELECT id,entered_at,exited_at,size,duration,exit_price,fees,commissions,result_net FROM trades WHERE external_id = ?', [trade.external_id]);
     if (exists) {
-      // Auto-patch: si les nouvelles données ont un timestamp ISO mais l'existant non, on corrige
       const isIso = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(s);
-      if (isIso(trade.entered_at) && !isIso(exists.entered_at)) {
+      const newFees  = (trade.fees ?? 0) + (trade.commissions ?? 0);
+      const hasFees  = newFees > 0;
+      const missingFees = !exists.fees && !exists.commissions;
+      // Auto-patch: corrige timestamps ISO manquants ET/OU frais manquants
+      if ((isIso(trade.entered_at) && !isIso(exists.entered_at)) || (hasFees && missingFees)) {
         runQ(db, dbPath, `
           UPDATE trades SET
             entered_at=:ea, exited_at=:xa,
             size=COALESCE(size,:size),
             duration=COALESCE(duration,:dur),
-            exit_price=COALESCE(exit_price,:ep)
+            exit_price=COALESCE(exit_price,:ep),
+            fees=CASE WHEN (fees IS NULL OR fees=0) AND :fees>0 THEN :fees ELSE fees END,
+            commissions=CASE WHEN (commissions IS NULL OR commissions=0) AND :comm>0 THEN :comm ELSE commissions END,
+            result_net=CASE WHEN (fees IS NULL OR fees=0) AND :fees>0 THEN :result_net ELSE result_net END
           WHERE id=:id
         `, { ':ea': trade.entered_at, ':xa': trade.exited_at ?? null,
              ':size': trade.size ?? null, ':dur': trade.duration ?? null,
-             ':ep': trade.exit_price ?? null, ':id': exists.id });
+             ':ep': trade.exit_price ?? null,
+             ':fees': trade.fees ?? 0, ':comm': trade.commissions ?? 0,
+             ':result_net': trade.result_net ?? null,
+             ':id': exists.id });
         return { id: exists.id, ...trade, patched: true };
       }
       return { id: exists.id, ...trade, skipped: true };
