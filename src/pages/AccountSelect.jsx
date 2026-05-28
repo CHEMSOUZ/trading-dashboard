@@ -157,7 +157,7 @@ function CreateAccountModal({ onClose, onCreate }) {
   const [step, setStep]         = useState('platform');
   const [platform, setPlatform] = useState(null);
   const [form, setForm]         = useState({ name: '', type: 'topstep_50k', color: '#00ff88', brokerAccountId: '' });
-  const [tdvCreds, setTdvCreds] = useState({ username: '', password: '', env: 'live' });
+  const [tdvCreds, setTdvCreds] = useState({ username: '', password: '', env: 'live', cid: '', sec: '' });
   const [tdvInfo,  setTdvInfo]  = useState(null);   // { tradovateUsername } after successful test
   const [testing,  setTesting]  = useState(false);
   const [tdvError, setTdvError] = useState('');
@@ -188,8 +188,10 @@ function CreateAccountModal({ onClose, onCreate }) {
 
   async function testCredentials() {
     if (!tdvCreds.username || !tdvCreds.password) { setTdvError('Identifiants requis'); return; }
+    if (!tdvCreds.cid || !tdvCreds.sec) { setTdvError('CID et Secret requis — voir trader.tradovate.com → API Access'); return; }
     setTesting(true); setTdvError(''); setTdvInfo(null);
-    const res = await window.tradovate.testConnect({ ...tdvCreds, env: form.type === 'tradovate_demo' ? 'demo' : 'live' });
+    const env = form.type === 'tradovate_demo' ? 'demo' : 'live';
+    const res = await window.tradovate.testConnect({ ...tdvCreds, env, cid: Number(tdvCreds.cid) });
     setTesting(false);
     if (res.ok) setTdvInfo(res.data);
     else setTdvError(res.error);
@@ -199,7 +201,7 @@ function CreateAccountModal({ onClose, onCreate }) {
     if (!form.name.trim()) { setError('Le nom est obligatoire'); return; }
     setSaving(true);
     const tradovateConfig = isTradovate
-      ? { username: tdvCreds.username, password: tdvCreds.password, env: form.type === 'tradovate_demo' ? 'demo' : 'live' }
+      ? { username: tdvCreds.username, password: tdvCreds.password, env: form.type === 'tradovate_demo' ? 'demo' : 'live', cid: Number(tdvCreds.cid) || 0, sec: tdvCreds.sec }
       : undefined;
     const res = await window.accounts.create({
       name: form.name.trim(), type: form.type, color: form.color,
@@ -361,6 +363,24 @@ function CreateAccountModal({ onClose, onCreate }) {
             <div>
               <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '6px' }}>MOT DE PASSE</div>
               <input style={inp} type="password" autoComplete="current-password" placeholder="Votre mot de passe" value={tdvCreds.password} onChange={setTdv('password')} onKeyDown={e => { if (e.key === 'Enter') testCredentials(); }} />
+            </div>
+
+            {/* CID / Secret — requis pour l'API Tradovate */}
+            <div style={{ padding: '10px 14px', background: 'rgba(255,204,0,0.05)', border: '1px solid rgba(255,204,0,0.15)', borderRadius: '6px' }}>
+              <div style={{ fontSize: '11px', color: '#aa8820', marginBottom: '10px', lineHeight: '1.6' }}>
+                <strong style={{ color: '#ffcc00' }}>Requis :</strong> CID et Secret d'app Tradovate.<br />
+                <span style={{ color: '#7a6820' }}>trader.tradovate.com → API Access → Create App</span>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ flex: '0 0 110px' }}>
+                  <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '5px' }}>CID (numéro)</div>
+                  <input style={inp} type="text" inputMode="numeric" placeholder="ex: 12345" value={tdvCreds.cid} onChange={setTdv('cid')} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '5px' }}>SECRET</div>
+                  <input style={inp} type="password" placeholder="Votre secret d'app" value={tdvCreds.sec} onChange={setTdv('sec')} />
+                </div>
+              </div>
             </div>
 
             {/* Test connection */}

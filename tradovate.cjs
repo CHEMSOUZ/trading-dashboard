@@ -85,11 +85,14 @@ async function getToken(creds) {
     password:   creds.password,
     appId:      creds.appId || 'TradingDashboard',
     appVersion: '1.0',
-    cid:        creds.cid ?? 8,
-    sec:        creds.sec ?? '',
+    cid:        creds.cid  ? Number(creds.cid) : 0,
+    sec:        creds.sec  ?? '',
   }, null);
   if (!r.accessToken) {
-    throw new Error(r.errorText || 'Authentification échouée — vérifiez vos identifiants Tradovate');
+    const msg = r.errorText || r['p-ticket'] || r.error
+      || (typeof r === 'string' ? r : JSON.stringify(r))
+      || 'Authentification échouée';
+    throw new Error(msg);
   }
   tokenCache[key] = r;
   return r.accessToken;
@@ -102,13 +105,16 @@ async function testConnect(creds) {
     password:   creds.password,
     appId:      creds.appId || 'TradingDashboard',
     appVersion: '1.0',
-    cid:        creds.cid ?? 8,
-    sec:        creds.sec ?? '',
+    cid:        creds.cid  ? Number(creds.cid) : 0,
+    sec:        creds.sec  ?? '',
   }, null);
   if (!r.accessToken) {
-    throw new Error(r.errorText || 'Identifiants incorrects');
+    // Surface the full error from Tradovate
+    const msg = r.errorText || r['p-ticket'] || r.error
+      || (typeof r === 'string' ? r : JSON.stringify(r))
+      || 'Authentification échouée';
+    throw new Error(msg);
   }
-  // Cache the token immediately so first sync is instant
   tokenCache[cacheKey(creds)] = r;
   return { userId: r.userId, tradovateUsername: r.name || creds.username };
 }
