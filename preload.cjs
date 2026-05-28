@@ -34,3 +34,19 @@ contextBridge.exposeInMainWorld('electron', {
   openImageDialog:  () => ipcRenderer.invoke('dialog:openImage'),
   openImagesDialog: () => ipcRenderer.invoke('dialog:openImages'),
 });
+
+contextBridge.exposeInMainWorld('tradovate', {
+  testConnect:        (creds)             => ipcRenderer.invoke('tradovate:testConnect', creds),
+  syncAccount:        (accountId)         => ipcRenderer.invoke('tradovate:syncAccount', accountId),
+  updateCredentials:  (accountId, creds)  => ipcRenderer.invoke('tradovate:updateCredentials', accountId, creds),
+  onSynced: (cb) => {
+    const handler = (_, data) => cb(data);
+    ipcRenderer.on('tradovate:synced', handler);
+    return () => ipcRenderer.removeListener('tradovate:synced', handler);
+  },
+  onError: (cb) => {
+    const handler = (_, data) => cb(data);
+    ipcRenderer.on('tradovate:error', handler);
+    return () => ipcRenderer.removeListener('tradovate:error', handler);
+  },
+});

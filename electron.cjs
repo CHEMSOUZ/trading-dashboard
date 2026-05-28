@@ -9,14 +9,17 @@ autoUpdater.autoInstallOnAppQuit = true;
 let mainWindow;
 let accounts;
 let dbModule;
+let tradovate;
 let activeDb     = null;
 let activeDbPath = null;
 let globalDb     = null;
 let globalDbPath = null;
+let tdvSyncInterval = null;
 
 async function init() {
-  accounts = require('./accounts.cjs');
-  dbModule = require('./database.cjs');
+  accounts  = require('./accounts.cjs');
+  dbModule  = require('./database.cjs');
+  tradovate = require('./tradovate.cjs');
 }
 
 async function loadActiveDb() {
@@ -83,11 +86,50 @@ app.whenReady().then(async () => {
       autoUpdater.checkForUpdatesAndNotify();
     });
   }
+
+  // Start auto-sync for any already-configured Tradovate accounts
+  startTdvAutoSync();
 });
 
 app.on('window-all-closed', () => {
+  stopTdvAutoSync();
   if (process.platform !== 'darwin') app.quit();
 });
+
+// ── Tradovate auto-sync (all accounts) ───────────────────────
+let isSyncing = false;
+
+async function syncAllTradovateAccounts() {
+  if (isSyncing) return;
+  isSyncing = true;
+  try {
+    const { accounts: allAccounts } = accounts.getAllAccounts();
+    const tdvAccs = allAccounts.filter(a =>
+      a.type?.startsWith('tradovate') && a.tradovateConfig?.username
+    );
+    for (const acc of tdvAccs) {
+      try {
+        const db = await dbModule.getDb(acc.dbPath);
+        const result = await tradovate.syncAccount(acc.tradovateConfig, dbModule.insertTrade, db, acc.dbPath);
+        // Persist last sync time on the account
+        accounts.updateAccount(acc.id, { lastTdvSync: result.syncedAt });
+        mainWindow?.webContents.send('tradovate:synced', { accountId: acc.id, ...result });
+      } catch (err) {
+        mainWindow?.webContents.send('tradovate:error', { accountId: acc.id, error: err.message });
+      }
+    }
+  } finally {
+    isSyncing = false;
+  }
+}
+
+function startTdvAutoSync() {
+  stopTdvAutoSync();
+  tdvSyncInterval = setInterval(syncAllTradovateAccounts, 60_000);
+}
+function stopTdvAutoSync() {
+  if (tdvSyncInterval) { clearInterval(tdvSyncInterval); tdvSyncInterval = null; }
+}
 
 autoUpdater.on('update-available',  (info) => { mainWindow?.webContents.send('update:available', info); });
 autoUpdater.on('update-downloaded', (info) => { mainWindow?.webContents.send('update:downloaded', info); });
@@ -147,6 +189,43 @@ function registerHandlers() {
   globalDbHandle('db:getWeeklyAnalyses',   (db) => dbModule.getWeeklyAnalyses(db));
   globalDbHandle('db:upsertWeeklyAnalysis',(db, dbp, a) => dbModule.upsertWeeklyAnalysis(db, dbp, a));
   globalDbHandle('db:deleteWeeklyAnalysis',(db, dbp, id) => dbModule.deleteWeeklyAnalysis(db, dbp, id));
+
+  // ── Tradovate (per-account) ───────────────────────────────────
+  ipcMain.handle('tradovate:testConnect', async (_, creds) => {
+    try {
+      const info = await tradovate.testConnect(creds);
+      return { ok: true, data: info };
+    } catch (e) { return { ok: false, error: e.message }; }
+  });
+
+  // Sync a specific account by ID
+  ipcMain.handle('tradovate:syncAccount', async (_, accountId) => {
+    try {
+      const { accounts: all } = accounts.getAllAccounts();
+      const acc = all.find(a => a.id === accountId);
+      if (!acc) return { ok: false, error: 'Compte introuvable' };
+      if (!acc.tradovateConfig?.username) return { ok: false, error: 'Compte non configuré Tradovate' };
+      const db = await dbModule.getDb(acc.dbPath);
+      const result = await tradovate.syncAccount(acc.tradovateConfig, dbModule.insertTrade, db, acc.dbPath);
+      accounts.updateAccount(accountId, { lastTdvSync: result.syncedAt });
+      mainWindow?.webContents.send('tradovate:synced', { accountId, ...result });
+      return { ok: true, data: result };
+    } catch (e) { return { ok: false, error: e.message }; }
+  });
+
+  // Update credentials on an existing account and re-sync
+  ipcMain.handle('tradovate:updateCredentials', async (_, accountId, creds) => {
+    try {
+      await tradovate.testConnect(creds);
+      accounts.updateAccount(accountId, { tradovateConfig: creds });
+      const { accounts: all } = accounts.getAllAccounts();
+      const acc = all.find(a => a.id === accountId);
+      const db  = await dbModule.getDb(acc.dbPath);
+      const result = await tradovate.syncAccount(creds, dbModule.insertTrade, db, acc.dbPath);
+      accounts.updateAccount(accountId, { lastTdvSync: result.syncedAt });
+      return { ok: true, data: result };
+    } catch (e) { return { ok: false, error: e.message }; }
+  });
 
   // ── File dialogs ──────────────────────────────────────────
   ipcMain.handle('dialog:openCsv', async () => {

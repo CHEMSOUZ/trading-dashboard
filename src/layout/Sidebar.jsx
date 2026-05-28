@@ -196,9 +196,10 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
           <div style={{ position: 'absolute', top: '90px', left: '8px', right: '8px', zIndex: 50, background: '#070d12', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '8px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
 
             {(() => {
-              const liveAccts      = accounts.filter(a => accountStatuses[a.id]?.isExpressFunded && !accountStatuses[a.id]?.isBlown);
-              const validatedAccts = accounts.filter(a => accountStatuses[a.id]?.isValidated && !accountStatuses[a.id]?.isExpressFunded && !accountStatuses[a.id]?.isBlown);
-              const regularAccts   = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isExpressFunded && !accountStatuses[a.id]?.isValidated);
+              const liveAccts      = accounts.filter(a => !accountStatuses[a.id]?.isBlown && (accountStatuses[a.id]?.isExpressFunded || a.type === 'tradovate_live'));
+              const challengeAccts = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' && !accountStatuses[a.id]?.isValidated && CHALLENGE_TYPES.has(a.type));
+              const validatedAccts = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' && accountStatuses[a.id]?.isValidated);
+              const regularAccts   = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' && !accountStatuses[a.id]?.isValidated && !CHALLENGE_TYPES.has(a.type));
               const blownAccts     = accounts.filter(a => accountStatuses[a.id]?.isBlown);
 
               function renderAccItem(a) {
@@ -254,21 +255,35 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                 );
               }
 
+              const hasMore = (a, ...rest) => a.length > 0 && rest.some(r => r.length > 0);
+
               return (
                 <>
-                  {/* COMPTE LIVE */}
+                  {/* 1. LIVE : Express Funded + Tradovate Live */}
                   {liveAccts.length > 0 && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#f0c020', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
                         <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#f0c020', boxShadow: '0 0 4px #f0c020' }} />
-                        COMPTE LIVE
+                        LIVE
                       </div>
                       {liveAccts.map(renderAccItem)}
-                      {(validatedAccts.length > 0 || regularAccts.length > 0 || blownAccts.length > 0) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
+                      {hasMore(liveAccts, challengeAccts, validatedAccts, regularAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
                     </>
                   )}
 
-                  {/* COMPTES VALIDÉS */}
+                  {/* 2. CHALLENGE : Topstep actifs non validés */}
+                  {challengeAccts.length > 0 && (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#00dd77', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
+                        <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00dd77', boxShadow: '0 0 4px #00dd77' }} />
+                        CHALLENGE
+                      </div>
+                      {challengeAccts.map(renderAccItem)}
+                      {hasMore(challengeAccts, validatedAccts, regularAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
+                    </>
+                  )}
+
+                  {/* 3. VALIDÉ */}
                   {validatedAccts.length > 0 && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#00ff88', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
@@ -276,20 +291,20 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         VALIDÉ
                       </div>
                       {validatedAccts.map(renderAccItem)}
-                      {(regularAccts.length > 0 || blownAccts.length > 0) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
+                      {hasMore(validatedAccts, regularAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
                     </>
                   )}
 
-                  {/* COMPTES RÉGULIERS */}
+                  {/* 4. AUTRES ACTIFS */}
                   {regularAccts.length > 0 && (
                     <>
-                      <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', padding: '4px 8px', marginBottom: '4px' }}>COMPTES</div>
+                      <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', padding: '4px 8px', marginBottom: '4px' }}>ACTIFS</div>
                       {regularAccts.map(renderAccItem)}
                       {blownAccts.length > 0 && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
                     </>
                   )}
 
-                  {/* CRAMÉS */}
+                  {/* 5. CRAMÉS */}
                   {blownAccts.length > 0 && (
                     <>
                       <div style={{ fontSize: '10px', color: '#ff4455', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px', opacity: 0.8 }}>CRAMÉS</div>

@@ -47,11 +47,10 @@ const PLATFORMS = {
   },
   tradovate: {
     label: 'Tradovate', color: '#00aaff',
-    desc: 'Compte broker Tradovate',
-    soon: true,
+    desc: 'Sync automatique via API',
     types: {
-      tradovate_live: { label: 'Live', desc: 'Compte live Tradovate' },
-      tradovate_demo: { label: 'Demo', desc: 'Compte simulation' },
+      tradovate_live: { label: 'Live', desc: 'Compte live Tradovate — trades réels' },
+      tradovate_demo: { label: 'Demo', desc: 'Compte simulation / paper trading' },
     },
   },
   perso: {
@@ -155,13 +154,21 @@ async function computeAccountStatus(acc, currentActiveId) {
 
 // ── Create Account Modal ──────────────────────────────────────
 function CreateAccountModal({ onClose, onCreate }) {
-  const [step, setStep]     = useState('platform');
+  const [step, setStep]         = useState('platform');
   const [platform, setPlatform] = useState(null);
-  const [form, setForm]     = useState({ name: '', type: 'topstep_50k', color: '#00ff88', brokerAccountId: '' });
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState('');
-  const set = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
+  const [form, setForm]         = useState({ name: '', type: 'topstep_50k', color: '#00ff88', brokerAccountId: '' });
+  const [tdvCreds, setTdvCreds] = useState({ username: '', password: '', env: 'live' });
+  const [tdvInfo,  setTdvInfo]  = useState(null);   // { tradovateUsername } after successful test
+  const [testing,  setTesting]  = useState(false);
+  const [tdvError, setTdvError] = useState('');
+  const [saving,   setSaving]   = useState(false);
+  const [error,    setError]    = useState('');
+
+  const set    = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
+  const setTdv = k => e => { setTdvCreds(p => ({ ...p, [k]: e.target.value })); setTdvInfo(null); setTdvError(''); };
+
   const inp = { background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.15)', borderRadius: '5px', padding: '9px 12px', color: '#c8d8c8', fontSize: '13px', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' };
+  const isTradovate = platform === 'tradovate';
 
   function selectPlatform(key) {
     const p = PLATFORMS[key];
@@ -171,52 +178,88 @@ function CreateAccountModal({ onClose, onCreate }) {
     setStep('details');
   }
 
+  function goToCredentials() {
+    if (!form.name.trim()) { setError('Le nom est obligatoire'); return; }
+    setError('');
+    // Pré-remplir env selon le type sélectionné
+    setTdvCreds(c => ({ ...c, env: form.type === 'tradovate_demo' ? 'demo' : 'live' }));
+    setStep('credentials');
+  }
+
+  async function testCredentials() {
+    if (!tdvCreds.username || !tdvCreds.password) { setTdvError('Identifiants requis'); return; }
+    setTesting(true); setTdvError(''); setTdvInfo(null);
+    const res = await window.tradovate.testConnect({ ...tdvCreds, env: form.type === 'tradovate_demo' ? 'demo' : 'live' });
+    setTesting(false);
+    if (res.ok) setTdvInfo(res.data);
+    else setTdvError(res.error);
+  }
+
   async function submit() {
     if (!form.name.trim()) { setError('Le nom est obligatoire'); return; }
     setSaving(true);
-    const res = await window.accounts.create({ name: form.name.trim(), type: form.type, color: form.color, brokerAccountId: form.brokerAccountId.trim(), platform });
+    const tradovateConfig = isTradovate
+      ? { username: tdvCreds.username, password: tdvCreds.password, env: form.type === 'tradovate_demo' ? 'demo' : 'live' }
+      : undefined;
+    const res = await window.accounts.create({
+      name: form.name.trim(), type: form.type, color: form.color,
+      brokerAccountId: form.brokerAccountId.trim(), platform, tradovateConfig,
+    });
     setSaving(false);
-    if (res.ok) { onCreate(res.data); onClose(); }
-    else setError(res.error ?? 'Erreur inconnue');
+    if (res.ok) {
+      // Trigger immediate sync for the new Tradovate account
+      if (isTradovate) {
+        window.tradovate.syncAccount(res.data.id).catch(() => {});
+      }
+      onCreate(res.data); onClose();
+    } else {
+      setError(res.error ?? 'Erreur inconnue');
+    }
   }
 
   const plat = platform ? PLATFORMS[platform] : null;
+  const stepTitles = { platform: 'Choisir la plateforme', details: `Compte ${plat?.label ?? ''}`, credentials: 'Connexion Tradovate' };
+
+  function handleBack() {
+    if (step === 'credentials') setStep('details');
+    else if (step === 'details') setStep('platform');
+  }
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{ background: '#070d12', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '12px', width: '100%', maxWidth: '500px', padding: '28px', boxShadow: '0 0 60px rgba(0,0,0,0.6)' }}>
+
+        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {step === 'details' && (
-              <button onClick={() => setStep('platform')} style={{ background: 'none', border: 'none', color: '#3a6a4a', cursor: 'pointer', fontSize: '18px', padding: '0', lineHeight: 1 }}
+            {step !== 'platform' && (
+              <button onClick={handleBack} style={{ background: 'none', border: 'none', color: '#3a6a4a', cursor: 'pointer', fontSize: '18px', padding: '0', lineHeight: 1 }}
                 onMouseEnter={e => e.currentTarget.style.color = '#00ff88'}
                 onMouseLeave={e => e.currentTarget.style.color = '#3a6a4a'}
               >←</button>
             )}
             <div>
               <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '4px' }}>NOUVEAU COMPTE</div>
-              <div style={{ fontSize: '18px', fontWeight: '700', color: '#e8f8e8' }}>{step === 'platform' ? 'Choisir la plateforme' : `Compte ${plat?.label}`}</div>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#e8f8e8' }}>{stepTitles[step]}</div>
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: '1px solid #1a3a22', color: '#4a7a5a', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
         </div>
 
+        {/* ── Step 1: Platform ── */}
         {step === 'platform' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {Object.entries(PLATFORMS).map(([key, p]) => (
-              <div key={key} onClick={() => !p.soon && selectPlatform(key)}
-                style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 18px', borderRadius: '8px', cursor: p.soon ? 'not-allowed' : 'pointer', background: `rgba(${p.color === '#00ff88' ? '0,255,136' : p.color === '#00aaff' ? '0,170,255' : '255,204,0'},0.05)`, border: `1px solid ${p.color}20`, transition: 'all 0.15s', opacity: p.soon ? 0.5 : 1 }}
-                onMouseEnter={e => { if (!p.soon) e.currentTarget.style.background = `rgba(${p.color === '#00ff88' ? '0,255,136' : p.color === '#00aaff' ? '0,170,255' : '255,204,0'},0.1)`; }}
-                onMouseLeave={e => { e.currentTarget.style.background = `rgba(${p.color === '#00ff88' ? '0,255,136' : p.color === '#00aaff' ? '0,170,255' : '255,204,0'},0.05)`; }}
+              <div key={key} onClick={() => selectPlatform(key)}
+                style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 18px', borderRadius: '8px', cursor: 'pointer', background: `rgba(${p.color === '#00ff88' ? '0,255,136' : p.color === '#00aaff' ? '0,170,255' : '255,204,0'},0.05)`, border: `1px solid ${p.color}20`, transition: 'all 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = `rgba(${p.color === '#00ff88' ? '0,255,136' : p.color === '#00aaff' ? '0,170,255' : '255,204,0'},0.1)`}
+                onMouseLeave={e => e.currentTarget.style.background = `rgba(${p.color === '#00ff88' ? '0,255,136' : p.color === '#00aaff' ? '0,170,255' : '255,204,0'},0.05)`}
               >
                 <div style={{ width: '52px', height: '52px', borderRadius: '10px', background: `${p.color}12`, border: `1px solid ${p.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <PlatformLogo platform={key} size={30} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
-                    <span style={{ fontSize: '15px', fontWeight: '700', color: p.color }}>{p.label}</span>
-                    {p.soon && <span style={{ fontSize: '9px', color: '#3a6a4a', background: 'rgba(0,255,136,0.08)', border: '1px solid #1a4a2a', padding: '1px 6px', borderRadius: '3px', letterSpacing: '1px' }}>BIENTÔT</span>}
-                  </div>
+                  <div style={{ fontSize: '15px', fontWeight: '700', color: p.color, marginBottom: '3px' }}>{p.label}</div>
                   <div style={{ fontSize: '12px', color: '#4a7a5a', marginBottom: '6px' }}>{p.desc}</div>
                   <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                     {Object.values(p.types).map(t => (
@@ -224,12 +267,13 @@ function CreateAccountModal({ onClose, onCreate }) {
                     ))}
                   </div>
                 </div>
-                {!p.soon && <div style={{ fontSize: '18px', color: `${p.color}60`, flexShrink: 0 }}>›</div>}
+                <div style={{ fontSize: '18px', color: `${p.color}60`, flexShrink: 0 }}>›</div>
               </div>
             ))}
           </div>
         )}
 
+        {/* ── Step 2: Details ── */}
         {step === 'details' && plat && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: `${plat.color}08`, border: `1px solid ${plat.color}20`, borderRadius: '6px' }}>
@@ -238,18 +282,18 @@ function CreateAccountModal({ onClose, onCreate }) {
             </div>
             <div>
               <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '6px' }}>NOM DU COMPTE *</div>
-              <input placeholder={`Ex: ${plat.label} Mai 2026`} value={form.name} onChange={set('name')} style={inp} autoFocus />
+              <input placeholder={`Ex: ${plat.label} Mai 2026`} value={form.name} onChange={set('name')} style={inp} autoFocus onKeyDown={e => { if (e.key === 'Enter') isTradovate ? goToCredentials() : submit(); }} />
             </div>
             <div>
               <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '8px' }}>TYPE</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 {Object.entries(plat.types).map(([key, info], idx, arr) => {
                   const typeColor = TYPE_LABELS[key]?.color ?? plat.color;
-                  const prevInfo = arr[idx - 1]?.[1];
-                  const showSeparator = idx > 0 && !!info.funded !== !!prevInfo?.funded;
+                  const prevInfo  = arr[idx - 1]?.[1];
+                  const showSep   = idx > 0 && !!info.funded !== !!prevInfo?.funded;
                   return (
                     <div key={key}>
-                      {showSeparator && (
+                      {showSep && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0 6px' }}>
                           <div style={{ flex: 1, height: '1px', background: 'rgba(0,255,136,0.08)' }} />
                           <span style={{ fontSize: '9px', color: '#f0c020', letterSpacing: '2px' }}>EXPRESS FUNDED</span>
@@ -280,15 +324,70 @@ function CreateAccountModal({ onClose, onCreate }) {
                 ))}
               </div>
             </div>
-            <div>
-              <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '6px' }}>ID BROKER (optionnel)</div>
-              <input placeholder="Ex: 50KTC-236410" value={form.brokerAccountId} onChange={set('brokerAccountId')} style={inp} />
-            </div>
+            {!isTradovate && (
+              <div>
+                <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '6px' }}>ID BROKER (optionnel)</div>
+                <input placeholder="Ex: 50KTC-236410" value={form.brokerAccountId} onChange={set('brokerAccountId')} style={inp} />
+              </div>
+            )}
             {error && <div style={{ padding: '10px', background: 'rgba(255,68,85,0.1)', border: '1px solid rgba(255,68,85,0.3)', borderRadius: '5px', color: '#ff4455', fontSize: '12px' }}>⚠ {error}</div>}
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #1a3a22', background: 'transparent', color: '#5a8a6a', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>ANNULER</button>
-              <button onClick={submit} disabled={saving} style={{ padding: '10px 28px', borderRadius: '5px', background: `${form.color}22`, border: `1px solid ${form.color}60`, color: form.color, fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving ? 'wait' : 'pointer' }}>
-                {saving ? 'CRÉATION...' : 'CRÉER'}
+              {isTradovate ? (
+                <button onClick={goToCredentials} style={{ padding: '10px 28px', borderRadius: '5px', background: 'rgba(0,170,255,0.15)', border: '1px solid rgba(0,170,255,0.4)', color: '#00aaff', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer' }}>
+                  SUIVANT →
+                </button>
+              ) : (
+                <button onClick={submit} disabled={saving} style={{ padding: '10px 28px', borderRadius: '5px', background: `${form.color}22`, border: `1px solid ${form.color}60`, color: form.color, fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving ? 'wait' : 'pointer' }}>
+                  {saving ? 'CRÉATION...' : 'CRÉER'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Tradovate credentials ── */}
+        {step === 'credentials' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Info banner */}
+            <div style={{ padding: '12px 14px', background: 'rgba(0,170,255,0.07)', border: '1px solid rgba(0,170,255,0.15)', borderRadius: '6px', fontSize: '12px', color: '#4a8aaa', lineHeight: '1.6' }}>
+              Entrez vos identifiants Tradovate. Ils seront stockés localement sur cet appareil et utilisés pour synchroniser automatiquement les trades de <strong style={{ color: '#00aaff' }}>{form.name}</strong>.
+            </div>
+
+            <div>
+              <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '6px' }}>NOM D'UTILISATEUR TRADOVATE</div>
+              <input style={inp} type="text" autoComplete="username" placeholder="Votre identifiant" value={tdvCreds.username} onChange={setTdv('username')} onKeyDown={e => { if (e.key === 'Enter') testCredentials(); }} autoFocus />
+            </div>
+            <div>
+              <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '6px' }}>MOT DE PASSE</div>
+              <input style={inp} type="password" autoComplete="current-password" placeholder="Votre mot de passe" value={tdvCreds.password} onChange={setTdv('password')} onKeyDown={e => { if (e.key === 'Enter') testCredentials(); }} />
+            </div>
+
+            {/* Test connection */}
+            {!tdvInfo && (
+              <button onClick={testCredentials} disabled={testing} style={{ padding: '10px 0', borderRadius: '5px', background: 'rgba(0,170,255,0.1)', border: '1px solid rgba(0,170,255,0.25)', color: '#00aaff', fontSize: '12px', fontFamily: 'inherit', cursor: testing ? 'wait' : 'pointer', letterSpacing: '1px' }}>
+                {testing ? 'TEST EN COURS…' : 'TESTER LA CONNEXION'}
+              </button>
+            )}
+
+            {tdvError && (
+              <div style={{ padding: '10px 14px', background: 'rgba(255,68,85,0.1)', border: '1px solid rgba(255,68,85,0.25)', borderRadius: '5px', color: '#ff7788', fontSize: '12px' }}>
+                ⚠ {tdvError}
+              </div>
+            )}
+
+            {tdvInfo && (
+              <div style={{ padding: '12px 14px', background: 'rgba(0,255,136,0.07)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '5px', fontSize: '13px', color: '#00cc66' }}>
+                ✓ Connecté en tant que <strong>{tdvInfo.tradovateUsername}</strong> — {form.type === 'tradovate_demo' ? 'Demo' : 'Live'}
+              </div>
+            )}
+
+            {error && <div style={{ padding: '10px', background: 'rgba(255,68,85,0.1)', border: '1px solid rgba(255,68,85,0.3)', borderRadius: '5px', color: '#ff4455', fontSize: '12px' }}>⚠ {error}</div>}
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #1a3a22', background: 'transparent', color: '#5a8a6a', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>ANNULER</button>
+              <button onClick={submit} disabled={saving || !tdvInfo} style={{ padding: '10px 28px', borderRadius: '5px', background: tdvInfo ? 'rgba(0,170,255,0.2)' : 'rgba(0,170,255,0.05)', border: `1px solid ${tdvInfo ? 'rgba(0,170,255,0.5)' : 'rgba(0,170,255,0.15)'}`, color: tdvInfo ? '#00aaff' : '#2a5a6a', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving ? 'wait' : tdvInfo ? 'pointer' : 'not-allowed', transition: 'all 0.15s' }}>
+                {saving ? 'CRÉATION…' : 'CRÉER ET SYNCHRONISER'}
               </button>
             </div>
           </div>
@@ -300,11 +399,26 @@ function CreateAccountModal({ onClose, onCreate }) {
 
 // ── Account Card ──────────────────────────────────────────────
 function AccountCard({ acc, isActive, status, onSelect, onDelete }) {
-  const typeInfo = TYPE_LABELS[acc.type] ?? { label: 'Autre', color: acc.color ?? '#ff6644', platform: 'perso' };
-  const isBlown  = status?.isBlown ?? false;
-  const hasStats = status?.pnl != null;
-  const pnl      = status?.pnl ?? 0;
-  const pnlColor = isBlown ? '#ff4455' : pnl >= 0 ? '#00ff88' : '#ff4455';
+  const [syncing,    setSyncing]    = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
+
+  const typeInfo       = TYPE_LABELS[acc.type] ?? { label: 'Autre', color: acc.color ?? '#ff6644', platform: 'perso' };
+  const isBlown        = status?.isBlown ?? false;
+  const hasStats       = status?.pnl != null;
+  const pnl            = status?.pnl ?? 0;
+  const pnlColor       = isBlown ? '#ff4455' : pnl >= 0 ? '#00ff88' : '#ff4455';
+  const isTdvLive      = acc.type === 'tradovate_live';
+  const isTdvDemo      = acc.type === 'tradovate_demo';
+  const isTdv          = isTdvLive || isTdvDemo;
+  const isChallenge    = CHALLENGE_TYPES.has(acc.type) && !isBlown && !status?.isValidated && !status?.isExpressFunded;
+
+  async function handleSync(e) {
+    e.stopPropagation();
+    setSyncing(true); setSyncResult(null);
+    const res = await window.tradovate.syncAccount(acc.id);
+    setSyncing(false);
+    if (res.ok) setSyncResult(res.data);
+  }
 
   return (
     <div onClick={() => onSelect(acc.id)}
@@ -313,24 +427,27 @@ function AccountCard({ acc, isActive, status, onSelect, onDelete }) {
       onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = isBlown ? '0 0 20px rgba(255,68,85,0.12)' : isActive ? `0 0 24px ${acc.color}20` : 'none'; }}
     >
       {/* Badges top-right */}
-      <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '160px' }}>
+      <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '170px' }}>
         {isBlown && (
           <div style={{ background: 'rgba(255,68,85,0.2)', border: '1px solid rgba(255,68,85,0.5)', borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: '#ff4455', letterSpacing: '1px', fontWeight: '700' }}>💀 CRAMÉ</div>
         )}
         {!isBlown && status?.isExpressFunded && (
           <div style={{ background: 'rgba(240,192,32,0.2)', border: '1px solid rgba(240,192,32,0.5)', borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: '#f0c020', letterSpacing: '1px', fontWeight: '700' }}>💰 FUNDED</div>
         )}
+        {!isBlown && isTdvLive && (
+          <div style={{ background: 'rgba(0,170,255,0.2)', border: '1px solid rgba(0,170,255,0.5)', borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: '#00aaff', letterSpacing: '1px', fontWeight: '700' }}>● LIVE</div>
+        )}
+        {!isBlown && isTdvDemo && (
+          <div style={{ background: 'rgba(0,170,255,0.1)', border: '1px solid rgba(0,170,255,0.3)', borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: '#4a8aaa', letterSpacing: '1px', fontWeight: '700' }}>DEMO</div>
+        )}
+        {!isBlown && isChallenge && (
+          <div style={{ background: 'rgba(0,255,136,0.12)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: '#00dd77', letterSpacing: '1px', fontWeight: '700' }}>CHALLENGE</div>
+        )}
         {!isBlown && status?.isValidated && (
           <div style={{ background: 'rgba(0,255,136,0.2)', border: '1px solid rgba(0,255,136,0.5)', borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: '#00ff88', letterSpacing: '1px', fontWeight: '700' }}>✅ VALIDÉ</div>
         )}
         {!isBlown && isActive && (
           <div style={{ background: `${acc.color}20`, border: `1px solid ${acc.color}40`, borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: acc.color, letterSpacing: '1px', fontWeight: '700' }}>ACTIF</div>
-        )}
-        {!isBlown && !isActive && hasStats && !status?.isExpressFunded && !status?.isValidated && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 6px #00ff88' }} />
-            <span style={{ fontSize: '8px', color: '#00ff88', letterSpacing: '1px', fontWeight: '700' }}>LIVE</span>
-          </div>
         )}
       </div>
 
@@ -365,8 +482,32 @@ function AccountCard({ acc, isActive, status, onSelect, onDelete }) {
         </div>
       )}
 
-      {acc.brokerAccountId && <div style={{ fontSize: '10px', color: '#3a6a4a', marginBottom: '2px' }}>{acc.brokerAccountId}</div>}
-      <div style={{ fontSize: '10px', color: '#2a4a30' }}>Créé le {new Date(acc.createdAt).toLocaleDateString('fr-FR')}</div>
+      {/* Tradovate sync info */}
+      {isTdv && acc.tradovateConfig && (
+        <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(0,170,255,0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: '10px', color: '#2a5a6a' }}>
+              {syncResult ? (
+                <span style={{ color: '#00aa66' }}>+{syncResult.imported} trade(s) importé(s)</span>
+              ) : acc.lastTdvSync ? (
+                <span>Sync {new Date(acc.lastTdvSync).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+              ) : (
+                <span>Pas encore synchronisé</span>
+              )}
+            </div>
+            <button onClick={handleSync} disabled={syncing}
+              style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '3px', background: 'rgba(0,170,255,0.1)', border: '1px solid rgba(0,170,255,0.2)', color: syncing ? '#2a5a6a' : '#00aaff', cursor: syncing ? 'wait' : 'pointer', fontFamily: 'inherit', letterSpacing: '0.5px', transition: 'all 0.15s' }}
+              onMouseEnter={e => { if (!syncing) e.currentTarget.style.background = 'rgba(0,170,255,0.2)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,170,255,0.1)'; }}
+            >
+              {syncing ? '⟳ sync…' : '⟳ Sync'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {acc.brokerAccountId && <div style={{ fontSize: '10px', color: '#3a6a4a', marginTop: '4px' }}>{acc.brokerAccountId}</div>}
+      <div style={{ fontSize: '10px', color: '#2a4a30', marginTop: '2px' }}>Créé le {new Date(acc.createdAt).toLocaleDateString('fr-FR')}</div>
 
       <button onClick={e => onDelete(acc.id, e)}
         style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '14px', padding: '2px 6px', borderRadius: '3px', transition: 'all 0.15s' }}
@@ -426,10 +567,28 @@ export default function AccountSelect({ onSelect, onBack }) {
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#060c10', color: '#3a6a4a', fontSize: '12px', letterSpacing: '2px', fontFamily: 'monospace' }}>CHARGEMENT...</div>
   );
 
+  // ── Section ordering (top → bottom) ──────────────────────────
+  // 1. LIVE  : Express Funded Topstep + Tradovate Live
+  // 2. CHALLENGE : active Topstep challenges (not validated)
+  // 3. VALIDÉ : validated challenges
+  // 4. AUTRES : perso, autre, tradovate_demo (active)
+  // 5. CRAMÉ : blown
   const blownAccounts     = data.accounts.filter(a => statuses[a.id]?.isBlown);
-  const liveAccounts      = data.accounts.filter(a => !statuses[a.id]?.isBlown && statuses[a.id]?.isExpressFunded);
-  const validatedAccounts = data.accounts.filter(a => !statuses[a.id]?.isBlown && !statuses[a.id]?.isExpressFunded && statuses[a.id]?.isValidated);
-  const activeAccounts    = data.accounts.filter(a => !statuses[a.id]?.isBlown && !statuses[a.id]?.isExpressFunded && !statuses[a.id]?.isValidated);
+  const liveAccounts      = data.accounts.filter(a =>
+    !statuses[a.id]?.isBlown && (statuses[a.id]?.isExpressFunded || a.type === 'tradovate_live')
+  );
+  const challengeAccounts = data.accounts.filter(a =>
+    !statuses[a.id]?.isBlown && !statuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' &&
+    !statuses[a.id]?.isValidated && CHALLENGE_TYPES.has(a.type)
+  );
+  const validatedAccounts = data.accounts.filter(a =>
+    !statuses[a.id]?.isBlown && !statuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' &&
+    statuses[a.id]?.isValidated
+  );
+  const otherAccounts     = data.accounts.filter(a =>
+    !statuses[a.id]?.isBlown && !statuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' &&
+    !statuses[a.id]?.isValidated && !CHALLENGE_TYPES.has(a.type)
+  );
 
   function renderSection(accounts, header) {
     return (
@@ -482,37 +641,46 @@ export default function AccountSelect({ onSelect, onBack }) {
           </div>
         ) : (
           <>
-            {/* ── COMPTE LIVE (Express Funded) ── */}
+            {/* ── 1. LIVE : Express Funded + Tradovate Live ── */}
             {liveAccounts.length > 0 && renderSection(liveAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f0c020', boxShadow: '0 0 10px #f0c020' }} />
-                <span style={{ fontSize: '10px', color: '#f0c020', letterSpacing: '2px', fontWeight: '700' }}>COMPTE LIVE — {liveAccounts.length}</span>
-                <span style={{ fontSize: '9px', color: '#8a7a30', letterSpacing: '1px' }}>Express Funded</span>
+                <span style={{ fontSize: '10px', color: '#f0c020', letterSpacing: '2px', fontWeight: '700' }}>LIVE — {liveAccounts.length}</span>
+                <span style={{ fontSize: '9px', color: '#8a7a30', letterSpacing: '1px' }}>Express Funded · Tradovate Live</span>
               </div>
             ))}
 
-            {/* ── COMPTES VALIDÉS ── */}
+            {/* ── 2. CHALLENGE : Topstep actifs non validés ── */}
+            {challengeAccounts.length > 0 && renderSection(challengeAccounts, (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#00dd77', boxShadow: '0 0 8px #00dd77' }} />
+                <span style={{ fontSize: '10px', color: '#00dd77', letterSpacing: '2px', fontWeight: '700' }}>CHALLENGE — {challengeAccounts.length}</span>
+                <span style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '1px' }}>En cours</span>
+              </div>
+            ))}
+
+            {/* ── 3. VALIDÉ : challenges réussis ── */}
             {validatedAccounts.length > 0 && renderSection(validatedAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 10px #00ff88' }} />
-                <span style={{ fontSize: '10px', color: '#00ff88', letterSpacing: '2px', fontWeight: '700' }}>COMPTES VALIDÉS — {validatedAccounts.length}</span>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 8px #00ff88' }} />
+                <span style={{ fontSize: '10px', color: '#00ff88', letterSpacing: '2px', fontWeight: '700' }}>VALIDÉ — {validatedAccounts.length}</span>
                 <span style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '1px' }}>Challenge réussi ✓</span>
               </div>
             ))}
 
-            {/* ── COMPTES ACTIFS ── */}
-            {activeAccounts.length > 0 && renderSection(activeAccounts, (
+            {/* ── 4. AUTRES ACTIFS : perso, demo, autre ── */}
+            {otherAccounts.length > 0 && renderSection(otherAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 8px #00ff88' }} />
-                <span style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', fontWeight: '700' }}>COMPTES ACTIFS — {activeAccounts.length}</span>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#5a8a6a', boxShadow: '0 0 5px #5a8a6a' }} />
+                <span style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', fontWeight: '700' }}>AUTRES ACTIFS — {otherAccounts.length}</span>
               </div>
             ))}
 
-            {/* ── COMPTES CRAMÉS ── */}
+            {/* ── 5. CRAMÉS ── */}
             {blownAccounts.length > 0 && renderSection(blownAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#ff4455', boxShadow: '0 0 8px #ff4455' }} />
-                <span style={{ fontSize: '10px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', opacity: 0.8 }}>COMPTES CRAMÉS — {blownAccounts.length}</span>
+                <span style={{ fontSize: '10px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', opacity: 0.8 }}>CRAMÉS — {blownAccounts.length}</span>
               </div>
             ))}
           </>
