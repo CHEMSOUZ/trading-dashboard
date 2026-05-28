@@ -9,7 +9,10 @@ import { useNavigate } from 'react-router-dom';
 function detectSource(headers) {
   const h = headers.map(x => x.trim().toLowerCase());
   if (h.includes('contractname') && h.includes('enteredat') && h.includes('tradeday')) return 'topstep';
-  if (h.includes('symbol') && h.includes('buyfillid') && h.includes('clearingfees')) return 'tradovate';
+  // Tradovate cash ledger export (Account, Transaction ID, Timestamp, Date, Delta, Amount, Cash Change Type, ...)
+  if (h.includes('transaction id') && h.includes('cash change type') && h.includes('contract')) return 'tradovate';
+  // Tradovate API-style export (legacy)
+  if (h.includes('symbol') && h.includes('buyfillid') && h.includes('clearingfees')) return 'tradovate_api';
   return 'unknown';
 }
 
@@ -150,9 +153,78 @@ function mapTradovateRow(row) {
   };
 }
 
+/**
+ * Parse Tradovate cash ledger CSV (Account, Transaction ID, Timestamp, Date, Delta, Amount, Cash Change Type, ...)
+ * Groups rows by Transaction ID: P&L row = trade, Commission/Fee rows = costs.
+ */
+function parseTradovateLedger(rows) {
+  const isPnL        = t => { const s = t.toLowerCase(); return s.includes('p&l') || s.includes('pnl') || s === 'trade'; };
+  const isFee        = t => { const s = t.toLowerCase(); return s.includes('fee') || s.includes('clearing'); };
+  const isCommission = t => t.toLowerCase().includes('commission');
+
+  // Group by Transaction ID
+  const groups = new Map();
+  for (const row of rows) {
+    const id = row['Transaction ID'] || '';
+    if (!id) continue;
+    if (!groups.has(id)) groups.set(id, []);
+    groups.get(id).push(row);
+  }
+
+  const trades = [];
+  for (const [txId, group] of groups) {
+    const pnlRow = group.find(r => isPnL(r['Cash Change Type'] || ''));
+    if (!pnlRow) continue;
+
+    const amount   = parseFloat(pnlRow['Amount'])    || 0;
+    const delta    = parseFloat(pnlRow['Delta'])     || 0;
+    const contract = pnlRow['Contract']   || '';
+    const tsRaw    = pnlRow['Timestamp']  || '';
+    const dateRaw  = pnlRow['Date']       || '';
+
+    let fees = 0, commissions = 0;
+    for (const r of group) {
+      if (r === pnlRow) continue;
+      const amt  = parseFloat(r['Amount']) || 0;
+      const type = r['Cash Change Type']   || '';
+      if (isFee(type))        fees         += Math.abs(amt);
+      else if (isCommission(type)) commissions += Math.abs(amt);
+    }
+
+    let enteredIso = null;
+    try { if (tsRaw) enteredIso = new Date(tsRaw).toISOString(); } catch {}
+    const isoDate   = enteredIso ? enteredIso.slice(0, 10) : dateRaw;
+    const resultNet = Math.round((amount - fees - commissions) * 100) / 100;
+    // delta < 0 → net sold (closing LONG) → LONG; delta > 0 → net bought (closing SHORT) → SHORT
+    const direction = delta < 0 ? 'LONG' : delta > 0 ? 'SHORT' : 'LONG';
+
+    trades.push({
+      external_id: `tdv_${txId}`,
+      source:      'tradovate_csv',
+      date:        isoDate,
+      entered_at:  enteredIso,
+      exited_at:   enteredIso,
+      pair:        normalizePair(contract),
+      direction,
+      entry:       0,
+      exit_price:  null,
+      size:        Math.abs(delta) || null,
+      result:      amount,
+      fees,
+      commissions,
+      result_net:  resultNet,
+      outcome:     resultNet > 0 ? 'WIN' : resultNet < 0 ? 'LOSS' : 'BE',
+      duration:    null,
+      stop: 0, tp: 0, rr: null, emotion: null, notes: null, screenshot: null,
+    });
+  }
+
+  return trades;
+}
+
 function mapRow(row, source) {
-  if (source === 'topstep')   return mapTopstepRow(row);
-  if (source === 'tradovate') return mapTradovateRow(row);
+  if (source === 'topstep')       return mapTopstepRow(row);
+  if (source === 'tradovate_api') return mapTradovateRow(row);
   return null;
 }
 
@@ -169,9 +241,10 @@ function pnlColor(v) {
 }
 
 const SOURCE_INFO = {
-  topstep:   { label: 'Topstep',   color: '#00ff88', icon: <TopstepLogo size={18} /> },
-  tradovate: { label: 'Tradovate', color: '#00aaff', icon: <TradovateLogo size={18} /> },
-  unknown:   { label: 'Inconnu',   color: '#f0a020', icon: '❓' },
+  topstep:       { label: 'Topstep',   color: '#00ff88', icon: <TopstepLogo size={18} /> },
+  tradovate:     { label: 'Tradovate', color: '#00aaff', icon: <TradovateLogo size={18} /> },
+  tradovate_api: { label: 'Tradovate', color: '#00aaff', icon: <TradovateLogo size={18} /> },
+  unknown:       { label: 'Inconnu',   color: '#f0a020', icon: '❓' },
 };
 
 function TopstepLogo({ size = 24 }) {
@@ -308,7 +381,9 @@ export default function CsvImport() {
       return;
     }
 
-    const mapped = rows.map(r => mapRow(r, detectedSource)).filter(Boolean);
+    const mapped = detectedSource === 'tradovate'
+      ? parseTradovateLedger(rows)
+      : rows.map(r => mapRow(r, detectedSource)).filter(Boolean);
 
     // Check duplicates against existing trades
     let existingIds = new Set();
@@ -387,7 +462,7 @@ export default function CsvImport() {
       <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
         {[
           { key: 'topstep',   label: 'Topstep',   Logo: TopstepLogo,   color: '#00ff88' },
-          { key: 'tradovate', label: 'Tradovate',  Logo: TradovateLogo, color: '#00aaff', soon: true },
+          { key: 'tradovate', label: 'Tradovate',  Logo: TradovateLogo, color: '#00aaff' },
         ].map(({ key, label, Logo, color, soon }) => (
           <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', background: `rgba(${color === '#00ff88' ? '0,255,136' : '0,170,255'},0.06)`, border: `1px solid ${color}25`, borderRadius: '6px' }}>
             <Logo size={20} />
