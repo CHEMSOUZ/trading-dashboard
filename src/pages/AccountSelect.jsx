@@ -47,7 +47,7 @@ const PLATFORMS = {
   },
   tradovate: {
     label: 'Tradovate', color: '#00aaff',
-    desc: 'Sync automatique via API',
+    desc: 'Import CSV de vos trades',
     types: {
       tradovate_live: { label: 'Live', desc: 'Compte live Tradovate — trades réels' },
       tradovate_demo: { label: 'Demo', desc: 'Compte simulation / paper trading' },
@@ -157,18 +157,12 @@ function CreateAccountModal({ onClose, onCreate }) {
   const [step, setStep]         = useState('platform');
   const [platform, setPlatform] = useState(null);
   const [form, setForm]         = useState({ name: '', type: 'topstep_50k', color: '#00ff88', brokerAccountId: '' });
-  const [tdvCreds, setTdvCreds] = useState({ username: '', password: '', env: 'live', cid: '', sec: '' });
-  const [tdvInfo,  setTdvInfo]  = useState(null);   // { tradovateUsername } after successful test
-  const [testing,  setTesting]  = useState(false);
-  const [tdvError, setTdvError] = useState('');
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState('');
 
-  const set    = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
-  const setTdv = k => e => { setTdvCreds(p => ({ ...p, [k]: e.target.value })); setTdvInfo(null); setTdvError(''); };
+  const set = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
 
   const inp = { background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.15)', borderRadius: '5px', padding: '9px 12px', color: '#c8d8c8', fontSize: '13px', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' };
-  const isTradovate = platform === 'tradovate';
 
   function selectPlatform(key) {
     const p = PLATFORMS[key];
@@ -178,54 +172,20 @@ function CreateAccountModal({ onClose, onCreate }) {
     setStep('details');
   }
 
-  function goToCredentials() {
-    if (!form.name.trim()) { setError('Le nom est obligatoire'); return; }
-    setError('');
-    // Pré-remplir env selon le type sélectionné
-    setTdvCreds(c => ({ ...c, env: form.type === 'tradovate_demo' ? 'demo' : 'live' }));
-    setStep('credentials');
-  }
-
-  async function testCredentials() {
-    if (!tdvCreds.username || !tdvCreds.password) { setTdvError('Identifiants requis'); return; }
-    if (!tdvCreds.cid || !tdvCreds.sec) { setTdvError('CID et Secret requis — voir trader.tradovate.com → API Access'); return; }
-    setTesting(true); setTdvError(''); setTdvInfo(null);
-    const env = form.type === 'tradovate_demo' ? 'demo' : 'live';
-    const res = await window.tradovate.testConnect({ ...tdvCreds, env, cid: Number(tdvCreds.cid) });
-    setTesting(false);
-    if (res.ok) setTdvInfo(res.data);
-    else setTdvError(res.error);
-  }
-
   async function submit() {
     if (!form.name.trim()) { setError('Le nom est obligatoire'); return; }
     setSaving(true);
-    const tradovateConfig = isTradovate
-      ? { username: tdvCreds.username, password: tdvCreds.password, env: form.type === 'tradovate_demo' ? 'demo' : 'live', cid: Number(tdvCreds.cid) || 0, sec: tdvCreds.sec }
-      : undefined;
     const res = await window.accounts.create({
       name: form.name.trim(), type: form.type, color: form.color,
-      brokerAccountId: form.brokerAccountId.trim(), platform, tradovateConfig,
+      brokerAccountId: form.brokerAccountId.trim(), platform,
     });
     setSaving(false);
-    if (res.ok) {
-      // Trigger immediate sync for the new Tradovate account
-      if (isTradovate) {
-        window.tradovate.syncAccount(res.data.id).catch(() => {});
-      }
-      onCreate(res.data); onClose();
-    } else {
-      setError(res.error ?? 'Erreur inconnue');
-    }
+    if (res.ok) { onCreate(res.data); onClose(); }
+    else setError(res.error ?? 'Erreur inconnue');
   }
 
   const plat = platform ? PLATFORMS[platform] : null;
-  const stepTitles = { platform: 'Choisir la plateforme', details: `Compte ${plat?.label ?? ''}`, credentials: 'Connexion Tradovate' };
-
-  function handleBack() {
-    if (step === 'credentials') setStep('details');
-    else if (step === 'details') setStep('platform');
-  }
+  const stepTitles = { platform: 'Choisir la plateforme', details: `Compte ${plat?.label ?? ''}` };
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={onClose}>
@@ -235,7 +195,7 @@ function CreateAccountModal({ onClose, onCreate }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {step !== 'platform' && (
-              <button onClick={handleBack} style={{ background: 'none', border: 'none', color: '#3a6a4a', cursor: 'pointer', fontSize: '18px', padding: '0', lineHeight: 1 }}
+              <button onClick={() => setStep('platform')} style={{ background: 'none', border: 'none', color: '#3a6a4a', cursor: 'pointer', fontSize: '18px', padding: '0', lineHeight: 1 }}
                 onMouseEnter={e => e.currentTarget.style.color = '#00ff88'}
                 onMouseLeave={e => e.currentTarget.style.color = '#3a6a4a'}
               >←</button>
@@ -284,7 +244,7 @@ function CreateAccountModal({ onClose, onCreate }) {
             </div>
             <div>
               <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '6px' }}>NOM DU COMPTE *</div>
-              <input placeholder={`Ex: ${plat.label} Mai 2026`} value={form.name} onChange={set('name')} style={inp} autoFocus onKeyDown={e => { if (e.key === 'Enter') isTradovate ? goToCredentials() : submit(); }} />
+              <input placeholder={`Ex: ${plat.label} Mai 2026`} value={form.name} onChange={set('name')} style={inp} autoFocus onKeyDown={e => { if (e.key === 'Enter') submit(); }} />
             </div>
             <div>
               <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '8px' }}>TYPE</div>
@@ -326,88 +286,15 @@ function CreateAccountModal({ onClose, onCreate }) {
                 ))}
               </div>
             </div>
-            {!isTradovate && (
-              <div>
-                <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '6px' }}>ID BROKER (optionnel)</div>
-                <input placeholder="Ex: 50KTC-236410" value={form.brokerAccountId} onChange={set('brokerAccountId')} style={inp} />
-              </div>
-            )}
+            <div>
+              <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '6px' }}>ID BROKER (optionnel)</div>
+              <input placeholder="Ex: 50KTC-236410" value={form.brokerAccountId} onChange={set('brokerAccountId')} style={inp} />
+            </div>
             {error && <div style={{ padding: '10px', background: 'rgba(255,68,85,0.1)', border: '1px solid rgba(255,68,85,0.3)', borderRadius: '5px', color: '#ff4455', fontSize: '12px' }}>⚠ {error}</div>}
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #1a3a22', background: 'transparent', color: '#5a8a6a', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>ANNULER</button>
-              {isTradovate ? (
-                <button onClick={goToCredentials} style={{ padding: '10px 28px', borderRadius: '5px', background: 'rgba(0,170,255,0.15)', border: '1px solid rgba(0,170,255,0.4)', color: '#00aaff', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer' }}>
-                  SUIVANT →
-                </button>
-              ) : (
-                <button onClick={submit} disabled={saving} style={{ padding: '10px 28px', borderRadius: '5px', background: `${form.color}22`, border: `1px solid ${form.color}60`, color: form.color, fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving ? 'wait' : 'pointer' }}>
-                  {saving ? 'CRÉATION...' : 'CRÉER'}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── Step 3: Tradovate credentials ── */}
-        {step === 'credentials' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Info banner */}
-            <div style={{ padding: '12px 14px', background: 'rgba(0,170,255,0.07)', border: '1px solid rgba(0,170,255,0.15)', borderRadius: '6px', fontSize: '12px', color: '#4a8aaa', lineHeight: '1.6' }}>
-              Entrez vos identifiants Tradovate. Ils seront stockés localement sur cet appareil et utilisés pour synchroniser automatiquement les trades de <strong style={{ color: '#00aaff' }}>{form.name}</strong>.
-            </div>
-
-            <div>
-              <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '6px' }}>NOM D'UTILISATEUR TRADOVATE</div>
-              <input style={inp} type="text" autoComplete="username" placeholder="Votre identifiant" value={tdvCreds.username} onChange={setTdv('username')} onKeyDown={e => { if (e.key === 'Enter') testCredentials(); }} autoFocus />
-            </div>
-            <div>
-              <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '6px' }}>MOT DE PASSE</div>
-              <input style={inp} type="password" autoComplete="current-password" placeholder="Votre mot de passe" value={tdvCreds.password} onChange={setTdv('password')} onKeyDown={e => { if (e.key === 'Enter') testCredentials(); }} />
-            </div>
-
-            {/* CID / Secret — requis pour l'API Tradovate */}
-            <div style={{ padding: '10px 14px', background: 'rgba(255,204,0,0.05)', border: '1px solid rgba(255,204,0,0.15)', borderRadius: '6px' }}>
-              <div style={{ fontSize: '11px', color: '#aa8820', marginBottom: '10px', lineHeight: '1.6' }}>
-                <strong style={{ color: '#ffcc00' }}>Requis :</strong> CID et Secret d'app Tradovate.<br />
-                <span style={{ color: '#7a6820' }}>trader.tradovate.com → API Access → Create App</span>
-              </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <div style={{ flex: '0 0 110px' }}>
-                  <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '5px' }}>CID (numéro)</div>
-                  <input style={inp} type="text" inputMode="numeric" placeholder="ex: 12345" value={tdvCreds.cid} onChange={setTdv('cid')} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '5px' }}>SECRET</div>
-                  <input style={inp} type="password" placeholder="Votre secret d'app" value={tdvCreds.sec} onChange={setTdv('sec')} />
-                </div>
-              </div>
-            </div>
-
-            {/* Test connection */}
-            {!tdvInfo && (
-              <button onClick={testCredentials} disabled={testing} style={{ padding: '10px 0', borderRadius: '5px', background: 'rgba(0,170,255,0.1)', border: '1px solid rgba(0,170,255,0.25)', color: '#00aaff', fontSize: '12px', fontFamily: 'inherit', cursor: testing ? 'wait' : 'pointer', letterSpacing: '1px' }}>
-                {testing ? 'TEST EN COURS…' : 'TESTER LA CONNEXION'}
-              </button>
-            )}
-
-            {tdvError && (
-              <div style={{ padding: '10px 14px', background: 'rgba(255,68,85,0.1)', border: '1px solid rgba(255,68,85,0.25)', borderRadius: '5px', color: '#ff7788', fontSize: '12px' }}>
-                ⚠ {tdvError}
-              </div>
-            )}
-
-            {tdvInfo && (
-              <div style={{ padding: '12px 14px', background: 'rgba(0,255,136,0.07)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '5px', fontSize: '13px', color: '#00cc66' }}>
-                ✓ Connecté en tant que <strong>{tdvInfo.tradovateUsername}</strong> — {form.type === 'tradovate_demo' ? 'Demo' : 'Live'}
-              </div>
-            )}
-
-            {error && <div style={{ padding: '10px', background: 'rgba(255,68,85,0.1)', border: '1px solid rgba(255,68,85,0.3)', borderRadius: '5px', color: '#ff4455', fontSize: '12px' }}>⚠ {error}</div>}
-
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #1a3a22', background: 'transparent', color: '#5a8a6a', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>ANNULER</button>
-              <button onClick={submit} disabled={saving || !tdvInfo} style={{ padding: '10px 28px', borderRadius: '5px', background: tdvInfo ? 'rgba(0,170,255,0.2)' : 'rgba(0,170,255,0.05)', border: `1px solid ${tdvInfo ? 'rgba(0,170,255,0.5)' : 'rgba(0,170,255,0.15)'}`, color: tdvInfo ? '#00aaff' : '#2a5a6a', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving ? 'wait' : tdvInfo ? 'pointer' : 'not-allowed', transition: 'all 0.15s' }}>
-                {saving ? 'CRÉATION…' : 'CRÉER ET SYNCHRONISER'}
+              <button onClick={submit} disabled={saving} style={{ padding: '10px 28px', borderRadius: '5px', background: `${form.color}22`, border: `1px solid ${form.color}60`, color: form.color, fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving ? 'wait' : 'pointer' }}>
+                {saving ? 'CRÉATION...' : 'CRÉER'}
               </button>
             </div>
           </div>
@@ -419,26 +306,14 @@ function CreateAccountModal({ onClose, onCreate }) {
 
 // ── Account Card ──────────────────────────────────────────────
 function AccountCard({ acc, isActive, status, onSelect, onDelete }) {
-  const [syncing,    setSyncing]    = useState(false);
-  const [syncResult, setSyncResult] = useState(null);
-
-  const typeInfo       = TYPE_LABELS[acc.type] ?? { label: 'Autre', color: acc.color ?? '#ff6644', platform: 'perso' };
-  const isBlown        = status?.isBlown ?? false;
-  const hasStats       = status?.pnl != null;
-  const pnl            = status?.pnl ?? 0;
-  const pnlColor       = isBlown ? '#ff4455' : pnl >= 0 ? '#00ff88' : '#ff4455';
-  const isTdvLive      = acc.type === 'tradovate_live';
-  const isTdvDemo      = acc.type === 'tradovate_demo';
-  const isTdv          = isTdvLive || isTdvDemo;
-  const isChallenge    = CHALLENGE_TYPES.has(acc.type) && !isBlown && !status?.isValidated && !status?.isExpressFunded;
-
-  async function handleSync(e) {
-    e.stopPropagation();
-    setSyncing(true); setSyncResult(null);
-    const res = await window.tradovate.syncAccount(acc.id);
-    setSyncing(false);
-    if (res.ok) setSyncResult(res.data);
-  }
+  const typeInfo    = TYPE_LABELS[acc.type] ?? { label: 'Autre', color: acc.color ?? '#ff6644', platform: 'perso' };
+  const isBlown     = status?.isBlown ?? false;
+  const hasStats    = status?.pnl != null;
+  const pnl         = status?.pnl ?? 0;
+  const pnlColor    = isBlown ? '#ff4455' : pnl >= 0 ? '#00ff88' : '#ff4455';
+  const isTdvLive   = acc.type === 'tradovate_live';
+  const isTdvDemo   = acc.type === 'tradovate_demo';
+  const isChallenge = CHALLENGE_TYPES.has(acc.type) && !isBlown && !status?.isValidated && !status?.isExpressFunded;
 
   return (
     <div onClick={() => onSelect(acc.id)}
@@ -499,30 +374,6 @@ function AccountCard({ acc, isActive, status, onSelect, onDelete }) {
               ⚠ Floor {status.floor.toFixed(0)}$<br/>franchi
             </div>
           )}
-        </div>
-      )}
-
-      {/* Tradovate sync info */}
-      {isTdv && acc.tradovateConfig && (
-        <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(0,170,255,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: '10px', color: '#2a5a6a' }}>
-              {syncResult ? (
-                <span style={{ color: '#00aa66' }}>+{syncResult.imported} trade(s) importé(s)</span>
-              ) : acc.lastTdvSync ? (
-                <span>Sync {new Date(acc.lastTdvSync).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-              ) : (
-                <span>Pas encore synchronisé</span>
-              )}
-            </div>
-            <button onClick={handleSync} disabled={syncing}
-              style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '3px', background: 'rgba(0,170,255,0.1)', border: '1px solid rgba(0,170,255,0.2)', color: syncing ? '#2a5a6a' : '#00aaff', cursor: syncing ? 'wait' : 'pointer', fontFamily: 'inherit', letterSpacing: '0.5px', transition: 'all 0.15s' }}
-              onMouseEnter={e => { if (!syncing) e.currentTarget.style.background = 'rgba(0,170,255,0.2)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,170,255,0.1)'; }}
-            >
-              {syncing ? '⟳ sync…' : '⟳ Sync'}
-            </button>
-          </div>
         </div>
       )}
 
