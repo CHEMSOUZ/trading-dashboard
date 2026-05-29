@@ -18,9 +18,12 @@ const LUCID_FUNDED = {
   ACCOUNT_SIZE: 50000,
   MAX_DAILY_LOSS: 2500,      // 5%
   MAX_TRAILING_DD: 2500,     // 5%
-  PROFIT_SPLIT: 80,          // 80%
-  MIN_PAYOUT_DAYS: 10,
-  MIN_PAYOUT_AMOUNT: 100,
+  PROFIT_SPLIT: 90,
+  MIN_PAYOUT_DAYS: 5,
+  MIN_DAILY_PROFIT: 150,
+  MIN_PAYOUT_AMOUNT: 500,
+  MAX_PAYOUT_AMOUNT: 2000,
+  MAX_PAYOUTS: 5,
 };
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -316,7 +319,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
 
 // ── LUCID FUNDED TAB ──────────────────────────────────────────
 function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput, setBalanceInput }) {
-  const { ACCOUNT_SIZE, MAX_DAILY_LOSS, MAX_TRAILING_DD, PROFIT_SPLIT, MIN_PAYOUT_DAYS, MIN_PAYOUT_AMOUNT } = LUCID_FUNDED;
+  const { ACCOUNT_SIZE, MAX_DAILY_LOSS, MAX_TRAILING_DD, PROFIT_SPLIT, MIN_PAYOUT_DAYS, MIN_DAILY_PROFIT, MIN_PAYOUT_AMOUNT, MAX_PAYOUT_AMOUNT, MAX_PAYOUTS } = LUCID_FUNDED;
 
   const totalNet = trades.reduce((s, t) => s + getNet(t), 0);
   const currentBalance = manualBalance > 0 ? manualBalance : ACCOUNT_SIZE + totalNet;
@@ -334,8 +337,11 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
   const worstDay = Math.min(...Object.values(byDay), 0);
   const dailyLossBreached = Math.abs(worstDay) >= MAX_DAILY_LOSS;
 
-  const payoutEligible  = tradingDays >= MIN_PAYOUT_DAYS && totalNet >= MIN_PAYOUT_AMOUNT && !accountLost && !dailyLossBreached;
-  const payoutAmount    = Math.max(totalNet, 0) * (PROFIT_SPLIT / 100);
+  const qualifiedDays = Object.values(byDay).filter(p => p >= MIN_DAILY_PROFIT).length;
+  const cycleNetProfit = Math.max(totalNet, 0);
+  const rawPayout = cycleNetProfit * (PROFIT_SPLIT / 100);
+  const payoutAmount = Math.min(rawPayout, MAX_PAYOUT_AMOUNT);
+  const payoutEligible = qualifiedDays >= MIN_PAYOUT_DAYS && totalNet >= MIN_PAYOUT_AMOUNT && !accountLost && !dailyLossBreached;
 
   const status = accountLost || dailyLossBreached
     ? { label: dailyLossBreached ? '❌ PERTE JOURNALIÈRE DÉPASSÉE' : '❌ COMPTE PERDU', color: '#ff4455' }
@@ -361,17 +367,14 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
             { label: 'Perte journalière max', value: `-${MAX_DAILY_LOSS.toLocaleString()}$ (5%)`, color: '#ff4455' },
             { label: 'Drawdown trailing max', value: `-${MAX_TRAILING_DD.toLocaleString()}$ (5%)`, color: '#f0a020' },
             { label: 'Part des profits', value: `${PROFIT_SPLIT}% pour le trader`, color: '#00ff88' },
-            { label: 'Payout disponible après', value: `${MIN_PAYOUT_DAYS} jours tradés`, color: '#c8d8c8' },
-            { label: 'Payout minimum', value: `${MIN_PAYOUT_AMOUNT}$`, color: '#c8d8c8' },
+            { label: 'Payout disponible après', value: `${MIN_PAYOUT_DAYS} jours avec profit ≥ ${MIN_DAILY_PROFIT}$`, color: '#c8d8c8' },
+            { label: 'Payout minimum / maximum', value: `${MIN_PAYOUT_AMOUNT}$ — ${MAX_PAYOUT_AMOUNT}$`, color: '#c8d8c8' },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '8px 10px' }}>
               <div style={{ fontSize: '10px', color: '#3a6a4a', marginBottom: '3px', letterSpacing: '0.5px' }}>{label}</div>
               <div style={{ fontSize: '13px', fontWeight: '700', color }}>{value}</div>
             </div>
           ))}
-        </div>
-        <div style={{ marginTop: '12px', padding: '8px 12px', background: 'rgba(0,170,255,0.06)', border: '1px solid rgba(0,170,255,0.15)', borderRadius: '5px', fontSize: '12px', color: '#4a8a9a' }}>
-          📈 <strong style={{ color: '#00aaff' }}>Scaling disponible :</strong> jusqu'à 200K après des payouts réguliers. La part des profits peut atteindre <strong style={{ color: '#00ff88' }}>90%</strong> après scaling complet.
         </div>
       </div>
 
@@ -408,7 +411,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {[
             { ok: !accountLost && !dailyLossBreached, label: 'Compte actif', desc: dailyLossBreached ? `Limite journalière dépassée (pire jour: ${fmt(worstDay)})` : accountLost ? 'Drawdown maximum atteint' : 'Aucune règle violée' },
-            { ok: tradingDays >= MIN_PAYOUT_DAYS, label: `Jours de trading minimum (${MIN_PAYOUT_DAYS})`, desc: `${tradingDays} jour${tradingDays > 1 ? 's' : ''} tradé${tradingDays > 1 ? 's' : ''}` },
+            { ok: qualifiedDays >= MIN_PAYOUT_DAYS, label: `Jours qualifiés — profit ≥ ${MIN_DAILY_PROFIT}$ (min ${MIN_PAYOUT_DAYS})`, desc: `${qualifiedDays} jour${qualifiedDays > 1 ? 's' : ''} qualifié${qualifiedDays > 1 ? 's' : ''} sur ${tradingDays} tradé${tradingDays > 1 ? 's' : ''}` },
             { ok: totalNet >= MIN_PAYOUT_AMOUNT, label: `Profit net minimum (${MIN_PAYOUT_AMOUNT}$)`, desc: `P&L net: ${fmt(totalNet, true)}` },
           ].map(({ ok, label, desc }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: ok ? 'rgba(0,255,136,0.04)' : 'rgba(10,28,18,0.4)', border: `1px solid ${ok ? 'rgba(0,255,136,0.12)' : 'rgba(0,255,136,0.06)'}`, borderRadius: '6px' }}>
@@ -423,9 +426,9 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
 
         {payoutEligible && (
           <div style={{ marginTop: '14px', background: 'rgba(0,255,136,0.08)', border: '2px solid rgba(0,255,136,0.3)', borderRadius: '6px', padding: '16px', textAlign: 'center' }}>
-            <div style={{ fontSize: '13px', color: '#4a7a5a', marginBottom: '6px' }}>Montant disponible au payout ({PROFIT_SPLIT}%)</div>
+            <div style={{ fontSize: '13px', color: '#4a7a5a', marginBottom: '6px' }}>Montant disponible au payout ({PROFIT_SPLIT}% · plafonné à {MAX_PAYOUT_AMOUNT}$)</div>
             <div style={{ fontSize: '28px', fontWeight: '700', color: '#00ff88' }}>{fmt(payoutAmount, true)}</div>
-            <div style={{ fontSize: '12px', color: '#3a6a4a', marginTop: '4px' }}>sur {fmt(totalNet, true)} de P&L net total</div>
+            <div style={{ fontSize: '12px', color: '#3a6a4a', marginTop: '4px' }}>sur {fmt(cycleNetProfit, true)} de P&L net · brut: {fmt(rawPayout, true)}</div>
           </div>
         )}
       </div>
@@ -435,7 +438,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
         <MetricCard label="BALANCE NETTE" value={`${currentBalance.toFixed(2)}$`} color={pnlColor(totalNet)} sub={manualBalance > 0 ? 'Manuelle' : 'Estimée'} />
         <MetricCard label="P&L NET" value={fmt(totalNet, true)} color={pnlColor(totalNet)} sub={`Ta part: ${fmt(payoutAmount, true)}`} />
         <MetricCard label="FLOOR DRAWDOWN" value={`${floor.toFixed(2)}$`} color="#ff4455" alert={distanceToFloor < 500} sub={`Marge: ${distanceToFloor.toFixed(2)}$`} />
-        <MetricCard label="JOURS TRADÉS" value={tradingDays} color={tradingDays >= MIN_PAYOUT_DAYS ? '#00ff88' : '#f0a020'} sub={`Min payout: ${MIN_PAYOUT_DAYS} · Gagnants: ${winningDays}`} />
+        <MetricCard label="JOURS QUALIFIÉS" value={`${qualifiedDays}/${MIN_PAYOUT_DAYS}`} color={qualifiedDays >= MIN_PAYOUT_DAYS ? '#00ff88' : '#f0a020'} sub={`Profit ≥ ${MIN_DAILY_PROFIT}$ · ${tradingDays} tradés`} />
       </div>
 
       {/* Charts */}
