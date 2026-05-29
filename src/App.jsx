@@ -13,6 +13,7 @@ import AccountSelect from './pages/AccountSelect';
 import Dashboard from './pages/Dashboard';
 import NewTrade from './pages/NewTrade';
 import Stats from './pages/Stats';
+import Topstep from './pages/Topstep';
 import Lucid from './pages/Lucid';
 import EmotionalCheck from './pages/EmotionalCheck';
 import Analysis from './pages/Analysis';
@@ -106,6 +107,7 @@ export default function App() {
             <Route path="/stats"         element={<Stats />} />
             <Route path="/analysis"      element={<Analysis />} />
             <Route path="/global"        element={<GlobalView />} />
+            <Route path="/topstep"       element={<Topstep />} />
             <Route path="/lucid"         element={<Lucid />} />
             <Route path="/emotional"     element={<EmotionalCheck />} />
             <Route path="/calendar"       element={<EconomicCalendar />} />

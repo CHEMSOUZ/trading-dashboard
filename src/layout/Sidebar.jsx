@@ -10,7 +10,9 @@ const NAV = [
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> },
   { to: '/global',    label: 'Vue Globale',  sub: 'Tous les comptes',
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> },
-  { to: '/lucid',     label: 'Lucid',        sub: 'Eval & Funded', badge: 'LIVE',
+  { to: '/topstep',   label: 'Topstep',      sub: 'Combine & Funded', badge: 'LIVE', _for: 'topstep',
+    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> },
+  { to: '/lucid',     label: 'Lucid',        sub: 'Eval & Funded', badge: 'LIVE', _for: 'tradovate',
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> },
   { to: '/emotional', label: 'État Mental',  sub: 'Bilan pré-séance',
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
@@ -346,7 +348,12 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
 
       {/* Nav */}
       <nav style={{ flex: 1, padding: '6px 0' }}>
-        {NAV.map(({ to, label, sub, icon, badge }) => {
+        {NAV.filter(item => {
+          const isTradovate = ['tradovate_live', 'tradovate_demo'].includes(activeAccount?.type);
+          if (item._for === 'tradovate') return isTradovate;
+          if (item._for === 'topstep')   return !isTradovate;
+          return true;
+        }).map(({ to, label, sub, icon, badge }) => {
           const active = location.pathname === to || location.pathname.startsWith(to + '/');
           return (
             <NavLink key={to} to={to} onClick={() => setShowSwitcher(false)}
