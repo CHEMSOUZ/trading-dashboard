@@ -22,6 +22,7 @@ import EconomicCalendar from './pages/EconomicCalendar';
 import Payout from './pages/Payout';
 import TradingPlan from './pages/TradingPlan';
 import StrategieDiscipline from './pages/StrategieDiscipline';
+import FitnessSante from './pages/FitnessSante';
 
 export default function App() {
   const [activeAccount, setActiveAccount] = useState(null);
@@ -112,6 +113,7 @@ export default function App() {
             <Route path="/payout"         element={<Payout />} />
             <Route path="/plan"           element={<TradingPlan />} />
             <Route path="/strategie"      element={<StrategieDiscipline />} />
+            <Route path="/fitness"        element={<FitnessSante />} />
           </Routes>
         </main>
       </div>
