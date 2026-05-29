@@ -261,6 +261,129 @@ function TradeTable({ trades, storageKey = 'global_trade_cols' }) {
   );
 }
 
+// ── Trading Calendar ─────────────────────────────────────────
+const CAL_MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function TradingCalendar({ trades, onDayClick }) {
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [month, setMonth] = useState(new Date().getMonth());
+
+  const byDay = trades.reduce((acc, t) => {
+    if (!acc[t.date]) acc[t.date] = { pnl: 0, count: 0, trades: [] };
+    acc[t.date].pnl += getNet(t);
+    acc[t.date].count += 1;
+    acc[t.date].trades.push(t);
+    return acc;
+  }, {});
+
+  const firstDay    = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today       = new Date().toISOString().slice(0, 10);
+
+  const monthTotal = Object.entries(byDay)
+    .filter(([d]) => d.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`))
+    .reduce((s, [, v]) => s + v.pnl, 0);
+
+  function prevMonth() { if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1); }
+  function nextMonth() { if (month === 11) { setYear(y => y + 1); setMonth(0); } else setMonth(m => m + 1); }
+
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const weeks = [];
+  let week = [];
+  cells.forEach((day, i) => {
+    week.push(day);
+    if (week.length === 7 || i === cells.length - 1) {
+      while (week.length < 7) week.push(null);
+      weeks.push([...week]);
+      week = [];
+    }
+  });
+
+  function getWeekPnl(weekStart) {
+    let total = 0, count = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart); d.setDate(d.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      if (byDay[key]) { total += byDay[key].pnl; count += byDay[key].count; }
+    }
+    return { total, count };
+  }
+
+  return (
+    <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', padding: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+        <div>
+          <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '3px' }}>CALENDRIER DE TRADING</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: '#4a7a5a', cursor: 'pointer', fontSize: '16px' }}>‹</button>
+            <span style={{ fontSize: '14px', fontWeight: '700', color: '#e8f8e8' }}>{CAL_MONTHS[month]} {year}</span>
+            <button onClick={nextMonth} style={{ background: 'none', border: 'none', color: '#4a7a5a', cursor: 'pointer', fontSize: '16px' }}>›</button>
+            <button onClick={() => { setYear(new Date().getFullYear()); setMonth(new Date().getMonth()); }}
+              style={{ background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.15)', color: '#00ff88', padding: '3px 8px', borderRadius: '4px', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>Aujourd'hui</button>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '3px' }}>P&L MENSUEL</div>
+          <div style={{ fontSize: '16px', fontWeight: '700', color: pnlColor(monthTotal) }}>{fmt(monthTotal, true)}</div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr) 90px', gap: '2px' }}>
+        {['D','L','Ma','Me','J','V','S'].map(d => (
+          <div key={d} style={{ textAlign: 'center', fontSize: '10px', color: '#3a6a4a', padding: '4px 0', letterSpacing: '1px' }}>{d}</div>
+        ))}
+        <div style={{ textAlign: 'center', fontSize: '10px', color: '#3a6a4a', padding: '4px 0' }}>SEM.</div>
+
+        {weeks.map((wk, wi) => {
+          const firstNonNull = wk.find(d => d != null);
+          const weekStartDate = firstNonNull ? new Date(year, month, firstNonNull - wk.indexOf(firstNonNull)) : null;
+          const weekData = weekStartDate ? getWeekPnl(weekStartDate) : { total: 0, count: 0 };
+          return [
+            ...wk.map((day, di) => {
+              if (!day) return <div key={`e-${wi}-${di}`} style={{ minHeight: '54px', borderRadius: '3px', background: 'transparent', border: '1px solid rgba(0,255,136,0.03)' }} />;
+              const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              const data = byDay[key];
+              const isToday = key === today;
+              const pnl = data?.pnl ?? null;
+              const bg = pnl == null ? 'rgba(10,28,18,0.3)'
+                : pnl > 0  ? `rgba(0,255,136,${Math.min(0.05 + (pnl / 2000) * 0.2, 0.25)})`
+                : pnl < 0  ? `rgba(255,68,85,${Math.min(0.05 + (Math.abs(pnl) / 2000) * 0.2, 0.25)})`
+                : 'rgba(240,160,32,0.08)';
+              return (
+                <div key={key}
+                  onClick={() => data && onDayClick?.(key, data.trades)}
+                  style={{ minHeight: '54px', borderRadius: '3px', padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px', background: bg, border: isToday ? '1.5px solid rgba(0,170,255,0.6)' : '1px solid rgba(0,255,136,0.05)', cursor: data ? 'pointer' : 'default', transition: 'opacity 0.1s' }}
+                  onMouseEnter={e => { if (data) e.currentTarget.style.opacity = '0.75'; }}
+                  onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+                >
+                  <div style={{ fontSize: '10px', color: isToday ? '#00aaff' : '#4a7a5a', fontWeight: isToday ? '700' : '400', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{day}</span>
+                    {isToday && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00aaff' }} />}
+                  </div>
+                  {data && (
+                    <>
+                      <div style={{ fontSize: '10px', fontWeight: '700', color: pnlColor(data.pnl), lineHeight: 1 }}>{fmt(data.pnl, true)}</div>
+                      <div style={{ fontSize: '8px', color: '#3a6a4a' }}>{data.count}T</div>
+                    </>
+                  )}
+                </div>
+              );
+            }),
+            <div key={`week-${wi}`} style={{ background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.06)', borderRadius: '3px', minHeight: '54px', padding: '6px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
+              <div style={{ fontSize: '8px', color: '#3a6a4a' }}>S{wi + 1}</div>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: pnlColor(weekData.total) }}>{weekData.total !== 0 ? fmt(weekData.total, true) : '—'}</div>
+              <div style={{ fontSize: '8px', color: '#3a6a4a' }}>{weekData.count}T</div>
+            </div>,
+          ];
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Generic Modal ─────────────────────────────────────────────
 function TradeModal({ title, subtitle, color, trades, onClose }) {
   return (
@@ -695,6 +818,23 @@ export default function GlobalView() {
               </Section>
             </div>
           )}
+
+          {/* ── CALENDAR ── */}
+          <div style={{ marginTop: '16px' }}>
+            <TradingCalendar
+              trades={trades}
+              onDayClick={(dateKey, dayTrades) => {
+                const dayPnl = dayTrades.reduce((s, t) => s + getNet(t), 0);
+                const dateLabel = new Date(dateKey + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                setModal({
+                  title: dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1),
+                  subtitle: `${dayTrades.length} trade${dayTrades.length > 1 ? 's' : ''} · ${fmt(dayPnl, true)}`,
+                  color: pnlColor(dayPnl),
+                  trades: dayTrades.sort((a, b) => (a.entered_at || a.date).localeCompare(b.entered_at || b.date)),
+                });
+              }}
+            />
+          </div>
 
           {/* ── ALL TRADES ── */}
           <div style={{ marginTop: '16px' }}>

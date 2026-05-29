@@ -153,7 +153,7 @@ function ImportModal({ onClose, onImported }) {
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────
-function Calendar({ trades }) {
+function Calendar({ trades, onDayClick }) {
   const [year, setYear]   = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth());
 
@@ -266,7 +266,12 @@ function Calendar({ trades }) {
               const isToday = key === today;
               const style = cellStyle(day);
               return (
-                <div key={key} style={{ ...style, minHeight: '52px', borderRadius: '3px', padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <div key={key}
+                  onClick={() => data && onDayClick?.(key)}
+                  style={{ ...style, minHeight: '52px', borderRadius: '3px', padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px', cursor: data ? 'pointer' : 'default', transition: 'opacity 0.1s' }}
+                  onMouseEnter={e => { if (data) e.currentTarget.style.opacity = '0.75'; }}
+                  onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+                >
                   <div style={{ fontSize: '9px', color: isToday ? '#00aaff' : '#4a7a5a', fontWeight: isToday ? '700' : '400', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{day}</span>
                     {isToday && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00aaff' }} />}
@@ -295,6 +300,46 @@ function Calendar({ trades }) {
   );
 }
 
+// ── Day Trades Modal ─────────────────────────────────────────
+function DayTradesModal({ dateKey, trades, onClose }) {
+  const dayPnl = trades.reduce((s, t) => s + getNet(t), 0);
+  const wins = trades.filter(t => getNet(t) > 0).length;
+  const dateLabel = new Date(dateKey + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const sorted = [...trades].sort((a, b) => (a.entered_at || a.date).localeCompare(b.entered_at || b.date));
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#070d12', border: `1px solid ${pnlColor(dayPnl)}40`, borderRadius: '10px', width: '100%', maxWidth: '740px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ padding: '16px 22px', borderBottom: '1px solid rgba(0,255,136,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div>
+            <div style={{ fontSize: '16px', fontWeight: '700', color: '#e8f8e8', textTransform: 'capitalize' }}>{dateLabel}</div>
+            <div style={{ fontSize: '12px', color: '#4a7a5a', marginTop: '3px' }}>
+              {sorted.length} trade{sorted.length > 1 ? 's' : ''} · WR: {sorted.length > 0 ? Math.round(wins / sorted.length * 100) : 0}% · <span style={{ color: pnlColor(dayPnl), fontWeight: '700' }}>{fmt(dayPnl, true)}</span>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: '1px solid #1a3a22', color: '#4a7a5a', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
+        </div>
+        <div style={{ overflowY: 'auto', flex: 1, padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          {sorted.map((t, i) => {
+            const net = getNet(t);
+            const hour = t.entered_at ? new Date(t.entered_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—';
+            return (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '58px 78px 68px 64px 78px 78px 88px', alignItems: 'center', padding: '8px 12px', background: 'rgba(10,28,18,0.4)', borderLeft: `2px solid ${pnlColor(net)}`, borderRadius: '4px', fontSize: '12px', gap: '4px' }}>
+                <span style={{ color: '#6a8a7a', fontSize: '11px' }}>{hour}</span>
+                <span style={{ color: '#c8d8c8', fontWeight: '600' }}>{t.pair}</span>
+                <span style={{ color: t.direction === 'LONG' ? '#00ff88' : '#ff4455', fontSize: '11px', background: `rgba(${t.direction === 'LONG' ? '0,255,136' : '255,68,85'},0.08)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
+                <span style={{ color: '#8aaa90', fontSize: '11px' }}>{t.entry ?? '—'}</span>
+                <span style={{ color: '#8aaa90', fontSize: '11px' }}>{t.exit_price ?? '—'}</span>
+                <span style={{ color: '#4a7a5a', fontSize: '11px' }}>{t.duration ?? '—'}</span>
+                <span style={{ color: pnlColor(net), fontWeight: '700', textAlign: 'right' }}>{fmt(net, true)}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── MAIN STATS PAGE ───────────────────────────────────────────
 export default function Stats() {
   const [trades, setTrades]     = useState([]);
@@ -302,6 +347,7 @@ export default function Stats() {
   const [loading, setLoading]   = useState(true);
   const [period, setPeriod]     = useState(() => localStorage.getItem('stats_period') || 'ALL');
   const [showImport, setShowImport] = useState(false);
+  const [calModal, setCalModal] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -670,8 +716,12 @@ export default function Stats() {
       </div>
 
       {/* ── CALENDAR ── */}
-      <Calendar trades={trades} />
+      <Calendar trades={trades} onDayClick={dateKey => {
+        const dayTrades = filtered.filter(t => t.date === dateKey).sort((a, b) => (a.entered_at || a.date).localeCompare(b.entered_at || b.date));
+        if (dayTrades.length > 0) setCalModal({ dateKey, trades: dayTrades });
+      }} />
 
+      {calModal && <DayTradesModal dateKey={calModal.dateKey} trades={calModal.trades} onClose={() => setCalModal(null)} />}
       {showImport && <ImportModal onClose={() => setShowImport(false)} onImported={load} />}
     </div>
   );
