@@ -36,14 +36,15 @@ const ACCOUNT_RULES = {
   topstep_ef_50k:    { size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
   topstep_ef_100k:   { size: 100000, maxLoss: 3000, dailyLoss: 2000 },
   topstep_ef_150k:   { size: 150000, maxLoss: 4500, dailyLoss: 3000 },
-  tradovate_live:    { size: null,   maxLoss: null,  dailyLoss: 2000 },
+  tradovate_live:    { size: 50000,  maxLoss: 2500,  dailyLoss: 2000, profitTarget: 4000, minDays: 5, consistencyPct: 0.40 },
   tradovate_demo:    { size: null,   maxLoss: null,  dailyLoss: null },
   perso:             { size: null,   maxLoss: null,  dailyLoss: null },
   autre:             { size: null,   maxLoss: null,  dailyLoss: null },
 };
 
-const CHALLENGE_TYPES = new Set(['topstep_50k','topstep_100k','topstep_150k']);
+const CHALLENGE_TYPES     = new Set(['topstep_50k','topstep_100k','topstep_150k']);
 const EXPRESS_FUNDED_TYPES = new Set(['topstep_ef_50k','topstep_ef_100k','topstep_ef_150k']);
+const LUCID_EVAL_TYPES    = new Set(['tradovate_live']);
 
 async function computeBlownStatus(acc, currentActiveId) {
   const rules = ACCOUNT_RULES[acc.type];
@@ -87,7 +88,7 @@ async function computeBlownStatus(acc, currentActiveId) {
       }
     }
 
-    // ── Validated: challenge type + pnl >= 3000 ──────────────
+    // ── Validated: challenge type (Topstep) ─────────────────
     let isValidated = false;
     if (CHALLENGE_TYPES.has(acc.type) && sorted.length > 0) {
       const firstDate = sorted[0].entered_at?.slice(0, 10) ?? sorted[0].date ?? '';
@@ -95,6 +96,24 @@ async function computeBlownStatus(acc, currentActiveId) {
         .filter(t => (t.entered_at?.slice(0, 10) ?? t.date ?? '') === firstDate)
         .reduce((s, t) => s + (t.result_net ?? t.result ?? 0), 0);
       isValidated = totalPnl >= 3000 && firstDayPnl < 1500;
+    }
+
+    // ── Validated: Lucid Eval (tradovate_live) ───────────────
+    if (LUCID_EVAL_TYPES.has(acc.type) && !isBlownDD && !isBlownDaily && rules.profitTarget) {
+      // Group by day (byDay already computed above for daily loss check — recompute here)
+      const byDay2 = {};
+      for (const t of sorted) {
+        const d = t.entered_at?.slice(0, 10) ?? t.date ?? '';
+        if (d) byDay2[d] = (byDay2[d] ?? 0) + (t.result_net ?? t.result ?? 0);
+      }
+      const tradingDays   = Object.keys(byDay2).length;
+      const posNetPnl     = Object.values(byDay2).filter(p => p > 0).reduce((s, v) => s + v, 0);
+      const bestDayNet    = posNetPnl > 0 ? Math.max(...Object.values(byDay2).filter(p => p > 0)) : 0;
+      const bestDayPct    = posNetPnl > 0 ? bestDayNet / posNetPnl : 0;
+      const consistencyOk = bestDayPct <= (rules.consistencyPct ?? 0.40) || posNetPnl === 0;
+      isValidated = totalPnl >= rules.profitTarget &&
+                    tradingDays >= (rules.minDays ?? 5) &&
+                    consistencyOk;
     }
 
     return {
@@ -223,9 +242,9 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
           <div style={{ position: 'absolute', top: '90px', left: '8px', right: '8px', zIndex: 50, background: '#070d12', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '8px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
 
             {(() => {
-              const liveAccts      = accounts.filter(a => !accountStatuses[a.id]?.isBlown && (accountStatuses[a.id]?.isExpressFunded || a.type === 'tradovate_live'));
+              const liveAccts      = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isValidated && (accountStatuses[a.id]?.isExpressFunded || a.type === 'tradovate_live'));
               const challengeAccts = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' && !accountStatuses[a.id]?.isValidated && CHALLENGE_TYPES.has(a.type));
-              const validatedAccts = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' && accountStatuses[a.id]?.isValidated);
+              const validatedAccts = accounts.filter(a => !accountStatuses[a.id]?.isBlown && accountStatuses[a.id]?.isValidated);
               const regularAccts   = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' && !accountStatuses[a.id]?.isValidated && !CHALLENGE_TYPES.has(a.type));
               const blownAccts     = accounts.filter(a => accountStatuses[a.id]?.isBlown);
 
@@ -265,7 +284,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                             <span style={{ fontSize: '13px', color: isBlown ? '#ff7777' : isEF ? '#f0c020' : isActive ? a.color : '#c8d8c8', fontWeight: isActive ? '700' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
                             {isBlown && <span title={st?.dailyLossBreached ? 'Perte journalière dépassée' : 'Drawdown maximum atteint'} style={{ fontSize: '8px', background: 'rgba(255,68,85,0.2)', border: '1px solid rgba(255,68,85,0.4)', color: '#ff4455', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0, cursor: 'help' }}>{st?.dailyLossBreached ? 'DAILY 🔴' : 'CRAMÉ'}</span>}
                             {!isBlown && isEF && <span style={{ fontSize: '8px', background: 'rgba(240,192,32,0.2)', border: '1px solid rgba(240,192,32,0.4)', color: '#f0c020', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>FUNDED</span>}
-                            {!isBlown && !isEF && isVal && <span style={{ fontSize: '8px', background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>VALIDÉ</span>}
+                            {!isBlown && isVal && <span title={LUCID_EVAL_TYPES.has(a.type) ? 'Lucid Eval validée — objectif +4000$ atteint' : 'Challenge validé'} style={{ fontSize: '8px', background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0, cursor: 'help' }}>{LUCID_EVAL_TYPES.has(a.type) ? 'LUCID ✅' : 'VALIDÉ'}</span>}
                           </div>
                           <div style={{ fontSize: '11px', color: isBlown ? '#6a3a3a' : '#3a6a4a', display: 'flex', alignItems: 'center', gap: '5px' }}>
                             <span>{a.typeInfo?.label}</span>
