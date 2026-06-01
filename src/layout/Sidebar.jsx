@@ -36,7 +36,7 @@ const ACCOUNT_RULES = {
   topstep_ef_50k:    { size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
   topstep_ef_100k:   { size: 100000, maxLoss: 3000, dailyLoss: 2000 },
   topstep_ef_150k:   { size: 150000, maxLoss: 4500, dailyLoss: 3000 },
-  tradovate_live:    { size: 50000,  maxLoss: 2500,  dailyLoss: 2000, profitTarget: 4000, minDays: 5, consistencyPct: 0.40 },
+  tradovate_live:    { size: 50000,  maxLoss: 2000,  dailyLoss: null, profitTarget: 3000, minDays: 0, consistencyPct: 0.50 },
   tradovate_demo:    { size: null,   maxLoss: null,  dailyLoss: null },
   perso:             { size: null,   maxLoss: null,  dailyLoss: null },
   autre:             { size: null,   maxLoss: null,  dailyLoss: null },

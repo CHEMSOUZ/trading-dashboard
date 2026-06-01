@@ -8,11 +8,11 @@ import {
 // ── Règles Lucid ──────────────────────────────────────────────
 const LUCID_EVAL = {
   ACCOUNT_SIZE: 50000,
-  PROFIT_TARGET: 4000,       // +8%
-  MAX_DAILY_LOSS: 2000,      // 4%
-  MAX_TRAILING_DD: 2500,     // 5%
-  MIN_DAYS: 5,
-  CONSISTENCY_PCT: 0.40,     // 1 jour max 40% du total net positif
+  PROFIT_TARGET: 3000,       // +6%
+  MAX_DAILY_LOSS: null,      // Pas de DLL sur LucidFlex Eval
+  MAX_TRAILING_DD: 2000,     // Max Loss Limit (4%)
+  MIN_DAYS: 0,               // Pas de minimum de jours
+  CONSISTENCY_PCT: 0.50,     // 1 jour max 50% du total net positif
 };
 const LUCID_FUNDED = {
   ACCOUNT_SIZE: 50000,
@@ -125,27 +125,25 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
   const winningDays   = Object.values(byDay).filter(p => p > 0).length;
   const dailyArr = allDays.map(([date, pnl]) => ({ date: date.slice(5), pnl: Math.round(pnl * 100) / 100 }));
 
-  // Max daily loss check — worst single day
-  const worstDay = Math.min(...Object.values(byDay), 0);
-  const dailyLossBreached = Math.abs(worstDay) >= MAX_DAILY_LOSS;
+  // Pas de DLL sur LucidFlex Eval
+  const dailyLossBreached = false;
 
   // Net profit progress
   const netProfit = Math.max(currentBalance - ACCOUNT_SIZE, 0);
   const targetReached = currentBalance >= ACCOUNT_SIZE + PROFIT_TARGET;
 
-  // Consistency
+  // Consistency (50%)
   const posNetPnl  = trades.filter(t => getNet(t) > 0).reduce((s, t) => s + getNet(t), 0);
   const bestDayNet = Math.max(...Object.values(byDay).filter(p => p > 0), 0);
   const bestDayPct = posNetPnl > 0 ? (bestDayNet / posNetPnl) * 100 : 0;
   const consistencyOk = bestDayPct <= CONSISTENCY_PCT * 100 || posNetPnl === 0;
 
-  const rule1 = !accountLost && !dailyLossBreached;
+  const rule1 = !accountLost;               // Drawdown trailing uniquement (pas de DLL)
   const rule2 = targetReached;
-  const rule3 = tradingDays >= MIN_DAYS;
-  const allPassed = rule1 && rule2 && rule3 && consistencyOk;
+  const allPassed = rule1 && rule2 && consistencyOk;
 
-  const status = accountLost || dailyLossBreached
-    ? { label: dailyLossBreached ? '❌ PERTE JOURNALIÈRE DÉPASSÉE' : '❌ COMPTE PERDU', color: '#ff4455' }
+  const status = accountLost
+    ? { label: '❌ COMPTE PERDU (Max Loss atteint)', color: '#ff4455' }
     : allPassed ? { label: '✅ ÉVALUATION VALIDÉE !', color: '#00ff88' }
     : { label: '⏳ EN COURS', color: '#f0a020' };
 
@@ -162,15 +160,15 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
 
       {/* Info */}
       <div style={{ background: 'rgba(0,170,255,0.04)', border: '1px solid rgba(0,170,255,0.15)', borderRadius: '6px', padding: '12px 16px', fontSize: '13px', color: '#4a7a5a' }}>
-        <div style={{ fontWeight: '700', color: '#00aaff', marginBottom: '6px', fontSize: '12px', letterSpacing: '1px' }}>RÈGLES LUCID EVALUATION — COMPTE 50K</div>
+        <div style={{ fontWeight: '700', color: '#00aaff', marginBottom: '6px', fontSize: '12px', letterSpacing: '1px' }}>RÈGLES LUCIDFLEX EVALUATION — COMPTE 50K</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginTop: '8px' }}>
           {[
-            { label: 'Profit Target', value: `+${PROFIT_TARGET.toLocaleString()}$ (8%)`, color: '#00ff88' },
-            { label: 'Perte journalière max', value: `-${MAX_DAILY_LOSS.toLocaleString()}$ (4%)`, color: '#ff4455' },
-            { label: 'Drawdown trailing max', value: `-${MAX_TRAILING_DD.toLocaleString()}$ (5%)`, color: '#f0a020' },
-            { label: 'Jours minimum', value: `${MIN_DAYS} jours tradés`, color: '#c8d8c8' },
-            { label: 'Règle cohérence', value: `Max 40% du P&L net/jour`, color: '#aa88ff' },
-            { label: 'Durée', value: 'Illimitée', color: '#c8d8c8' },
+            { label: 'Profit Target', value: `+${PROFIT_TARGET.toLocaleString()}$ (6%)`, color: '#00ff88' },
+            { label: 'Max Loss Limit (Trailing DD)', value: `-${MAX_TRAILING_DD.toLocaleString()}$ (4%)`, color: '#f0a020' },
+            { label: 'Perte journalière', value: 'Aucune (pas de DLL)', color: '#00aaff' },
+            { label: 'Jours minimum', value: 'Aucun — illimité', color: '#c8d8c8' },
+            { label: 'Règle cohérence', value: `Max 50% du P&L net/jour`, color: '#aa88ff' },
+            { label: 'Durée', value: 'Illimitée · 1 frais unique', color: '#c8d8c8' },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '8px 10px' }}>
               <div style={{ fontSize: '10px', color: '#3a6a4a', marginBottom: '3px', letterSpacing: '0.5px' }}>{label}</div>
@@ -192,7 +190,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
 
       {/* Trailing Drawdown */}
       <div style={{ background: 'rgba(10,28,18,0.4)', border: `1px solid ${distanceToFloor < 500 ? 'rgba(255,68,85,0.3)' : 'rgba(0,255,136,0.08)'}`, borderRadius: '8px', padding: '18px' }}>
-        <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>⚠️ TRAILING DRAWDOWN (5% DU HWM)</div>
+        <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>⚠️ MAX LOSS LIMIT — TRAILING DRAWDOWN (4% DU HWM)</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', marginBottom: '14px' }}>
           <MetricCard label="BALANCE" value={`${currentBalance.toFixed(2)}$`} color="#c8d8c8" sub={manualBalance > 0 ? 'Manuelle' : 'Estimée'} />
           <MetricCard label="HIGH WATER MARK" value={`${hwm.toFixed(2)}$`} color="#f0a020" sub="Plus haut atteint" />
@@ -212,13 +210,13 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
         <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>🎯 VALIDATION DES RÈGLES</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
-          {/* Rule 1 — No blow */}
+          {/* Rule 1 — Drawdown uniquement (pas de DLL) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px', background: rule1 ? 'rgba(0,255,136,0.04)' : 'rgba(255,68,85,0.06)', border: `1px solid ${rule1 ? 'rgba(0,255,136,0.12)' : 'rgba(255,68,85,0.3)'}`, borderRadius: '6px' }}>
             <span style={{ fontSize: '19px' }}>{rule1 ? '✅' : '❌'}</span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '14px', color: '#c8d8c8', fontWeight: '600', marginBottom: '3px' }}>Drawdown trailing & Perte journalière</div>
+              <div style={{ fontSize: '14px', color: '#c8d8c8', fontWeight: '600', marginBottom: '3px' }}>Max Loss Limit (Trailing Drawdown)</div>
               <div style={{ fontSize: '12px', color: '#4a7a5a' }}>
-                Drawdown: {fmt(distanceToFloor)} de marge · Pire jour: {fmt(worstDay)} {dailyLossBreached ? '⚠️ limite dépassée' : ''}
+                Marge restante: {fmt(distanceToFloor)} · Floor: {floor.toFixed(2)}$ · <span style={{ color: '#00aaff' }}>Pas de DLL</span>
               </div>
             </div>
           </div>
@@ -232,28 +230,13 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
             </div>
           </div>
 
-          {/* Rule 3 — Min days */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px', background: rule3 ? 'rgba(0,255,136,0.04)' : 'rgba(10,28,18,0.4)', border: `1px solid ${rule3 ? 'rgba(0,255,136,0.12)' : 'rgba(0,255,136,0.06)'}`, borderRadius: '6px' }}>
-            <span style={{ fontSize: '19px' }}>{rule3 ? '✅' : '⏳'}</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '14px', color: '#c8d8c8', fontWeight: '600', marginBottom: '8px' }}>Jours de trading minimum ({MIN_DAYS} jours)</div>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                {allDays.slice(0, 6).map(([date, pnl]) => <DayDot key={date} date={date} pnl={pnl} />)}
-                {Array.from({ length: Math.max(0, MIN_DAYS - tradingDays) }).map((_, i) => (
-                  <div key={i} style={{ width: '34px', height: '34px', borderRadius: '50%', border: '1.5px dashed #1a3a22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#2a4a30' }}>—</div>
-                ))}
-              </div>
-            </div>
-            <div style={{ fontSize: '15px', fontWeight: '700', color: rule3 ? '#00ff88' : '#f0a020' }}>{tradingDays}/{MIN_DAYS}</div>
-          </div>
-
-          {/* Rule 4 — Consistency */}
+          {/* Rule 3 — Consistency 50% */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px', background: consistencyOk ? 'rgba(0,255,136,0.04)' : 'rgba(255,68,85,0.06)', border: `1px solid ${consistencyOk ? 'rgba(0,255,136,0.12)' : 'rgba(255,68,85,0.3)'}`, borderRadius: '6px' }}>
             <span style={{ fontSize: '19px' }}>{consistencyOk ? '✅' : '⚠️'}</span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '14px', color: '#c8d8c8', fontWeight: '600', marginBottom: '4px' }}>Règle de cohérence — Max 40% du P&L net positif par jour</div>
+              <div style={{ fontSize: '14px', color: '#c8d8c8', fontWeight: '600', marginBottom: '4px' }}>Règle de cohérence — Max 50% du P&L net positif par jour</div>
               <div style={{ fontSize: '12px', color: '#4a7a5a' }}>
-                Meilleur jour: {fmt(bestDayNet, true)} · Total net+: {fmt(posNetPnl, true)} · Part: {bestDayPct.toFixed(1)}%/40%
+                Meilleur jour: {fmt(bestDayNet, true)} · Total net+: {fmt(posNetPnl, true)} · Part: {bestDayPct.toFixed(1)}%/50%
               </div>
             </div>
           </div>
@@ -263,25 +246,18 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
       {/* Suivi journalier */}
       {allDays.length > 0 && (
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', padding: '18px' }}>
-          <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>📅 SUIVI JOURNALIER — Budget: -{MAX_DAILY_LOSS.toLocaleString()}$/jour</div>
+          <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>📅 SUIVI JOURNALIER — <span style={{ color: '#00aaff', fontSize: '10px' }}>Pas de DLL · Max Loss Limit trailing: -{MAX_TRAILING_DD}$</span></div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
             {allDays.slice().reverse().map(([date, pnl]) => {
-              const usedBudget = pnl < 0 ? Math.min(Math.abs(pnl) / MAX_DAILY_LOSS * 100, 100) : 0;
-              const isBreached = pnl < -MAX_DAILY_LOSS;
-              const isWarning  = pnl < -MAX_DAILY_LOSS * 0.6;
-              const rowColor   = isBreached ? '#ff4455' : isWarning ? '#f0a020' : pnl > 0 ? '#00ff88' : '#8aaa90';
+              const rowColor = pnl > 0 ? '#00ff88' : pnl < 0 ? '#ff4455' : '#8aaa90';
               return (
-                <div key={date} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 80px 100px', gap: '10px', alignItems: 'center', padding: '7px 10px', background: isBreached ? 'rgba(255,68,85,0.06)' : 'rgba(10,28,18,0.3)', borderRadius: '4px', border: `1px solid ${isBreached ? 'rgba(255,68,85,0.2)' : 'rgba(0,255,136,0.04)'}` }}>
+                <div key={date} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 120px', gap: '10px', alignItems: 'center', padding: '7px 10px', background: 'rgba(10,28,18,0.3)', borderRadius: '4px', border: `1px solid rgba(0,255,136,0.04)` }}>
                   <span style={{ fontSize: '11px', color: '#4a7a5a' }}>{date}</span>
                   <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
-                    {pnl < 0 && <div style={{ height: '100%', width: `${usedBudget}%`, background: isBreached ? '#ff4455' : isWarning ? '#f0a020' : '#00aaff', borderRadius: '3px', transition: 'width 0.3s' }} />}
+                    <div style={{ height: '100%', width: `${Math.min(Math.abs(pnl) / Math.max(PROFIT_TARGET, 1) * 100, 100)}%`, background: pnl >= 0 ? '#00ff88' : '#ff4455', borderRadius: '3px', transition: 'width 0.3s' }} />
                   </div>
-                  <span style={{ fontSize: '10px', color: '#4a7a5a', textAlign: 'right' }}>
-                    {pnl < 0 ? `${usedBudget.toFixed(0)}%` : ''}
-                  </span>
                   <span style={{ fontSize: '12px', fontWeight: '700', color: rowColor, textAlign: 'right' }}>
                     {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}$
-                    {isBreached && <span style={{ fontSize: '9px', marginLeft: '4px' }}>⚠</span>}
                   </span>
                 </div>
               );
@@ -291,7 +267,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
             {[
               { label: 'MOY. GAGNANTS', value: winningDays > 0 ? `+${(Object.values(byDay).filter(p=>p>0).reduce((s,v)=>s+v,0)/winningDays).toFixed(2)}$` : '—', color: '#00ff88' },
               { label: 'MOY. PERDANTS', value: (tradingDays - winningDays) > 0 ? `-${(Math.abs(Object.values(byDay).filter(p=>p<0).reduce((s,v)=>s+v,0))/(tradingDays-winningDays)).toFixed(2)}$` : '—', color: '#ff4455' },
-              { label: 'UTILISATION BUDGET', value: `${(Object.values(byDay).filter(p=>p<0).reduce((s,p)=>s+Math.min(Math.abs(p)/MAX_DAILY_LOSS*100,100),0)/Math.max(Object.values(byDay).filter(p=>p<0).length,1)).toFixed(0)}% moy.`, color: '#f0a020' },
+              { label: 'MEILLEUR JOUR', value: tradingDays > 0 ? `+${Math.max(...Object.values(byDay)).toFixed(2)}$` : '—', color: '#00ff88' },
             ].map(({ label, value, color }) => (
               <div key={label} style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '8px 10px' }}>
                 <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '0.5px', marginBottom: '3px' }}>{label}</div>
@@ -306,8 +282,8 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
         <MetricCard label="BALANCE NETTE" value={`${currentBalance.toFixed(2)}$`} color={rule2 ? '#00ff88' : '#c8d8c8'} sub={manualBalance > 0 ? 'Manuelle' : 'Estimée'} />
         <MetricCard label="PROFIT NET" value={fmt(netProfit, true)} color={pnlColor(netProfit)} sub={`Objectif: +${PROFIT_TARGET}$`} />
-        <MetricCard label="FLOOR DRAWDOWN" value={`${floor.toFixed(2)}$`} color="#ff4455" alert={distanceToFloor < 500} sub={`Marge: ${distanceToFloor.toFixed(2)}$`} />
-        <MetricCard label="JOURS TRADÉS" value={tradingDays} color={rule3 ? '#00ff88' : '#f0a020'} sub={`Min: ${MIN_DAYS} · Gagnants: ${winningDays}`} />
+        <MetricCard label="MAX LOSS FLOOR" value={`${floor.toFixed(2)}$`} color="#ff4455" alert={distanceToFloor < 300} sub={`Marge: ${distanceToFloor.toFixed(2)}$`} />
+        <MetricCard label="JOURS TRADÉS" value={tradingDays} color="#c8d8c8" sub={`Aucun minimum · ${winningDays} gagnants`} />
       </div>
 
       {/* Charts */}
@@ -340,7 +316,6 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
                 <YAxis tick={{ fill: '#3a6a4a', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
                 <Tooltip content={<CTooltip />} />
                 <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
-                <ReferenceLine y={-MAX_DAILY_LOSS} stroke="#ff4455" strokeDasharray="4 4" strokeOpacity={0.5} label={{ value: `Limite -${MAX_DAILY_LOSS}$`, fill: '#ff4455', fontSize: 10, position: 'right' }} />
                 <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#00ff88" isAnimationActive maxBarSize={28} />
               </BarChart>
             </ResponsiveContainer>
@@ -351,8 +326,8 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
       {allPassed && (
         <div style={{ background: 'rgba(0,255,136,0.08)', border: '2px solid #00ff88', borderRadius: '8px', padding: '20px', textAlign: 'center', boxShadow: '0 0 30px rgba(0,255,136,0.1)' }}>
           <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎉</div>
-          <div style={{ fontSize: '19px', fontWeight: '700', color: '#00ff88', marginBottom: '6px' }}>ÉVALUATION LUCID VALIDÉE !</div>
-          <div style={{ fontSize: '13px', color: '#4a7a5a' }}>Toutes les règles sont respectées. Tu peux passer au compte Funded Lucid.</div>
+          <div style={{ fontSize: '19px', fontWeight: '700', color: '#00ff88', marginBottom: '6px' }}>LUCIDFLEX EVAL VALIDÉE !</div>
+          <div style={{ fontSize: '13px', color: '#4a7a5a' }}>Profit target +{PROFIT_TARGET.toLocaleString()}$ atteint · Cohérence OK · Tu peux passer au compte Funded.</div>
         </div>
       )}
     </div>
