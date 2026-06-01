@@ -30,16 +30,16 @@ const NAV = [
 
 // -- Status detection ----------------------------------------
 const ACCOUNT_RULES = {
-  topstep_50k:       { size: 50000,  maxLoss: 2000 },
-  topstep_100k:      { size: 100000, maxLoss: 3000 },
-  topstep_150k:      { size: 150000, maxLoss: 4500 },
-  topstep_ef_50k:    { size: 50000,  maxLoss: 2000 },
-  topstep_ef_100k:   { size: 100000, maxLoss: 3000 },
-  topstep_ef_150k:   { size: 150000, maxLoss: 4500 },
-  tradovate_live:    { size: null,   maxLoss: null  },
-  tradovate_demo:    { size: null,   maxLoss: null  },
-  perso:             { size: null,   maxLoss: null  },
-  autre:             { size: null,   maxLoss: null  },
+  topstep_50k:       { size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
+  topstep_100k:      { size: 100000, maxLoss: 3000, dailyLoss: 2000 },
+  topstep_150k:      { size: 150000, maxLoss: 4500, dailyLoss: 3000 },
+  topstep_ef_50k:    { size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
+  topstep_ef_100k:   { size: 100000, maxLoss: 3000, dailyLoss: 2000 },
+  topstep_ef_150k:   { size: 150000, maxLoss: 4500, dailyLoss: 3000 },
+  tradovate_live:    { size: null,   maxLoss: null,  dailyLoss: 2000 },
+  tradovate_demo:    { size: null,   maxLoss: null,  dailyLoss: null },
+  perso:             { size: null,   maxLoss: null,  dailyLoss: null },
+  autre:             { size: null,   maxLoss: null,  dailyLoss: null },
 };
 
 const CHALLENGE_TYPES = new Set(['topstep_50k','topstep_100k','topstep_150k']);
@@ -48,7 +48,8 @@ const EXPRESS_FUNDED_TYPES = new Set(['topstep_ef_50k','topstep_ef_100k','topste
 async function computeBlownStatus(acc, currentActiveId) {
   const rules = ACCOUNT_RULES[acc.type];
   const isExpressFunded = EXPRESS_FUNDED_TYPES.has(acc.type);
-  if (!rules?.size || !rules?.maxLoss) return { isBlown: false, pnl: null, isValidated: false, isExpressFunded };
+  const hasAnyRule = rules?.size || rules?.maxLoss || rules?.dailyLoss;
+  if (!hasAnyRule) return { isBlown: false, pnl: null, isValidated: false, isExpressFunded };
   try {
     await window.accounts.setActive(acc.id);
     const res = await window.db.getAllTrades();
@@ -58,14 +59,35 @@ async function computeBlownStatus(acc, currentActiveId) {
     const sorted = [...trades]
       .filter(t => (t.result_net ?? t.result) != null)
       .sort((a, b) => (a.entered_at || a.date || '').localeCompare(b.entered_at || b.date || ''));
-    let hwm = rules.size, floor = rules.size - rules.maxLoss, bal = rules.size;
-    for (const t of sorted) {
-      bal += t.result_net ?? t.result ?? 0;
-      if (bal > hwm) { hwm = bal; floor = hwm - rules.maxLoss; }
-    }
     const totalPnl = trades.reduce((s, t) => s + (t.result_net ?? t.result ?? 0), 0);
 
-    // Validated: challenge + pnl >= 3000 + first day respected consistency (< 1500)
+    // ── Trailing drawdown check ──────────────────────────────
+    let isBlownDD = false;
+    if (rules.size && rules.maxLoss) {
+      let hwm = rules.size, floor = rules.size - rules.maxLoss, bal = rules.size;
+      for (const t of sorted) {
+        bal += t.result_net ?? t.result ?? 0;
+        if (bal > hwm) { hwm = bal; floor = hwm - rules.maxLoss; }
+      }
+      isBlownDD = rules.size + totalPnl <= floor;
+    }
+
+    // ── Daily loss check ─────────────────────────────────────
+    let isBlownDaily = false;
+    if (rules.dailyLoss) {
+      const byDay = {};
+      for (const t of sorted) {
+        const d = t.entered_at?.slice(0, 10) ?? t.date ?? '';
+        if (d) byDay[d] = (byDay[d] ?? 0) + (t.result_net ?? t.result ?? 0);
+      }
+      const vals = Object.values(byDay);
+      if (vals.length > 0) {
+        const worstDay = Math.min(...vals);
+        isBlownDaily = worstDay <= -rules.dailyLoss;
+      }
+    }
+
+    // ── Validated: challenge type + pnl >= 3000 ──────────────
     let isValidated = false;
     if (CHALLENGE_TYPES.has(acc.type) && sorted.length > 0) {
       const firstDate = sorted[0].entered_at?.slice(0, 10) ?? sorted[0].date ?? '';
@@ -76,7 +98,8 @@ async function computeBlownStatus(acc, currentActiveId) {
     }
 
     return {
-      isBlown: rules.size + totalPnl <= floor,
+      isBlown: isBlownDD || isBlownDaily,
+      dailyLossBreached: isBlownDaily,
       pnl: Math.round(totalPnl * 100) / 100,
       isValidated,
       isExpressFunded,
@@ -240,7 +263,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                             <span style={{ fontSize: '13px', color: isBlown ? '#ff7777' : isEF ? '#f0c020' : isActive ? a.color : '#c8d8c8', fontWeight: isActive ? '700' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
-                            {isBlown && <span style={{ fontSize: '8px', background: 'rgba(255,68,85,0.2)', border: '1px solid rgba(255,68,85,0.4)', color: '#ff4455', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>CRAMÉ</span>}
+                            {isBlown && <span title={st?.dailyLossBreached ? 'Perte journalière dépassée' : 'Drawdown maximum atteint'} style={{ fontSize: '8px', background: 'rgba(255,68,85,0.2)', border: '1px solid rgba(255,68,85,0.4)', color: '#ff4455', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0, cursor: 'help' }}>{st?.dailyLossBreached ? 'DAILY 🔴' : 'CRAMÉ'}</span>}
                             {!isBlown && isEF && <span style={{ fontSize: '8px', background: 'rgba(240,192,32,0.2)', border: '1px solid rgba(240,192,32,0.4)', color: '#f0c020', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>FUNDED</span>}
                             {!isBlown && !isEF && isVal && <span style={{ fontSize: '8px', background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>VALIDÉ</span>}
                           </div>
