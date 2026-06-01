@@ -231,105 +231,6 @@ function TradeTable({ trades, onNavigate, onDelete }) {
   );
 }
 
-// ── Quick Trade Modal ─────────────────────────────────────────
-function QuickTradeModal({ onClose, onAdded }) {
-  const PAIRS = ['MNQ','NQ','MES','ES','MGC','GC','M2K','RTY','MCL','CL'];
-  const [form, setForm] = useState({
-    date: new Date().toISOString().slice(0, 10),
-    pair: 'MNQ', direction: 'LONG',
-    entry: '', exit_price: '', size: '', result: '', outcome: '',
-  });
-  const [saving, setSaving] = useState(false);
-  const inp = { background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.12)', borderRadius: '4px', padding: '8px 10px', color: '#c8d8c8', fontSize: '11px', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' };
-
-  async function submit() {
-    if (!form.result) return;
-    setSaving(true);
-    const pnl = parseFloat(form.result) || 0;
-    await window.db.insertTrade({
-      date: form.date, pair: form.pair, direction: form.direction,
-      entry: parseFloat(form.entry) || 0,
-      exit_price: parseFloat(form.exit_price) || null,
-      size: parseFloat(form.size) || null,
-      result: pnl, result_net: pnl,
-      outcome: form.outcome || (pnl > 0 ? 'WIN' : pnl < 0 ? 'LOSS' : 'BE'),
-      source: 'manual_quick', stop: 0, tp: 0,
-    });
-    setSaving(false);
-    onAdded(); onClose();
-  }
-
-  const set = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#070d12', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '10px', width: '100%', maxWidth: '440px', padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div>
-            <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>SAISIE RAPIDE</div>
-            <div style={{ fontSize: '16px', fontWeight: '700', color: '#e8f8e8' }}>⚡ Trade Express</div>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: '1px solid #1a3a22', color: '#4a7a5a', width: '28px', height: '28px', borderRadius: '50%', cursor: 'pointer', fontSize: '14px' }}>×</button>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-            <div>
-              <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '4px' }}>DATE</div>
-              <input type="date" value={form.date} onChange={set('date')} style={{ ...inp, colorScheme: 'dark' }} />
-            </div>
-            <div>
-              <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '4px' }}>INSTRUMENT</div>
-              <select value={form.pair} onChange={set('pair')} style={inp}>
-                {PAIRS.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-            <div>
-              <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '4px' }}>DIRECTION</div>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                {['LONG','SHORT'].map(d => (
-                  <button key={d} onClick={() => setForm(p => ({ ...p, direction: d }))} style={{ flex: 1, padding: '8px 2px', borderRadius: '4px', border: `1px solid ${form.direction===d?(d==='LONG'?'#00ff88':'#ff4455'):'rgba(0,255,136,0.12)'}`, background: form.direction===d?`rgba(${d==='LONG'?'0,255,136':'255,68,85'},0.12)`:'rgba(10,28,18,0.6)', color: form.direction===d?(d==='LONG'?'#00ff88':'#ff4455'):'#5a8a6a', fontSize: '9px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer' }}>{d}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-            <div>
-              <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '4px' }}>ENTRÉE</div>
-              <input type="number" placeholder="28900" value={form.entry} onChange={set('entry')} style={inp} />
-            </div>
-            <div>
-              <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '4px' }}>SORTIE</div>
-              <input type="number" placeholder="28920" value={form.exit_price} onChange={set('exit_price')} style={inp} />
-            </div>
-            <div>
-              <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '4px' }}>TAILLE</div>
-              <input type="number" placeholder="10" value={form.size} onChange={set('size')} style={inp} />
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            <div>
-              <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '4px' }}>P&L NET * ($)</div>
-              <input type="number" placeholder="+500 ou -250" value={form.result} onChange={set('result')} style={{ ...inp, color: form.result ? pnlColor(parseFloat(form.result)) : '#c8d8c8' }} />
-            </div>
-            <div>
-              <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '4px' }}>RÉSULTAT</div>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                {['WIN','LOSS','BE'].map(o => {
-                  const c = o==='WIN'?'#00ff88':o==='LOSS'?'#ff4455':'#f0a020';
-                  return <button key={o} onClick={() => setForm(p => ({ ...p, outcome: o }))} style={{ flex: 1, padding: '8px 2px', borderRadius: '4px', border: `1px solid ${form.outcome===o?c:'rgba(0,255,136,0.12)'}`, background: form.outcome===o?`rgba(${o==='WIN'?'0,255,136':o==='LOSS'?'255,68,85':'240,160,32'},0.12)`:'rgba(10,28,18,0.6)', color: form.outcome===o?c:'#5a8a6a', fontSize: '9px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer' }}>{o}</button>;
-                })}
-              </div>
-            </div>
-          </div>
-          <button onClick={submit} disabled={saving || !form.result} style={{ padding: '11px', borderRadius: '5px', background: 'linear-gradient(135deg,rgba(0,255,136,0.2),rgba(0,170,85,0.1))', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', fontSize: '11px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1.5px', cursor: 'pointer' }}>
-            {saving ? 'ENREGISTREMENT...' : '⚡ ENREGISTRER'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── MAIN ──────────────────────────────────────────────────────
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -338,7 +239,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter]   = useState(() => localStorage.getItem('dash_filter') || 'ALL');
   const [search, setSearch]   = useState('');
-  const [showQuick, setShowQuick] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -407,9 +307,6 @@ export default function Dashboard() {
             onMouseLeave={e => { e.currentTarget.style.color = '#4a7a5a'; e.currentTarget.style.borderColor = '#1a3a22'; }}
           >
             📂 Import CSV
-          </button>
-          <button onClick={() => setShowQuick(true)} style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.25)', color: '#00ff88', padding: '8px 14px', borderRadius: '5px', fontSize: '10px', fontFamily: 'inherit', letterSpacing: '1px', cursor: 'pointer', fontWeight: '700' }}>
-            ⚡ Trade Express
           </button>
           <button onClick={() => navigate('/dashboard/new')} style={{ background: 'linear-gradient(135deg,rgba(0,255,136,0.2),rgba(0,170,85,0.1))', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', padding: '8px 16px', borderRadius: '5px', fontSize: '10px', fontFamily: 'inherit', letterSpacing: '1px', cursor: 'pointer', fontWeight: '700' }}>
             + NOUVEAU TRADE
@@ -486,7 +383,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {showQuick && <QuickTradeModal onClose={() => setShowQuick(false)} onAdded={load} />}
     </div>
   );
 }

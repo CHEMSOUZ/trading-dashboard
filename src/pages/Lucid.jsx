@@ -9,14 +9,14 @@ import {
 const LUCID_EVAL = {
   ACCOUNT_SIZE: 50000,
   PROFIT_TARGET: 4000,       // +8%
-  MAX_DAILY_LOSS: 2500,      // 5%
+  MAX_DAILY_LOSS: 2000,      // 4%
   MAX_TRAILING_DD: 2500,     // 5%
   MIN_DAYS: 5,
   CONSISTENCY_PCT: 0.40,     // 1 jour max 40% du total net positif
 };
 const LUCID_FUNDED = {
   ACCOUNT_SIZE: 50000,
-  MAX_DAILY_LOSS: 2500,      // 5%
+  MAX_DAILY_LOSS: 2000,      // 4%
   MAX_TRAILING_DD: 2500,     // 5%
   PROFIT_SPLIT: 90,
   MIN_PAYOUT_DAYS: 5,
@@ -166,7 +166,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginTop: '8px' }}>
           {[
             { label: 'Profit Target', value: `+${PROFIT_TARGET.toLocaleString()}$ (8%)`, color: '#00ff88' },
-            { label: 'Perte journalière max', value: `-${MAX_DAILY_LOSS.toLocaleString()}$ (5%)`, color: '#ff4455' },
+            { label: 'Perte journalière max', value: `-${MAX_DAILY_LOSS.toLocaleString()}$ (4%)`, color: '#ff4455' },
             { label: 'Drawdown trailing max', value: `-${MAX_TRAILING_DD.toLocaleString()}$ (5%)`, color: '#f0a020' },
             { label: 'Jours minimum', value: `${MIN_DAYS} jours tradés`, color: '#c8d8c8' },
             { label: 'Règle cohérence', value: `Max 40% du P&L net/jour`, color: '#aa88ff' },
@@ -259,6 +259,48 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
           </div>
         </div>
       </div>
+
+      {/* Suivi journalier */}
+      {allDays.length > 0 && (
+        <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', padding: '18px' }}>
+          <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>📅 SUIVI JOURNALIER — Budget: -{MAX_DAILY_LOSS.toLocaleString()}$/jour</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
+            {allDays.slice().reverse().map(([date, pnl]) => {
+              const usedBudget = pnl < 0 ? Math.min(Math.abs(pnl) / MAX_DAILY_LOSS * 100, 100) : 0;
+              const isBreached = pnl < -MAX_DAILY_LOSS;
+              const isWarning  = pnl < -MAX_DAILY_LOSS * 0.6;
+              const rowColor   = isBreached ? '#ff4455' : isWarning ? '#f0a020' : pnl > 0 ? '#00ff88' : '#8aaa90';
+              return (
+                <div key={date} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 80px 100px', gap: '10px', alignItems: 'center', padding: '7px 10px', background: isBreached ? 'rgba(255,68,85,0.06)' : 'rgba(10,28,18,0.3)', borderRadius: '4px', border: `1px solid ${isBreached ? 'rgba(255,68,85,0.2)' : 'rgba(0,255,136,0.04)'}` }}>
+                  <span style={{ fontSize: '11px', color: '#4a7a5a' }}>{date}</span>
+                  <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                    {pnl < 0 && <div style={{ height: '100%', width: `${usedBudget}%`, background: isBreached ? '#ff4455' : isWarning ? '#f0a020' : '#00aaff', borderRadius: '3px', transition: 'width 0.3s' }} />}
+                  </div>
+                  <span style={{ fontSize: '10px', color: '#4a7a5a', textAlign: 'right' }}>
+                    {pnl < 0 ? `${usedBudget.toFixed(0)}%` : ''}
+                  </span>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: rowColor, textAlign: 'right' }}>
+                    {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}$
+                    {isBreached && <span style={{ fontSize: '9px', marginLeft: '4px' }}>⚠</span>}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginTop: '12px' }}>
+            {[
+              { label: 'MOY. GAGNANTS', value: winningDays > 0 ? `+${(Object.values(byDay).filter(p=>p>0).reduce((s,v)=>s+v,0)/winningDays).toFixed(2)}$` : '—', color: '#00ff88' },
+              { label: 'MOY. PERDANTS', value: (tradingDays - winningDays) > 0 ? `-${(Math.abs(Object.values(byDay).filter(p=>p<0).reduce((s,v)=>s+v,0))/(tradingDays-winningDays)).toFixed(2)}$` : '—', color: '#ff4455' },
+              { label: 'UTILISATION BUDGET', value: `${(Object.values(byDay).filter(p=>p<0).reduce((s,p)=>s+Math.min(Math.abs(p)/MAX_DAILY_LOSS*100,100),0)/Math.max(Object.values(byDay).filter(p=>p<0).length,1)).toFixed(0)}% moy.`, color: '#f0a020' },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '8px 10px' }}>
+                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '0.5px', marginBottom: '3px' }}>{label}</div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color }}>{value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
@@ -364,7 +406,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginTop: '8px' }}>
           {[
             { label: 'Pas de Profit Target', value: 'Aucun objectif requis', color: '#00ff88' },
-            { label: 'Perte journalière max', value: `-${MAX_DAILY_LOSS.toLocaleString()}$ (5%)`, color: '#ff4455' },
+            { label: 'Perte journalière max', value: `-${MAX_DAILY_LOSS.toLocaleString()}$ (4%)`, color: '#ff4455' },
             { label: 'Drawdown trailing max', value: `-${MAX_TRAILING_DD.toLocaleString()}$ (5%)`, color: '#f0a020' },
             { label: 'Part des profits', value: `${PROFIT_SPLIT}% pour le trader`, color: '#00ff88' },
             { label: 'Payout disponible après', value: `${MIN_PAYOUT_DAYS} jours avec profit ≥ ${MIN_DAILY_PROFIT}$`, color: '#c8d8c8' },
@@ -432,6 +474,51 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
           </div>
         )}
       </div>
+
+      {/* Suivi journalier Funded */}
+      {allDays.length > 0 && (
+        <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', padding: '18px' }}>
+          <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>📅 SUIVI JOURNALIER — Budget: -{MAX_DAILY_LOSS.toLocaleString()}$/jour · Qualifié si ≥+{MIN_DAILY_PROFIT}$</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
+            {allDays.slice().reverse().map(([date, pnl]) => {
+              const isQualified = pnl >= MIN_DAILY_PROFIT;
+              const isBreached  = pnl < -MAX_DAILY_LOSS;
+              const isWarning   = pnl < -MAX_DAILY_LOSS * 0.6;
+              const usedBudget  = pnl < 0 ? Math.min(Math.abs(pnl) / MAX_DAILY_LOSS * 100, 100) : 0;
+              const rowColor    = isBreached ? '#ff4455' : isQualified ? '#00ff88' : pnl > 0 ? '#8aaa90' : isWarning ? '#f0a020' : '#8aaa90';
+              return (
+                <div key={date} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 80px 120px', gap: '10px', alignItems: 'center', padding: '7px 10px', background: isBreached ? 'rgba(255,68,85,0.06)' : isQualified ? 'rgba(0,255,136,0.04)' : 'rgba(10,28,18,0.3)', borderRadius: '4px', border: `1px solid ${isBreached ? 'rgba(255,68,85,0.2)' : isQualified ? 'rgba(0,255,136,0.1)' : 'rgba(0,255,136,0.04)'}` }}>
+                  <span style={{ fontSize: '11px', color: '#4a7a5a' }}>{date}</span>
+                  <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                    {pnl < 0 && <div style={{ height: '100%', width: `${usedBudget}%`, background: isBreached ? '#ff4455' : '#f0a020', borderRadius: '3px' }} />}
+                    {pnl > 0 && <div style={{ height: '100%', width: `${Math.min(pnl/MAX_DAILY_LOSS*100,100)}%`, background: isQualified ? '#00ff88' : '#00aa55', borderRadius: '3px' }} />}
+                  </div>
+                  <span style={{ fontSize: '10px', color: '#4a7a5a', textAlign: 'right' }}>
+                    {isQualified ? '✓ qualifié' : pnl < 0 ? `${usedBudget.toFixed(0)}%` : ''}
+                  </span>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: rowColor, textAlign: 'right' }}>
+                    {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}$
+                    {isBreached && <span style={{ fontSize: '9px', marginLeft: '4px' }}>⚠</span>}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginTop: '12px' }}>
+            {[
+              { label: 'JOURS QUALIFIÉS', value: `${qualifiedDays}/${MIN_PAYOUT_DAYS}`, color: qualifiedDays >= MIN_PAYOUT_DAYS ? '#00ff88' : '#f0a020' },
+              { label: 'MOY. P&L/JOUR', value: tradingDays > 0 ? `${totalNet >= 0 ? '+' : ''}${(totalNet / tradingDays).toFixed(2)}$` : '—', color: pnlColor(totalNet / Math.max(tradingDays, 1)) },
+              { label: 'MEILLEUR JOUR', value: allDays.length > 0 ? `+${Math.max(...Object.values(byDay)).toFixed(2)}$` : '—', color: '#00ff88' },
+              { label: 'PIRE JOUR', value: allDays.length > 0 ? `${Math.min(...Object.values(byDay)).toFixed(2)}$` : '—', color: '#ff4455' },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '8px 10px' }}>
+                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '0.5px', marginBottom: '3px' }}>{label}</div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color }}>{value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
@@ -521,7 +608,7 @@ export default function Lucid() {
       <div style={{ display: 'flex', marginBottom: '20px', background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: '8px', padding: '4px' }}>
         {[
           { key: 'eval',   label: '🎯 LucidEval',   desc: 'Compte évaluation · Validation' },
-          { key: 'funded', label: '💰 LucidFunded', desc: 'Compte live · Payout 80%' },
+          { key: 'funded', label: '💰 LucidFunded', desc: 'Compte live · Payout 90%' },
         ].map(({ key, label, desc }) => (
           <button key={key} onClick={() => switchTab(key)} style={{ flex: 1, padding: '13px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', transition: 'all 0.2s', background: tab === key ? 'rgba(0,255,136,0.12)' : 'transparent', fontFamily: 'inherit' }}>
             <div style={{ fontSize: '14px', fontWeight: '700', color: tab === key ? '#00ff88' : '#5a8a6a', marginBottom: '2px' }}>{label}</div>

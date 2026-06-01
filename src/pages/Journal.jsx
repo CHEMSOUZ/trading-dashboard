@@ -15,27 +15,81 @@ function fmtPnl(n) {
   return `${n >= 0 ? '+' : ''}${n.toFixed(2)}$`;
 }
 
-// ── Frais Cell avec tooltip détail ───────────────────────────
-function FraisCell({ trade }) {
-  const [hover, setHover] = useState(false);
-  const fees = trade.fees ?? 0;
-  const commissions = trade.commissions ?? 0;
-  const total = fees + commissions;
-  const hasBoth = fees > 0 && commissions > 0;
+// ── Frais Cell — affichage + édition inline ──────────────────
+function FraisCell({ trade, onUpdate }) {
+  const [editing, setEditing]         = useState(false);
+  const [feesVal, setFeesVal]         = useState('');
+  const [commissionsVal, setCommissionsVal] = useState('');
+  const [hover, setHover]             = useState(false);
+  const [saving, setSaving]           = useState(false);
 
-  if (total === 0) return <span style={{ color: '#2a4a30', fontSize: '10px' }}>—</span>;
+  const fees        = trade.fees ?? 0;
+  const commissions = trade.commissions ?? 0;
+  const total       = fees + commissions;
+
+  function startEdit(e) {
+    e.stopPropagation();
+    setFeesVal(fees > 0 ? String(fees) : '');
+    setCommissionsVal(commissions > 0 ? String(commissions) : '');
+    setEditing(true);
+  }
+
+  async function saveEdit(e) {
+    e?.stopPropagation();
+    setSaving(true);
+    const newFees  = parseFloat(feesVal)        || 0;
+    const newComms = parseFloat(commissionsVal) || 0;
+    const newNet   = (trade.result ?? 0) - newFees - newComms;
+    await window.db.updateTrade(trade.id, {
+      ...trade,
+      fees:        newFees,
+      commissions: newComms,
+      result_net:  Math.round(newNet * 100) / 100,
+    });
+    onUpdate(trade.id, { fees: newFees, commissions: newComms, result_net: Math.round(newNet * 100) / 100 });
+    setSaving(false);
+    setEditing(false);
+  }
+
+  function cancelEdit(e) { e?.stopPropagation(); setEditing(false); }
+
+  if (editing) {
+    return (
+      <div onClick={e => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '130px' }}>
+        <input
+          autoFocus type="number" placeholder="Frais" value={feesVal}
+          onChange={e => setFeesVal(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') saveEdit(e); if (e.key === 'Escape') cancelEdit(e); }}
+          style={{ width: '100%', background: 'rgba(10,28,18,0.8)', border: '1px solid rgba(240,160,32,0.4)', borderRadius: '3px', padding: '3px 6px', color: '#f0a020', fontSize: '10px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+        />
+        <input
+          type="number" placeholder="Commissions" value={commissionsVal}
+          onChange={e => setCommissionsVal(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') saveEdit(e); if (e.key === 'Escape') cancelEdit(e); }}
+          style={{ width: '100%', background: 'rgba(10,28,18,0.8)', border: '1px solid rgba(240,160,32,0.3)', borderRadius: '3px', padding: '3px 6px', color: '#f0a020', fontSize: '10px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+        />
+        <div style={{ display: 'flex', gap: '3px' }}>
+          <button onClick={saveEdit} disabled={saving} style={{ flex: 1, background: 'rgba(0,255,136,0.12)', border: '1px solid rgba(0,255,136,0.25)', color: '#00ff88', borderRadius: '3px', padding: '2px', fontSize: '9px', cursor: 'pointer', fontFamily: 'inherit' }}>✓</button>
+          <button onClick={cancelEdit} style={{ flex: 1, background: 'transparent', border: '1px solid #1a3a22', color: '#4a7a5a', borderRadius: '3px', padding: '2px', fontSize: '9px', cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
-      style={{ position: 'relative', display: 'inline-block' }}
+      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+      onClick={startEdit}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      title="Cliquer pour modifier les frais"
     >
-      <span style={{ fontSize: '11px', fontWeight: '600', color: '#f0a020', cursor: hasBoth ? 'help' : 'default' }}>
-        -{total.toFixed(2)}$
+      <span style={{ fontSize: '11px', fontWeight: '600', color: total > 0 ? '#f0a020' : '#2a4a30' }}>
+        {total > 0 ? `-${total.toFixed(2)}$` : '—'}
       </span>
+      <span style={{ fontSize: '8px', color: hover ? '#00ff88' : '#2a5a32', transition: 'color 0.15s' }}>✎</span>
 
-      {hover && hasBoth && (
+      {hover && total > 0 && (
         <div style={{
           position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
           marginBottom: '6px', zIndex: 100,
@@ -45,7 +99,7 @@ function FraisCell({ trade }) {
           minWidth: '160px', pointerEvents: 'none',
           boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
         }}>
-          <div style={{ fontSize: '8px', color: '#5a4a20', letterSpacing: '1px', marginBottom: '8px' }}>DÉTAIL FRAIS</div>
+          <div style={{ fontSize: '8px', color: '#5a4a20', letterSpacing: '1px', marginBottom: '8px' }}>DÉTAIL — clic pour modifier</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {commissions > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
@@ -157,6 +211,10 @@ export default function Journal() {
     if (!window.confirm('Supprimer ce trade ?')) return;
     await window.db.deleteTrade(id);
     setTrades(prev => prev.filter(t => t.id !== id));
+  }
+
+  function handleFeeUpdate(id, patch) {
+    setTrades(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
   }
 
   // Filter based on net P&L outcome
@@ -308,9 +366,9 @@ export default function Journal() {
                   <PnlCell trade={t} />
                 </div>
 
-                {/* Frais avec tooltip détail */}
+                {/* Frais éditables */}
                 <div onClick={e => e.stopPropagation()}>
-                  <FraisCell trade={t} />
+                  <FraisCell trade={t} onUpdate={handleFeeUpdate} />
                 </div>
 
                 <span style={{ color: '#4a7a5a', fontSize: '10px' }}>{t.duration ?? '—'}</span>

@@ -9,8 +9,18 @@ import { useNavigate } from 'react-router-dom';
 function detectSource(headers) {
   const h = headers.map(x => x.trim().toLowerCase());
   if (h.includes('contractname') && h.includes('enteredat') && h.includes('tradeday')) return 'topstep';
+  // Tradovate Performance/Trade History export (entrée + sortie séparées)
+  if ((h.some(x => x === 'opened at' || x === 'entry time' || x === 'open time' || x === 'entrytime')) &&
+      (h.some(x => x === 'closed at'  || x === 'exit time'  || x === 'close time' || x === 'closetime')))
+    return 'tradovate_perf';
+  // Tradovate Fills export (fills individuels buy/sell)
+  if ((h.includes('timestamp') || h.includes('fill time')) &&
+      (h.includes('action') || h.includes('side')) &&
+      (h.includes('contractid') || h.includes('contract id')) &&
+      h.includes('qty'))
+    return 'tradovate_fills';
   // Tradovate cash ledger export (Account, Transaction ID, Timestamp, Date, Delta, Amount, Cash Change Type, ...)
-  if (h.includes('transaction id') && h.includes('cash change type') && h.includes('contract')) return 'tradovate';
+  if (h.includes('transaction id') && h.includes('cash change type') && (h.includes('contract') || h.includes('contractid'))) return 'tradovate';
   // Tradovate API-style export (legacy)
   if (h.includes('symbol') && h.includes('buyfillid') && h.includes('clearingfees')) return 'tradovate_api';
   return 'unknown';
@@ -20,17 +30,42 @@ function detectSource(headers) {
  * Parse a raw CSV string → array of row objects
  */
 function parseCsv(raw) {
-  const lines = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(Boolean);
+  const lines = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
   if (lines.length < 2) return [];
-  // Strip BOM if present
   const headerLine = lines[0].replace(/^\uFEFF/, '');
-  const headers = headerLine.split(',').map(h => h.trim());
+
+  function splitCsvLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if (ch === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  }
+
+  const headers = splitCsvLine(headerLine);
   return lines.slice(1).map(line => {
-    const vals = line.split(',');
+    const vals = splitCsvLine(line);
     const obj = {};
     headers.forEach((h, i) => { obj[h] = (vals[i] ?? '').trim(); });
     return obj;
   });
+}
+
+function parseTradovateDate(str) {
+  if (!str) return null;
+  try { return new Date(str).toISOString(); } catch { return null; }
 }
 
 /**
@@ -154,6 +189,111 @@ function mapTradovateRow(row) {
 }
 
 /**
+ * Tradovate Performance/Trade History export (une ligne = un trade complet)
+ * Colonnes typiques : Contract, Opened At/Entry Time, Closed At/Exit Time,
+ *   Qty, Buy Avg Fill, Sell Avg Fill, Gross P&L, Commission, Fee, Net P&L
+ */
+function mapTradovatePerfRow(row, idx) {
+  const get = (...keys) => { for (const k of keys) if (row[k]) return row[k]; return ''; };
+  const enteredAt = parseTradovateDate(get('Opened At','Entry Time','Open Time','opentime','EntryTime'));
+  const exitedAt  = parseTradovateDate(get('Closed At','Exit Time','Close Time','closetime','ExitTime'));
+  const date      = enteredAt ? enteredAt.slice(0,10) : (exitedAt ? exitedAt.slice(0,10) : '');
+  const contract  = get('Contract','Symbol','ContractId','contractId');
+  const qty       = parseFloat(get('Qty','Size','Quantity')) || 1;
+  const pnlBrut   = parseFloat(get('Gross P&L','GrossPnL','Trade P&L','TradePnL')) || 0;
+  const commissions = parseFloat(get('Commission','Commissions')) || 0;
+  const fees      = parseFloat(get('Fee','Fees','Clearing Fee','ClearingFee')) || 0;
+  const netRaw    = get('Net P&L','NetPnL','Net Trade P&L','NetTradePnL');
+  const resultNet = netRaw ? (parseFloat(netRaw) || 0) : pnlBrut - commissions - fees;
+  const buyFill   = parseFloat(get('Buy Avg Fill','Buy Avg Price','BuyAvgFill','Entry Price','EntryPrice')) || 0;
+  const sellFill  = parseFloat(get('Sell Avg Fill','Sell Avg Price','SellAvgFill','Exit Price','ExitPrice'))  || 0;
+  const sideRaw   = get('Side','Action','Direction').toLowerCase();
+  let direction = 'LONG';
+  if (sideRaw.includes('short') || sideRaw === 's') direction = 'SHORT';
+  else if (buyFill > 0 && sellFill > 0) direction = buyFill <= sellFill ? 'LONG' : 'SHORT';
+  const entry    = direction === 'LONG' ? buyFill  : sellFill;
+  const exitPrice = direction === 'LONG' ? sellFill : buyFill;
+  const rawId    = get('Trade ID','tradeId','OrderId','orderId');
+  return {
+    external_id: rawId ? `tdv_${rawId}` : `tdv_perf_${date}_${contract}_${idx}`,
+    source: 'tradovate_csv', date, entered_at: enteredAt, exited_at: exitedAt,
+    pair: normalizePair(contract), direction,
+    entry: entry || 0, exit_price: exitPrice || null, size: qty,
+    result: pnlBrut, fees, commissions,
+    result_net: Math.round(resultNet * 100) / 100,
+    outcome: resultNet > 0 ? 'WIN' : resultNet < 0 ? 'LOSS' : 'BE',
+    duration: null, stop: 0, tp: 0, rr: null, emotion: null, notes: null, screenshot: null,
+  };
+}
+
+/**
+ * Tradovate Fills export — apparie les fills Buy/Sell en FIFO pour reconstituer les trades
+ * Colonnes : timestamp, contractId, qty, price, action (Buy/Sell), commission, clearingFee
+ */
+function parseTradovateFills(rows) {
+  const sorted = [...rows].sort((a, b) => {
+    const ta = new Date(a['timestamp'] || a['Timestamp'] || a['fill time'] || a['Fill Time'] || 0);
+    const tb = new Date(b['timestamp'] || b['Timestamp'] || b['fill time'] || b['Fill Time'] || 0);
+    return ta - tb;
+  });
+  const queues = new Map();
+  const completed = [];
+
+  for (const row of sorted) {
+    const contract   = (row['contractId'] || row['Contract ID'] || row['contract'] || '').trim();
+    const action     = (row['action'] || row['side'] || row['Action'] || row['Side'] || '').toLowerCase();
+    const qty        = Math.abs(parseFloat(row['qty'] || row['Qty'] || '1')) || 1;
+    const price      = parseFloat(row['price'] || row['Price'] || '0') || 0;
+    const commission = Math.abs(parseFloat(row['commission'] || row['Commission'] || '0')) || 0;
+    const fees       = Math.abs(parseFloat(row['clearingFee'] || row['ClearingFee'] || row['fee'] || row['Fee'] || '0')) || 0;
+    const tsRaw      = row['timestamp'] || row['Timestamp'] || row['fill time'] || row['Fill Time'] || '';
+    const enteredAt  = parseTradovateDate(tsRaw);
+    const isBuy = action.includes('buy') || action === 'b';
+
+    if (!queues.has(contract)) queues.set(contract, { buys: [], sells: [] });
+    const q = queues.get(contract);
+
+    if (isBuy) {
+      if (q.sells.length > 0) {
+        const open = q.sells.shift();
+        const pnlBrut   = (open.price - price) * qty;
+        const totalComm = commission + open.commission;
+        const totalFees = fees + open.fees;
+        const resultNet = pnlBrut - totalComm - totalFees;
+        completed.push({ open, close: { price, enteredAt, commission, fees }, qty, pnlBrut, totalComm, totalFees, resultNet, direction: 'SHORT', contract });
+      } else { q.buys.push({ price, qty, commission, fees, enteredAt }); }
+    } else {
+      if (q.buys.length > 0) {
+        const open = q.buys.shift();
+        const pnlBrut   = (price - open.price) * qty;
+        const totalComm = commission + open.commission;
+        const totalFees = fees + open.fees;
+        const resultNet = pnlBrut - totalComm - totalFees;
+        completed.push({ open, close: { price, enteredAt, commission, fees }, qty, pnlBrut, totalComm, totalFees, resultNet, direction: 'LONG', contract });
+      } else { q.sells.push({ price, qty, commission, fees, enteredAt }); }
+    }
+  }
+
+  return completed.map((t, i) => {
+    const date = t.open.enteredAt ? t.open.enteredAt.slice(0,10) : '';
+    return {
+      external_id: `tdv_fill_${date}_${t.contract}_${i}`,
+      source: 'tradovate_csv', date,
+      entered_at: t.open.enteredAt, exited_at: t.close.enteredAt,
+      pair: normalizePair(t.contract), direction: t.direction,
+      entry: t.direction === 'LONG' ? t.open.price : t.close.price,
+      exit_price: t.direction === 'LONG' ? t.close.price : t.open.price,
+      size: t.qty,
+      result: Math.round(t.pnlBrut * 100) / 100,
+      fees: t.totalFees, commissions: t.totalComm,
+      result_net: Math.round(t.resultNet * 100) / 100,
+      outcome: t.resultNet > 0 ? 'WIN' : t.resultNet < 0 ? 'LOSS' : 'BE',
+      duration: null, stop: 0, tp: 0, rr: null, emotion: null, notes: null, screenshot: null,
+    };
+  });
+}
+
+/**
  * Parse Tradovate cash ledger CSV (Account, Transaction ID, Timestamp, Date, Delta, Amount, Cash Change Type, ...)
  * Groups rows by Transaction ID: P&L row = trade, Commission/Fee rows = costs.
  */
@@ -222,9 +362,10 @@ function parseTradovateLedger(rows) {
   return trades;
 }
 
-function mapRow(row, source) {
-  if (source === 'topstep')       return mapTopstepRow(row);
-  if (source === 'tradovate_api') return mapTradovateRow(row);
+function mapRow(row, source, idx) {
+  if (source === 'topstep')        return mapTopstepRow(row);
+  if (source === 'tradovate_api')  return mapTradovateRow(row);
+  if (source === 'tradovate_perf') return mapTradovatePerfRow(row, idx);
   return null;
 }
 
@@ -241,10 +382,12 @@ function pnlColor(v) {
 }
 
 const SOURCE_INFO = {
-  topstep:       { label: 'Topstep',   color: '#00ff88', icon: <TopstepLogo size={18} /> },
-  tradovate:     { label: 'Tradovate', color: '#00aaff', icon: <TradovateLogo size={18} /> },
-  tradovate_api: { label: 'Tradovate', color: '#00aaff', icon: <TradovateLogo size={18} /> },
-  unknown:       { label: 'Inconnu',   color: '#f0a020', icon: '❓' },
+  topstep:        { label: 'Topstep',                color: '#00ff88', icon: <TopstepLogo size={18} /> },
+  tradovate:      { label: 'Tradovate (Ledger)',      color: '#00aaff', icon: <TradovateLogo size={18} /> },
+  tradovate_perf: { label: 'Tradovate (Performance)', color: '#00aaff', icon: <TradovateLogo size={18} /> },
+  tradovate_fills:{ label: 'Tradovate (Fills)',       color: '#00aaff', icon: <TradovateLogo size={18} /> },
+  tradovate_api:  { label: 'Tradovate (API)',         color: '#00aaff', icon: <TradovateLogo size={18} /> },
+  unknown:        { label: 'Inconnu',                color: '#f0a020', icon: '❓' },
 };
 
 function TopstepLogo({ size = 24 }) {
@@ -314,11 +457,13 @@ function DropZone({ onFile, disabled }) {
 
 function PreviewRow({ trade, idx, duplicate }) {
   const net = trade.result_net ?? 0;
+  const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—';
+  const totalFees = (trade.fees ?? 0) + (trade.commissions ?? 0);
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: '32px 90px 55px 65px 70px 70px 55px 90px 70px 1fr',
-      gap: '6px',
+      gridTemplateColumns: '28px 86px 90px 60px 60px 55px 90px 75px 70px 1fr',
+      gap: '5px',
       alignItems: 'center',
       padding: '7px 10px',
       background: duplicate
@@ -331,8 +476,11 @@ function PreviewRow({ trade, idx, duplicate }) {
     }}>
       <span style={{ color: '#2a5a32', fontSize: '10px' }}>{idx + 1}</span>
       <span style={{ color: '#4a7a5a', fontSize: '10px' }}>{trade.date}</span>
-      <span style={{ color: '#6a8a7a', fontSize: '10px' }}>
-        {trade.entered_at ? new Date(trade.entered_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—'}
+      <span style={{ color: '#6a8a7a', fontSize: '10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+        <span>{fmtTime(trade.entered_at)}</span>
+        {trade.exited_at && trade.exited_at !== trade.entered_at && (
+          <span style={{ color: '#4a6a5a' }}>↓{fmtTime(trade.exited_at)}</span>
+        )}
       </span>
       <span style={{ color: '#c8d8c8', fontWeight: '600' }}>{trade.pair}</span>
       <span style={{
@@ -341,13 +489,13 @@ function PreviewRow({ trade, idx, duplicate }) {
         background: `rgba(${trade.direction === 'LONG' ? '0,255,136' : '255,68,85'},0.08)`,
         padding: '1px 5px', borderRadius: '3px', textAlign: 'center',
       }}>{trade.direction}</span>
-      <span style={{ color: '#8aaa90' }}>{trade.entry?.toFixed(2) ?? '—'}</span>
       <span style={{ color: '#8aaa90' }}>{trade.size ?? '—'}</span>
       <span style={{ color: pnlColor(net), fontWeight: '700' }}>{fmt(net, true)}</span>
+      <span style={{ color: '#f0a020', fontSize: '10px' }}>{totalFees > 0 ? `-${totalFees.toFixed(2)}$` : '—'}</span>
       <span style={{ color: '#4a7a5a', fontSize: '10px' }}>{trade.duration ?? '—'}</span>
       {duplicate
         ? <span style={{ color: '#f0a020', fontSize: '10px' }}>⚠ Déjà importé</span>
-        : <span style={{ color: '#2a5a32', fontSize: '10px' }}>{trade.outcome ?? '—'}</span>
+        : <span style={{ color: pnlColor(net), fontSize: '10px', fontWeight: '700' }}>{trade.outcome ?? '—'}</span>
       }
     </div>
   );
@@ -377,13 +525,15 @@ export default function CsvImport() {
     setSource(detectedSource);
 
     if (detectedSource === 'unknown') {
-      setError('Format CSV non reconnu. Seuls les exports Topstep et Tradovate sont supportés pour le moment.');
+      setError('Format CSV non reconnu. Exports supportés : Topstep · Tradovate Performance · Tradovate Fills · Tradovate Ledger. Voir les instructions ci-dessous.');
       return;
     }
 
     const mapped = detectedSource === 'tradovate'
       ? parseTradovateLedger(rows)
-      : rows.map(r => mapRow(r, detectedSource)).filter(Boolean);
+      : detectedSource === 'tradovate_fills'
+        ? parseTradovateFills(rows)
+        : rows.map((r, i) => mapRow(r, detectedSource, i)).filter(Boolean);
 
     // Check duplicates against existing trades
     let existingIds = new Set();
@@ -482,20 +632,39 @@ export default function CsvImport() {
             </div>
           )}
           {/* Instructions */}
-          <div style={{ background: 'rgba(10,28,18,0.3)', border: '1px solid rgba(0,255,136,0.06)', borderRadius: '8px', padding: '16px 20px' }}>
-            <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>COMMENT EXPORTER DEPUIS TOPSTEP</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {[
-                'Connecte-toi sur topstep.com',
-                'Va dans "Trading History" ou "Performance"',
-                'Clique sur "Export" → sélectionne la période',
-                'Télécharge le fichier CSV et glisse-le ici',
-              ].map((step, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                  <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#00ff88', flexShrink: 0, marginTop: '1px' }}>{i + 1}</div>
-                  <span style={{ fontSize: '12px', color: '#8aaa90', lineHeight: '1.5' }}>{step}</span>
-                </div>
-              ))}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div style={{ background: 'rgba(10,28,18,0.3)', border: '1px solid rgba(0,255,136,0.06)', borderRadius: '8px', padding: '16px 20px' }}>
+              <div style={{ fontSize: '10px', color: '#00ff88', letterSpacing: '2px', marginBottom: '12px' }}>TOPSTEP — EXPORT CSV</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  'Connecte-toi sur topstep.com',
+                  'Va dans "Trading History" ou "Performance"',
+                  'Clique sur "Export" → sélectionne la période',
+                  'Télécharge le CSV et glisse-le ici',
+                ].map((s, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#00ff88', flexShrink: 0, marginTop: '1px' }}>{i + 1}</div>
+                    <span style={{ fontSize: '11px', color: '#8aaa90', lineHeight: '1.5' }}>{s}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ background: 'rgba(0,170,255,0.03)', border: '1px solid rgba(0,170,255,0.08)', borderRadius: '8px', padding: '16px 20px' }}>
+              <div style={{ fontSize: '10px', color: '#00aaff', letterSpacing: '2px', marginBottom: '8px' }}>TRADOVATE — 3 FORMATS SUPPORTÉS</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {[
+                  { title: 'Performance (recommandé)', steps: ['Onglet "Trade History" → "Performance"', 'Filtrer la période → Export CSV', 'Colonnes : Contract, Opened At, Closed At, Qty, P&L, Fee'] },
+                  { title: 'Fills (fills individuels)', steps: ['Onglet "Orders" ou "Fills"', 'Export CSV — chaque ligne = un fill Buy/Sell', 'Colonnes : timestamp, contractId, qty, price, action'] },
+                  { title: 'Ledger (relevé de compte)', steps: ['Onglet "Account" → "Activity"', 'Export CSV — lignes P&L + frais groupées', 'Colonnes : Transaction ID, Cash Change Type, Amount'] },
+                ].map(({ title, steps }) => (
+                  <div key={title}>
+                    <div style={{ fontSize: '10px', color: '#4a8aaa', marginBottom: '4px', fontWeight: '600' }}>▸ {title}</div>
+                    {steps.map((s, i) => (
+                      <div key={i} style={{ fontSize: '10px', color: '#6a8a9a', paddingLeft: '10px', lineHeight: '1.6' }}>• {s}</div>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -542,8 +711,8 @@ export default function CsvImport() {
 
           {/* Table header */}
           <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '32px 90px 55px 65px 70px 70px 55px 90px 70px 1fr', gap: '6px', padding: '8px 10px', fontSize: '9px', color: '#2a5a32', letterSpacing: '1.5px', borderBottom: '1px solid rgba(0,255,136,0.06)', background: 'rgba(0,0,0,0.2)' }}>
-              <span>#</span><span>DATE</span><span>HEURE</span><span>PAIRE</span><span>DIR.</span><span>ENTRÉE</span><span>TAILLE</span><span>P&L NET</span><span>DURÉE</span><span>STATUT</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '28px 86px 90px 60px 60px 55px 90px 75px 70px 1fr', gap: '5px', padding: '8px 10px', fontSize: '9px', color: '#2a5a32', letterSpacing: '1.5px', borderBottom: '1px solid rgba(0,255,136,0.06)', background: 'rgba(0,0,0,0.2)' }}>
+              <span>#</span><span>DATE</span><span>ENTRÉE/SORTIE</span><span>PAIRE</span><span>DIR.</span><span>TAILLE</span><span>P&L NET</span><span style={{ color: '#5a4a20' }}>FRAIS</span><span>DURÉE</span><span>STATUT</span>
             </div>
             <div style={{ maxHeight: '380px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px', padding: '6px' }}>
               {trades.map((t, i) => (
