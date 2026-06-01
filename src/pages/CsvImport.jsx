@@ -9,11 +9,15 @@ import { useNavigate } from 'react-router-dom';
 function detectSource(headers) {
   const h = headers.map(x => x.trim().toLowerCase());
   if (h.includes('contractname') && h.includes('enteredat') && h.includes('tradeday')) return 'topstep';
+  // Tradovate Performance export (buyFillId + sellFillId + boughtTimestamp + soldTimestamp + pnl)
+  if (h.includes('buyfillid') && h.includes('sellfillid') &&
+      h.includes('boughttimestamp') && h.includes('soldtimestamp'))
+    return 'tradovate_perf';
   // Tradovate Orders export (B/S column + Product + Fill Time + avgPrice)
   if (h.includes('b/s') && h.includes('product') &&
       (h.includes('fill time') || h.includes('avgprice') || h.includes('avg fill price')))
     return 'tradovate_orders';
-  // Tradovate Performance/Trade History export (entrée + sortie séparées)
+  // Tradovate Performance générique (opened at / closed at)
   if ((h.some(x => x === 'opened at' || x === 'entry time' || x === 'open time' || x === 'entrytime')) &&
       (h.some(x => x === 'closed at'  || x === 'exit time'  || x === 'close time' || x === 'closetime')))
     return 'tradovate_perf';
@@ -69,7 +73,12 @@ function parseCsv(raw) {
 
 function parseTradovateDate(str) {
   if (!str) return null;
-  try { return new Date(str).toISOString(); } catch { return null; }
+  try {
+    // "MM/DD/YYYY HH:MM:SS" (format Tradovate)
+    const m = str.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{2}:\d{2}:\d{2})$/);
+    if (m) return new Date(`${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}T${m[4]}`).toISOString();
+    return new Date(str).toISOString();
+  } catch { return null; }
 }
 
 /**
@@ -193,40 +202,69 @@ function mapTradovateRow(row) {
 }
 
 /**
- * Tradovate Performance/Trade History export (une ligne = un trade complet)
- * Colonnes typiques : Contract, Opened At/Entry Time, Closed At/Exit Time,
- *   Qty, Buy Avg Fill, Sell Avg Fill, Gross P&L, Commission, Fee, Net P&L
+ * Tradovate Performance export — une ligne = un trade complet
+ * Colonnes réelles : symbol, buyFillId, sellFillId, qty, buyPrice, sellPrice,
+ *   pnl (format "$(420.00)"), boughtTimestamp, soldTimestamp, duration
  */
 function mapTradovatePerfRow(row, idx) {
-  const get = (...keys) => { for (const k of keys) if (row[k]) return row[k]; return ''; };
-  const enteredAt = parseTradovateDate(get('Opened At','Entry Time','Open Time','opentime','EntryTime'));
-  const exitedAt  = parseTradovateDate(get('Closed At','Exit Time','Close Time','closetime','ExitTime'));
-  const date      = enteredAt ? enteredAt.slice(0,10) : (exitedAt ? exitedAt.slice(0,10) : '');
-  const contract  = get('Contract','Symbol','ContractId','contractId');
-  const qty       = parseFloat(get('Qty','Size','Quantity')) || 1;
-  const pnlBrut   = parseFloat(get('Gross P&L','GrossPnL','Trade P&L','TradePnL')) || 0;
-  const commissions = parseFloat(get('Commission','Commissions')) || 0;
-  const fees      = parseFloat(get('Fee','Fees','Clearing Fee','ClearingFee')) || 0;
-  const netRaw    = get('Net P&L','NetPnL','Net Trade P&L','NetTradePnL');
-  const resultNet = netRaw ? (parseFloat(netRaw) || 0) : pnlBrut - commissions - fees;
-  const buyFill   = parseFloat(get('Buy Avg Fill','Buy Avg Price','BuyAvgFill','Entry Price','EntryPrice')) || 0;
-  const sellFill  = parseFloat(get('Sell Avg Fill','Sell Avg Price','SellAvgFill','Exit Price','ExitPrice'))  || 0;
-  const sideRaw   = get('Side','Action','Direction').toLowerCase();
-  let direction = 'LONG';
-  if (sideRaw.includes('short') || sideRaw === 's') direction = 'SHORT';
-  else if (buyFill > 0 && sellFill > 0) direction = buyFill <= sellFill ? 'LONG' : 'SHORT';
-  const entry    = direction === 'LONG' ? buyFill  : sellFill;
-  const exitPrice = direction === 'LONG' ? sellFill : buyFill;
-  const rawId    = get('Trade ID','tradeId','OrderId','orderId');
+  // Parse "$(420.00)" → -420  |  "$420.00" → 420
+  function parsePnl(str) {
+    if (!str) return 0;
+    const s = str.trim();
+    const neg = s.match(/^\$\(([0-9,.]+)\)$/);
+    if (neg) return -parseFloat(neg[1].replace(/,/g, ''));
+    const pos = s.match(/^\$([0-9,.]+)$/);
+    if (pos) return parseFloat(pos[1].replace(/,/g, ''));
+    return parseFloat(s.replace(/[$(),]/g, '')) || 0;
+  }
+
+  // Normalise "6min 30sec" / "3h 31min 28sec" → "6m 30s" / "3h 31m"
+  function normDur(str) {
+    if (!str) return null;
+    return str.replace(/(\d+)h/g, '$1h ').replace(/(\d+)min/g, '$1m ').replace(/(\d+)sec/g, '$1s').trim();
+  }
+
+  const boughtTs  = parseTradovateDate(row['boughtTimestamp']);
+  const soldTs    = parseTradovateDate(row['soldTimestamp']);
+  const buyPrice  = parseFloat(row['buyPrice'])  || 0;
+  const sellPrice = parseFloat(row['sellPrice']) || 0;
+  const qty       = parseFloat(row['qty'])       || 1;
+  const pnl       = parsePnl(row['pnl']);
+  const contract  = (row['symbol'] || '').trim();
+
+  // Direction : acheté avant vendu → LONG ; vendu avant acheté → SHORT
+  const isLong    = !soldTs || (boughtTs && boughtTs <= soldTs);
+  const direction = isLong ? 'LONG' : 'SHORT';
+  const enteredAt = isLong ? boughtTs  : soldTs;
+  const exitedAt  = isLong ? soldTs    : boughtTs;
+  const entry     = isLong ? buyPrice  : sellPrice;
+  const exitPrice = isLong ? sellPrice : buyPrice;
+  const date      = enteredAt ? enteredAt.slice(0, 10) : '';
+
+  const buyId  = row['buyFillId']  || '';
+  const sellId = row['sellFillId'] || '';
+  const extId  = buyId && sellId
+    ? `tdv_perf_${buyId}_${sellId}`
+    : `tdv_perf_${date}_${contract}_${idx}`;
+
   return {
-    external_id: rawId ? `tdv_${rawId}` : `tdv_perf_${date}_${contract}_${idx}`,
-    source: 'tradovate_csv', date, entered_at: enteredAt, exited_at: exitedAt,
-    pair: normalizePair(contract), direction,
-    entry: entry || 0, exit_price: exitPrice || null, size: qty,
-    result: pnlBrut, fees, commissions,
-    result_net: Math.round(resultNet * 100) / 100,
-    outcome: resultNet > 0 ? 'WIN' : resultNet < 0 ? 'LOSS' : 'BE',
-    duration: null, stop: 0, tp: 0, rr: null, emotion: null, notes: null, screenshot: null,
+    external_id:  extId,
+    source:       'tradovate_csv',
+    date,
+    entered_at:   enteredAt,
+    exited_at:    exitedAt,
+    pair:         normalizePair(contract),
+    direction,
+    entry,
+    exit_price:   exitPrice,
+    size:         qty,
+    result:       pnl,
+    fees:         0,
+    commissions:  0,
+    result_net:   pnl,
+    outcome:      pnl > 0 ? 'WIN' : pnl < 0 ? 'LOSS' : 'BE',
+    duration:     normDur(row['duration']),
+    stop: 0, tp: 0, rr: null, emotion: null, notes: null, screenshot: null,
   };
 }
 
