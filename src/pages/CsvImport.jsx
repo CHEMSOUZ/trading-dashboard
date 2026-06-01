@@ -9,17 +9,21 @@ import { useNavigate } from 'react-router-dom';
 function detectSource(headers) {
   const h = headers.map(x => x.trim().toLowerCase());
   if (h.includes('contractname') && h.includes('enteredat') && h.includes('tradeday')) return 'topstep';
+  // Tradovate Orders export (B/S column + Product + Fill Time + avgPrice)
+  if (h.includes('b/s') && h.includes('product') &&
+      (h.includes('fill time') || h.includes('avgprice') || h.includes('avg fill price')))
+    return 'tradovate_orders';
   // Tradovate Performance/Trade History export (entrée + sortie séparées)
   if ((h.some(x => x === 'opened at' || x === 'entry time' || x === 'open time' || x === 'entrytime')) &&
       (h.some(x => x === 'closed at'  || x === 'exit time'  || x === 'close time' || x === 'closetime')))
     return 'tradovate_perf';
-  // Tradovate Fills export (fills individuels buy/sell)
+  // Tradovate Fills export générique (fills individuels buy/sell)
   if ((h.includes('timestamp') || h.includes('fill time')) &&
       (h.includes('action') || h.includes('side')) &&
       (h.includes('contractid') || h.includes('contract id')) &&
       h.includes('qty'))
     return 'tradovate_fills';
-  // Tradovate cash ledger export (Account, Transaction ID, Timestamp, Date, Delta, Amount, Cash Change Type, ...)
+  // Tradovate cash ledger export
   if (h.includes('transaction id') && h.includes('cash change type') && (h.includes('contract') || h.includes('contractid'))) return 'tradovate';
   // Tradovate API-style export (legacy)
   if (h.includes('symbol') && h.includes('buyfillid') && h.includes('clearingfees')) return 'tradovate_api';
@@ -227,6 +231,128 @@ function mapTradovatePerfRow(row, idx) {
 }
 
 /**
+ * Tradovate Orders export — apparie les ordres Buy/Sell (FIFO) pour reconstituer les trades
+ * Colonnes réelles : B/S, Product, avgPrice, filledQty, Fill Time, Notional Value, Status
+ */
+function parseTradovateOrders(rows) {
+  // Parse "MM/DD/YYYY HH:MM:SS" ou "M/D/YY" → ISO
+  function parseOrderDate(str) {
+    if (!str) return null;
+    try {
+      // MM/DD/YYYY HH:MM:SS
+      const m1 = str.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{2}:\d{2}:\d{2})$/);
+      if (m1) return new Date(`${m1[3]}-${m1[1].padStart(2,'0')}-${m1[2].padStart(2,'0')}T${m1[4]}`).toISOString();
+      // M/D/YY
+      const m2 = str.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+      if (m2) return new Date(`20${m2[3]}-${m2[1].padStart(2,'0')}-${m2[2].padStart(2,'0')}T00:00:00`).toISOString();
+      return new Date(str).toISOString();
+    } catch { return null; }
+  }
+
+  function calcDuration(start, end) {
+    if (!start || !end) return null;
+    const diff = new Date(end) - new Date(start);
+    if (diff <= 0) return null;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  }
+
+  // Multiplicateurs connus ($ par point, par contrat)
+  const MULT = { MNQ:2, NQ:20, MES:5, ES:50, MGC:10, GC:100, M2K:5, RTY:50, MCL:100, CL:1000 };
+  const multCache = new Map();
+
+  function getMultiplier(product, notionalStr, qty, price) {
+    if (multCache.has(product)) return multCache.get(product);
+    if (MULT[product]) { multCache.set(product, MULT[product]); return MULT[product]; }
+    const notional = parseFloat((notionalStr || '0').replace(/,/g, '').replace(/[^0-9.]/g, ''));
+    if (notional > 0 && qty > 0 && price > 0) {
+      const m = Math.round((notional / (qty * price)) * 10) / 10;
+      if (m > 0) { multCache.set(product, m); return m; }
+    }
+    return 1;
+  }
+
+  // Garder uniquement les ordres remplis, trier par Fill Time
+  const sorted = rows
+    .filter(r => {
+      const status = (r['Status'] || '').trim().toLowerCase();
+      return status === 'filled' || status === '';
+    })
+    .sort((a, b) => {
+      const ta = parseOrderDate(a['Fill Time'] || a['Timestamp'] || '') || '';
+      const tb = parseOrderDate(b['Fill Time'] || b['Timestamp'] || '') || '';
+      return ta < tb ? -1 : ta > tb ? 1 : 0;
+    });
+
+  const queues = new Map(); // product → { buys: [], sells: [] }
+  const completed = [];
+
+  for (const row of sorted) {
+    const bs      = (row['B/S'] || '').trim().toUpperCase();
+    const product = (row['Product'] || '').trim();
+    const price   = parseFloat(row['avgPrice'] || row['Avg Fill Price'] || '0') || 0;
+    const qty     = Math.abs(parseFloat(row['filledQty'] || row['Filled Qty'] || row['Quantity'] || '1')) || 1;
+    const notional = row['Notional Value'] || '';
+    const fillTime = parseOrderDate(row['Fill Time'] || row['Timestamp'] || '');
+
+    if (!product || !price || (!bs.startsWith('B') && !bs.startsWith('S'))) continue;
+    const mult = getMultiplier(product, notional, qty, price);
+
+    if (!queues.has(product)) queues.set(product, { buys: [], sells: [] });
+    const q = queues.get(product);
+    const fill = { price, qty, fillTime, mult, product };
+
+    if (bs.startsWith('B')) {
+      // BUY : ferme un SHORT ou ouvre un LONG
+      if (q.sells.length > 0) {
+        const open = q.sells.shift();
+        completed.push({ dir: 'SHORT', open, close: fill });
+      } else {
+        q.buys.push(fill);
+      }
+    } else {
+      // SELL : ferme un LONG ou ouvre un SHORT
+      if (q.buys.length > 0) {
+        const open = q.buys.shift();
+        completed.push({ dir: 'LONG', open, close: fill });
+      } else {
+        q.sells.push(fill);
+      }
+    }
+  }
+
+  return completed.map((t, i) => {
+    const entryFill = t.dir === 'LONG' ? t.open  : t.close;
+    const exitFill  = t.dir === 'LONG' ? t.close : t.open;
+    const pnl = Math.round((exitFill.price - entryFill.price) * t.open.qty * t.open.mult * 100) / 100;
+    const date = t.open.fillTime ? t.open.fillTime.slice(0,10) : '';
+    return {
+      external_id: `tdv_ord_${date}_${t.open.product}_${i}`,
+      source:      'tradovate_csv',
+      date,
+      entered_at:  t.open.fillTime,
+      exited_at:   t.close.fillTime,
+      pair:        normalizePair(t.open.product),
+      direction:   t.dir,
+      entry:       entryFill.price,
+      exit_price:  exitFill.price,
+      size:        t.open.qty,
+      result:      pnl,
+      fees:        0,
+      commissions: 0,
+      result_net:  pnl,
+      outcome:     pnl > 0 ? 'WIN' : pnl < 0 ? 'LOSS' : 'BE',
+      duration:    calcDuration(t.open.fillTime, t.close.fillTime),
+      stop: 0, tp: 0, rr: null, emotion: null, notes: null, screenshot: null,
+    };
+  });
+}
+
+/**
  * Tradovate Fills export — apparie les fills Buy/Sell en FIFO pour reconstituer les trades
  * Colonnes : timestamp, contractId, qty, price, action (Buy/Sell), commission, clearingFee
  */
@@ -382,12 +508,13 @@ function pnlColor(v) {
 }
 
 const SOURCE_INFO = {
-  topstep:        { label: 'Topstep',                color: '#00ff88', icon: <TopstepLogo size={18} /> },
-  tradovate:      { label: 'Tradovate (Ledger)',      color: '#00aaff', icon: <TradovateLogo size={18} /> },
-  tradovate_perf: { label: 'Tradovate (Performance)', color: '#00aaff', icon: <TradovateLogo size={18} /> },
-  tradovate_fills:{ label: 'Tradovate (Fills)',       color: '#00aaff', icon: <TradovateLogo size={18} /> },
-  tradovate_api:  { label: 'Tradovate (API)',         color: '#00aaff', icon: <TradovateLogo size={18} /> },
-  unknown:        { label: 'Inconnu',                color: '#f0a020', icon: '❓' },
+  topstep:          { label: 'Topstep',                 color: '#00ff88', icon: <TopstepLogo size={18} /> },
+  tradovate:        { label: 'Tradovate (Ledger)',       color: '#00aaff', icon: <TradovateLogo size={18} /> },
+  tradovate_orders: { label: 'Tradovate (Orders)',       color: '#00aaff', icon: <TradovateLogo size={18} /> },
+  tradovate_perf:   { label: 'Tradovate (Performance)',  color: '#00aaff', icon: <TradovateLogo size={18} /> },
+  tradovate_fills:  { label: 'Tradovate (Fills)',        color: '#00aaff', icon: <TradovateLogo size={18} /> },
+  tradovate_api:    { label: 'Tradovate (API)',          color: '#00aaff', icon: <TradovateLogo size={18} /> },
+  unknown:          { label: 'Inconnu',                 color: '#f0a020', icon: '❓' },
 };
 
 function TopstepLogo({ size = 24 }) {
@@ -531,9 +658,11 @@ export default function CsvImport() {
 
     const mapped = detectedSource === 'tradovate'
       ? parseTradovateLedger(rows)
-      : detectedSource === 'tradovate_fills'
-        ? parseTradovateFills(rows)
-        : rows.map((r, i) => mapRow(r, detectedSource, i)).filter(Boolean);
+      : detectedSource === 'tradovate_orders'
+        ? parseTradovateOrders(rows)
+        : detectedSource === 'tradovate_fills'
+          ? parseTradovateFills(rows)
+          : rows.map((r, i) => mapRow(r, detectedSource, i)).filter(Boolean);
 
     // Check duplicates against existing trades
     let existingIds = new Set();
@@ -650,12 +779,11 @@ export default function CsvImport() {
               </div>
             </div>
             <div style={{ background: 'rgba(0,170,255,0.03)', border: '1px solid rgba(0,170,255,0.08)', borderRadius: '8px', padding: '16px 20px' }}>
-              <div style={{ fontSize: '10px', color: '#00aaff', letterSpacing: '2px', marginBottom: '8px' }}>TRADOVATE — 3 FORMATS SUPPORTÉS</div>
+              <div style={{ fontSize: '10px', color: '#00aaff', letterSpacing: '2px', marginBottom: '8px' }}>TRADOVATE — EXPORT ORDERS (recommandé)</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {[
-                  { title: 'Performance (recommandé)', steps: ['Onglet "Trade History" → "Performance"', 'Filtrer la période → Export CSV', 'Colonnes : Contract, Opened At, Closed At, Qty, P&L, Fee'] },
-                  { title: 'Fills (fills individuels)', steps: ['Onglet "Orders" ou "Fills"', 'Export CSV — chaque ligne = un fill Buy/Sell', 'Colonnes : timestamp, contractId, qty, price, action'] },
-                  { title: 'Ledger (relevé de compte)', steps: ['Onglet "Account" → "Activity"', 'Export CSV — lignes P&L + frais groupées', 'Colonnes : Transaction ID, Cash Change Type, Amount'] },
+                  { title: 'Orders / Ordres (format détecté ✓)', steps: ['Connecte-toi sur trader.tradovate.com', 'Menu latéral → "Orders" (Ordres)', 'Filtre : Status = "Filled" + période', 'Icône export (↓) → Download CSV', 'Colonnes clés : B/S, Product, avgPrice, filledQty, Fill Time'] },
+                  { title: 'Ledger (relevé de compte)', steps: ['Menu latéral → "Account" → "Activity"', 'Export CSV', 'Colonnes : Transaction ID, Cash Change Type, Amount, Contract'] },
                 ].map(({ title, steps }) => (
                   <div key={title}>
                     <div style={{ fontSize: '10px', color: '#4a8aaa', marginBottom: '4px', fontWeight: '600' }}>▸ {title}</div>
@@ -664,6 +792,9 @@ export default function CsvImport() {
                     ))}
                   </div>
                 ))}
+                <div style={{ fontSize: '9px', color: '#3a5a6a', padding: '6px 8px', background: 'rgba(0,170,255,0.05)', borderRadius: '3px', borderLeft: '2px solid rgba(0,170,255,0.2)' }}>
+                  ℹ️ Les ordres Canceled sont ignorés automatiquement. Les frais ne sont pas dans cet export — tu peux les ajouter manuellement dans le Journal.
+                </div>
               </div>
             </div>
           </div>
