@@ -30,21 +30,30 @@ const NAV = [
 
 // -- Status detection ----------------------------------------
 const ACCOUNT_RULES = {
-  topstep_50k:       { size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
-  topstep_100k:      { size: 100000, maxLoss: 3000, dailyLoss: 2000 },
-  topstep_150k:      { size: 150000, maxLoss: 4500, dailyLoss: 3000 },
-  topstep_ef_50k:    { size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
-  topstep_ef_100k:   { size: 100000, maxLoss: 3000, dailyLoss: 2000 },
-  topstep_ef_150k:   { size: 150000, maxLoss: 4500, dailyLoss: 3000 },
-  tradovate_live:    { size: 50000,  maxLoss: 2000,  dailyLoss: null, profitTarget: 3000, minDays: 0, consistencyPct: 0.50 },
-  tradovate_demo:    { size: null,   maxLoss: null,  dailyLoss: null },
-  perso:             { size: null,   maxLoss: null,  dailyLoss: null },
-  autre:             { size: null,   maxLoss: null,  dailyLoss: null },
+  topstep_50k:         { size: 50000,  maxLoss: 2000, dailyLoss: 1000, profitTarget: 3000, minDays: 2, consistencyPct: 0.50 },
+  topstep_100k:        { size: 100000, maxLoss: 3000, dailyLoss: 2000, profitTarget: 6000, minDays: 2, consistencyPct: 0.50 },
+  topstep_150k:        { size: 150000, maxLoss: 4500, dailyLoss: 3000, profitTarget: 9000, minDays: 2, consistencyPct: 0.50 },
+  topstep_ef_50k:      { size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
+  topstep_ef_100k:     { size: 100000, maxLoss: 3000, dailyLoss: 2000 },
+  topstep_ef_150k:     { size: 150000, maxLoss: 4500, dailyLoss: 3000 },
+  lucid_eval_25k:      { size: 25000,  maxLoss: 1000, dailyLoss: null, profitTarget: 1250, minDays: 0, consistencyPct: 0.50 },
+  lucid_eval_50k:      { size: 50000,  maxLoss: 2000, dailyLoss: null, profitTarget: 3000, minDays: 0, consistencyPct: 0.50 },
+  lucid_eval_100k:     { size: 100000, maxLoss: 3000, dailyLoss: null, profitTarget: 6000, minDays: 0, consistencyPct: 0.50 },
+  lucid_eval_150k:     { size: 150000, maxLoss: 4500, dailyLoss: null, profitTarget: 9000, minDays: 0, consistencyPct: 0.50 },
+  lucid_funded_25k:    { size: 25000,  maxLoss: 1000, dailyLoss: 1000 },
+  lucid_funded_50k:    { size: 50000,  maxLoss: 2500, dailyLoss: 2000 },
+  lucid_funded_100k:   { size: 100000, maxLoss: 3000, dailyLoss: 3000 },
+  lucid_funded_150k:   { size: 150000, maxLoss: 4500, dailyLoss: 4500 },
+  tradovate_live:      { size: 50000,  maxLoss: 2000, dailyLoss: null, profitTarget: 3000, minDays: 0, consistencyPct: 0.50 },
+  tradovate_demo:      { size: null,   maxLoss: null,  dailyLoss: null },
+  perso:               { size: null,   maxLoss: null,  dailyLoss: null },
+  autre:               { size: null,   maxLoss: null,  dailyLoss: null },
 };
 
-const CHALLENGE_TYPES     = new Set(['topstep_50k','topstep_100k','topstep_150k']);
-const EXPRESS_FUNDED_TYPES = new Set(['topstep_ef_50k','topstep_ef_100k','topstep_ef_150k']);
-const LUCID_EVAL_TYPES    = new Set(['tradovate_live']);
+const CHALLENGE_TYPES      = new Set(['topstep_50k','topstep_100k','topstep_150k']);
+const EXPRESS_FUNDED_TYPES = new Set(['topstep_ef_50k','topstep_ef_100k','topstep_ef_150k',
+                                      'lucid_funded_25k','lucid_funded_50k','lucid_funded_100k','lucid_funded_150k']);
+const LUCID_EVAL_TYPES     = new Set(['lucid_eval_25k','lucid_eval_50k','lucid_eval_100k','lucid_eval_150k','tradovate_live']);
 
 async function computeBlownStatus(acc, currentActiveId) {
   const rules = ACCOUNT_RULES[acc.type];
@@ -88,14 +97,16 @@ async function computeBlownStatus(acc, currentActiveId) {
       }
     }
 
-    // ── Validated: challenge type (Topstep) ─────────────────
+    // ── Validated: challenge type (Topstep Combine) ─────────
     let isValidated = false;
-    if (CHALLENGE_TYPES.has(acc.type) && sorted.length > 0) {
-      const firstDate = sorted[0].entered_at?.slice(0, 10) ?? sorted[0].date ?? '';
-      const firstDayPnl = sorted
-        .filter(t => (t.entered_at?.slice(0, 10) ?? t.date ?? '') === firstDate)
-        .reduce((s, t) => s + (t.result_net ?? t.result ?? 0), 0);
-      isValidated = totalPnl >= 3000 && firstDayPnl < 1500;
+    if (CHALLENGE_TYPES.has(acc.type) && sorted.length > 0 && rules.profitTarget) {
+      const byDay2 = {};
+      for (const t of sorted) {
+        const d = t.entered_at?.slice(0, 10) ?? t.date ?? '';
+        if (d) byDay2[d] = (byDay2[d] ?? 0) + (t.result_net ?? t.result ?? 0);
+      }
+      const tradingDays2 = Object.keys(byDay2).length;
+      isValidated = totalPnl >= rules.profitTarget && tradingDays2 >= (rules.minDays ?? 2);
     }
 
     // ── Validated: Lucid Eval (tradovate_live) ───────────────
@@ -167,6 +178,12 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
     if (currentId) { try { await window.accounts.setActive(currentId); } catch {} }
     setAccountStatuses(statuses);
   }
+
+  // Recharger quand une page change le type du compte
+  useEffect(() => {
+    window.addEventListener('account-updated', loadAccounts);
+    return () => window.removeEventListener('account-updated', loadAccounts);
+  }, []);
 
   // ── Resize ────────────────────────────────────────────────
   const onMouseDown = useCallback((e) => {
@@ -254,7 +271,8 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                 const isActive = a.id === activeAccount?.id;
                 const isEF = st?.isExpressFunded ?? false;
                 const isVal = st?.isValidated ?? false;
-                const dotColor = isBlown ? '#ff4455' : isEF ? '#f0c020' : '#00ff88';
+                const isLucidFunded = a.type?.startsWith('lucid_funded');
+                const dotColor = isBlown ? '#ff4455' : (isEF || isLucidFunded) ? '#f0c020' : '#00ff88';
                 const bgNormal = isBlown ? 'rgba(255,68,85,0.06)' : isEF ? 'rgba(240,192,32,0.06)' : 'rgba(0,255,136,0.06)';
                 const borderAccent = isBlown ? 'rgba(255,68,85,0.4)' : isEF ? 'rgba(240,192,32,0.4)' : 'transparent';
                 return (

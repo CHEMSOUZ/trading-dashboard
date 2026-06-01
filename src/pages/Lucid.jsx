@@ -6,25 +6,124 @@ import {
 } from 'recharts';
 
 // ── Règles Lucid ──────────────────────────────────────────────
-const LUCID_EVAL = {
-  ACCOUNT_SIZE: 50000,
-  PROFIT_TARGET: 3000,       // +6%
-  MAX_DAILY_LOSS: null,      // Pas de DLL sur LucidFlex Eval
-  MAX_TRAILING_DD: 2000,     // Max Loss Limit (4%)
-  MIN_DAYS: 0,               // Pas de minimum de jours
-  CONSISTENCY_PCT: 0.50,     // 1 jour max 50% du total net positif
+// ── Règles par taille de compte ───────────────────────────────
+const LUCID_EVAL_MAP = {
+  lucid_eval_25k:  { ACCOUNT_SIZE: 25000,  PROFIT_TARGET: 1250, MAX_TRAILING_DD: 1000, CONSISTENCY_PCT: 0.50 },
+  lucid_eval_50k:  { ACCOUNT_SIZE: 50000,  PROFIT_TARGET: 3000, MAX_TRAILING_DD: 2000, CONSISTENCY_PCT: 0.50 },
+  lucid_eval_100k: { ACCOUNT_SIZE: 100000, PROFIT_TARGET: 6000, MAX_TRAILING_DD: 3000, CONSISTENCY_PCT: 0.50 },
+  lucid_eval_150k: { ACCOUNT_SIZE: 150000, PROFIT_TARGET: 9000, MAX_TRAILING_DD: 4500, CONSISTENCY_PCT: 0.50 },
+  tradovate_live:  { ACCOUNT_SIZE: 50000,  PROFIT_TARGET: 3000, MAX_TRAILING_DD: 2000, CONSISTENCY_PCT: 0.50 },
 };
-const LUCID_FUNDED = {
-  ACCOUNT_SIZE: 50000,
-  MAX_DAILY_LOSS: 2000,      // 4%
-  MAX_TRAILING_DD: 2500,     // 5%
-  PROFIT_SPLIT: 90,
-  MIN_PAYOUT_DAYS: 5,
-  MIN_DAILY_PROFIT: 150,
-  MIN_PAYOUT_AMOUNT: 500,
-  MAX_PAYOUT_AMOUNT: 2000,
-  MAX_PAYOUTS: 5,
+const LUCID_FUNDED_MAP = {
+  lucid_funded_25k:  { ACCOUNT_SIZE: 25000,  MAX_DAILY_LOSS: 1000, MAX_TRAILING_DD: 1000, PROFIT_SPLIT: 90, MIN_PAYOUT_DAYS: 5, MIN_DAILY_PROFIT: 100, MIN_PAYOUT_AMOUNT: 250,  MAX_PAYOUT_AMOUNT: 1000, MAX_PAYOUTS: 5 },
+  lucid_funded_50k:  { ACCOUNT_SIZE: 50000,  MAX_DAILY_LOSS: 2000, MAX_TRAILING_DD: 2500, PROFIT_SPLIT: 90, MIN_PAYOUT_DAYS: 5, MIN_DAILY_PROFIT: 150, MIN_PAYOUT_AMOUNT: 500,  MAX_PAYOUT_AMOUNT: 2000, MAX_PAYOUTS: 5 },
+  lucid_funded_100k: { ACCOUNT_SIZE: 100000, MAX_DAILY_LOSS: 3000, MAX_TRAILING_DD: 3000, PROFIT_SPLIT: 90, MIN_PAYOUT_DAYS: 5, MIN_DAILY_PROFIT: 250, MIN_PAYOUT_AMOUNT: 1000, MAX_PAYOUT_AMOUNT: 4000, MAX_PAYOUTS: 5 },
+  lucid_funded_150k: { ACCOUNT_SIZE: 150000, MAX_DAILY_LOSS: 4500, MAX_TRAILING_DD: 4500, PROFIT_SPLIT: 90, MIN_PAYOUT_DAYS: 5, MIN_DAILY_PROFIT: 350, MIN_PAYOUT_AMOUNT: 1500, MAX_PAYOUT_AMOUNT: 6000, MAX_PAYOUTS: 5 },
 };
+const DEFAULT_EVAL   = LUCID_EVAL_MAP['lucid_eval_50k'];
+const DEFAULT_FUNDED = LUCID_FUNDED_MAP['lucid_funded_50k'];
+
+// ── Options du sélecteur de phase ─────────────────────────────
+const LUCID_PHASE_OPTIONS = [
+  { group: '🎯 LucidFlex Evaluation', phase: 'eval', color: '#00ff88', options: [
+    { value: 'lucid_eval_25k',  label: '25K', sub: 'Profit: +1 250$ · Max Loss: -1 000$ · Pas de DLL' },
+    { value: 'lucid_eval_50k',  label: '50K', sub: 'Profit: +3 000$ · Max Loss: -2 000$ · Pas de DLL' },
+    { value: 'lucid_eval_100k', label: '100K', sub: 'Profit: +6 000$ · Max Loss: -3 000$ · Pas de DLL' },
+    { value: 'lucid_eval_150k', label: '150K', sub: 'Profit: +9 000$ · Max Loss: -4 500$ · Pas de DLL' },
+  ]},
+  { group: '💰 LucidFlex Funded (Live)', phase: 'funded', color: '#f0c020', options: [
+    { value: 'lucid_funded_25k',  label: '25K', sub: 'Payout 90% · DLL: -1 000$ · Trailing DD: -1 000$' },
+    { value: 'lucid_funded_50k',  label: '50K', sub: 'Payout 90% · DLL: -2 000$ · Trailing DD: -2 500$' },
+    { value: 'lucid_funded_100k', label: '100K', sub: 'Payout 90% · DLL: -3 000$ · Trailing DD: -3 000$' },
+    { value: 'lucid_funded_150k', label: '150K', sub: 'Payout 90% · DLL: -4 500$ · Trailing DD: -4 500$' },
+  ]},
+];
+
+// ── Phase Selector ─────────────────────────────────────────────
+function LucidPhaseSelector({ account, onChanged }) {
+  const [open, setOpen]       = useState(false);
+  const [selected, setSelected] = useState(account?.type ?? '');
+  const [saving, setSaving]   = useState(false);
+
+  const allOpts = LUCID_PHASE_OPTIONS.flatMap(g => g.options.map(o => ({ ...o, phase: g.phase, color: g.color })));
+  const current = allOpts.find(o => o.value === account?.type);
+  const groupColor = current?.color ?? '#3a6a4a';
+
+  async function confirm() {
+    if (!account || selected === account?.type) { setOpen(false); return; }
+    setSaving(true);
+    await window.accounts.update(account.id, { type: selected });
+    setSaving(false);
+    setOpen(false);
+    onChanged(selected);
+    window.dispatchEvent(new Event('account-updated'));
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <div style={{ background: `rgba(${groupColor==='#00ff88'?'0,255,136':groupColor==='#f0c020'?'240,192,32':'58,106,74'},0.04)`, border: `1px solid ${groupColor}20`, borderRadius: '6px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '3px' }}>PHASE DU COMPTE</div>
+          {current ? (
+            <div>
+              <span style={{ fontSize: '14px', fontWeight: '700', color: '#e8f8e8' }}>{current.phase === 'eval' ? '🎯' : '💰'} {account?.typeInfo?.label ?? account?.type}</span>
+              <span style={{ fontSize: '10px', color: groupColor, marginLeft: '10px' }}>{current.sub}</span>
+            </div>
+          ) : (
+            <div style={{ fontSize: '13px', color: '#f0a020' }}>⚠ Phase non définie — cliquez "Modifier" pour configurer</div>
+          )}
+        </div>
+        <button onClick={() => { setSelected(account?.type ?? ''); setOpen(true); }} style={{ background: 'rgba(0,170,255,0.1)', border: '1px solid rgba(0,170,255,0.25)', color: '#00aaff', padding: '7px 14px', borderRadius: '4px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', fontWeight: '600', whiteSpace: 'nowrap' }}>
+          Modifier →
+        </button>
+      </div>
+
+      {open && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setOpen(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#070d12', border: '1px solid rgba(0,170,255,0.3)', borderRadius: '10px', padding: '24px', width: '560px', maxWidth: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>LUCID TRADING</div>
+                <div style={{ fontSize: '16px', fontWeight: '700', color: '#e8f8e8' }}>Sélectionner la phase du compte</div>
+              </div>
+              <button onClick={() => setOpen(false)} style={{ background: 'none', border: '1px solid #1a3a22', color: '#4a7a5a', width: '28px', height: '28px', borderRadius: '50%', cursor: 'pointer', fontSize: '14px' }}>×</button>
+            </div>
+
+            {LUCID_PHASE_OPTIONS.map(grp => (
+              <div key={grp.group} style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '10px', color: grp.color, letterSpacing: '2px', marginBottom: '8px', opacity: 0.8 }}>{grp.group.toUpperCase()}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '6px' }}>
+                  {grp.options.map(opt => (
+                    <div key={opt.value} onClick={() => setSelected(opt.value)} style={{ padding: '10px 12px', borderRadius: '6px', cursor: 'pointer', background: selected === opt.value ? `rgba(${grp.color==='#00ff88'?'0,255,136':'240,192,32'},0.08)` : 'rgba(10,28,18,0.4)', border: `1px solid ${selected === opt.value ? grp.color+'44' : 'rgba(0,255,136,0.06)'}`, transition: 'all 0.15s' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+                        <div style={{ width: '14px', height: '14px', borderRadius: '50%', border: `2px solid ${selected === opt.value ? grp.color : '#2a5a3a'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          {selected === opt.value && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: grp.color }} />}
+                        </div>
+                        <span style={{ fontSize: '15px', fontWeight: '700', color: selected === opt.value ? '#e8f8e8' : '#8aaa90' }}>{opt.label}</span>
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#4a7a5a', paddingLeft: '22px' }}>{opt.sub}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div style={{ background: 'rgba(240,160,32,0.06)', border: '1px solid rgba(240,160,32,0.2)', borderRadius: '4px', padding: '8px 12px', marginBottom: '16px', fontSize: '11px', color: '#f0a020' }}>
+              ⚠ Ce choix est permanent. Éval → validé quand profit target atteint · Funded → compte LIVE dans la sidebar.
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setOpen(false)} style={{ padding: '9px 18px', borderRadius: '5px', border: '1px solid #1a3a22', background: 'transparent', color: '#5a8a6a', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>Annuler</button>
+              <button onClick={confirm} disabled={saving || !selected || selected === account?.type} style={{ padding: '9px 22px', borderRadius: '5px', background: !selected || selected === account?.type ? 'rgba(10,28,18,0.4)' : 'linear-gradient(135deg,rgba(0,170,255,0.2),rgba(0,120,200,0.1))', border: `1px solid ${!selected || selected === account?.type ? '#1a3a22' : 'rgba(0,170,255,0.35)'}`, color: !selected || selected === account?.type ? '#2a5a32' : '#00aaff', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving || !selected || selected === account?.type ? 'not-allowed' : 'pointer' }}>
+                {saving ? 'SAUVEGARDE...' : selected === account?.type ? 'DÉJÀ SÉLECTIONNÉ' : '✓ CONFIRMER LA PHASE'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Helpers ───────────────────────────────────────────────────
 function getNet(t) { return t.result_net ?? t.result ?? 0; }
@@ -109,8 +208,9 @@ function computeTrailing(trades, manualBalance, accountSize, maxLoss) {
 }
 
 // ── LUCID EVAL TAB ────────────────────────────────────────────
-function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, setBalanceInput }) {
-  const { ACCOUNT_SIZE, PROFIT_TARGET, MAX_DAILY_LOSS, MAX_TRAILING_DD, MIN_DAYS, CONSISTENCY_PCT } = LUCID_EVAL;
+function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, setBalanceInput, accountType }) {
+  const { ACCOUNT_SIZE, PROFIT_TARGET, MAX_TRAILING_DD, CONSISTENCY_PCT } = LUCID_EVAL_MAP[accountType] ?? DEFAULT_EVAL;
+  const MAX_DAILY_LOSS = null; // Pas de DLL sur LucidFlex Eval
 
   const totalNet = trades.reduce((s, t) => s + getNet(t), 0);
   const currentBalance = manualBalance > 0 ? manualBalance : ACCOUNT_SIZE + totalNet;
@@ -335,8 +435,8 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
 }
 
 // ── LUCID FUNDED TAB ──────────────────────────────────────────
-function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput, setBalanceInput }) {
-  const { ACCOUNT_SIZE, MAX_DAILY_LOSS, MAX_TRAILING_DD, PROFIT_SPLIT, MIN_PAYOUT_DAYS, MIN_DAILY_PROFIT, MIN_PAYOUT_AMOUNT, MAX_PAYOUT_AMOUNT, MAX_PAYOUTS } = LUCID_FUNDED;
+function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput, setBalanceInput, accountType }) {
+  const { ACCOUNT_SIZE, MAX_DAILY_LOSS, MAX_TRAILING_DD, PROFIT_SPLIT, MIN_PAYOUT_DAYS, MIN_DAILY_PROFIT, MIN_PAYOUT_AMOUNT, MAX_PAYOUT_AMOUNT, MAX_PAYOUTS } = LUCID_FUNDED_MAP[accountType] ?? DEFAULT_FUNDED;
 
   const totalNet = trades.reduce((s, t) => s + getNet(t), 0);
   const currentBalance = manualBalance > 0 ? manualBalance : ACCOUNT_SIZE + totalNet;
@@ -547,17 +647,26 @@ export default function Lucid() {
   const [tab, setTab]     = useState(() => localStorage.getItem('lucid_tab') || 'eval');
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [account, setAccount] = useState(null);
   const [evalBalance, setEvalBalance]   = useState(() => parseFloat(localStorage.getItem('lucid_eval_balance') || '0') || 0);
   const [fundedBalance, setFundedBalance] = useState(() => parseFloat(localStorage.getItem('lucid_funded_balance') || '0') || 0);
   const [balanceInput, setBalanceInput] = useState('');
 
   useEffect(() => {
     (async () => {
-      const res = await window.db.getAllTrades();
-      if (res.ok) setTrades(res.data);
+      const [accRes, tradesRes] = await Promise.all([window.accounts.getActive(), window.db.getAllTrades()]);
+      if (accRes.ok && accRes.data) setAccount(accRes.data);
+      if (tradesRes.ok) setTrades(tradesRes.data);
       setLoading(false);
     })();
   }, []);
+
+  const accountType = account?.type ?? 'lucid_eval_50k';
+  // Auto-switcher : si le compte est funded, afficher l'onglet funded par défaut
+  useEffect(() => {
+    if (account?.type?.startsWith('lucid_funded')) setTab('funded');
+    else if (account?.type?.startsWith('lucid_eval') || account?.type === 'tradovate_live') setTab('eval');
+  }, [account?.type]);
 
   function switchTab(t) { setTab(t); localStorage.setItem('lucid_tab', t); setBalanceInput(''); }
 
@@ -565,25 +674,39 @@ export default function Lucid() {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#3a6a4a', fontSize: '13px', letterSpacing: '2px' }}>CHARGEMENT...</div>
   );
 
+  const typeInfo = account?.typeInfo?.label ?? account?.type ?? '—';
+  const sizeLabel = LUCID_EVAL_MAP[accountType] || LUCID_FUNDED_MAP[accountType]
+    ? `${(LUCID_EVAL_MAP[accountType] ?? LUCID_FUNDED_MAP[accountType])?.ACCOUNT_SIZE?.toLocaleString()}K`
+    : '50K';
+
   return (
     <div style={{ padding: '24px 28px', maxWidth: '1100px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ fontSize: '13px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '6px' }}>PROP FIRM</div>
+          <div style={{ fontSize: '13px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '6px' }}>LUCID TRADING</div>
           <h1 style={{ fontSize: '23px', fontWeight: '700', color: '#e8f8e8', margin: 0 }}>
-            {tab === 'eval' ? '🎯 Lucid Evaluation — 50K' : '💰 Lucid Funded — 50K'}
+            {tab === 'eval' ? `🎯 LucidFlex Eval — ${sizeLabel}` : `💰 LucidFlex Funded — ${sizeLabel}`}
           </h1>
         </div>
         <div style={{ background: 'rgba(0,170,255,0.08)', border: '1px solid rgba(0,170,255,0.2)', borderRadius: '6px', padding: '8px 14px', fontSize: '12px', color: '#00aaff', fontWeight: '700', letterSpacing: '1px' }}>
-          LUCID TRADING
+          PROP FIRM
         </div>
       </div>
+
+      {/* Phase selector */}
+      {account && (
+        <div style={{ marginBottom: '16px' }}>
+          <LucidPhaseSelector account={account} onChanged={newType => {
+            setAccount(prev => ({ ...prev, type: newType, typeInfo: { label: newType } }));
+          }} />
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: 'flex', marginBottom: '20px', background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: '8px', padding: '4px' }}>
         {[
-          { key: 'eval',   label: '🎯 LucidEval',   desc: 'Compte évaluation · Validation' },
-          { key: 'funded', label: '💰 LucidFunded', desc: 'Compte live · Payout 90%' },
+          { key: 'eval',   label: '🎯 LucidFlex Eval',   desc: 'Évaluation · Validation' },
+          { key: 'funded', label: '💰 LucidFlex Funded', desc: 'Compte live · Payout 90%' },
         ].map(({ key, label, desc }) => (
           <button key={key} onClick={() => switchTab(key)} style={{ flex: 1, padding: '13px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', transition: 'all 0.2s', background: tab === key ? 'rgba(0,255,136,0.12)' : 'transparent', fontFamily: 'inherit' }}>
             <div style={{ fontSize: '14px', fontWeight: '700', color: tab === key ? '#00ff88' : '#5a8a6a', marginBottom: '2px' }}>{label}</div>
@@ -594,9 +717,9 @@ export default function Lucid() {
       </div>
 
       {tab === 'eval' ? (
-        <LucidEvalTab trades={trades} manualBalance={evalBalance} setManualBalance={setEvalBalance} balanceInput={balanceInput} setBalanceInput={setBalanceInput} />
+        <LucidEvalTab trades={trades} manualBalance={evalBalance} setManualBalance={setEvalBalance} balanceInput={balanceInput} setBalanceInput={setBalanceInput} accountType={accountType} />
       ) : (
-        <LucidFundedTab trades={trades} manualBalance={fundedBalance} setManualBalance={setFundedBalance} balanceInput={balanceInput} setBalanceInput={setBalanceInput} />
+        <LucidFundedTab trades={trades} manualBalance={fundedBalance} setManualBalance={setFundedBalance} balanceInput={balanceInput} setBalanceInput={setBalanceInput} accountType={accountType} />
       )}
     </div>
   );

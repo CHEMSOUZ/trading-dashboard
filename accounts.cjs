@@ -5,12 +5,25 @@ const { app } = require('electron');
 const ACCOUNTS_FILE = path.join(app.getPath('userData'), 'accounts.json');
 
 const ACCOUNT_TYPES = {
-  'topstep_50k':    { label: 'Topstep Express 50K',   size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
-  'topstep_100k':   { label: 'Topstep Express 100K',  size: 100000, maxLoss: 3000, dailyLoss: 2000 },
-  'topstep_150k':   { label: 'Topstep Express 150K',  size: 150000, maxLoss: 4500, dailyLoss: 3000 },
-  'topstep_ef_50k':    { label: 'Funded 50K',  size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
-  'topstep_ef_100k':   { label: 'Funded 100K', size: 100000, maxLoss: 3000, dailyLoss: 2000 },
-  'topstep_ef_150k':   { label: 'Funded 150K', size: 150000, maxLoss: 4500, dailyLoss: 3000 },
+  // ── Topstep Combine (évaluation) ─────────────────────────────
+  'topstep_50k':       { label: 'Topstep Combine 50K',   size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
+  'topstep_100k':      { label: 'Topstep Combine 100K',  size: 100000, maxLoss: 3000, dailyLoss: 2000 },
+  'topstep_150k':      { label: 'Topstep Combine 150K',  size: 150000, maxLoss: 4500, dailyLoss: 3000 },
+  // ── Topstep Express Funded (live) ────────────────────────────
+  'topstep_ef_50k':    { label: 'Topstep Funded 50K',   size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
+  'topstep_ef_100k':   { label: 'Topstep Funded 100K',  size: 100000, maxLoss: 3000, dailyLoss: 2000 },
+  'topstep_ef_150k':   { label: 'Topstep Funded 150K',  size: 150000, maxLoss: 4500, dailyLoss: 3000 },
+  // ── LucidFlex Evaluation (pas de DLL) ────────────────────────
+  'lucid_eval_25k':    { label: 'LucidFlex Eval 25K',   size: 25000,  maxLoss: 1000, dailyLoss: null, profitTarget: 1250, consistencyPct: 0.50 },
+  'lucid_eval_50k':    { label: 'LucidFlex Eval 50K',   size: 50000,  maxLoss: 2000, dailyLoss: null, profitTarget: 3000, consistencyPct: 0.50 },
+  'lucid_eval_100k':   { label: 'LucidFlex Eval 100K',  size: 100000, maxLoss: 3000, dailyLoss: null, profitTarget: 6000, consistencyPct: 0.50 },
+  'lucid_eval_150k':   { label: 'LucidFlex Eval 150K',  size: 150000, maxLoss: 4500, dailyLoss: null, profitTarget: 9000, consistencyPct: 0.50 },
+  // ── LucidFlex Funded (live) ───────────────────────────────────
+  'lucid_funded_25k':  { label: 'LucidFlex Funded 25K',  size: 25000,  maxLoss: 1000, dailyLoss: 1000, profitTarget: null, consistencyPct: null },
+  'lucid_funded_50k':  { label: 'LucidFlex Funded 50K',  size: 50000,  maxLoss: 2500, dailyLoss: 2000, profitTarget: null, consistencyPct: null },
+  'lucid_funded_100k': { label: 'LucidFlex Funded 100K', size: 100000, maxLoss: 3000, dailyLoss: 3000, profitTarget: null, consistencyPct: null },
+  'lucid_funded_150k': { label: 'LucidFlex Funded 150K', size: 150000, maxLoss: 4500, dailyLoss: 4500, profitTarget: null, consistencyPct: null },
+  // ── Génériques ───────────────────────────────────────────────
   'tradovate_live': { label: 'Tradovate Live', size: null,   maxLoss: null, dailyLoss: null },
   'tradovate_demo': { label: 'Tradovate Demo', size: null,   maxLoss: null, dailyLoss: null },
   'perso':          { label: 'Compte Personnel', size: null, maxLoss: null, dailyLoss: null },
@@ -72,6 +85,10 @@ function updateAccount(id, updates) {
   const data = loadAccounts();
   const idx  = data.accounts.findIndex(a => a.id === id);
   if (idx === -1) throw new Error('Account not found');
+  // Auto-update typeInfo when type changes
+  if (updates.type && updates.type !== data.accounts[idx].type) {
+    updates.typeInfo = ACCOUNT_TYPES[updates.type] ?? ACCOUNT_TYPES['autre'];
+  }
   data.accounts[idx] = { ...data.accounts[idx], ...updates };
   saveAccounts(data);
   return data.accounts[idx];

@@ -6,15 +6,119 @@ import {
   ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 
-const FUNDED = {
-  ACCOUNT_SIZE: 50000, MAX_LOSS: 2000,
-  FLOOR_INITIAL: 48000, LOCK_LEVEL: 52000,
+const TS_COMBINE_MAP = {
+  topstep_50k:  { ACCOUNT_SIZE: 50000,  MAX_LOSS: 2000, BASE_PROFIT_TARGET: 3000, MIN_DAYS: 2, CONSISTENCY_PCT: 0.50, FLOOR_INITIAL: 48000 },
+  topstep_100k: { ACCOUNT_SIZE: 100000, MAX_LOSS: 3000, BASE_PROFIT_TARGET: 6000, MIN_DAYS: 2, CONSISTENCY_PCT: 0.50, FLOOR_INITIAL: 97000 },
+  topstep_150k: { ACCOUNT_SIZE: 150000, MAX_LOSS: 4500, BASE_PROFIT_TARGET: 9000, MIN_DAYS: 2, CONSISTENCY_PCT: 0.50, FLOOR_INITIAL: 145500 },
 };
-const COMBINE = {
-  ACCOUNT_SIZE: 50000, MAX_LOSS: 2000,
-  FLOOR_INITIAL: 48000, BASE_PROFIT_TARGET: 3000,
-  MIN_DAYS: 2, CONSISTENCY_PCT: 0.50,
+const TS_FUNDED_MAP = {
+  topstep_ef_50k:  { ACCOUNT_SIZE: 50000,  MAX_LOSS: 2000, LOCK_LEVEL: 52000 },
+  topstep_ef_100k: { ACCOUNT_SIZE: 100000, MAX_LOSS: 3000, LOCK_LEVEL: 103000 },
+  topstep_ef_150k: { ACCOUNT_SIZE: 150000, MAX_LOSS: 4500, LOCK_LEVEL: 154500 },
 };
+// Backward compat
+const COMBINE = TS_COMBINE_MAP['topstep_50k'];
+const FUNDED  = TS_FUNDED_MAP['topstep_ef_50k'];
+
+// ── Options du sélecteur de phase ─────────────────────────────
+const TS_PHASE_OPTIONS = [
+  { group: '🎯 Trading Combine (Évaluation)', phase: 'combine', color: '#00ff88', options: [
+    { value: 'topstep_50k',  label: '50K',  sub: 'Profit: +3 000$ · Max Loss: -2 000$ · Min 2 jours' },
+    { value: 'topstep_100k', label: '100K', sub: 'Profit: +6 000$ · Max Loss: -3 000$ · Min 2 jours' },
+    { value: 'topstep_150k', label: '150K', sub: 'Profit: +9 000$ · Max Loss: -4 500$ · Min 2 jours' },
+  ]},
+  { group: '💰 Express Funded (Live)', phase: 'funded', color: '#f0c020', options: [
+    { value: 'topstep_ef_50k',  label: '50K',  sub: 'Trailing DD: -2 000$ · Lock: 52 000$' },
+    { value: 'topstep_ef_100k', label: '100K', sub: 'Trailing DD: -3 000$ · Lock: 103 000$' },
+    { value: 'topstep_ef_150k', label: '150K', sub: 'Trailing DD: -4 500$ · Lock: 154 500$' },
+  ]},
+];
+
+// ── Phase Selector ─────────────────────────────────────────────
+function TopstepPhaseSelector({ account, onChanged }) {
+  const [open, setOpen]         = useState(false);
+  const [selected, setSelected] = useState(account?.type ?? '');
+  const [saving, setSaving]     = useState(false);
+
+  const allOpts = TS_PHASE_OPTIONS.flatMap(g => g.options.map(o => ({ ...o, phase: g.phase, color: g.color })));
+  const current = allOpts.find(o => o.value === account?.type);
+  const groupColor = current?.color ?? '#3a6a4a';
+
+  async function confirm() {
+    if (!account || selected === account?.type) { setOpen(false); return; }
+    setSaving(true);
+    await window.accounts.update(account.id, { type: selected });
+    setSaving(false);
+    setOpen(false);
+    onChanged(selected);
+    window.dispatchEvent(new Event('account-updated'));
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <div style={{ background: `rgba(${groupColor==='#00ff88'?'0,255,136':'240,192,32'},0.04)`, border: `1px solid ${groupColor}20`, borderRadius: '6px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '3px' }}>PHASE DU COMPTE</div>
+          {current ? (
+            <div>
+              <span style={{ fontSize: '14px', fontWeight: '700', color: '#e8f8e8' }}>{current.phase === 'combine' ? '🎯' : '💰'} {account?.typeInfo?.label ?? account?.type}</span>
+              <span style={{ fontSize: '10px', color: groupColor, marginLeft: '10px' }}>{current.sub}</span>
+            </div>
+          ) : (
+            <div style={{ fontSize: '13px', color: '#f0a020' }}>⚠ Phase non définie — cliquez "Modifier" pour configurer</div>
+          )}
+        </div>
+        <button onClick={() => { setSelected(account?.type ?? ''); setOpen(true); }} style={{ background: 'rgba(0,170,255,0.1)', border: '1px solid rgba(0,170,255,0.25)', color: '#00aaff', padding: '7px 14px', borderRadius: '4px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', fontWeight: '600', whiteSpace: 'nowrap' }}>
+          Modifier →
+        </button>
+      </div>
+
+      {open && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setOpen(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#070d12', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '10px', padding: '24px', width: '560px', maxWidth: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>TOPSTEP</div>
+                <div style={{ fontSize: '16px', fontWeight: '700', color: '#e8f8e8' }}>Sélectionner la phase du compte</div>
+              </div>
+              <button onClick={() => setOpen(false)} style={{ background: 'none', border: '1px solid #1a3a22', color: '#4a7a5a', width: '28px', height: '28px', borderRadius: '50%', cursor: 'pointer', fontSize: '14px' }}>×</button>
+            </div>
+
+            {TS_PHASE_OPTIONS.map(grp => (
+              <div key={grp.group} style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '10px', color: grp.color, letterSpacing: '2px', marginBottom: '8px', opacity: 0.8 }}>{grp.group.toUpperCase()}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '6px' }}>
+                  {grp.options.map(opt => (
+                    <div key={opt.value} onClick={() => setSelected(opt.value)} style={{ padding: '10px 12px', borderRadius: '6px', cursor: 'pointer', background: selected === opt.value ? `rgba(${grp.color==='#00ff88'?'0,255,136':'240,192,32'},0.08)` : 'rgba(10,28,18,0.4)', border: `1px solid ${selected === opt.value ? grp.color+'44' : 'rgba(0,255,136,0.06)'}`, transition: 'all 0.15s' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+                        <div style={{ width: '14px', height: '14px', borderRadius: '50%', border: `2px solid ${selected === opt.value ? grp.color : '#2a5a3a'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          {selected === opt.value && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: grp.color }} />}
+                        </div>
+                        <span style={{ fontSize: '15px', fontWeight: '700', color: selected === opt.value ? '#e8f8e8' : '#8aaa90' }}>{opt.label}</span>
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#4a7a5a', paddingLeft: '22px' }}>{opt.sub}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div style={{ background: 'rgba(240,160,32,0.06)', border: '1px solid rgba(240,160,32,0.2)', borderRadius: '4px', padding: '8px 12px', marginBottom: '16px', fontSize: '11px', color: '#f0a020' }}>
+              ⚠ Ce choix est permanent. Combine → validé quand profit target atteint · Express Funded → compte LIVE dans la sidebar.
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setOpen(false)} style={{ padding: '9px 18px', borderRadius: '5px', border: '1px solid #1a3a22', background: 'transparent', color: '#5a8a6a', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>Annuler</button>
+              <button onClick={confirm} disabled={saving || !selected || selected === account?.type} style={{ padding: '9px 22px', borderRadius: '5px', background: !selected || selected === account?.type ? 'rgba(10,28,18,0.4)' : 'linear-gradient(135deg,rgba(0,255,136,0.2),rgba(0,170,85,0.1))', border: `1px solid ${!selected || selected === account?.type ? '#1a3a22' : 'rgba(0,255,136,0.35)'}`, color: !selected || selected === account?.type ? '#2a5a32' : '#00ff88', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving || !selected || selected === account?.type ? 'not-allowed' : 'pointer' }}>
+                {saving ? 'SAUVEGARDE...' : selected === account?.type ? 'DÉJÀ SÉLECTIONNÉ' : '✓ CONFIRMER LA PHASE'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function getNet(trade) {
   if (trade.result_net != null) return trade.result_net;
@@ -101,8 +205,8 @@ function computeTrailing(trades, manualBalance, accountSize, maxLoss) {
 }
 
 // ── FUNDED TAB ────────────────────────────────────────────────
-function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setBalanceInput }) {
-  const { ACCOUNT_SIZE, MAX_LOSS, LOCK_LEVEL } = FUNDED;
+function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setBalanceInput, accountType }) {
+  const { ACCOUNT_SIZE, MAX_LOSS, LOCK_LEVEL } = TS_FUNDED_MAP[accountType] ?? FUNDED;
   const [localOption, setLocalOption] = useState(localStorage.getItem('ts_payout_option') || 'A');
 
   const totalNet = trades.reduce((s, t) => s + getNet(t), 0);
@@ -265,8 +369,8 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
 }
 
 // ── COMBINE TAB ───────────────────────────────────────────────
-function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, setBalanceInput }) {
-  const { ACCOUNT_SIZE, MAX_LOSS, BASE_PROFIT_TARGET, MIN_DAYS, CONSISTENCY_PCT } = COMBINE;
+function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, setBalanceInput, accountType }) {
+  const { ACCOUNT_SIZE, MAX_LOSS, BASE_PROFIT_TARGET, MIN_DAYS, CONSISTENCY_PCT } = TS_COMBINE_MAP[accountType] ?? COMBINE;
 
   const totalNet = trades.reduce((s, t) => s + getNet(t), 0);
   const currentBalance = manualBalance > 0 ? manualBalance : ACCOUNT_SIZE + totalNet;
@@ -477,19 +581,31 @@ export default function Topstep() {
   const [tab, setTab] = useState(() => localStorage.getItem('ts_tab') || 'combine');
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [account, setAccount] = useState(null);
   const [fundedBalance, setFundedBalance] = useState(() => parseFloat(localStorage.getItem('ts_balance') || '0') || 0);
   const [combineBalance, setCombineBalance] = useState(() => parseFloat(localStorage.getItem('ts_combine_balance') || '0') || 0);
   const [balanceInput, setBalanceInput] = useState('');
 
   useEffect(() => {
     (async () => {
-      const res = await window.db.getAllTrades();
-      if (res.ok) setTrades(res.data);
+      const [accRes, tradesRes] = await Promise.all([window.accounts.getActive(), window.db.getAllTrades()]);
+      if (accRes.ok && accRes.data) setAccount(accRes.data);
+      if (tradesRes.ok) setTrades(tradesRes.data);
       setLoading(false);
     })();
   }, []);
 
+  const accountType = account?.type ?? 'topstep_50k';
+
+  // Auto-switcher d'onglet selon le type du compte
+  useEffect(() => {
+    if (accountType?.startsWith('topstep_ef')) setTab('funded');
+    else if (accountType?.startsWith('topstep_') && !accountType?.startsWith('topstep_ef')) setTab('combine');
+  }, [accountType]);
+
   function switchTab(t) { setTab(t); localStorage.setItem('ts_tab', t); setBalanceInput(''); }
+
+  const sizeLabel = TS_COMBINE_MAP[accountType]?.ACCOUNT_SIZE ?? TS_FUNDED_MAP[accountType]?.ACCOUNT_SIZE ?? 50000;
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#3a6a4a', fontSize: '13px', letterSpacing: '2px' }}>CHARGEMENT...</div>
@@ -497,11 +613,11 @@ export default function Topstep() {
 
   return (
     <div style={{ padding: '24px 28px', maxWidth: '1100px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <div style={{ fontSize: '13px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '6px' }}>TOPSTEP</div>
           <h1 style={{ fontSize: '23px', fontWeight: '700', color: '#e8f8e8', margin: 0 }}>
-            {tab === 'funded' ? '💰 Express Funded — 50K' : '🎯 Trading Combine — 50K'}
+            {tab === 'funded' ? `💰 Express Funded — ${(sizeLabel/1000).toFixed(0)}K` : `🎯 Trading Combine — ${(sizeLabel/1000).toFixed(0)}K`}
           </h1>
         </div>
         <button onClick={() => navigate('/stats')} style={{ background: 'transparent', border: '1px solid #1a3a22', color: '#4a7a5a', padding: '8px 16px', borderRadius: '5px', fontSize: '13px', fontFamily: 'inherit', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s' }}
@@ -509,6 +625,15 @@ export default function Topstep() {
           onMouseLeave={e => { e.currentTarget.style.color = '#4a7a5a'; e.currentTarget.style.borderColor = '#1a3a22'; }}
         >📅 Calendrier & Stats</button>
       </div>
+
+      {/* Phase selector */}
+      {account && (
+        <div style={{ marginBottom: '16px' }}>
+          <TopstepPhaseSelector account={account} onChanged={newType => {
+            setAccount(prev => ({ ...prev, type: newType, typeInfo: { label: newType } }));
+          }} />
+        </div>
+      )}
 
       <div style={{ display: 'flex', marginBottom: '20px', background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: '8px', padding: '4px' }}>
         {[
@@ -524,9 +649,9 @@ export default function Topstep() {
       </div>
 
       {tab === 'funded' ? (
-        <FundedTab trades={trades} manualBalance={fundedBalance} setManualBalance={setFundedBalance} balanceInput={balanceInput} setBalanceInput={setBalanceInput} />
+        <FundedTab trades={trades} manualBalance={fundedBalance} setManualBalance={setFundedBalance} balanceInput={balanceInput} setBalanceInput={setBalanceInput} accountType={accountType} />
       ) : (
-        <CombineTab trades={trades} manualBalance={combineBalance} setManualBalance={setCombineBalance} balanceInput={balanceInput} setBalanceInput={setBalanceInput} />
+        <CombineTab trades={trades} manualBalance={combineBalance} setManualBalance={setCombineBalance} balanceInput={balanceInput} setBalanceInput={setBalanceInput} accountType={accountType} />
       )}
     </div>
   );
