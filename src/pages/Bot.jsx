@@ -13,113 +13,93 @@ function calcRR(entry, sl, tp) {
   return (reward / risk).toFixed(2);
 }
 
-// ── Pine Script template ──────────────────────────────────────
+// ── Pine Script template (v5 corrigé) ────────────────────────
 const PINE_SCRIPT = `//@version=5
 indicator("ICT Bot Signals — MNQ", overlay=true, max_bars_back=500)
 
-// ═══════════════════════════════════════════════════════════
-//  CONFIGURATION — remplace l'URL par ton URL ngrok
-// ═══════════════════════════════════════════════════════════
-// 1. Lance : ngrok http 3001
-// 2. Copie l'URL HTTPS dans la variable ci-dessous
-// 3. Dans TradingView : Créer Alerte → Webhook URL → {ton_url}/webhook
-
 symbol_name = "MNQ"
 
-// ═══════════════════════════════════════════════════════════
-//  INDICATEURS
-// ═══════════════════════════════════════════════════════════
-ema9   = ta.ema(close, 9)
-ema20  = ta.ema(close, 20)
-ema50  = ta.ema(close, 50)
-ema200 = ta.ema(close, 200)
+// ── Indicateurs ───────────────────────────────────────────────
+ema9     = ta.ema(close, 9)
+ema20    = ta.ema(close, 20)
+ema50    = ta.ema(close, 50)
+ema200   = ta.ema(close, 200)
+vwap_val = ta.vwap(hlc3)
+atr      = ta.atr(14)
 
-[vwap_val, _, _] = ta.vwap(high, low, close, volume)
-atr = ta.atr(14)
+// ── Fair Value Gap ────────────────────────────────────────────
+bull_fvg = low[0] > high[2]
+bear_fvg = high[0] < low[2]
 
-// ═══════════════════════════════════════════════════════════
-//  FAIR VALUE GAP (FVG)
-// ═══════════════════════════════════════════════════════════
-bull_fvg = low[0] > high[2]   // gap haussier : low actuel > high il y a 2 bougies
-bear_fvg = high[0] < low[2]   // gap baissier : high actuel < low il y a 2 bougies
-
-// ═══════════════════════════════════════════════════════════
-//  MARKET STRUCTURE SHIFT (MSS simplifié)
-// ═══════════════════════════════════════════════════════════
+// ── Market Structure Shift ────────────────────────────────────
 swing_high = ta.highest(high, 10)[1]
 swing_low  = ta.lowest(low, 10)[1]
-mss_bull   = ta.crossover(close, swing_high)   // cassure HH → MSS haussier
-mss_bear   = ta.crossunder(close, swing_low)   // cassure LL → MSS baissier
+mss_bull   = ta.crossover(close, swing_high)
+mss_bear   = ta.crossunder(close, swing_low)
 
-// ═══════════════════════════════════════════════════════════
-//  BIAIS DIRECTIONNEL
-// ═══════════════════════════════════════════════════════════
+// ── Biais directionnel ────────────────────────────────────────
 bull_bias = ema20 > ema50 and close > vwap_val and close > ema200
 bear_bias = ema20 < ema50 and close < vwap_val and close < ema200
 
-// ═══════════════════════════════════════════════════════════
-//  SIGNAUX D'ENTRÉE
-// ═══════════════════════════════════════════════════════════
-// LONG : biais haussier + FVG haussier + MSS
-long_signal  = bull_bias and (bull_fvg or mss_bull) and ta.crossover(close, ema9)
-// SHORT : biais baissier + FVG baissier + MSS
-short_signal = bear_bias and (bear_fvg or mss_bear) and ta.crossunder(close, ema9)
+// ── Signaux ───────────────────────────────────────────────────
+ema9_cross_up   = ta.crossover(close, ema9)
+ema9_cross_down = ta.crossunder(close, ema9)
+long_signal     = bull_bias and (bull_fvg or mss_bull) and ema9_cross_up
+short_signal    = bear_bias and (bear_fvg or mss_bear) and ema9_cross_down
 
-// ═══════════════════════════════════════════════════════════
-//  CALCUL SL / TP
-// ═══════════════════════════════════════════════════════════
-sl_mult  = 1.5   // ATR × 1.5 pour le stop
-tp1_mult = 2.0   // ATR × 2.0 pour TP1
-tp2_mult = 3.5   // ATR × 3.5 pour TP2
+// ── SL / TP ───────────────────────────────────────────────────
+sl_mult  = 1.5
+tp1_mult = 2.0
+tp2_mult = 3.5
 
-// ═══════════════════════════════════════════════════════════
-//  ALERTES WEBHOOK (format JSON pour le dashboard)
-// ═══════════════════════════════════════════════════════════
+// ── Alertes webhook ───────────────────────────────────────────
 if long_signal
-    entry = close
-    sl    = math.round(entry - atr * sl_mult, 2)
-    tp1   = math.round(entry + atr * tp1_mult, 2)
-    tp2   = math.round(entry + atr * tp2_mult, 2)
-    rr    = str.tostring(math.round(atr * tp2_mult / (atr * sl_mult) * 10) / 10)
-    ctx   = bull_fvg ? "FVG haussier" : "MSS + EMA9 cross"
-    msg   = '{"symbol":"' + symbol_name + '","signal":"LONG","entry":' + str.tostring(entry) +
-            ',"sl":' + str.tostring(sl) +
-            ',"tp1":' + str.tostring(tp1) +
-            ',"tp2":' + str.tostring(tp2) +
-            ',"rr":"1:' + rr + '"' +
-            ',"context":"' + ctx + ' — EMA ' + (ema20 > ema50 ? "haussier" : "neutre") + ' — VWAP ' + (close > vwap_val ? "au-dessus" : "en-dessous") + '"' +
-            ',"timeframe":"{{interval}}"' +
-            ',"timestamp":"{{time}}"}'
+    entry    = close
+    sl       = math.round(entry - atr * sl_mult,  2)
+    tp1      = math.round(entry + atr * tp1_mult, 2)
+    tp2      = math.round(entry + atr * tp2_mult, 2)
+    rr       = str.tostring(math.round(tp2_mult / sl_mult * 10) / 10)
+    ctx      = bull_fvg ? "FVG haussier" : "MSS + EMA9 cross"
+    ema_dir  = ema20 > ema50 ? "haussier" : "neutre"
+    vwap_pos = close > vwap_val ? "au-dessus" : "en-dessous"
+    msg      = '{"symbol":"' + symbol_name + '","signal":"LONG","entry":' + str.tostring(entry) +
+               ',"sl":' + str.tostring(sl) +
+               ',"tp1":' + str.tostring(tp1) +
+               ',"tp2":' + str.tostring(tp2) +
+               ',"rr":"1:' + rr + '"' +
+               ',"context":"' + ctx + ' — EMA ' + ema_dir + ' — VWAP ' + vwap_pos + '"' +
+               ',"timeframe":"{{interval}}"' +
+               ',"timestamp":"{{time}}"}'
     alert(msg, alert.freq_once_per_bar_close)
 
 if short_signal
-    entry = close
-    sl    = math.round(entry + atr * sl_mult, 2)
-    tp1   = math.round(entry - atr * tp1_mult, 2)
-    tp2   = math.round(entry - atr * tp2_mult, 2)
-    rr    = str.tostring(math.round(atr * tp2_mult / (atr * sl_mult) * 10) / 10)
-    ctx   = bear_fvg ? "FVG baissier" : "MSS + EMA9 cross"
-    msg   = '{"symbol":"' + symbol_name + '","signal":"SHORT","entry":' + str.tostring(entry) +
-            ',"sl":' + str.tostring(sl) +
-            ',"tp1":' + str.tostring(tp1) +
-            ',"tp2":' + str.tostring(tp2) +
-            ',"rr":"1:' + rr + '"' +
-            ',"context":"' + ctx + ' — EMA ' + (ema20 < ema50 ? "baissier" : "neutre") + ' — VWAP ' + (close < vwap_val ? "en-dessous" : "au-dessus") + '"' +
-            ',"timeframe":"{{interval}}"' +
-            ',"timestamp":"{{time}}"}'
+    entry    = close
+    sl       = math.round(entry + atr * sl_mult,  2)
+    tp1      = math.round(entry - atr * tp1_mult, 2)
+    tp2      = math.round(entry - atr * tp2_mult, 2)
+    rr       = str.tostring(math.round(tp2_mult / sl_mult * 10) / 10)
+    ctx      = bear_fvg ? "FVG baissier" : "MSS + EMA9 cross"
+    ema_dir  = ema20 < ema50 ? "baissier" : "neutre"
+    vwap_pos = close < vwap_val ? "en-dessous" : "au-dessus"
+    msg      = '{"symbol":"' + symbol_name + '","signal":"SHORT","entry":' + str.tostring(entry) +
+               ',"sl":' + str.tostring(sl) +
+               ',"tp1":' + str.tostring(tp1) +
+               ',"tp2":' + str.tostring(tp2) +
+               ',"rr":"1:' + rr + '"' +
+               ',"context":"' + ctx + ' — EMA ' + ema_dir + ' — VWAP ' + vwap_pos + '"' +
+               ',"timeframe":"{{interval}}"' +
+               ',"timestamp":"{{time}}"}'
     alert(msg, alert.freq_once_per_bar_close)
 
-// ═══════════════════════════════════════════════════════════
-//  AFFICHAGE
-// ═══════════════════════════════════════════════════════════
-plot(ema9,   "EMA 9",   color.new(color.lime,   20), 1)
-plot(ema20,  "EMA 20",  color.new(color.yellow, 20), 1)
-plot(ema50,  "EMA 50",  color.new(color.orange, 20), 1)
-plot(ema200, "EMA 200", color.new(color.red,    20), 2)
-plot(vwap_val, "VWAP",  color.new(color.aqua,   10), 2)
+// ── Affichage ─────────────────────────────────────────────────
+plot(ema9,     "EMA 9",   color.new(color.lime,   20), 1)
+plot(ema20,    "EMA 20",  color.new(color.yellow, 20), 1)
+plot(ema50,    "EMA 50",  color.new(color.orange, 20), 1)
+plot(ema200,   "EMA 200", color.new(color.red,    20), 2)
+plot(vwap_val, "VWAP",    color.new(color.aqua,   10), 2)
 
-plotshape(long_signal,  "LONG",  shape.triangleup,   location.belowbar, color.lime,   size=size.small)
-plotshape(short_signal, "SHORT", shape.triangledown, location.abovebar, color.red,    size=size.small)
+plotshape(long_signal,  "LONG",  shape.triangleup,   location.belowbar, color.lime, size=size.small)
+plotshape(short_signal, "SHORT", shape.triangledown, location.abovebar, color.red,  size=size.small)
 `;
 
 // ── Signal Card ───────────────────────────────────────────────
