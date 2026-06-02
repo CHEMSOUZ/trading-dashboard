@@ -13,90 +13,296 @@ function calcRR(entry, sl, tp) {
   return (reward / risk).toFixed(2);
 }
 
-// ── Pine Script multi-bot ─────────────────────────────────────
+// ── Pine Script multi-bot (ICT Full Strategy) ─────────────────
 const PINE_BOTS = [
-  { id: 'standard',     name: 'ICT Standard',     botId: 'ICT_15min',  tf: '15min',  color: '#00ff88', sl: 1.5, tp1: 2.0, tp2: 3.5, desc: 'Équilibré · conditions strictes · signaux fiables' },
-  { id: 'agressif',     name: 'ICT Agressif',      botId: 'ICT_5min',   tf: '5min',   color: '#f0c020', sl: 1.0, tp1: 1.5, tp2: 2.5, desc: 'Signaux fréquents · R:R plus court · scalping' },
-  { id: 'conservateur', name: 'ICT Conservateur',  botId: 'ICT_1H',     tf: '1H',     color: '#00aaff', sl: 2.0, tp1: 3.0, tp2: 5.0, desc: 'Signaux rares mais qualité maximale · swing' },
+  { id: 'ultra',        name: 'ICT Ultra',        botId: 'ICT_1min',  tf: '1min',  color: '#ff6644', sl: 0.8, tp1: 1.2, tp2: 2.0, htfTf: '15',  minScore: 3, desc: 'Scalping · HTF 15min · score ≥ 3' },
+  { id: 'agressif',     name: 'ICT Agressif',      botId: 'ICT_5min',  tf: '5min',  color: '#f0c020', sl: 1.0, tp1: 1.5, tp2: 2.5, htfTf: '60',  minScore: 3, desc: 'Scalping · HTF 1H · score ≥ 3' },
+  { id: 'standard',     name: 'ICT Standard',      botId: 'ICT_15min', tf: '15min', color: '#00ff88', sl: 1.5, tp1: 2.0, tp2: 3.5, htfTf: '240', minScore: 4, desc: 'Intraday · HTF 4H · score ≥ 4' },
+  { id: 'conservateur', name: 'ICT Conservateur',  botId: 'ICT_1H',    tf: '1H',    color: '#00aaff', sl: 2.0, tp1: 3.0, tp2: 5.0, htfTf: 'D',   minScore: 4, desc: 'Swing · HTF Daily · score ≥ 4' },
 ];
 
-function generateScript({ name, botId, sl, tp1, tp2 }) {
+function generateScript({ name, botId, sl, tp1, tp2, htfTf, minScore }) {
   return `//@version=5
-indicator("${name}", overlay=true, max_bars_back=500)
+indicator("${name}", overlay=true, max_bars_back=500, max_lines_count=200, max_boxes_count=200, max_labels_count=200)
 
+// ── Identité ──────────────────────────────────────────────────
 bot_name    = "${botId}"
 symbol_name = "MNQ"
-vwap_val    = ta.vwap
-atr         = ta.atr(14)
-ema9        = ta.ema(close, 9)
-ema20       = ta.ema(close, 20)
-ema50       = ta.ema(close, 50)
-ema200      = ta.ema(close, 200)
 
-bull_fvg   = low > high[2]
-bear_fvg   = high < low[2]
-swing_high = ta.highest(high, 10)[1]
-swing_low  = ta.lowest(low, 10)[1]
-mss_bull   = ta.crossover(close, swing_high)
-mss_bear   = ta.crossunder(close, swing_low)
+// ── Inputs ───────────────────────────────────────────────────
+htf_tf      = input.timeframe("${htfTf}", "Timeframe HTF")
+show_bias   = input.bool(true,  "Afficher le bias HTF")
+liq_len     = input.int(10,     "Longueur swing (EQH/EQL)", minval=3)
+eq_thresh   = input.float(0.05, "Seuil Equal H/L (%)", step=0.01)
+show_liq    = input.bool(true,  "Afficher les zones de liquidité")
+mss_len     = input.int(5,      "Sensibilité MSS", minval=2)
+show_mss    = input.bool(true,  "Afficher MSS")
+show_bos    = input.bool(true,  "Afficher BOS")
+show_fvg    = input.bool(true,  "Afficher les FVG")
+fvg_min_pct = input.float(0.03, "Taille min FVG (%)", step=0.01)
+show_ob     = input.bool(true,  "Afficher les Order Blocks")
+show_entry  = input.bool(true,  "Afficher les signaux d'entrée")
+show_kz     = input.bool(true,  "Afficher Kill Zones")
 
-bull_bias  = ema20 > ema50 and close > vwap_val and close > ema200
-bear_bias  = ema20 < ema50 and close < vwap_val and close < ema200
-cross_up   = ta.crossover(close, ema9)
-cross_down = ta.crossunder(close, ema9)
+col_bull  = color.new(#00e676, 0)
+col_bear  = color.new(#ff1744, 0)
+col_fvg_b = color.new(#00e676, 80)
+col_fvg_s = color.new(#ff1744, 80)
+col_ob_b  = color.new(#29b6f6, 75)
+col_ob_s  = color.new(#ffa726, 75)
 
-long_signal  = bull_bias and (bull_fvg or mss_bull) and cross_up
-short_signal = bear_bias and (bear_fvg or mss_bear) and cross_down
+// ── 1. HTF BIAS ───────────────────────────────────────────────
+htf_close = request.security(syminfo.tickerid, htf_tf, close)
+htf_ema20 = request.security(syminfo.tickerid, htf_tf, ta.ema(close, 20))
+htf_ema50 = request.security(syminfo.tickerid, htf_tf, ta.ema(close, 50))
 
+htf_bullish = htf_close > htf_ema20 and htf_ema20 > htf_ema50
+htf_bearish = htf_close < htf_ema20 and htf_ema20 < htf_ema50
+
+if show_bias and barstate.islast
+    bias_txt = htf_bullish ? "BULLISH ▲" : htf_bearish ? "BEARISH ▼" : "RANGE ↔"
+    bias_col = htf_bullish ? col_bull : htf_bearish ? col_bear : color.gray
+    label.new(bar_index, high, "HTF Bias: " + bias_txt + " (" + htf_tf + ")",
+      color=bias_col, textcolor=color.white, style=label.style_label_left, size=size.normal)
+
+// ── 2. LIQUIDITÉ ─────────────────────────────────────────────
+swing_high = ta.pivothigh(high, liq_len, liq_len)
+swing_low  = ta.pivotlow(low,  liq_len, liq_len)
+
+if show_liq and not na(swing_high)
+    line.new(bar_index - liq_len, swing_high, bar_index + liq_len, swing_high,
+      color=color.new(col_bear, 40), style=line.style_dotted)
+    label.new(bar_index - liq_len, swing_high, "SSL",
+      color=color.new(col_bear, 20), textcolor=color.white, style=label.style_label_right, size=size.tiny)
+
+if show_liq and not na(swing_low)
+    line.new(bar_index - liq_len, swing_low, bar_index + liq_len, swing_low,
+      color=color.new(col_bull, 40), style=line.style_dotted)
+    label.new(bar_index - liq_len, swing_low, "BSL",
+      color=color.new(col_bull, 20), textcolor=color.white, style=label.style_label_right, size=size.tiny)
+
+var float prev_sh = na
+var float prev_sl = na
+
+if not na(swing_high)
+    if not na(prev_sh) and math.abs(swing_high - prev_sh) / prev_sh * 100 <= eq_thresh
+        if show_liq
+            box.new(bar_index - liq_len * 2, math.max(swing_high, prev_sh),
+              bar_index + 5, math.min(swing_high, prev_sh),
+              border_color=col_bear, bgcolor=color.new(col_bear, 85))
+            label.new(bar_index - liq_len, math.max(swing_high, prev_sh), "EQH 🎯",
+              color=col_bear, textcolor=color.white, style=label.style_label_down, size=size.small)
+    prev_sh := swing_high
+
+if not na(swing_low)
+    if not na(prev_sl) and math.abs(swing_low - prev_sl) / prev_sl * 100 <= eq_thresh
+        if show_liq
+            box.new(bar_index - liq_len * 2, math.max(swing_low, prev_sl),
+              bar_index + 5, math.min(swing_low, prev_sl),
+              border_color=col_bull, bgcolor=color.new(col_bull, 85))
+            label.new(bar_index - liq_len, math.min(swing_low, prev_sl), "EQL 🎯",
+              color=col_bull, textcolor=color.white, style=label.style_label_up, size=size.small)
+    prev_sl := swing_low
+
+// ── 3. MSS / BOS ─────────────────────────────────────────────
+ph = ta.pivothigh(high, mss_len, mss_len)
+pl = ta.pivotlow(low,  mss_len, mss_len)
+
+var float last_ph      = na
+var float last_pl      = na
+var bool  in_downtrend = false
+var bool  in_uptrend   = false
+
+if not na(ph)
+    last_ph := ph
+if not na(pl)
+    last_pl := pl
+
+bos_bull = not na(last_ph) and close > last_ph and close[1] <= last_ph[1]
+bos_bear = not na(last_pl) and close < last_pl and close[1] >= last_pl[1]
+
+mss_bull_sig = in_downtrend and bos_bull
+mss_bear_sig = in_uptrend   and bos_bear
+
+if bos_bear
+    in_downtrend := true
+    in_uptrend   := false
+if bos_bull
+    in_uptrend   := true
+    in_downtrend := false
+
+if show_mss
+    if mss_bull_sig
+        label.new(bar_index, low,  "MSS ▲", color=col_bull, textcolor=color.white, style=label.style_label_up,   size=size.small)
+    if mss_bear_sig
+        label.new(bar_index, high, "MSS ▼", color=col_bear, textcolor=color.white, style=label.style_label_down, size=size.small)
+
+if show_bos
+    if bos_bull and not mss_bull_sig
+        label.new(bar_index, low,  "BOS ▲", color=color.new(col_bull, 40), textcolor=color.white, style=label.style_label_up,   size=size.tiny)
+    if bos_bear and not mss_bear_sig
+        label.new(bar_index, high, "BOS ▼", color=color.new(col_bear, 40), textcolor=color.white, style=label.style_label_down, size=size.tiny)
+
+// ── 4. DISPLACEMENT ──────────────────────────────────────────
+candle_body  = math.abs(close - open)
+candle_range = high - low
+body_ratio   = candle_range > 0 ? candle_body / candle_range : 0
+avg_range    = ta.sma(candle_range, 14)
+
+displacement_bull = close > open and body_ratio > 0.6 and candle_range > avg_range * 1.5
+displacement_bear = close < open and body_ratio > 0.6 and candle_range > avg_range * 1.5
+
+// ── 5. FVG ───────────────────────────────────────────────────
+fvg_bull_cond = low > high[2] and (low - high[2]) / high[2] * 100 >= fvg_min_pct
+fvg_bear_cond = high < low[2] and (low[2] - high) / low[2] * 100 >= fvg_min_pct
+
+if show_fvg
+    if fvg_bull_cond
+        box.new(bar_index - 2, low, bar_index + 20, high[2],
+          border_color=color.new(col_bull, 60), bgcolor=col_fvg_b)
+        label.new(bar_index, low, "FVG ▲",
+          color=color.new(col_bull, 40), textcolor=color.white, style=label.style_label_up, size=size.tiny)
+    if fvg_bear_cond
+        box.new(bar_index - 2, low[2], bar_index + 20, high,
+          border_color=color.new(col_bear, 60), bgcolor=col_fvg_s)
+        label.new(bar_index, high, "FVG ▼",
+          color=color.new(col_bear, 40), textcolor=color.white, style=label.style_label_down, size=size.tiny)
+
+// ── 6. ORDER BLOCK ────────────────────────────────────────────
+ob_bull_cond = displacement_bull and close[1] < open[1]
+ob_bear_cond = displacement_bear and close[1] > open[1]
+
+if show_ob
+    if ob_bull_cond
+        box.new(bar_index - 1, math.min(open[1], close[1]),
+          bar_index + 30, math.max(open[1], close[1]),
+          border_color=color.new(col_ob_b, 20), bgcolor=col_ob_b)
+        label.new(bar_index - 1, math.min(open[1], close[1]), "OB ▲",
+          color=col_ob_b, textcolor=color.white, style=label.style_label_up, size=size.tiny)
+    if ob_bear_cond
+        box.new(bar_index - 1, math.min(open[1], close[1]),
+          bar_index + 30, math.max(open[1], close[1]),
+          border_color=color.new(col_ob_s, 20), bgcolor=col_ob_s)
+        label.new(bar_index - 1, math.max(open[1], close[1]), "OB ▼",
+          color=col_ob_s, textcolor=color.white, style=label.style_label_down, size=size.tiny)
+
+// ── 7. KILL ZONES ─────────────────────────────────────────────
+hour_utc   = hour(time, "UTC")
+minute_utc = minute(time, "UTC")
+time_dec   = hour_utc + minute_utc / 60.0
+
+london_kz = time_dec >= 7.0  and time_dec < 10.0
+ny_am_kz  = time_dec >= 12.0 and time_dec < 15.0
+ny_pm_kz  = time_dec >= 17.0 and time_dec < 20.0
+in_kz     = london_kz or ny_am_kz or ny_pm_kz
+
+kz_col = london_kz ? color.new(#ffd600, 88) :
+         ny_am_kz  ? color.new(#00bcd4, 88) :
+         ny_pm_kz  ? color.new(#ab47bc, 88) : color.new(color.gray, 100)
+bgcolor(show_kz and in_kz ? kz_col : na)
+
+if show_kz and in_kz and not (london_kz[1] or ny_am_kz[1] or ny_pm_kz[1])
+    kz_txt = london_kz ? "🇬🇧 London KZ" : ny_am_kz ? "🗽 NY AM KZ" : "🗽 NY PM KZ"
+    label.new(bar_index, high * 1.001, kz_txt,
+      color=color.new(color.gray, 60), textcolor=color.white, style=label.style_label_down, size=size.small)
+
+// ── 8. SCORE & SIGNAL ─────────────────────────────────────────
+lookback = 5
+
+recent_mss_bull  = ta.barssince(mss_bull_sig)      < lookback
+recent_mss_bear  = ta.barssince(mss_bear_sig)      < lookback
+recent_disp_bull = ta.barssince(displacement_bull) < lookback
+recent_disp_bear = ta.barssince(displacement_bear) < lookback
+recent_fvg_bull  = ta.barssince(fvg_bull_cond)     < lookback
+recent_fvg_bear  = ta.barssince(fvg_bear_cond)     < lookback
+recent_ob_bull   = ta.barssince(ob_bull_cond)       < lookback
+recent_ob_bear   = ta.barssince(ob_bear_cond)       < lookback
+
+poi_bull = recent_fvg_bull or recent_ob_bull
+poi_bear = recent_fvg_bear or recent_ob_bear
+
+score_bull = (htf_bullish      ? 1 : 0) + (recent_mss_bull  ? 1 : 0) +
+             (recent_disp_bull ? 1 : 0) + (poi_bull          ? 1 : 0) + (in_kz ? 1 : 0)
+score_bear = (htf_bearish      ? 1 : 0) + (recent_mss_bear  ? 1 : 0) +
+             (recent_disp_bear ? 1 : 0) + (poi_bear          ? 1 : 0) + (in_kz ? 1 : 0)
+
+entry_long  = show_entry and score_bull >= ${minScore}
+entry_short = show_entry and score_bear >= ${minScore}
+
+plotshape(entry_long,  title="ICT Long",  style=shape.triangleup,   location=location.belowbar, color=col_bull, size=size.normal, text="ICT L")
+plotshape(entry_short, title="ICT Short", style=shape.triangledown,  location=location.abovebar, color=col_bear, size=size.normal, text="ICT S")
+
+// ── 9. ALERTES WEBHOOK (JSON → dashboard) ─────────────────────
+atr      = ta.atr(14)
 sl_mult  = ${sl}
 tp1_mult = ${tp1}
 tp2_mult = ${tp2}
 
-if long_signal
-    e    = close
-    sl   = math.round((e - atr * sl_mult)  * 100) / 100
-    tp1  = math.round((e + atr * tp1_mult) * 100) / 100
-    tp2  = math.round((e + atr * tp2_mult) * 100) / 100
-    rr   = str.tostring(math.round(tp2_mult / sl_mult * 10) / 10.0)
-    ctx  = bull_fvg ? "FVG haussier" : "MSS EMA9"
-    ed   = ema20 > ema50 ? "haussier" : "neutre"
-    vp   = close > vwap_val ? "dessus" : "dessous"
-    msg  = '{"bot":"' + bot_name + '","symbol":"' + symbol_name +
-           '","signal":"LONG","entry":' + str.tostring(e) +
-           ',"sl":' + str.tostring(sl) +
-           ',"tp1":' + str.tostring(tp1) +
-           ',"tp2":' + str.tostring(tp2) +
-           ',"rr":"1:' + rr +
-           '","context":"' + ctx + ' EMA ' + ed + ' VWAP ' + vp +
-           '","timeframe":"{{interval}}","timestamp":"{{time}}"}'
+if entry_long
+    e   = close
+    s   = math.round((e - atr * sl_mult)  * 100) / 100
+    t1  = math.round((e + atr * tp1_mult) * 100) / 100
+    t2  = math.round((e + atr * tp2_mult) * 100) / 100
+    rr  = str.tostring(math.round(tp2_mult / sl_mult * 10) / 10.0)
+    ctx = (recent_fvg_bull ? "FVG " : "") + (recent_ob_bull ? "OB " : "") + (mss_bull_sig ? "MSS " : "") + "KZ:" + (in_kz ? "Y" : "N") + " score:" + str.tostring(score_bull)
+    msg = '{"bot":"' + bot_name + '","symbol":"' + symbol_name +
+          '","signal":"LONG","entry":' + str.tostring(e) +
+          ',"sl":' + str.tostring(s) +
+          ',"tp1":' + str.tostring(t1) +
+          ',"tp2":' + str.tostring(t2) +
+          ',"rr":"1:' + rr +
+          '","context":"' + ctx +
+          '","timeframe":"{{interval}}","timestamp":"{{time}}"}'
     alert(msg, alert.freq_once_per_bar_close)
 
-if short_signal
-    e    = close
-    sl   = math.round((e + atr * sl_mult)  * 100) / 100
-    tp1  = math.round((e - atr * tp1_mult) * 100) / 100
-    tp2  = math.round((e - atr * tp2_mult) * 100) / 100
-    rr   = str.tostring(math.round(tp2_mult / sl_mult * 10) / 10.0)
-    ctx  = bear_fvg ? "FVG baissier" : "MSS EMA9"
-    ed   = ema20 < ema50 ? "baissier" : "neutre"
-    vp   = close < vwap_val ? "dessous" : "dessus"
-    msg  = '{"bot":"' + bot_name + '","symbol":"' + symbol_name +
-           '","signal":"SHORT","entry":' + str.tostring(e) +
-           ',"sl":' + str.tostring(sl) +
-           ',"tp1":' + str.tostring(tp1) +
-           ',"tp2":' + str.tostring(tp2) +
-           ',"rr":"1:' + rr +
-           '","context":"' + ctx + ' EMA ' + ed + ' VWAP ' + vp +
-           '","timeframe":"{{interval}}","timestamp":"{{time}}"}'
+if entry_short
+    e   = close
+    s   = math.round((e + atr * sl_mult)  * 100) / 100
+    t1  = math.round((e - atr * tp1_mult) * 100) / 100
+    t2  = math.round((e - atr * tp2_mult) * 100) / 100
+    rr  = str.tostring(math.round(tp2_mult / sl_mult * 10) / 10.0)
+    ctx = (recent_fvg_bear ? "FVG " : "") + (recent_ob_bear ? "OB " : "") + (mss_bear_sig ? "MSS " : "") + "KZ:" + (in_kz ? "Y" : "N") + " score:" + str.tostring(score_bear)
+    msg = '{"bot":"' + bot_name + '","symbol":"' + symbol_name +
+          '","signal":"SHORT","entry":' + str.tostring(e) +
+          ',"sl":' + str.tostring(s) +
+          ',"tp1":' + str.tostring(t1) +
+          ',"tp2":' + str.tostring(t2) +
+          ',"rr":"1:' + rr +
+          '","context":"' + ctx +
+          '","timeframe":"{{interval}}","timestamp":"{{time}}"}'
     alert(msg, alert.freq_once_per_bar_close)
 
-plot(ema9,     "EMA 9",   color.new(color.lime,   20), 1)
-plot(ema20,    "EMA 20",  color.new(color.yellow, 20), 1)
-plot(ema50,    "EMA 50",  color.new(color.orange, 20), 1)
-plot(ema200,   "EMA 200", color.new(color.red,    20), 2)
-plot(vwap_val, "VWAP",    color.new(color.aqua,   10), 2)
-plotshape(long_signal,  "LONG",  shape.triangleup,   location.belowbar, color.lime, size=size.small)
-plotshape(short_signal, "SHORT", shape.triangledown, location.abovebar, color.red,  size=size.small)
+// ── 10. DASHBOARD TABLE ───────────────────────────────────────
+var table dash = table.new(position.top_right, 2, 9,
+  border_color=color.new(color.gray, 60), border_width=1,
+  bgcolor=color.new(#1a1a2e, 10))
+
+f_ok(v) => v ? "✅" : "❌"
+f_row(t, ok, r, v) =>
+    table.cell(t, 0, r, v,      text_color=color.white, bgcolor=color.new(#1a1a2e, 30),   text_size=size.small)
+    table.cell(t, 1, r, f_ok(ok), text_color=color.white, bgcolor=ok ? color.new(#00e676, 60) : color.new(#ff1744, 60), text_size=size.small)
+
+if barstate.islast
+    table.cell(dash, 0, 0, "ICT [" + bot_name + "]",
+      text_color=color.white, bgcolor=color.new(#0d1117, 20), text_size=size.small)
+    table.cell(dash, 1, 0, htf_bullish ? "BULL" : htf_bearish ? "BEAR" : "RANGE",
+      text_color=color.white,
+      bgcolor=htf_bullish ? color.new(col_bull, 40) : htf_bearish ? color.new(col_bear, 40) : color.new(color.gray, 40),
+      text_size=size.small)
+    f_row(dash, htf_bullish or htf_bearish,          1, "1. Bias HTF")
+    f_row(dash, recent_mss_bull or recent_mss_bear,   2, "2. MSS")
+    f_row(dash, recent_disp_bull or recent_disp_bear, 3, "3. Displacement")
+    f_row(dash, recent_fvg_bull or recent_fvg_bear,   4, "4. FVG")
+    f_row(dash, recent_ob_bull or recent_ob_bear,     5, "5. Order Block")
+    f_row(dash, in_kz,                                6, "6. Kill Zone")
+    f_row(dash, entry_long or entry_short,            7, "→ SETUP ≥ ${minScore}/5")
+    score_max = math.max(score_bull, score_bear)
+    table.cell(dash, 0, 8, "Score: " + str.tostring(score_max) + "/5",
+      text_color=color.white, bgcolor=color.new(#0d1117, 20), text_size=size.small)
+    table.cell(dash, 1, 8, entry_long ? "LONG 🟢" : entry_short ? "SHORT 🔴" : "—",
+      text_color=color.white,
+      bgcolor=entry_long ? color.new(col_bull, 40) : entry_short ? color.new(col_bear, 40) : color.new(color.gray, 60),
+      text_size=size.small)
 `;
 }
 
@@ -620,13 +826,13 @@ export default function Bot() {
       {tab === 'pine' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-          {/* Bot selector */}
-          <div style={{ display: 'flex', gap: '8px' }}>
+          {/* Bot selector — grille 2×2 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             {PINE_BOTS.map(bot => (
               <button key={bot.id} onClick={() => setSelectedPine(bot.id)}
-                style={{ flex: 1, padding: '12px 10px', borderRadius: '7px', border: `1px solid ${selectedPine === bot.id ? bot.color + '60' : 'rgba(0,255,136,0.1)'}`, background: selectedPine === bot.id ? `${bot.color}12` : 'rgba(10,28,18,0.4)', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'all 0.15s' }}>
+                style={{ padding: '12px 14px', borderRadius: '7px', border: `1px solid ${selectedPine === bot.id ? bot.color + '60' : 'rgba(0,255,136,0.1)'}`, background: selectedPine === bot.id ? `${bot.color}12` : 'rgba(10,28,18,0.4)', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'all 0.15s' }}>
                 <div style={{ fontSize: '12px', fontWeight: '700', color: selectedPine === bot.id ? bot.color : '#c8d8c8', marginBottom: '3px' }}>{bot.name}</div>
-                <div style={{ fontSize: '10px', color: '#3a6a4a' }}>{bot.tf} · ATR ×{bot.sl}/{bot.tp1}/{bot.tp2}</div>
+                <div style={{ fontSize: '10px', color: '#3a6a4a' }}>{bot.tf} · ATR ×{bot.sl}/{bot.tp1}/{bot.tp2} · score ≥ {bot.minScore}</div>
                 <div style={{ fontSize: '10px', color: '#2a5a3a', marginTop: '2px' }}>{bot.desc}</div>
               </button>
             ))}
