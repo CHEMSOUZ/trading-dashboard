@@ -34,3 +34,14 @@ contextBridge.exposeInMainWorld('electron', {
   openImageDialog:  () => ipcRenderer.invoke('dialog:openImage'),
   openImagesDialog: () => ipcRenderer.invoke('dialog:openImages'),
 });
+
+contextBridge.exposeInMainWorld('bot', {
+  getSignals:   ()       => ipcRenderer.invoke('bot:getSignals'),
+  clearSignals: ()       => ipcRenderer.invoke('bot:clearSignals'),
+  getPort:      ()       => ipcRenderer.invoke('bot:getPort'),
+  setPort:      (port)   => ipcRenderer.invoke('bot:setPort', port),
+  onSignal:     (cb)     => ipcRenderer.on('bot:signal',       (_, d) => cb(d)),
+  onServerReady:(cb)     => ipcRenderer.on('bot:server-ready', (_, d) => cb(d)),
+  onServerError:(cb)     => ipcRenderer.on('bot:server-error', (_, d) => cb(d)),
+  offSignal:    (cb)     => ipcRenderer.removeListener('bot:signal', cb),
+});

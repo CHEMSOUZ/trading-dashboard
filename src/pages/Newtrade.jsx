@@ -272,7 +272,7 @@ export default function NewTrade() {
     date: new Date().toISOString().slice(0, 10),
     pair: 'MNQ', direction: 'LONG',
     entry: '', stop: '', tp: '', rr: '',
-    result: '', outcome: '', emotion: 'Calme', notes: '',
+    result: '', fees: '', commissions: '', outcome: '', emotion: 'Calme', notes: '',
     entered_time: '', exited_time: '', size: '', duration: '',
   });
 
@@ -312,8 +312,8 @@ export default function NewTrade() {
           direction: t.direction ?? 'LONG',
           entry: String(t.entry ?? ''), stop: String(t.stop ?? ''),
           tp: String(t.tp ?? ''), rr: String(t.rr ?? ''),
-          result: String(t.result ?? ''), outcome: t.outcome ?? '',
-          emotion: t.emotion ?? 'Calme', notes: t.notes ?? '',
+          result: String(t.result ?? ''), fees: String(t.fees ?? ''), commissions: String(t.commissions ?? ''),
+          outcome: t.outcome ?? '', emotion: t.emotion ?? 'Calme', notes: t.notes ?? '',
           entered_time: toTime(t.entered_at),
           exited_time:  toTime(t.exited_at),
           size:     String(t.size ?? ''),
@@ -352,8 +352,12 @@ export default function NewTrade() {
       stop:   parseFloat(form.stop)   || 0,
       tp:     parseFloat(form.tp)     || 0,
       rr:     parseFloat(form.rr)     || null,
+      fees:       parseFloat(form.fees)        || 0,
+      commissions: parseFloat(form.commissions) || 0,
       result: form.result !== '' ? parseFloat(form.result) : null,
-      result_net: form.result !== '' ? parseFloat(form.result) : null,
+      result_net: form.result !== ''
+        ? (parseFloat(form.result) || 0) - (parseFloat(form.fees) || 0) - (parseFloat(form.commissions) || 0)
+        : null,
       outcome:    form.outcome || null,
       emotion:    form.emotion || null,
       notes: form.notes ? `${form.notes}\n\nChecklist: ${checklistSummary}` : `Checklist: ${checklistSummary}`,
@@ -460,14 +464,46 @@ export default function NewTrade() {
             </Field>
           </div>
 
-          {/* Résultat, Outcome, Émotion */}
+          {/* Résultat, Frais, Commissions */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
-            <Field label="RÉSULTAT ($)">
+            <Field label="RÉSULTAT BRUT ($)">
               <input type="number" placeholder="+500 ou -250" value={form.result} onChange={set('result')}
                 style={{ ...inputStyle, color: form.result ? (parseFloat(form.result) >= 0 ? '#00ff88' : '#ff4455') : '#c8d8c8' }}
                 onFocus={e => e.target.style.borderColor = '#00ff88'}
                 onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
             </Field>
+            <Field label="FRAIS ($)">
+              <input type="number" placeholder="0.00" min="0" step="0.01" value={form.fees} onChange={set('fees')}
+                style={{ ...inputStyle, color: parseFloat(form.fees) > 0 ? '#f0a020' : '#c8d8c8' }}
+                onFocus={e => e.target.style.borderColor = '#f0a020'}
+                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+            </Field>
+            <Field label="COMMISSIONS ($)">
+              <input type="number" placeholder="0.00" min="0" step="0.01" value={form.commissions} onChange={set('commissions')}
+                style={{ ...inputStyle, color: parseFloat(form.commissions) > 0 ? '#f0a020' : '#c8d8c8' }}
+                onFocus={e => e.target.style.borderColor = '#f0a020'}
+                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+            </Field>
+          </div>
+
+          {/* P&L net calculé */}
+          {(form.result !== '' || form.fees !== '' || form.commissions !== '') && (
+            <div style={{ background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '5px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '1px' }}>P&L NET :</span>
+              {(() => {
+                const net = (parseFloat(form.result) || 0) - (parseFloat(form.fees) || 0) - (parseFloat(form.commissions) || 0);
+                return <span style={{ fontSize: '15px', fontWeight: '700', color: net >= 0 ? '#00ff88' : '#ff4455' }}>{net >= 0 ? '+' : ''}{net.toFixed(2)}$</span>;
+              })()}
+              {((parseFloat(form.fees) || 0) + (parseFloat(form.commissions) || 0)) > 0 && (
+                <span style={{ fontSize: '10px', color: '#4a6a4a', marginLeft: 'auto' }}>
+                  -{((parseFloat(form.fees) || 0) + (parseFloat(form.commissions) || 0)).toFixed(2)}$ de frais
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Outcome, Émotion */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
             <Field label="OUTCOME">
               <div style={{ display: 'flex', gap: '5px' }}>
                 {['WIN','LOSS','BE'].map(o => {

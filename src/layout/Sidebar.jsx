@@ -26,6 +26,8 @@ const NAV = [
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> },
   { to: '/fitness',   label: 'Fitness & Santé', sub: 'Sport & Nutrition',
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><rect x="2" y="9" width="4" height="6" rx="1"/><rect x="18" y="9" width="4" height="6" rx="1"/></svg> },
+  { to: '/bot',       label: 'Bot Trading',   sub: 'Signaux MNQ live', badge: 'BOT',
+    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/><circle cx="9" cy="14" r="1" fill="currentColor"/><circle cx="15" cy="14" r="1" fill="currentColor"/><line x1="9" y1="17" x2="15" y2="17"/></svg> },
 ];
 
 // -- Status detection ----------------------------------------
@@ -434,7 +436,12 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                 <div style={{ fontSize: '14px', fontWeight: active ? '700' : '400', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
                 <div style={{ fontSize: '12px', color: active ? '#3a8a4a' : '#3a5a3a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>
               </div>
-              {badge && <span style={{ fontSize: '11px', letterSpacing: '1px', background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', padding: '2px 5px', borderRadius: '2px', flexShrink: 0 }}>{badge}</span>}
+              {badge && (() => {
+                const bc = badge === 'BOT' ? '#00aaff' : '#00ff88';
+                const bg = badge === 'BOT' ? 'rgba(0,170,255,0.15)' : 'rgba(0,255,136,0.15)';
+                const br = badge === 'BOT' ? 'rgba(0,170,255,0.3)' : 'rgba(0,255,136,0.3)';
+                return <span style={{ fontSize: '11px', letterSpacing: '1px', background: bg, border: `1px solid ${br}`, color: bc, padding: '2px 5px', borderRadius: '2px', flexShrink: 0 }}>{badge}</span>;
+              })()}
             </NavLink>
           );
         })}

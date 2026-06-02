@@ -24,6 +24,7 @@ import Payout from './pages/Payout';
 import TradingPlan from './pages/TradingPlan';
 import StrategieDiscipline from './pages/StrategieDiscipline';
 import FitnessSante from './pages/FitnessSante';
+import Bot from './pages/Bot';
 
 export default function App() {
   const [activeAccount, setActiveAccount] = useState(null);
@@ -116,6 +117,7 @@ export default function App() {
             <Route path="/plan"           element={<TradingPlan />} />
             <Route path="/strategie"      element={<StrategieDiscipline />} />
             <Route path="/fitness"        element={<FitnessSante />} />
+            <Route path="/bot"            element={<Bot />} />
           </Routes>
         </main>
       </div>

@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs   = require('fs');
+const http = require('http');
 const { autoUpdater } = require('electron-updater');
 
 autoUpdater.autoDownload = true;
@@ -13,6 +14,51 @@ let activeDb     = null;
 let activeDbPath = null;
 let globalDb     = null;
 let globalDbPath = null;
+
+// ── Bot webhook server ────────────────────────────────────────
+let botServer    = null;
+let botPort      = 3001;
+let botSignals   = [];
+
+function startBotServer(port) {
+  if (botServer) { try { botServer.close(); } catch(_) {} }
+  botPort = port || 3001;
+  botServer = http.createServer((req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+    if (req.method === 'POST' && req.url === '/webhook') {
+      let body = '';
+      req.on('data', chunk => { body += chunk; if (body.length > 8192) req.destroy(); });
+      req.on('end', () => {
+        try {
+          const signal = JSON.parse(body);
+          signal._id         = Date.now() + Math.random();
+          signal._receivedAt = new Date().toISOString();
+          botSignals.unshift(signal);
+          if (botSignals.length > 200) botSignals = botSignals.slice(0, 200);
+          mainWindow?.webContents.send('bot:signal', signal);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch(e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'Invalid JSON' }));
+        }
+      });
+    } else {
+      res.writeHead(404); res.end();
+    }
+  });
+  botServer.on('error', (e) => {
+    console.error('[Bot] Server error:', e.message);
+    mainWindow?.webContents.send('bot:server-error', e.message);
+  });
+  botServer.listen(botPort, '127.0.0.1', () => {
+    console.log(`[Bot] Webhook server listening on port ${botPort}`);
+    mainWindow?.webContents.send('bot:server-ready', botPort);
+  });
+}
 
 async function init() {
   accounts = require('./accounts.cjs');
@@ -78,6 +124,7 @@ app.whenReady().then(async () => {
   await loadGlobalDb();
   registerHandlers();
   createWindow();
+  startBotServer(3001);
 
   if (app.isPackaged) {
     mainWindow.webContents.on('did-finish-load', () => {
@@ -88,6 +135,7 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+  if (botServer) { try { botServer.close(); } catch(_) {} }
   if (process.platform !== 'darwin') app.quit();
 });
 
@@ -97,6 +145,15 @@ autoUpdater.on('error', (err) => { console.error('AutoUpdater error:', err); });
 
 function registerHandlers() {
   ipcMain.handle('update:install', () => { autoUpdater.quitAndInstall(); });
+
+  // ── Bot handlers ──────────────────────────────────────────
+  ipcMain.handle('bot:getSignals',  () => ({ ok: true, data: botSignals }));
+  ipcMain.handle('bot:clearSignals',() => { botSignals = []; return { ok: true }; });
+  ipcMain.handle('bot:getPort',     () => ({ ok: true, data: botPort }));
+  ipcMain.handle('bot:setPort',     (_, port) => {
+    try { startBotServer(parseInt(port) || 3001); return { ok: true, data: botPort }; }
+    catch(e) { return { ok: false, error: e.message }; }
+  });
 
   // ── Account handlers ──────────────────────────────────────
   ipcMain.handle('accounts:getAll',    async () => { try { return { ok: true, data: accounts.getAllAccounts() }; } catch(e) { return { ok: false, error: e.message }; } });
