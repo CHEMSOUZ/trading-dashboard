@@ -44,6 +44,9 @@ const ACCOUNT_RULES = {
   lucid_funded_50k:    { size: 50000,  maxLoss: 2500, dailyLoss: 2000 },
   lucid_funded_100k:   { size: 100000, maxLoss: 3000, dailyLoss: 3000 },
   lucid_funded_150k:   { size: 150000, maxLoss: 4500, dailyLoss: 4500 },
+  lucid_live_50k:      { size: null,   maxLoss: null,  dailyLoss: null },
+  lucid_live_100k:     { size: null,   maxLoss: null,  dailyLoss: null },
+  lucid_live_150k:     { size: null,   maxLoss: null,  dailyLoss: null },
   tradovate_live:      { size: 50000,  maxLoss: 2000, dailyLoss: null, profitTarget: 3000, minDays: 0, consistencyPct: 0.50 },
   tradovate_demo:      { size: null,   maxLoss: null,  dailyLoss: null },
   perso:               { size: null,   maxLoss: null,  dailyLoss: null },
@@ -54,6 +57,7 @@ const CHALLENGE_TYPES      = new Set(['topstep_50k','topstep_100k','topstep_150k
 const EXPRESS_FUNDED_TYPES = new Set(['topstep_ef_50k','topstep_ef_100k','topstep_ef_150k',
                                       'lucid_funded_25k','lucid_funded_50k','lucid_funded_100k','lucid_funded_150k']);
 const LUCID_EVAL_TYPES     = new Set(['lucid_eval_25k','lucid_eval_50k','lucid_eval_100k','lucid_eval_150k','tradovate_live']);
+const LIVE_TYPES           = new Set(['lucid_live_50k','lucid_live_100k','lucid_live_150k','tradovate_live']);
 
 async function computeBlownStatus(acc, currentActiveId) {
   const rules = ACCOUNT_RULES[acc.type];
@@ -242,7 +246,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
         <div onClick={() => setShowSwitcher(s => !s)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 11px', borderRadius: '6px', cursor: 'pointer', background: showSwitcher ? 'rgba(0,255,136,0.06)' : 'transparent', border: `1px solid ${showSwitcher ? 'rgba(0,255,136,0.2)' : 'rgba(0,255,136,0.06)'}`, transition: 'all 0.15s' }}>
           {(() => {
             const st = accountStatuses[activeAccount?.id];
-            const dc = st?.isBlown ? '#ff4455' : st?.isExpressFunded ? '#f0c020' : '#00ff88';
+            const dc = st?.isBlown ? '#ff4455' : st?.isExpressFunded ? '#f0c020' : LIVE_TYPES.has(activeAccount?.type) ? '#00ddff' : '#00ff88';
             return <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: dc, boxShadow: `0 0 7px ${dc}`, flexShrink: 0 }} />;
           })()}
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -259,10 +263,10 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
           <div style={{ position: 'absolute', top: '90px', left: '8px', right: '8px', zIndex: 50, background: '#070d12', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '8px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
 
             {(() => {
-              const liveAccts      = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isValidated && (accountStatuses[a.id]?.isExpressFunded || a.type === 'tradovate_live'));
-              const challengeAccts = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' && !accountStatuses[a.id]?.isValidated && CHALLENGE_TYPES.has(a.type));
-              const validatedAccts = accounts.filter(a => !accountStatuses[a.id]?.isBlown && accountStatuses[a.id]?.isValidated);
-              const regularAccts   = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' && !accountStatuses[a.id]?.isValidated && !CHALLENGE_TYPES.has(a.type));
+              const liveAccts      = accounts.filter(a => !accountStatuses[a.id]?.isBlown && LIVE_TYPES.has(a.type));
+              const fundedAccts    = accounts.filter(a => !accountStatuses[a.id]?.isBlown && accountStatuses[a.id]?.isExpressFunded && !LIVE_TYPES.has(a.type));
+              const challengeAccts = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isExpressFunded && !LIVE_TYPES.has(a.type) && !accountStatuses[a.id]?.isValidated && (CHALLENGE_TYPES.has(a.type) || LUCID_EVAL_TYPES.has(a.type)));
+              const validatedAccts = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isExpressFunded && !LIVE_TYPES.has(a.type) && accountStatuses[a.id]?.isValidated);
               const blownAccts     = accounts.filter(a => accountStatuses[a.id]?.isBlown);
 
               function renderAccItem(a) {
@@ -271,10 +275,10 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                 const isActive = a.id === activeAccount?.id;
                 const isEF = st?.isExpressFunded ?? false;
                 const isVal = st?.isValidated ?? false;
-                const isLucidFunded = a.type?.startsWith('lucid_funded');
-                const dotColor = isBlown ? '#ff4455' : (isEF || isLucidFunded) ? '#f0c020' : '#00ff88';
-                const bgNormal = isBlown ? 'rgba(255,68,85,0.06)' : isEF ? 'rgba(240,192,32,0.06)' : 'rgba(0,255,136,0.06)';
-                const borderAccent = isBlown ? 'rgba(255,68,85,0.4)' : isEF ? 'rgba(240,192,32,0.4)' : 'transparent';
+                const isLive = LIVE_TYPES.has(a.type);
+                const dotColor = isBlown ? '#ff4455' : isEF ? '#f0c020' : isLive ? '#00ddff' : '#00ff88';
+                const bgNormal = isBlown ? 'rgba(255,68,85,0.06)' : isEF ? 'rgba(240,192,32,0.06)' : isLive ? 'rgba(0,221,255,0.06)' : 'rgba(0,255,136,0.06)';
+                const borderAccent = isBlown ? 'rgba(255,68,85,0.4)' : isEF ? 'rgba(240,192,32,0.4)' : isLive ? 'rgba(0,221,255,0.4)' : 'transparent';
                 return (
                   <div key={a.id} style={{ borderRadius: '5px', marginBottom: '2px', overflow: 'hidden' }}>
                     {renamingId === a.id ? (
@@ -292,17 +296,18 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                       </div>
                     ) : (
                       <div onClick={() => switchTo(a.id)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', cursor: 'pointer', background: isActive ? bgNormal : 'transparent', transition: 'background 0.12s', borderRadius: '5px', borderLeft: `2px solid ${isBlown || isEF ? borderAccent : 'transparent'}` }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', cursor: 'pointer', background: isActive ? bgNormal : 'transparent', transition: 'background 0.12s', borderRadius: '5px', borderLeft: `2px solid ${isBlown || isEF || isLive ? borderAccent : 'transparent'}` }}
                         onMouseEnter={e => e.currentTarget.style.background = bgNormal}
                         onMouseLeave={e => e.currentTarget.style.background = isActive ? bgNormal : 'transparent'}
                       >
                         <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: dotColor, boxShadow: `0 0 5px ${dotColor}`, flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <span style={{ fontSize: '13px', color: isBlown ? '#ff7777' : isEF ? '#f0c020' : isActive ? a.color : '#c8d8c8', fontWeight: isActive ? '700' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
+                            <span style={{ fontSize: '13px', color: isBlown ? '#ff7777' : isEF ? '#f0c020' : isLive ? '#00ddff' : isActive ? a.color : '#c8d8c8', fontWeight: isActive ? '700' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
                             {isBlown && <span title={st?.dailyLossBreached ? 'Perte journalière dépassée' : 'Drawdown maximum atteint'} style={{ fontSize: '8px', background: 'rgba(255,68,85,0.2)', border: '1px solid rgba(255,68,85,0.4)', color: '#ff4455', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0, cursor: 'help' }}>{st?.dailyLossBreached ? 'DAILY 🔴' : 'CRAMÉ'}</span>}
-                            {!isBlown && isEF && <span style={{ fontSize: '8px', background: 'rgba(240,192,32,0.2)', border: '1px solid rgba(240,192,32,0.4)', color: '#f0c020', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>FUNDED</span>}
-                            {!isBlown && isVal && <span title={LUCID_EVAL_TYPES.has(a.type) ? 'Lucid Eval validée — objectif +4000$ atteint' : 'Challenge validé'} style={{ fontSize: '8px', background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0, cursor: 'help' }}>{LUCID_EVAL_TYPES.has(a.type) ? 'LUCID ✅' : 'VALIDÉ'}</span>}
+                            {!isBlown && isLive && <span style={{ fontSize: '8px', background: 'rgba(0,221,255,0.15)', border: '1px solid rgba(0,221,255,0.4)', color: '#00ddff', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>LIVE</span>}
+                            {!isBlown && !isLive && isEF && <span style={{ fontSize: '8px', background: 'rgba(240,192,32,0.2)', border: '1px solid rgba(240,192,32,0.4)', color: '#f0c020', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>FUNDED</span>}
+                            {!isBlown && !isLive && isVal && <span title={LUCID_EVAL_TYPES.has(a.type) ? 'Lucid Eval validée — objectif atteint' : 'Challenge validé'} style={{ fontSize: '8px', background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0, cursor: 'help' }}>{LUCID_EVAL_TYPES.has(a.type) ? 'LUCID ✅' : 'VALIDÉ'}</span>}
                           </div>
                           <div style={{ fontSize: '11px', color: isBlown ? '#6a3a3a' : '#3a6a4a', display: 'flex', alignItems: 'center', gap: '5px' }}>
                             <span>{a.typeInfo?.label}</span>
@@ -323,19 +328,31 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
 
               return (
                 <>
-                  {/* 1. LIVE : Express Funded + Tradovate Live */}
+                  {/* 1. LIVE : Lucid Live + Tradovate Live */}
                   {liveAccts.length > 0 && (
                     <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#f0c020', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
-                        <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#f0c020', boxShadow: '0 0 4px #f0c020' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#00ddff', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
+                        <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00ddff', boxShadow: '0 0 4px #00ddff' }} />
                         LIVE
                       </div>
                       {liveAccts.map(renderAccItem)}
-                      {hasMore(liveAccts, challengeAccts, validatedAccts, regularAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
+                      {hasMore(liveAccts, fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
                     </>
                   )}
 
-                  {/* 2. CHALLENGE : Topstep actifs non validés */}
+                  {/* 2. FUNDED : Express Funded + Lucid Funded */}
+                  {fundedAccts.length > 0 && (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#f0c020', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
+                        <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#f0c020', boxShadow: '0 0 4px #f0c020' }} />
+                        FUNDED
+                      </div>
+                      {fundedAccts.map(renderAccItem)}
+                      {hasMore(fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
+                    </>
+                  )}
+
+                  {/* 3. CHALLENGE : Topstep Combine + Lucid Eval non validés */}
                   {challengeAccts.length > 0 && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#00dd77', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
@@ -343,11 +360,11 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         CHALLENGE
                       </div>
                       {challengeAccts.map(renderAccItem)}
-                      {hasMore(challengeAccts, validatedAccts, regularAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
+                      {hasMore(challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
                     </>
                   )}
 
-                  {/* 3. VALIDÉ */}
+                  {/* 4. VALIDÉ */}
                   {validatedAccts.length > 0 && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#00ff88', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
@@ -355,15 +372,6 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         VALIDÉ
                       </div>
                       {validatedAccts.map(renderAccItem)}
-                      {hasMore(validatedAccts, regularAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
-                    </>
-                  )}
-
-                  {/* 4. AUTRES ACTIFS */}
-                  {regularAccts.length > 0 && (
-                    <>
-                      <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', padding: '4px 8px', marginBottom: '4px' }}>ACTIFS</div>
-                      {regularAccts.map(renderAccItem)}
                       {blownAccts.length > 0 && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
                     </>
                   )}

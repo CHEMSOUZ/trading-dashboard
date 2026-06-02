@@ -10,27 +10,46 @@ const TYPE_LABELS = {
   topstep_ef_50k:    { label: 'Funded 50K',      color: '#f0c020', platform: 'topstep' },
   topstep_ef_100k:   { label: 'Funded 100K',     color: '#f0c020', platform: 'topstep' },
   topstep_ef_150k:   { label: 'Funded 150K',     color: '#f0c020', platform: 'topstep' },
-  tradovate_live:    { label: 'Tradovate Live',   color: '#00aaff', platform: 'tradovate' },
-  tradovate_demo:    { label: 'Tradovate Demo',   color: '#4488ff', platform: 'tradovate' },
+  lucid_eval_50k:    { label: 'LucidFlex 50K',   color: '#00aaff', platform: 'tradovate' },
+  lucid_eval_100k:   { label: 'LucidFlex 100K',  color: '#00aaff', platform: 'tradovate' },
+  lucid_eval_150k:   { label: 'LucidFlex 150K',  color: '#00aaff', platform: 'tradovate' },
+  lucid_funded_50k:  { label: 'Funded 50K',      color: '#f0c020', platform: 'tradovate' },
+  lucid_funded_100k: { label: 'Funded 100K',     color: '#f0c020', platform: 'tradovate' },
+  lucid_funded_150k: { label: 'Funded 150K',     color: '#f0c020', platform: 'tradovate' },
+  lucid_live_50k:    { label: 'Live 50K',        color: '#00ddff', platform: 'tradovate' },
+  lucid_live_100k:   { label: 'Live 100K',       color: '#00ddff', platform: 'tradovate' },
+  lucid_live_150k:   { label: 'Live 150K',       color: '#00ddff', platform: 'tradovate' },
+  tradovate_live:    { label: 'Tradovate Live',  color: '#00aaff', platform: 'tradovate' },
+  tradovate_demo:    { label: 'Tradovate Demo',  color: '#4488ff', platform: 'tradovate' },
   perso:             { label: 'Compte Personnel', color: '#ffcc00', platform: 'perso' },
-  autre:             { label: 'Autre compte',     color: '#ff6644', platform: 'perso' },
+  autre:             { label: 'Autre compte',    color: '#ff6644', platform: 'perso' },
 };
 
 const ACCOUNT_RULES = {
-  topstep_50k:       { size: 50000,  maxLoss: 2000 },
-  topstep_100k:      { size: 100000, maxLoss: 3000 },
-  topstep_150k:      { size: 150000, maxLoss: 4500 },
+  topstep_50k:       { size: 50000,  maxLoss: 2000,  profitTarget: 3000 },
+  topstep_100k:      { size: 100000, maxLoss: 3000,  profitTarget: 6000 },
+  topstep_150k:      { size: 150000, maxLoss: 4500,  profitTarget: 9000 },
   topstep_ef_50k:    { size: 50000,  maxLoss: 2000 },
   topstep_ef_100k:   { size: 100000, maxLoss: 3000 },
   topstep_ef_150k:   { size: 150000, maxLoss: 4500 },
+  lucid_eval_50k:    { size: 50000,  maxLoss: 2000,  profitTarget: 3000 },
+  lucid_eval_100k:   { size: 100000, maxLoss: 3000,  profitTarget: 6000 },
+  lucid_eval_150k:   { size: 150000, maxLoss: 4500,  profitTarget: 9000 },
+  lucid_funded_50k:  { size: 50000,  maxLoss: 2500 },
+  lucid_funded_100k: { size: 100000, maxLoss: 3000 },
+  lucid_funded_150k: { size: 150000, maxLoss: 4500 },
+  lucid_live_50k:    { size: null,   maxLoss: null },
+  lucid_live_100k:   { size: null,   maxLoss: null },
+  lucid_live_150k:   { size: null,   maxLoss: null },
   tradovate_live:    { size: null,   maxLoss: null },
   tradovate_demo:    { size: null,   maxLoss: null },
   perso:             { size: null,   maxLoss: null },
   autre:             { size: null,   maxLoss: null },
 };
 
-const CHALLENGE_TYPES = new Set(['topstep_50k','topstep_100k','topstep_150k']);
-const EXPRESS_FUNDED_TYPES = new Set(['topstep_ef_50k','topstep_ef_100k','topstep_ef_150k']);
+const CHALLENGE_TYPES = new Set(['topstep_50k','topstep_100k','topstep_150k','lucid_eval_50k','lucid_eval_100k','lucid_eval_150k']);
+const EXPRESS_FUNDED_TYPES = new Set(['topstep_ef_50k','topstep_ef_100k','topstep_ef_150k','lucid_funded_50k','lucid_funded_100k','lucid_funded_150k']);
+const LIVE_TYPES = new Set(['lucid_live_50k','lucid_live_100k','lucid_live_150k','tradovate_live']);
 
 const PLATFORMS = {
   topstep: {
@@ -46,19 +65,18 @@ const PLATFORMS = {
     },
   },
   tradovate: {
-    label: 'Tradovate', color: '#00aaff',
-    desc: 'Import CSV de vos trades',
+    label: 'Lucid', color: '#00aaff',
+    desc: 'LucidFlex Combine · Funded · Live',
     types: {
-      tradovate_live: { label: 'Live', desc: 'Compte live Tradovate — trades réels' },
-      tradovate_demo: { label: 'Demo', desc: 'Compte simulation / paper trading' },
-    },
-  },
-  perso: {
-    label: 'Personnel', color: '#ffcc00',
-    desc: 'Compte live ou paper trading',
-    types: {
-      perso: { label: 'Compte Personnel', desc: 'Live ou paper trading' },
-      autre: { label: 'Autre',            desc: 'Broker ou plateforme custom' },
+      lucid_eval_50k:    { label: 'LucidFlex 50K',  desc: 'Combine · Max loss -2 000$' },
+      lucid_eval_100k:   { label: 'LucidFlex 100K', desc: 'Combine · Max loss -3 000$' },
+      lucid_eval_150k:   { label: 'LucidFlex 150K', desc: 'Combine · Max loss -4 500$' },
+      lucid_funded_50k:  { label: 'Funded 50K',     desc: 'Funded · Max loss -2 500$', funded: true },
+      lucid_funded_100k: { label: 'Funded 100K',    desc: 'Funded · Max loss -3 000$', funded: true },
+      lucid_funded_150k: { label: 'Funded 150K',    desc: 'Funded · Max loss -4 500$', funded: true },
+      lucid_live_50k:    { label: 'Live 50K',       desc: 'Compte live réel', live: true },
+      lucid_live_100k:   { label: 'Live 100K',      desc: 'Compte live réel', live: true },
+      lucid_live_150k:   { label: 'Live 150K',      desc: 'Compte live réel', live: true },
     },
   },
 };
@@ -132,12 +150,8 @@ async function computeAccountStatus(acc, currentActiveId) {
     const autoBlown = rules.size + totalPnl <= floor;
 
     let isValidated = false;
-    if (CHALLENGE_TYPES.has(acc.type) && sorted.length > 0) {
-      const firstDate = sorted[0].entered_at?.slice(0, 10) ?? sorted[0].date ?? '';
-      const firstDayPnl = sorted
-        .filter(t => (t.entered_at?.slice(0, 10) ?? t.date ?? '') === firstDate)
-        .reduce((s, t) => s + (t.result_net ?? t.result ?? 0), 0);
-      isValidated = totalPnl >= 3000 && firstDayPnl < 1500;
+    if (CHALLENGE_TYPES.has(acc.type) && sorted.length > 0 && rules?.profitTarget) {
+      isValidated = totalPnl >= rules.profitTarget;
     }
 
     return {
@@ -256,13 +270,18 @@ function CreateAccountModal({ onClose, onCreate }) {
                 {Object.entries(plat.types).map(([key, info], idx, arr) => {
                   const typeColor = TYPE_LABELS[key]?.color ?? plat.color;
                   const prevInfo  = arr[idx - 1]?.[1];
-                  const showSep   = idx > 0 && !!info.funded !== !!prevInfo?.funded;
+                  const showSep   = idx > 0 && (
+                    (!!info.funded && !prevInfo?.funded && !prevInfo?.live) ||
+                    (!!info.live && !prevInfo?.live)
+                  );
+                  const sepLabel  = info.live ? 'LIVE' : 'FUNDED';
+                  const sepColor  = info.live ? '#00ddff' : '#f0c020';
                   return (
                     <div key={key}>
                       {showSep && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0 6px' }}>
                           <div style={{ flex: 1, height: '1px', background: 'rgba(0,255,136,0.08)' }} />
-                          <span style={{ fontSize: '9px', color: '#f0c020', letterSpacing: '2px' }}>EXPRESS FUNDED</span>
+                          <span style={{ fontSize: '9px', color: sepColor, letterSpacing: '2px' }}>{sepLabel}</span>
                           <div style={{ flex: 1, height: '1px', background: 'rgba(0,255,136,0.08)' }} />
                         </div>
                       )}
@@ -371,13 +390,29 @@ function EditAccountModal({ acc, onClose, onSave }) {
                     <span style={{ fontSize: '9px', color: plat.color, letterSpacing: '2px', fontWeight: '700' }}>{plat.label.toUpperCase()}</span>
                   </div>
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    {Object.entries(plat.types).map(([typeKey, typeInfo]) => {
+                    {Object.entries(plat.types).map(([typeKey, typeInfo], tidx, tarr) => {
                       const tc = TYPE_LABELS[typeKey]?.color ?? plat.color;
                       const sel = form.type === typeKey;
+                      const prevTypeInfo = tarr[tidx - 1]?.[1];
+                      const showTypeSep  = tidx > 0 && (
+                        (!!typeInfo.funded && !prevTypeInfo?.funded && !prevTypeInfo?.live) ||
+                        (!!typeInfo.live && !prevTypeInfo?.live)
+                      );
+                      const typeSepLabel = typeInfo.live ? 'LIVE' : 'FUNDED';
+                      const typeSepColor = typeInfo.live ? '#00ddff' : '#f0c020';
                       return (
-                        <div key={typeKey} onClick={() => setForm(p => ({ ...p, type: typeKey, color: tc }))}
-                          style={{ padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '11px', fontWeight: sel ? '700' : '400', color: sel ? tc : '#5a8a6a', background: sel ? `${tc}15` : 'rgba(10,28,18,0.5)', border: `1px solid ${sel ? tc + '50' : 'rgba(0,255,136,0.08)'}`, transition: 'all 0.12s' }}>
-                          {typeInfo.label}
+                        <div key={typeKey} style={{ display: 'contents' }}>
+                          {showTypeSep && (
+                            <div style={{ flexBasis: '100%', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', marginBottom: '2px' }}>
+                              <div style={{ flex: 1, height: '1px', background: 'rgba(0,255,136,0.08)' }} />
+                              <span style={{ fontSize: '8px', color: typeSepColor, letterSpacing: '2px' }}>{typeSepLabel}</span>
+                              <div style={{ flex: 1, height: '1px', background: 'rgba(0,255,136,0.08)' }} />
+                            </div>
+                          )}
+                          <div onClick={() => setForm(p => ({ ...p, type: typeKey, color: tc }))}
+                            style={{ padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '11px', fontWeight: sel ? '700' : '400', color: sel ? tc : '#5a8a6a', background: sel ? `${tc}15` : 'rgba(10,28,18,0.5)', border: `1px solid ${sel ? tc + '50' : 'rgba(0,255,136,0.08)'}`, transition: 'all 0.12s' }}>
+                            {typeInfo.label}
+                          </div>
                         </div>
                       );
                     })}
@@ -435,7 +470,7 @@ function AccountCard({ acc, isActive, status, onSelect, onEdit, onDelete, onMark
   const hasStats    = status?.pnl != null;
   const pnl         = status?.pnl ?? 0;
   const pnlColor    = isBlown ? '#ff4455' : pnl >= 0 ? '#00ff88' : '#ff4455';
-  const isTdvLive   = acc.type === 'tradovate_live';
+  const isTdvLive   = LIVE_TYPES.has(acc.type);
   const isTdvDemo   = acc.type === 'tradovate_demo';
   const isChallenge = CHALLENGE_TYPES.has(acc.type) && !isBlown && !status?.isValidated && !status?.isExpressFunded;
 
@@ -603,34 +638,32 @@ export default function AccountSelect({ onSelect, onBack }) {
   );
 
   // ── Section ordering (top → bottom) ──────────────────────────
-  // 0. ACTIF  : compte actuellement sélectionné (épinglé en tête)
-  // 1. LIVE   : Express Funded Topstep + Tradovate Live (sauf actif)
-  // 2. CHALLENGE : Topstep en cours non validés (sauf actif)
-  // 3. VALIDÉ : challenges réussis (sauf actif)
-  // 4. AUTRES : perso, demo, autre (sauf actif)
-  // 5. CRAMÉS : blown (manuellement ou auto)
+  // 0. ACTIF    : compte actuellement sélectionné (épinglé en tête)
+  // 1. LIVE     : Lucid Live + Tradovate Live
+  // 2. FUNDED   : Express Funded Topstep + Lucid Funded
+  // 3. CHALLENGE: Topstep Combine + Lucid Eval non validés
+  // 4. VALIDÉ   : challenges réussis
+  // 5. CRAMÉS   : blown (manuellement ou auto)
   const activeAcc = data.accounts.find(a => a.id === data.activeId && !statuses[a.id]?.isBlown);
   const isNotActive = a => a.id !== data.activeId;
 
   const blownAccounts     = data.accounts.filter(a => statuses[a.id]?.isBlown);
   const liveAccounts      = data.accounts.filter(a =>
+    !statuses[a.id]?.isBlown && isNotActive(a) && LIVE_TYPES.has(a.type)
+  );
+  const fundedAccounts    = data.accounts.filter(a =>
     !statuses[a.id]?.isBlown && isNotActive(a) &&
-    (statuses[a.id]?.isExpressFunded || a.type === 'tradovate_live')
+    statuses[a.id]?.isExpressFunded && !LIVE_TYPES.has(a.type)
   );
   const challengeAccounts = data.accounts.filter(a =>
     !statuses[a.id]?.isBlown && isNotActive(a) &&
-    !statuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' &&
+    !statuses[a.id]?.isExpressFunded && !LIVE_TYPES.has(a.type) &&
     !statuses[a.id]?.isValidated && CHALLENGE_TYPES.has(a.type)
   );
   const validatedAccounts = data.accounts.filter(a =>
     !statuses[a.id]?.isBlown && isNotActive(a) &&
-    !statuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' &&
+    !statuses[a.id]?.isExpressFunded && !LIVE_TYPES.has(a.type) &&
     statuses[a.id]?.isValidated
-  );
-  const otherAccounts     = data.accounts.filter(a =>
-    !statuses[a.id]?.isBlown && isNotActive(a) &&
-    !statuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' &&
-    !statuses[a.id]?.isValidated && !CHALLENGE_TYPES.has(a.type)
   );
 
   function renderSection(accounts, header) {
@@ -698,16 +731,25 @@ export default function AccountSelect({ onSelect, onBack }) {
               </div>
             )}
 
-            {/* ── 1. LIVE : Express Funded + Tradovate Live ── */}
+            {/* ── 1. LIVE : Lucid Live + Tradovate Live ── */}
             {liveAccounts.length > 0 && renderSection(liveAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f0c020', boxShadow: '0 0 10px #f0c020' }} />
-                <span style={{ fontSize: '10px', color: '#f0c020', letterSpacing: '2px', fontWeight: '700' }}>LIVE — {liveAccounts.length}</span>
-                <span style={{ fontSize: '9px', color: '#8a7a30', letterSpacing: '1px' }}>Express Funded · Tradovate Live</span>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#00ddff', boxShadow: '0 0 10px #00ddff' }} />
+                <span style={{ fontSize: '10px', color: '#00ddff', letterSpacing: '2px', fontWeight: '700' }}>LIVE — {liveAccounts.length}</span>
+                <span style={{ fontSize: '9px', color: '#2a7a8a', letterSpacing: '1px' }}>Compte live réel</span>
               </div>
             ))}
 
-            {/* ── 2. CHALLENGE : Topstep actifs non validés ── */}
+            {/* ── 2. FUNDED : Express Funded Topstep + Lucid Funded ── */}
+            {fundedAccounts.length > 0 && renderSection(fundedAccounts, (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f0c020', boxShadow: '0 0 10px #f0c020' }} />
+                <span style={{ fontSize: '10px', color: '#f0c020', letterSpacing: '2px', fontWeight: '700' }}>FUNDED — {fundedAccounts.length}</span>
+                <span style={{ fontSize: '9px', color: '#8a7a30', letterSpacing: '1px' }}>Express Funded · Lucid Funded</span>
+              </div>
+            ))}
+
+            {/* ── 3. CHALLENGE : Topstep Combine + Lucid Eval non validés ── */}
             {challengeAccounts.length > 0 && renderSection(challengeAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#00dd77', boxShadow: '0 0 8px #00dd77' }} />
@@ -716,20 +758,12 @@ export default function AccountSelect({ onSelect, onBack }) {
               </div>
             ))}
 
-            {/* ── 3. VALIDÉ : challenges réussis ── */}
+            {/* ── 4. VALIDÉ : challenges réussis ── */}
             {validatedAccounts.length > 0 && renderSection(validatedAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 8px #00ff88' }} />
                 <span style={{ fontSize: '10px', color: '#00ff88', letterSpacing: '2px', fontWeight: '700' }}>VALIDÉ — {validatedAccounts.length}</span>
                 <span style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '1px' }}>Challenge réussi ✓</span>
-              </div>
-            ))}
-
-            {/* ── 4. AUTRES ACTIFS : perso, demo, autre ── */}
-            {otherAccounts.length > 0 && renderSection(otherAccounts, (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#5a8a6a', boxShadow: '0 0 5px #5a8a6a' }} />
-                <span style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', fontWeight: '700' }}>AUTRES ACTIFS — {otherAccounts.length}</span>
               </div>
             ))}
 
