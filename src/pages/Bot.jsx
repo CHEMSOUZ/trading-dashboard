@@ -186,23 +186,31 @@ if show_ob
         label.new(bar_index - 1, math.max(open[1], close[1]), "OB ▼",
           color=col_ob_s, textcolor=color.white, style=label.style_label_down, size=size.tiny)
 
-// ── 7. KILL ZONES ─────────────────────────────────────────────
-hour_utc   = hour(time, "UTC")
-minute_utc = minute(time, "UTC")
-time_dec   = hour_utc + minute_utc / 60.0
+// ── 7. KILL ZONES (heure française — Europe/Paris) ────────────
+h_fr    = hour(time,   "Europe/Paris")
+m_fr    = minute(time, "Europe/Paris")
+time_fr = h_fr + m_fr / 60.0
 
-london_kz = time_dec >= 7.0  and time_dec < 10.0
-ny_am_kz  = time_dec >= 12.0 and time_dec < 15.0
-ny_pm_kz  = time_dec >= 17.0 and time_dec < 20.0
-in_kz     = london_kz or ny_am_kz or ny_pm_kz
+asia_kz     = time_fr >= 2.0  and time_fr < 6.0
+london_kz   = time_fr >= 8.0  and time_fr < 11.0
+ny_am_kz    = time_fr >= 13.0 and time_fr < 17.5
+ny_lunch_kz = time_fr >= 17.5 and time_fr < 19.5
+ny_pm_kz    = time_fr >= 19.5 and time_fr < (22.0 + 14.0 / 60.0)
+in_kz       = asia_kz or london_kz or ny_am_kz or ny_lunch_kz or ny_pm_kz
 
-kz_col = london_kz ? color.new(#ffd600, 88) :
-         ny_am_kz  ? color.new(#00bcd4, 88) :
-         ny_pm_kz  ? color.new(#ab47bc, 88) : color.new(color.gray, 100)
+kz_col = asia_kz     ? color.new(#7b1fa2, 88) :
+         london_kz   ? color.new(#ffd600, 88) :
+         ny_am_kz    ? color.new(#00bcd4, 88) :
+         ny_lunch_kz ? color.new(#ff6d00, 88) :
+         ny_pm_kz    ? color.new(#ab47bc, 88) : color.new(color.gray, 100)
 bgcolor(show_kz and in_kz ? kz_col : na)
 
-if show_kz and in_kz and not (london_kz[1] or ny_am_kz[1] or ny_pm_kz[1])
-    kz_txt = london_kz ? "🇬🇧 London KZ" : ny_am_kz ? "🗽 NY AM KZ" : "🗽 NY PM KZ"
+prev_kz = asia_kz[1] or london_kz[1] or ny_am_kz[1] or ny_lunch_kz[1] or ny_pm_kz[1]
+if show_kz and in_kz and not prev_kz
+    kz_txt = asia_kz     ? "🌏 Asia KZ (2h-6h)"          :
+             london_kz   ? "🇬🇧 London KZ (8h-11h)"      :
+             ny_am_kz    ? "🗽 NY AM KZ (13h-17h30)"     :
+             ny_lunch_kz ? "🍽 NY Lunch (17h30-19h30)"   : "🗽 NY PM KZ (19h30-22h14)"
     label.new(bar_index, high * 1.001, kz_txt,
       color=color.new(color.gray, 60), textcolor=color.white, style=label.style_label_down, size=size.small)
 
