@@ -13,6 +13,22 @@ function calcRR(entry, sl, tp) {
   return (reward / risk).toFixed(2);
 }
 
+// ── Formatage heure Paris ─────────────────────────────────────
+function fmtTime(raw, showSeconds = false) {
+  if (!raw) return '—';
+  let d;
+  const num = Number(raw);
+  d = (!isNaN(num) && num > 1_000_000_000_000) ? new Date(num) : new Date(raw);
+  if (isNaN(d.getTime())) return '—';
+  const tz  = 'Europe/Paris';
+  const now  = new Date();
+  const opts = { timeZone: tz, hour: '2-digit', minute: '2-digit', ...(showSeconds && { second: '2-digit' }), hour12: false };
+  const timeStr = d.toLocaleTimeString('fr-FR', opts);
+  const dayD    = d.toLocaleDateString('fr-FR', { timeZone: tz, day: '2-digit', month: '2-digit' });
+  const dayNow  = now.toLocaleDateString('fr-FR', { timeZone: tz, day: '2-digit', month: '2-digit' });
+  return dayD !== dayNow ? `${dayD} ${timeStr}` : timeStr;
+}
+
 // ── Pine Script multi-bot (ICT Full Strategy) ─────────────────
 const PINE_BOTS = [
   { id: 'ultra',        name: 'ICT Ultra',        botId: 'ICT_1min',  tf: '1min',  color: '#ff6644', sl: 0.8, tp1: 1.2, tp2: 2.0, htfTf: '15',  minScore: 3, desc: 'Scalping · HTF 15min · score ≥ 3' },
@@ -331,7 +347,9 @@ function SignalCard({ signal, onSave, isLatest }) {
   const accentColor = isLong ? '#00ff88' : '#ff4455';
   const bgColor     = isLong ? 'rgba(0,255,136,0.04)' : 'rgba(255,68,85,0.04)';
 
-  const time = signal.timestamp || signal._receivedAt?.slice(11, 16) || '—';
+  const timeRecu  = fmtTime(signal._receivedAt, true);
+  const timeBougie = signal.timestamp && isNaN(Number(signal.timestamp))
+    ? fmtTime(signal.timestamp) : null;
 
   return (
     <div style={{ background: bgColor, border: `1px solid ${accentColor}25`, borderLeft: `3px solid ${accentColor}`, borderRadius: '8px', padding: '18px 20px', position: 'relative' }}>
@@ -343,7 +361,13 @@ function SignalCard({ signal, onSave, isLatest }) {
         <div style={{ fontSize: '13px', color: '#8aaa90', fontWeight: '600' }}>{signal.symbol || 'MNQ'}</div>
         {signal.bot && (() => { const b = PINE_BOTS.find(x => x.botId === signal.bot); const c = b?.color ?? '#aa88ff'; return <div style={{ fontSize: '10px', color: c, background: `${c}15`, border: `1px solid ${c}40`, padding: '2px 8px', borderRadius: '3px', fontWeight: '700', letterSpacing: '1px' }}>{signal.bot}</div>; })()}
         {signal.timeframe && <div style={{ fontSize: '11px', color: '#3a6a4a', background: 'rgba(0,255,136,0.05)', border: '1px solid rgba(0,255,136,0.1)', padding: '2px 7px', borderRadius: '3px' }}>{signal.timeframe}M</div>}
-        <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#3a6a4a' }}>{time}</div>
+        <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px' }}>
+          <div style={{ fontSize: '13px', color: '#c8d8c8', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{timeRecu}</div>
+          {timeBougie && timeBougie !== timeRecu && (
+            <div style={{ fontSize: '9px', color: '#3a6a4a' }}>bougie : {timeBougie}</div>
+          )}
+          <div style={{ fontSize: '9px', color: '#2a4a30' }}>heure Paris</div>
+        </div>
         {isLatest && <div style={{ fontSize: '8px', background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', padding: '2px 6px', borderRadius: '3px', letterSpacing: '1px', fontWeight: '700' }}>NOUVEAU</div>}
       </div>
 
@@ -637,7 +661,7 @@ export default function Bot() {
                           const dir   = (sig.signal ?? sig.direction ?? '').toUpperCase();
                           const isL   = dir === 'LONG';
                           const color = isL ? '#00ff88' : '#ff4455';
-                          const time  = sig.timestamp?.slice(-5) || sig._receivedAt?.slice(11, 16) || '—';
+                          const time  = fmtTime(sig._receivedAt);
                           return (
                             <tr key={sig._id ?? i} style={{ borderBottom: '1px solid rgba(0,255,136,0.04)', transition: 'background 0.1s' }}
                               onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.03)'}
