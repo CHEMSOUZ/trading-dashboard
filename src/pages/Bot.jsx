@@ -13,94 +13,92 @@ function calcRR(entry, sl, tp) {
   return (reward / risk).toFixed(2);
 }
 
-// ── Pine Script template (v5 corrigé) ────────────────────────
-const PINE_SCRIPT = `//@version=5
-indicator("ICT Bot Signals — MNQ", overlay=true, max_bars_back=500)
+// ── Pine Script multi-bot ─────────────────────────────────────
+const PINE_BOTS = [
+  { id: 'standard',     name: 'ICT Standard',     botId: 'ICT_15min',  tf: '15min',  color: '#00ff88', sl: 1.5, tp1: 2.0, tp2: 3.5, desc: 'Équilibré · conditions strictes · signaux fiables' },
+  { id: 'agressif',     name: 'ICT Agressif',      botId: 'ICT_5min',   tf: '5min',   color: '#f0c020', sl: 1.0, tp1: 1.5, tp2: 2.5, desc: 'Signaux fréquents · R:R plus court · scalping' },
+  { id: 'conservateur', name: 'ICT Conservateur',  botId: 'ICT_1H',     tf: '1H',     color: '#00aaff', sl: 2.0, tp1: 3.0, tp2: 5.0, desc: 'Signaux rares mais qualité maximale · swing' },
+];
 
+function generateScript({ name, botId, sl, tp1, tp2 }) {
+  return `//@version=5
+indicator("${name}", overlay=true, max_bars_back=500)
+
+bot_name    = "${botId}"
 symbol_name = "MNQ"
+vwap_val    = ta.vwap
+atr         = ta.atr(14)
+ema9        = ta.ema(close, 9)
+ema20       = ta.ema(close, 20)
+ema50       = ta.ema(close, 50)
+ema200      = ta.ema(close, 200)
 
-// ── Indicateurs ───────────────────────────────────────────────
-ema9     = ta.ema(close, 9)
-ema20    = ta.ema(close, 20)
-ema50    = ta.ema(close, 50)
-ema200   = ta.ema(close, 200)
-vwap_val = ta.vwap(hlc3)
-atr      = ta.atr(14)
-
-// ── Fair Value Gap ────────────────────────────────────────────
-bull_fvg = low[0] > high[2]
-bear_fvg = high[0] < low[2]
-
-// ── Market Structure Shift ────────────────────────────────────
+bull_fvg   = low > high[2]
+bear_fvg   = high < low[2]
 swing_high = ta.highest(high, 10)[1]
 swing_low  = ta.lowest(low, 10)[1]
 mss_bull   = ta.crossover(close, swing_high)
 mss_bear   = ta.crossunder(close, swing_low)
 
-// ── Biais directionnel ────────────────────────────────────────
-bull_bias = ema20 > ema50 and close > vwap_val and close > ema200
-bear_bias = ema20 < ema50 and close < vwap_val and close < ema200
+bull_bias  = ema20 > ema50 and close > vwap_val and close > ema200
+bear_bias  = ema20 < ema50 and close < vwap_val and close < ema200
+cross_up   = ta.crossover(close, ema9)
+cross_down = ta.crossunder(close, ema9)
 
-// ── Signaux ───────────────────────────────────────────────────
-ema9_cross_up   = ta.crossover(close, ema9)
-ema9_cross_down = ta.crossunder(close, ema9)
-long_signal     = bull_bias and (bull_fvg or mss_bull) and ema9_cross_up
-short_signal    = bear_bias and (bear_fvg or mss_bear) and ema9_cross_down
+long_signal  = bull_bias and (bull_fvg or mss_bull) and cross_up
+short_signal = bear_bias and (bear_fvg or mss_bear) and cross_down
 
-// ── SL / TP ───────────────────────────────────────────────────
-sl_mult  = 1.5
-tp1_mult = 2.0
-tp2_mult = 3.5
+sl_mult  = ${sl}
+tp1_mult = ${tp1}
+tp2_mult = ${tp2}
 
-// ── Alertes webhook ───────────────────────────────────────────
 if long_signal
-    entry    = close
-    sl       = math.round(entry - atr * sl_mult,  2)
-    tp1      = math.round(entry + atr * tp1_mult, 2)
-    tp2      = math.round(entry + atr * tp2_mult, 2)
-    rr       = str.tostring(math.round(tp2_mult / sl_mult * 10) / 10)
-    ctx      = bull_fvg ? "FVG haussier" : "MSS + EMA9 cross"
-    ema_dir  = ema20 > ema50 ? "haussier" : "neutre"
-    vwap_pos = close > vwap_val ? "au-dessus" : "en-dessous"
-    msg      = '{"symbol":"' + symbol_name + '","signal":"LONG","entry":' + str.tostring(entry) +
-               ',"sl":' + str.tostring(sl) +
-               ',"tp1":' + str.tostring(tp1) +
-               ',"tp2":' + str.tostring(tp2) +
-               ',"rr":"1:' + rr + '"' +
-               ',"context":"' + ctx + ' — EMA ' + ema_dir + ' — VWAP ' + vwap_pos + '"' +
-               ',"timeframe":"{{interval}}"' +
-               ',"timestamp":"{{time}}"}'
+    e    = close
+    sl   = math.round((e - atr * sl_mult)  * 100) / 100
+    tp1  = math.round((e + atr * tp1_mult) * 100) / 100
+    tp2  = math.round((e + atr * tp2_mult) * 100) / 100
+    rr   = str.tostring(math.round(tp2_mult / sl_mult * 10) / 10.0)
+    ctx  = bull_fvg ? "FVG haussier" : "MSS EMA9"
+    ed   = ema20 > ema50 ? "haussier" : "neutre"
+    vp   = close > vwap_val ? "dessus" : "dessous"
+    msg  = '{"bot":"' + bot_name + '","symbol":"' + symbol_name +
+           '","signal":"LONG","entry":' + str.tostring(e) +
+           ',"sl":' + str.tostring(sl) +
+           ',"tp1":' + str.tostring(tp1) +
+           ',"tp2":' + str.tostring(tp2) +
+           ',"rr":"1:' + rr +
+           '","context":"' + ctx + ' EMA ' + ed + ' VWAP ' + vp +
+           '","timeframe":"{{interval}}","timestamp":"{{time}}"}'
     alert(msg, alert.freq_once_per_bar_close)
 
 if short_signal
-    entry    = close
-    sl       = math.round(entry + atr * sl_mult,  2)
-    tp1      = math.round(entry - atr * tp1_mult, 2)
-    tp2      = math.round(entry - atr * tp2_mult, 2)
-    rr       = str.tostring(math.round(tp2_mult / sl_mult * 10) / 10)
-    ctx      = bear_fvg ? "FVG baissier" : "MSS + EMA9 cross"
-    ema_dir  = ema20 < ema50 ? "baissier" : "neutre"
-    vwap_pos = close < vwap_val ? "en-dessous" : "au-dessus"
-    msg      = '{"symbol":"' + symbol_name + '","signal":"SHORT","entry":' + str.tostring(entry) +
-               ',"sl":' + str.tostring(sl) +
-               ',"tp1":' + str.tostring(tp1) +
-               ',"tp2":' + str.tostring(tp2) +
-               ',"rr":"1:' + rr + '"' +
-               ',"context":"' + ctx + ' — EMA ' + ema_dir + ' — VWAP ' + vwap_pos + '"' +
-               ',"timeframe":"{{interval}}"' +
-               ',"timestamp":"{{time}}"}'
+    e    = close
+    sl   = math.round((e + atr * sl_mult)  * 100) / 100
+    tp1  = math.round((e - atr * tp1_mult) * 100) / 100
+    tp2  = math.round((e - atr * tp2_mult) * 100) / 100
+    rr   = str.tostring(math.round(tp2_mult / sl_mult * 10) / 10.0)
+    ctx  = bear_fvg ? "FVG baissier" : "MSS EMA9"
+    ed   = ema20 < ema50 ? "baissier" : "neutre"
+    vp   = close < vwap_val ? "dessous" : "dessus"
+    msg  = '{"bot":"' + bot_name + '","symbol":"' + symbol_name +
+           '","signal":"SHORT","entry":' + str.tostring(e) +
+           ',"sl":' + str.tostring(sl) +
+           ',"tp1":' + str.tostring(tp1) +
+           ',"tp2":' + str.tostring(tp2) +
+           ',"rr":"1:' + rr +
+           '","context":"' + ctx + ' EMA ' + ed + ' VWAP ' + vp +
+           '","timeframe":"{{interval}}","timestamp":"{{time}}"}'
     alert(msg, alert.freq_once_per_bar_close)
 
-// ── Affichage ─────────────────────────────────────────────────
 plot(ema9,     "EMA 9",   color.new(color.lime,   20), 1)
 plot(ema20,    "EMA 20",  color.new(color.yellow, 20), 1)
 plot(ema50,    "EMA 50",  color.new(color.orange, 20), 1)
 plot(ema200,   "EMA 200", color.new(color.red,    20), 2)
 plot(vwap_val, "VWAP",    color.new(color.aqua,   10), 2)
-
 plotshape(long_signal,  "LONG",  shape.triangleup,   location.belowbar, color.lime, size=size.small)
 plotshape(short_signal, "SHORT", shape.triangledown, location.abovebar, color.red,  size=size.small)
 `;
+}
 
 // ── Signal Card ───────────────────────────────────────────────
 function SignalCard({ signal, onSave, isLatest }) {
@@ -129,6 +127,7 @@ function SignalCard({ signal, onSave, isLatest }) {
           {isLong ? '▲' : '▼'} {dir}
         </div>
         <div style={{ fontSize: '13px', color: '#8aaa90', fontWeight: '600' }}>{signal.symbol || 'MNQ'}</div>
+        {signal.bot && (() => { const b = PINE_BOTS.find(x => x.botId === signal.bot); const c = b?.color ?? '#aa88ff'; return <div style={{ fontSize: '10px', color: c, background: `${c}15`, border: `1px solid ${c}40`, padding: '2px 8px', borderRadius: '3px', fontWeight: '700', letterSpacing: '1px' }}>{signal.bot}</div>; })()}
         {signal.timeframe && <div style={{ fontSize: '11px', color: '#3a6a4a', background: 'rgba(0,255,136,0.05)', border: '1px solid rgba(0,255,136,0.1)', padding: '2px 7px', borderRadius: '3px' }}>{signal.timeframe}M</div>}
         <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#3a6a4a' }}>{time}</div>
         {isLatest && <div style={{ fontSize: '8px', background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', padding: '2px 6px', borderRadius: '3px', letterSpacing: '1px', fontWeight: '700' }}>NOUVEAU</div>}
@@ -223,6 +222,8 @@ export default function Bot() {
   const [port, setPort]         = useState(3001);
   const [portInput, setPortInput] = useState('3001');
   const [tab, setTab]           = useState('signals');
+  const [selectedBot, setSelectedBot] = useState('TOUS');
+  const [selectedPine, setSelectedPine] = useState('standard');
   const [copied, setCopied]     = useState('');
   const [saving, setSaving]     = useState(false);
   const [saveMsg, setSaveMsg]   = useState('');
@@ -291,8 +292,11 @@ export default function Bot() {
     navigator.clipboard.writeText(text).then(() => { setCopied(key); setTimeout(() => setCopied(''), 2000); });
   }
 
-  const webhookUrl = `http://localhost:${port}/webhook`;
-  const latest     = signals[0] ?? null;
+  const webhookUrl   = `http://localhost:${port}/webhook`;
+  const botIds       = ['TOUS', ...Array.from(new Set(signals.map(s => s.bot).filter(Boolean)))];
+  const filtered     = selectedBot === 'TOUS' ? signals : signals.filter(s => s.bot === selectedBot);
+  const latest       = filtered[0] ?? null;
+  const activePine   = PINE_BOTS.find(b => b.id === selectedPine) ?? PINE_BOTS[0];
 
   const inp = { background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.15)', borderRadius: '5px', padding: '7px 10px', color: '#c8d8c8', fontSize: '12px', fontFamily: 'inherit', outline: 'none', width: '80px', boxSizing: 'border-box' };
 
@@ -339,6 +343,7 @@ export default function Bot() {
       <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid rgba(0,255,136,0.08)', paddingBottom: '0' }}>
         {[
           { key: 'signals', label: `SIGNAUX${signals.length > 0 ? ` (${signals.length})` : ''}` },
+
           { key: 'chart',   label: 'GRAPHIQUE TV' },
           { key: 'setup',   label: 'CONFIGURATION' },
           { key: 'pine',    label: 'PINE SCRIPT' },
@@ -359,16 +364,34 @@ export default function Bot() {
       {/* ── Tab: SIGNAUX ── */}
       {tab === 'signals' && (
         <div>
+          {/* Bot selector */}
+          {botIds.length > 1 && (
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {botIds.map(bid => {
+                const bot  = PINE_BOTS.find(b => b.botId === bid);
+                const c    = bid === 'TOUS' ? '#c8d8c8' : (bot?.color ?? '#aa88ff');
+                const cnt  = bid === 'TOUS' ? signals.length : signals.filter(s => s.bot === bid).length;
+                const sel  = selectedBot === bid;
+                return (
+                  <button key={bid} onClick={() => setSelectedBot(bid)}
+                    style={{ padding: '5px 14px', borderRadius: '4px', border: `1px solid ${sel ? c + '80' : 'rgba(0,255,136,0.1)'}`, background: sel ? `${c}15` : 'transparent', color: sel ? c : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', fontWeight: sel ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '1px' }}>
+                    {bid} <span style={{ opacity: 0.6 }}>({cnt})</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {saveMsg && (
             <div style={{ marginBottom: '14px', padding: '10px 14px', background: saveMsg.startsWith('Erreur') ? 'rgba(255,68,85,0.1)' : 'rgba(0,255,136,0.1)', border: `1px solid ${saveMsg.startsWith('Erreur') ? 'rgba(255,68,85,0.3)' : 'rgba(0,255,136,0.3)'}`, borderRadius: '5px', fontSize: '12px', color: saveMsg.startsWith('Erreur') ? '#ff4455' : '#00ff88' }}>
               {saveMsg}
             </div>
           )}
 
-          {signals.length === 0 ? (
+          {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', border: '1px dashed rgba(0,255,136,0.1)', borderRadius: '8px' }}>
               <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.4 }}>📡</div>
-              <div style={{ fontSize: '13px', color: '#3a6a4a', marginBottom: '6px' }}>En attente de signaux...</div>
+              <div style={{ fontSize: '13px', color: '#3a6a4a', marginBottom: '6px' }}>{signals.length > 0 ? `Aucun signal pour ${selectedBot}` : 'En attente de signaux...'}</div>
               <div style={{ fontSize: '11px', color: '#2a4a30' }}>Configure ngrok + TradingView pour recevoir les alertes</div>
               <button onClick={() => setTab('setup')} style={{ marginTop: '14px', padding: '7px 16px', background: 'transparent', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '4px', color: '#00aa55', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px' }}>
                 VOIR LA CONFIGURATION →
@@ -383,9 +406,9 @@ export default function Bot() {
               </div>
 
               {/* History */}
-              {signals.length > 1 && (
+              {filtered.length > 1 && (
                 <div>
-                  <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>HISTORIQUE — {signals.length - 1} signal{signals.length > 2 ? 's' : ''} précédent{signals.length > 2 ? 's' : ''}</div>
+                  <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>HISTORIQUE — {filtered.length - 1} signal{filtered.length > 2 ? 's' : ''} précédent{filtered.length > 2 ? 's' : ''}</div>
                   <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', overflow: 'hidden' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                       <thead>
@@ -396,7 +419,7 @@ export default function Bot() {
                         </tr>
                       </thead>
                       <tbody>
-                        {signals.slice(1).map((sig, i) => {
+                        {filtered.slice(1).map((sig, i) => {
                           const dir   = (sig.signal ?? sig.direction ?? '').toUpperCase();
                           const isL   = dir === 'LONG';
                           const color = isL ? '#00ff88' : '#ff4455';
@@ -595,32 +618,48 @@ export default function Bot() {
 
       {/* ── Tab: PINE SCRIPT ── */}
       {tab === 'pine' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+          {/* Bot selector */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {PINE_BOTS.map(bot => (
+              <button key={bot.id} onClick={() => setSelectedPine(bot.id)}
+                style={{ flex: 1, padding: '12px 10px', borderRadius: '7px', border: `1px solid ${selectedPine === bot.id ? bot.color + '60' : 'rgba(0,255,136,0.1)'}`, background: selectedPine === bot.id ? `${bot.color}12` : 'rgba(10,28,18,0.4)', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'all 0.15s' }}>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: selectedPine === bot.id ? bot.color : '#c8d8c8', marginBottom: '3px' }}>{bot.name}</div>
+                <div style={{ fontSize: '10px', color: '#3a6a4a' }}>{bot.tf} · ATR ×{bot.sl}/{bot.tp1}/{bot.tp2}</div>
+                <div style={{ fontSize: '10px', color: '#2a5a3a', marginTop: '2px' }}>{bot.desc}</div>
+              </button>
+            ))}
+          </div>
+
+          {/* Info + copy */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: `${activePine.color}08`, border: `1px solid ${activePine.color}20`, borderRadius: '6px' }}>
             <div style={{ flex: 1, fontSize: '11px', color: '#5a8a6a', lineHeight: '1.6' }}>
-              Copie ce script dans TradingView → Pine Script Editor, puis active-le sur le graphique <strong style={{ color: '#c8d8c8' }}>MNQ1!</strong>.
-              Le script détecte automatiquement les setups ICT (FVG, MSS, VWAP, EMA alignment) et génère des alertes webhook.
+              Bot ID : <code style={{ color: activePine.color, background: `${activePine.color}15`, padding: '1px 6px', borderRadius: '3px' }}>{activePine.botId}</code> — les signaux apparaîtront sous cet identifiant dans l'onglet SIGNAUX. Même webhook URL pour tous les bots.
             </div>
-            <button onClick={() => copyText(PINE_SCRIPT, 'pine')}
-              style={{ padding: '8px 16px', background: copied === 'pine' ? 'rgba(0,255,136,0.15)' : 'transparent', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '5px', color: '#00ff88', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
-              {copied === 'pine' ? '✓ COPIÉ' : 'COPIER LE SCRIPT'}
+            <button onClick={() => copyText(generateScript(activePine), `pine_${activePine.id}`)}
+              style={{ padding: '8px 16px', background: copied === `pine_${activePine.id}` ? `${activePine.color}25` : 'transparent', border: `1px solid ${activePine.color}50`, borderRadius: '5px', color: activePine.color, fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
+              {copied === `pine_${activePine.id}` ? '✓ COPIÉ' : 'COPIER'}
             </button>
           </div>
-          <div style={{ background: 'rgba(4,12,8,0.9)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: '6px', overflow: 'auto', maxHeight: '520px' }}>
+
+          {/* Script preview */}
+          <div style={{ background: 'rgba(4,12,8,0.9)', border: `1px solid ${activePine.color}18`, borderRadius: '6px', overflow: 'auto', maxHeight: '480px' }}>
             <pre style={{ margin: 0, padding: '16px 18px', fontSize: '11px', color: '#7aaa8a', fontFamily: "'JetBrains Mono','Fira Code',monospace", lineHeight: '1.65', whiteSpace: 'pre' }}>
-              {PINE_SCRIPT.split('\n').map((line, i) => {
+              {generateScript(activePine).split('\n').map((line, i) => {
                 let color = '#7aaa8a';
                 if (line.startsWith('//')) color = '#3a6a4a';
                 else if (line.startsWith('//@')) color = '#3a5a4a';
-                else if (line.match(/^(if|and|or|not|var|varip|import|export|strategy|indicator|library)\b/)) color = '#aa88ff';
+                else if (line.match(/^(if|and|or|not)\b/)) color = '#aa88ff';
                 else if (line.match(/\b(alert|plot|plotshape|ta\.|math\.|str\.)\b/)) color = '#00aaff';
-                else if (line.match(/["'][^"']*["']/)) color = '#f0c020';
+                else if (line.match(/["'][^"']*["']/)) color = activePine.color;
                 return <span key={i} style={{ display: 'block', color }}>{line}</span>;
               })}
             </pre>
           </div>
-          <div style={{ padding: '10px 14px', background: 'rgba(240,192,32,0.05)', border: '1px solid rgba(240,192,32,0.15)', borderRadius: '5px', fontSize: '11px', color: '#8a7a30', lineHeight: '1.6' }}>
-            <strong style={{ color: '#f0c020' }}>Note :</strong> Ce script est un point de départ ICT/SMC. Ajuste les multiplicateurs ATR (sl_mult, tp1_mult, tp2_mult) selon ton style de trading. Tu peux aussi le combiner avec d'autres indicateurs dans ta bibliothèque TradingView.
+
+          <div style={{ padding: '10px 14px', background: 'rgba(0,170,255,0.04)', border: '1px solid rgba(0,170,255,0.12)', borderRadius: '5px', fontSize: '11px', color: '#3a5a6a', lineHeight: '1.6' }}>
+            <strong style={{ color: '#00aaff' }}>Multi-bot :</strong> Ajoute chaque script sur un graphique TradingView différent (MNQ1! 5min / 15min / 1H) et crée une alerte séparée pour chacun. Tous pointent vers le même webhook URL ngrok. Les signaux arrivent séparés par bot dans le dashboard.
           </div>
         </div>
       )}
