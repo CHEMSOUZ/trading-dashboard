@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs   = require('fs');
 const http = require('http');
@@ -145,6 +145,9 @@ autoUpdater.on('error', (err) => { console.error('AutoUpdater error:', err); });
 
 function registerHandlers() {
   ipcMain.handle('update:install', () => { autoUpdater.quitAndInstall(); });
+
+  // ── Shell handlers ────────────────────────────────────────
+  ipcMain.handle('shell:openExternal', (_, url) => { shell.openExternal(url); return { ok: true }; });
 
   // ── Bot handlers ──────────────────────────────────────────
   ipcMain.handle('bot:getSignals',  () => ({ ok: true, data: botSignals }));

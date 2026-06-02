@@ -35,6 +35,10 @@ contextBridge.exposeInMainWorld('electron', {
   openImagesDialog: () => ipcRenderer.invoke('dialog:openImages'),
 });
 
+contextBridge.exposeInMainWorld('shell', {
+  openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
+});
+
 contextBridge.exposeInMainWorld('bot', {
   getSignals:   ()       => ipcRenderer.invoke('bot:getSignals'),
   clearSignals: ()       => ipcRenderer.invoke('bot:clearSignals'),

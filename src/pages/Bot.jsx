@@ -213,6 +213,29 @@ function SignalCard({ signal, onSave, isLatest }) {
   );
 }
 
+// ── Custom TradingView Input ──────────────────────────────────
+function CustomTVInput() {
+  const [sym, setSym]   = useState('CME_MINI:MNQ1!');
+  const [tf, setTf]     = useState('5');
+  const inp = { background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.15)', borderRadius: '5px', padding: '8px 11px', color: '#c8d8c8', fontSize: '12px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' };
+  function open() {
+    const url = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(sym)}&interval=${tf}`;
+    window.shell.openExternal(url);
+  }
+  return (
+    <>
+      <input value={sym} onChange={e => setSym(e.target.value)} placeholder="CME_MINI:MNQ1!" style={{ ...inp, flex: 2 }} onKeyDown={e => e.key === 'Enter' && open()} />
+      <select value={tf} onChange={e => setTf(e.target.value)} style={{ ...inp, width: '90px' }}>
+        {[['1','1 min'],['3','3 min'],['5','5 min'],['15','15 min'],['30','30 min'],['60','1H'],['240','4H'],['D','1J']].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+      <button onClick={open} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '5px', color: '#00ff88', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', whiteSpace: 'nowrap', transition: 'all 0.15s' }}
+        onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.08)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      >OUVRIR ↗</button>
+    </>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────
 export default function Bot() {
   const navigate  = useNavigate();
@@ -433,18 +456,71 @@ export default function Bot() {
 
       {/* ── Tab: GRAPHIQUE TV ── */}
       {tab === 'chart' && (
-        <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', overflow: 'hidden' }}>
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(0,255,136,0.08)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 6px #00ff88' }} />
-            <span style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px' }}>TRADINGVIEW — MNQ1! LIVE</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* Explanation */}
+          <div style={{ padding: '14px 18px', background: 'rgba(0,170,255,0.05)', border: '1px solid rgba(0,170,255,0.15)', borderRadius: '6px', fontSize: '12px', color: '#5a8a9a', lineHeight: '1.7' }}>
+            <span style={{ color: '#00aaff', fontWeight: '700' }}>Pourquoi pas en iframe ?</span> — Le symbole <code style={{ background: 'rgba(0,170,255,0.1)', padding: '1px 6px', borderRadius: '3px', color: '#00ddff' }}>MNQ1!</code> sur TradingView nécessite ta session active (compte + données CME). Un iframe ne peut pas accéder à tes cookies de connexion. Ouvre TradingView dans ton navigateur : ta session est déjà là, les données sont en temps réel.
           </div>
-          <div style={{ height: '580px' }}>
-            <iframe
-              src="https://www.tradingview.com/widgetembed/?frameElementId=tradingview_bot&symbol=CME_MINI%3AMNQ1%21&interval=5&hidesidetoolbar=0&hidetoptoolbar=0&symboledit=1&saveimage=1&toolbarbg=060c10&studies=MAExp%40tv-basicstudies%7C%7CVWAP%40tv-basicstudies&theme=dark&style=1&timezone=America%2FNew_York&studies_overrides=%7B%7D&overrides=%7B%22mainSeriesProperties.candleStyle.upColor%22%3A%22%2300ff88%22%2C%22mainSeriesProperties.candleStyle.downColor%22%3A%22%23ff4455%22%7D&enabled_features=[]&disabled_features=[]&locale=fr&utm_source=localhost&utm_medium=widget&utm_campaign=chart"
-              style={{ width: '100%', height: '100%', border: 'none' }}
-              allowFullScreen
-              title="TradingView MNQ"
-            />
+
+          {/* Quick open buttons */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            {[
+              {
+                label: 'MNQ1! — 5 min',
+                sub: 'Micro E-mini Nasdaq · Scalping',
+                url: 'https://www.tradingview.com/chart/?symbol=CME_MINI%3AMNQ1%21&interval=5',
+                color: '#00ff88',
+              },
+              {
+                label: 'MNQ1! — 15 min',
+                sub: 'Micro E-mini Nasdaq · Intraday',
+                url: 'https://www.tradingview.com/chart/?symbol=CME_MINI%3AMNQ1%21&interval=15',
+                color: '#00ff88',
+              },
+              {
+                label: 'NQ1! — 5 min',
+                sub: 'E-mini Nasdaq · Vue macro',
+                url: 'https://www.tradingview.com/chart/?symbol=CME_MINI%3ANQ1%21&interval=5',
+                color: '#00aaff',
+              },
+              {
+                label: 'NQ1! — 1H',
+                sub: 'E-mini Nasdaq · Contexte HTF',
+                url: 'https://www.tradingview.com/chart/?symbol=CME_MINI%3ANQ1%21&interval=60',
+                color: '#00aaff',
+              },
+            ].map(btn => (
+              <button key={btn.url} onClick={() => window.shell.openExternal(btn.url)}
+                style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px 18px', background: `${btn.color}06`, border: `1px solid ${btn.color}20`, borderRadius: '8px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s', fontFamily: 'inherit' }}
+                onMouseEnter={e => { e.currentTarget.style.background = `${btn.color}12`; e.currentTarget.style.borderColor = `${btn.color}50`; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = `${btn.color}06`; e.currentTarget.style.borderColor = `${btn.color}20`; e.currentTarget.style.transform = 'none'; }}
+              >
+                <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: `${btn.color}15`, border: `1px solid ${btn.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={btn.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+                  </svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '700', color: btn.color, marginBottom: '2px' }}>{btn.label}</div>
+                  <div style={{ fontSize: '11px', color: '#3a6a4a' }}>{btn.sub}</div>
+                </div>
+                <div style={{ marginLeft: 'auto', fontSize: '16px', color: `${btn.color}60` }}>↗</div>
+              </button>
+            ))}
+          </div>
+
+          {/* Custom URL */}
+          <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '14px 18px' }}>
+            <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>OUVRIR UN SYMBOLE PERSONNALISÉ</div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <CustomTVInput />
+            </div>
+          </div>
+
+          {/* Tip */}
+          <div style={{ padding: '10px 14px', background: 'rgba(240,192,32,0.04)', border: '1px solid rgba(240,192,32,0.12)', borderRadius: '5px', fontSize: '11px', color: '#6a5a20', lineHeight: '1.6' }}>
+            <strong style={{ color: '#f0c020' }}>Astuce :</strong> Dans TradingView, active les alertes sur l'indicateur Pine Script (onglet PINE SCRIPT) et configure le webhook vers ton URL ngrok. Le dashboard recevra les signaux automatiquement pendant que le graphique tourne en parallèle.
           </div>
         </div>
       )}
