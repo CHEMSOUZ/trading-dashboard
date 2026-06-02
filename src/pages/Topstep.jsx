@@ -188,7 +188,8 @@ function DayDot({ date, pnl }) {
 function computeTrailing(trades, manualBalance, accountSize, maxLoss) {
   const sorted = [...trades].filter(t => t.result != null).sort((a, b) => (a.entered_at || a.date).localeCompare(b.entered_at || b.date));
   let runBal = manualBalance > 0 ? manualBalance - trades.reduce((s, t) => s + getNet(t), 0) : accountSize;
-  let hwm = runBal, floor = runBal - maxLoss;
+  // Floor is capped at accountSize: once profit >= maxLoss, the floor locks at the starting balance
+  let hwm = runBal, floor = Math.min(accountSize, runBal - maxLoss);
   const byDayArr = sorted.reduce((acc, t) => {
     const last = acc[acc.length - 1];
     if (last && last.date === t.date) last.pnl += getNet(t);
@@ -198,7 +199,7 @@ function computeTrailing(trades, manualBalance, accountSize, maxLoss) {
   const points = [{ date: 'Start', balance: runBal, floor }];
   byDayArr.forEach(({ date, pnl }) => {
     runBal += pnl;
-    if (runBal > hwm) { hwm = runBal; floor = hwm - maxLoss; }
+    if (runBal > hwm) { hwm = runBal; floor = Math.min(accountSize, hwm - maxLoss); }
     points.push({ date: date.slice(5), balance: Math.round(runBal * 100) / 100, floor: Math.round(floor * 100) / 100 });
   });
   return { points, hwm, floor, byDayArr };
@@ -216,6 +217,7 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
   const distanceToFloor = currentBalance - floor;
   const accountLost = currentBalance <= floor;
   const isAboveLock = currentBalance >= LOCK_LEVEL;
+  const floorLocked = floor >= ACCOUNT_SIZE;
 
   const byDay = trades.reduce((acc, t) => { if (!acc[t.date]) acc[t.date] = 0; acc[t.date] += getNet(t); return acc; }, {});
   const dailyArr = Object.entries(byDay).sort(([a],[b]) => a.localeCompare(b)).map(([date, pnl]) => ({ date: date.slice(5), pnl: Math.round(pnl * 100) / 100 }));
@@ -258,7 +260,13 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
 
       {/* Trailing drawdown */}
       <div style={{ background: 'rgba(10,28,18,0.4)', border: `1px solid ${distanceToFloor < 500 ? 'rgba(255,68,85,0.3)' : 'rgba(0,255,136,0.08)'}`, borderRadius: '8px', padding: '18px' }}>
-        <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>⚠️ TRAILING DRAWDOWN (P&L NET)</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '2px' }}>⚠️ TRAILING DRAWDOWN SUIVEUR — {MAX_LOSS.toLocaleString()}$</div>
+          {floorLocked
+            ? <div style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', color: '#00ff88', fontWeight: '700', letterSpacing: '1px' }}>🔒 VERROUILLÉ AU CAPITAL INITIAL</div>
+            : <div style={{ background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.25)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', color: '#f0a020', letterSpacing: '1px' }}>↑ EN SUIVI — se verrouille à {ACCOUNT_SIZE.toLocaleString()}$ dès +{MAX_LOSS.toLocaleString()}$ de profit</div>
+          }
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', marginBottom: '14px' }}>
           <MetricCard label="BALANCE" value={`${currentBalance.toFixed(2)}$`} color={currentBalance >= LOCK_LEVEL ? '#00ff88' : '#c8d8c8'} sub={manualBalance > 0 ? 'Manuelle' : 'Estimée'} />
           <MetricCard label="HIGH WATER MARK" value={`${hwm.toFixed(2)}$`} color="#f0a020" sub="Plus haut net" />
@@ -271,7 +279,7 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
             {distanceToFloor.toFixed(2)}$ de marge · Floor: {floor.toFixed(2)}$
           </div>
         </div>
-        {isAboveLock && <div style={{ marginTop: '10px', background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '4px', padding: '8px 12px', fontSize: '13px', color: '#00ff88' }}>🔒 Au-dessus de {LOCK_LEVEL}$ — trailing se stabilise.</div>}
+        {floorLocked && <div style={{ marginTop: '10px', background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '4px', padding: '8px 12px', fontSize: '13px', color: '#00ff88' }}>🔒 Floor verrouillé à {ACCOUNT_SIZE.toLocaleString()}$ — tu ne peux plus perdre en dessous de ton capital de départ.</div>}
       </div>
 
       {/* Payout options */}
@@ -378,6 +386,7 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
 
   const distanceToFloor = currentBalance - floor;
   const accountLost = currentBalance <= floor;
+  const floorLocked = floor >= ACCOUNT_SIZE;
 
   const byDay = trades.reduce((acc, t) => { if (!acc[t.date]) acc[t.date] = 0; acc[t.date] += getNet(t); return acc; }, {});
   const tradingDays = Object.keys(byDay).length;
@@ -460,8 +469,11 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px', background: rule1 ? 'rgba(0,255,136,0.04)' : 'rgba(255,68,85,0.06)', border: `1px solid ${rule1 ? 'rgba(0,255,136,0.12)' : 'rgba(255,68,85,0.3)'}`, borderRadius: '6px' }}>
             <span style={{ fontSize: '19px' }}>{rule1 ? '✅' : '❌'}</span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '14px', color: '#c8d8c8', fontWeight: '600', marginBottom: '3px' }}>Maximum Loss Limit</div>
-              <div style={{ fontSize: '13px', color: '#4a7a5a' }}>Balance nette ≥ 48 000$ · Floor: {floor.toFixed(2)}$</div>
+              <div style={{ fontSize: '14px', color: '#c8d8c8', fontWeight: '600', marginBottom: '3px' }}>
+                Trailing Drawdown Suiveur — {MAX_LOSS.toLocaleString()}$
+                {floorLocked && <span style={{ fontSize: '11px', color: '#00ff88', marginLeft: '8px' }}>🔒 Verrouillé au capital initial</span>}
+              </div>
+              <div style={{ fontSize: '13px', color: '#4a7a5a' }}>Floor actuel: {floor.toFixed(2)}$ · Se verrouille à {ACCOUNT_SIZE.toLocaleString()}$ dès +{MAX_LOSS.toLocaleString()}$ de profit</div>
             </div>
             <div style={{ fontSize: '15px', fontWeight: '700', color: rule1 ? '#00ff88' : '#ff4455', flexShrink: 0 }}>{fmt(distanceToFloor)} de marge</div>
           </div>

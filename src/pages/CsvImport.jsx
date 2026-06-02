@@ -7,11 +7,13 @@ import { useNavigate } from 'react-router-dom';
  * Detect CSV source from headers
  */
 function detectSource(headers) {
-  const h = headers.map(x => x.trim().toLowerCase());
+  const h  = headers.map(x => x.trim().toLowerCase());
+  // Normalized: remove spaces/underscores/hyphens for flexible matching
+  const hn = h.map(x => x.replace(/[\s_-]/g, ''));
   if (h.includes('contractname') && h.includes('enteredat') && h.includes('tradeday')) return 'topstep';
-  // Tradovate Performance export (buyFillId + sellFillId + boughtTimestamp + soldTimestamp + pnl)
-  if (h.includes('buyfillid') && h.includes('sellfillid') &&
-      h.includes('boughttimestamp') && h.includes('soldtimestamp'))
+  // Tradovate Performance export — supports camelCase (buyFillId) and space-separated (buy fill id)
+  if (hn.includes('buyfillid') && hn.includes('sellfillid') &&
+      hn.includes('boughttimestamp') && hn.includes('soldtimestamp'))
     return 'tradovate_perf';
   // Tradovate Orders export (B/S column + Product + Fill Time + avgPrice)
   if (h.includes('b/s') && h.includes('product') &&
@@ -32,6 +34,23 @@ function detectSource(headers) {
   // Tradovate API-style export (legacy)
   if (h.includes('symbol') && h.includes('buyfillid') && h.includes('clearingfees')) return 'tradovate_api';
   return 'unknown';
+}
+
+/**
+ * Case-insensitive row value accessor — handles camelCase, snake_case, space-separated variants
+ */
+function getRowVal(row, ...keys) {
+  for (const k of keys) {
+    if (row[k] !== undefined && row[k] !== '') return row[k];
+  }
+  const normalize = s => s.replace(/[\s_-]/g, '').toLowerCase();
+  const rowNorm = {};
+  for (const [k, v] of Object.entries(row)) rowNorm[normalize(k)] = v;
+  for (const k of keys) {
+    const v = rowNorm[normalize(k)];
+    if (v !== undefined && v !== '') return v;
+  }
+  return '';
 }
 
 /**
@@ -203,11 +222,10 @@ function mapTradovateRow(row) {
 
 /**
  * Tradovate Performance export — une ligne = un trade complet
- * Colonnes réelles : symbol, buyFillId, sellFillId, qty, buyPrice, sellPrice,
- *   pnl (format "$(420.00)"), boughtTimestamp, soldTimestamp, duration
+ * Supporte camelCase (buyFillId, tradePnL) et espaces (buy fill id, trade pnl)
  */
 function mapTradovatePerfRow(row, idx) {
-  // Parse "$(420.00)" → -420  |  "$420.00" → 420
+  // Parse "$(420.00)" → -420  |  "$420.00" → 420  |  "420.00" → 420
   function parsePnl(str) {
     if (!str) return 0;
     const s = str.trim();
@@ -224,13 +242,15 @@ function mapTradovatePerfRow(row, idx) {
     return str.replace(/(\d+)h/g, '$1h ').replace(/(\d+)min/g, '$1m ').replace(/(\d+)sec/g, '$1s').trim();
   }
 
-  const boughtTs  = parseTradovateDate(row['boughtTimestamp']);
-  const soldTs    = parseTradovateDate(row['soldTimestamp']);
-  const buyPrice  = parseFloat(row['buyPrice'])  || 0;
-  const sellPrice = parseFloat(row['sellPrice']) || 0;
-  const qty       = parseFloat(row['qty'])       || 1;
-  const pnl       = parsePnl(row['pnl']);
-  const contract  = (row['symbol'] || '').trim();
+  const boughtTs  = parseTradovateDate(getRowVal(row, 'boughtTimestamp', 'Bought Timestamp', 'bought_timestamp'));
+  const soldTs    = parseTradovateDate(getRowVal(row, 'soldTimestamp',   'Sold Timestamp',   'sold_timestamp'));
+  const buyPrice  = parseFloat(getRowVal(row, 'buyPrice',  'Buy Price',  'buy_price',  'buyAvgPrice'))  || 0;
+  const sellPrice = parseFloat(getRowVal(row, 'sellPrice', 'Sell Price', 'sell_price', 'sellAvgPrice')) || 0;
+  const qty       = parseFloat(getRowVal(row, 'qty', 'Qty', 'quantity', 'Quantity')) || 1;
+  // tradePnL (Tradovate API) or pnl (Performance CSV) or P&L
+  const rawPnl    = getRowVal(row, 'pnl', 'tradePnL', 'tradePnl', 'P&L', 'Pnl', 'pnL', 'trade pnl', 'net pnl');
+  const pnl       = parsePnl(rawPnl);
+  const contract  = getRowVal(row, 'symbol', 'Symbol', 'contract', 'Contract', 'ContractName').trim();
 
   // Direction : acheté avant vendu → LONG ; vendu avant acheté → SHORT
   const isLong    = !soldTs || (boughtTs && boughtTs <= soldTs);
@@ -241,8 +261,8 @@ function mapTradovatePerfRow(row, idx) {
   const exitPrice = isLong ? sellPrice : buyPrice;
   const date      = enteredAt ? enteredAt.slice(0, 10) : '';
 
-  const buyId  = row['buyFillId']  || '';
-  const sellId = row['sellFillId'] || '';
+  const buyId  = getRowVal(row, 'buyFillId',  'Buy Fill Id',  'buy_fill_id');
+  const sellId = getRowVal(row, 'sellFillId', 'Sell Fill Id', 'sell_fill_id');
   const extId  = buyId && sellId
     ? `tdv_perf_${buyId}_${sellId}`
     : `tdv_perf_${date}_${contract}_${idx}`;
@@ -263,7 +283,7 @@ function mapTradovatePerfRow(row, idx) {
     commissions:  0,
     result_net:   pnl,
     outcome:      pnl > 0 ? 'WIN' : pnl < 0 ? 'LOSS' : 'BE',
-    duration:     normDur(row['duration']),
+    duration:     normDur(getRowVal(row, 'duration', 'Duration')),
     stop: 0, tp: 0, rr: null, emotion: null, notes: null, screenshot: null,
   };
 }

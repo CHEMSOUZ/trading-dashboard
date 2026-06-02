@@ -191,7 +191,8 @@ function computeTrailing(trades, manualBalance, accountSize, maxLoss) {
   const sorted = [...trades].filter(t => (t.result_net ?? t.result) != null)
     .sort((a, b) => (a.entered_at || a.date).localeCompare(b.entered_at || b.date));
   let runBal = manualBalance > 0 ? manualBalance - trades.reduce((s, t) => s + getNet(t), 0) : accountSize;
-  let hwm = runBal, floor = runBal - maxLoss;
+  // Floor is capped at accountSize: once profit >= maxLoss, the floor locks at the starting balance
+  let hwm = runBal, floor = Math.min(accountSize, runBal - maxLoss);
   const byDayArr = sorted.reduce((acc, t) => {
     const last = acc[acc.length - 1];
     if (last && last.date === t.date) last.pnl += getNet(t);
@@ -201,7 +202,7 @@ function computeTrailing(trades, manualBalance, accountSize, maxLoss) {
   const points = [{ date: 'Start', balance: runBal, floor }];
   byDayArr.forEach(({ date, pnl }) => {
     runBal += pnl;
-    if (runBal > hwm) { hwm = runBal; floor = hwm - maxLoss; }
+    if (runBal > hwm) { hwm = runBal; floor = Math.min(accountSize, hwm - maxLoss); }
     points.push({ date: date.slice(5), balance: Math.round(runBal * 100) / 100, floor: Math.round(floor * 100) / 100 });
   });
   return { points, hwm, floor, byDayArr };
@@ -218,6 +219,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
 
   const distanceToFloor = currentBalance - floor;
   const accountLost    = currentBalance <= floor;
+  const floorLocked    = floor >= ACCOUNT_SIZE;
 
   const byDay = trades.reduce((acc, t) => { if (!acc[t.date]) acc[t.date] = 0; acc[t.date] += getNet(t); return acc; }, {});
   const allDays = Object.entries(byDay).sort(([a], [b]) => a.localeCompare(b));
@@ -290,7 +292,13 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
 
       {/* Trailing Drawdown */}
       <div style={{ background: 'rgba(10,28,18,0.4)', border: `1px solid ${distanceToFloor < 500 ? 'rgba(255,68,85,0.3)' : 'rgba(0,255,136,0.08)'}`, borderRadius: '8px', padding: '18px' }}>
-        <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>⚠️ MAX LOSS LIMIT — TRAILING DRAWDOWN (4% DU HWM)</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px' }}>⚠️ TRAILING DRAWDOWN SUIVEUR — {MAX_TRAILING_DD.toLocaleString()}$</div>
+          {floorLocked
+            ? <div style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', color: '#00ff88', fontWeight: '700', letterSpacing: '1px' }}>🔒 VERROUILLÉ AU CAPITAL INITIAL</div>
+            : <div style={{ background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.25)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', color: '#f0a020', letterSpacing: '1px' }}>↑ EN SUIVI — se verrouille à {ACCOUNT_SIZE.toLocaleString()}$ dès +{MAX_TRAILING_DD.toLocaleString()}$ de profit</div>
+          }
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', marginBottom: '14px' }}>
           <MetricCard label="BALANCE" value={`${currentBalance.toFixed(2)}$`} color="#c8d8c8" sub={manualBalance > 0 ? 'Manuelle' : 'Estimée'} />
           <MetricCard label="HIGH WATER MARK" value={`${hwm.toFixed(2)}$`} color="#f0a020" sub="Plus haut atteint" />
@@ -444,6 +452,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
 
   const distanceToFloor = currentBalance - floor;
   const accountLost = currentBalance <= floor;
+  const floorLocked = floor >= ACCOUNT_SIZE;
 
   const byDay = trades.reduce((acc, t) => { if (!acc[t.date]) acc[t.date] = 0; acc[t.date] += getNet(t); return acc; }, {});
   const allDays = Object.entries(byDay).sort(([a], [b]) => a.localeCompare(b));
@@ -507,7 +516,13 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
 
       {/* Drawdown */}
       <div style={{ background: 'rgba(10,28,18,0.4)', border: `1px solid ${distanceToFloor < 500 ? 'rgba(255,68,85,0.3)' : 'rgba(0,255,136,0.08)'}`, borderRadius: '8px', padding: '18px' }}>
-        <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>⚠️ TRAILING DRAWDOWN (5% DU HWM)</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px' }}>⚠️ TRAILING DRAWDOWN SUIVEUR — {MAX_TRAILING_DD.toLocaleString()}$</div>
+          {floorLocked
+            ? <div style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', color: '#00ff88', fontWeight: '700', letterSpacing: '1px' }}>🔒 VERROUILLÉ AU CAPITAL INITIAL</div>
+            : <div style={{ background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.25)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', color: '#f0a020', letterSpacing: '1px' }}>↑ EN SUIVI — se verrouille à {ACCOUNT_SIZE.toLocaleString()}$ dès +{MAX_TRAILING_DD.toLocaleString()}$ de profit</div>
+          }
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', marginBottom: '14px' }}>
           <MetricCard label="BALANCE" value={`${currentBalance.toFixed(2)}$`} color="#c8d8c8" sub={manualBalance > 0 ? 'Manuelle' : 'Estimée'} />
           <MetricCard label="HIGH WATER MARK" value={`${hwm.toFixed(2)}$`} color="#f0a020" sub="Plus haut net" />

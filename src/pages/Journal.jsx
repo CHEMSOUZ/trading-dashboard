@@ -15,13 +15,11 @@ function fmtPnl(n) {
   return `${n >= 0 ? '+' : ''}${n.toFixed(2)}$`;
 }
 
-// ── Frais Cell — affichage + édition inline ──────────────────
+// ── Frais Cell — affichage + édition inline (total unique) ───
 function FraisCell({ trade, onUpdate }) {
-  const [editing, setEditing]         = useState(false);
-  const [feesVal, setFeesVal]         = useState('');
-  const [commissionsVal, setCommissionsVal] = useState('');
-  const [hover, setHover]             = useState(false);
-  const [saving, setSaving]           = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [totalVal, setTotalVal] = useState('');
+  const [saving, setSaving]   = useState(false);
 
   const fees        = trade.fees ?? 0;
   const commissions = trade.commissions ?? 0;
@@ -29,24 +27,23 @@ function FraisCell({ trade, onUpdate }) {
 
   function startEdit(e) {
     e.stopPropagation();
-    setFeesVal(fees > 0 ? String(fees) : '');
-    setCommissionsVal(commissions > 0 ? String(commissions) : '');
+    setTotalVal(total > 0 ? String(total) : '');
     setEditing(true);
   }
 
   async function saveEdit(e) {
     e?.stopPropagation();
     setSaving(true);
-    const newFees  = parseFloat(feesVal)        || 0;
-    const newComms = parseFloat(commissionsVal) || 0;
-    const newNet   = (trade.result ?? 0) - newFees - newComms;
+    const newTotal = parseFloat(totalVal) || 0;
+    // On stocke tout dans fees, on vide commissions pour simplifier
+    const newNet = (trade.result ?? 0) - newTotal;
     await window.db.updateTrade(trade.id, {
       ...trade,
-      fees:        newFees,
-      commissions: newComms,
+      fees:        newTotal,
+      commissions: 0,
       result_net:  Math.round(newNet * 100) / 100,
     });
-    onUpdate(trade.id, { fees: newFees, commissions: newComms, result_net: Math.round(newNet * 100) / 100 });
+    onUpdate(trade.id, { fees: newTotal, commissions: 0, result_net: Math.round(newNet * 100) / 100 });
     setSaving(false);
     setEditing(false);
   }
@@ -55,71 +52,42 @@ function FraisCell({ trade, onUpdate }) {
 
   if (editing) {
     return (
-      <div onClick={e => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '130px' }}>
+      <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: '120px' }}>
+        <span style={{ fontSize: '10px', color: '#f0a020', flexShrink: 0 }}>-</span>
         <input
-          autoFocus type="number" placeholder="Frais" value={feesVal}
-          onChange={e => setFeesVal(e.target.value)}
+          autoFocus type="number" min="0" step="0.01" placeholder="0.00" value={totalVal}
+          onChange={e => setTotalVal(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') saveEdit(e); if (e.key === 'Escape') cancelEdit(e); }}
-          style={{ width: '100%', background: 'rgba(10,28,18,0.8)', border: '1px solid rgba(240,160,32,0.4)', borderRadius: '3px', padding: '3px 6px', color: '#f0a020', fontSize: '10px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+          style={{ flex: 1, background: 'rgba(10,28,18,0.9)', border: '1px solid rgba(240,160,32,0.5)', borderRadius: '3px', padding: '4px 6px', color: '#f0a020', fontSize: '11px', fontFamily: 'inherit', outline: 'none', minWidth: 0 }}
         />
-        <input
-          type="number" placeholder="Commissions" value={commissionsVal}
-          onChange={e => setCommissionsVal(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') saveEdit(e); if (e.key === 'Escape') cancelEdit(e); }}
-          style={{ width: '100%', background: 'rgba(10,28,18,0.8)', border: '1px solid rgba(240,160,32,0.3)', borderRadius: '3px', padding: '3px 6px', color: '#f0a020', fontSize: '10px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
-        />
-        <div style={{ display: 'flex', gap: '3px' }}>
-          <button onClick={saveEdit} disabled={saving} style={{ flex: 1, background: 'rgba(0,255,136,0.12)', border: '1px solid rgba(0,255,136,0.25)', color: '#00ff88', borderRadius: '3px', padding: '2px', fontSize: '9px', cursor: 'pointer', fontFamily: 'inherit' }}>✓</button>
-          <button onClick={cancelEdit} style={{ flex: 1, background: 'transparent', border: '1px solid #1a3a22', color: '#4a7a5a', borderRadius: '3px', padding: '2px', fontSize: '9px', cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
-        </div>
+        <span style={{ fontSize: '10px', color: '#f0a020', flexShrink: 0 }}>$</span>
+        <button onClick={saveEdit} disabled={saving} title="Enregistrer (Entrée)" style={{ background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', borderRadius: '3px', padding: '3px 6px', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✓</button>
+        <button onClick={cancelEdit} title="Annuler (Échap)" style={{ background: 'transparent', border: '1px solid #1a3a22', color: '#4a7a5a', borderRadius: '3px', padding: '3px 6px', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
       </div>
     );
   }
 
-  return (
-    <div
-      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
-      onClick={startEdit}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      title="Cliquer pour modifier les frais"
-    >
-      <span style={{ fontSize: '11px', fontWeight: '600', color: total > 0 ? '#f0a020' : '#2a4a30' }}>
-        {total > 0 ? `-${total.toFixed(2)}$` : '—'}
-      </span>
-      <span style={{ fontSize: '8px', color: hover ? '#00ff88' : '#2a5a32', transition: 'color 0.15s' }}>✎</span>
+  if (total > 0) {
+    return (
+      <div onClick={startEdit} title="Cliquer pour modifier les frais"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer', padding: '2px 6px', borderRadius: '4px', border: '1px solid transparent', transition: 'all 0.15s' }}
+        onMouseEnter={e => { e.currentTarget.style.border = '1px solid rgba(240,160,32,0.3)'; e.currentTarget.style.background = 'rgba(240,160,32,0.06)'; }}
+        onMouseLeave={e => { e.currentTarget.style.border = '1px solid transparent'; e.currentTarget.style.background = 'transparent'; }}
+      >
+        <span style={{ fontSize: '11px', fontWeight: '600', color: '#f0a020' }}>-{total.toFixed(2)}$</span>
+        <span style={{ fontSize: '9px', color: '#6a4a20' }}>✎</span>
+      </div>
+    );
+  }
 
-      {hover && total > 0 && (
-        <div style={{
-          position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
-          marginBottom: '6px', zIndex: 100,
-          background: 'rgba(6,18,12,0.98)',
-          border: '1px solid rgba(240,160,32,0.25)',
-          borderRadius: '5px', padding: '10px 12px',
-          minWidth: '160px', pointerEvents: 'none',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-        }}>
-          <div style={{ fontSize: '8px', color: '#5a4a20', letterSpacing: '1px', marginBottom: '8px' }}>DÉTAIL — clic pour modifier</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {commissions > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
-                <span style={{ fontSize: '10px', color: '#8aaa90' }}>Commissions</span>
-                <span style={{ fontSize: '10px', color: '#f0a020' }}>-{commissions.toFixed(2)}$</span>
-              </div>
-            )}
-            {fees > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
-                <span style={{ fontSize: '10px', color: '#8aaa90' }}>Frais</span>
-                <span style={{ fontSize: '10px', color: '#f0a020' }}>-{fees.toFixed(2)}$</span>
-              </div>
-            )}
-            <div style={{ borderTop: '1px solid rgba(240,160,32,0.15)', marginTop: '4px', paddingTop: '4px', display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
-              <span style={{ fontSize: '10px', color: '#c8d8c8', fontWeight: '600' }}>Total</span>
-              <span style={{ fontSize: '11px', fontWeight: '700', color: '#f0a020' }}>-{total.toFixed(2)}$</span>
-            </div>
-          </div>
-        </div>
-      )}
+  // Pas encore de frais → bouton "+ frais" visible
+  return (
+    <div onClick={startEdit} title="Ajouter des frais"
+      style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', cursor: 'pointer', padding: '2px 7px', borderRadius: '4px', border: '1px dashed rgba(240,160,32,0.25)', color: '#6a5020', fontSize: '10px', letterSpacing: '0.5px', transition: 'all 0.15s' }}
+      onMouseEnter={e => { e.currentTarget.style.border = '1px dashed rgba(240,160,32,0.5)'; e.currentTarget.style.color = '#f0a020'; }}
+      onMouseLeave={e => { e.currentTarget.style.border = '1px dashed rgba(240,160,32,0.25)'; e.currentTarget.style.color = '#6a5020'; }}
+    >
+      <span>+</span><span>frais</span>
     </div>
   );
 }
@@ -279,7 +247,7 @@ export default function Journal() {
         })}
         <div style={{ marginLeft: 'auto', fontSize: '9px', color: '#2a4a30', display: 'flex', alignItems: 'center', gap: '4px' }}>
           <span>💡</span>
-          <span>Survolez le P&L pour voir le détail des frais</span>
+          <span>Colonne FRAIS — cliquez pour modifier · P&L net recalculé automatiquement</span>
         </div>
       </div>
 

@@ -107,27 +107,30 @@ function PlatformLogo({ platform, size = 28 }) {
 async function computeAccountStatus(acc, currentActiveId) {
   const rules = ACCOUNT_RULES[acc.type];
   const isExpressFunded = EXPRESS_FUNDED_TYPES.has(acc.type);
+  const manuallyBlown = acc.blown ?? false;
+
   if (!rules?.size || !rules?.maxLoss) {
-    return { pnl: null, isBlown: false, floor: null, tradeCount: 0, winrate: 0, isValidated: false, isExpressFunded };
+    return { pnl: null, isBlown: manuallyBlown, manuallyBlown, floor: null, tradeCount: 0, winrate: 0, isValidated: false, isExpressFunded };
   }
   try {
     await window.accounts.setActive(acc.id);
     const res = await window.db.getAllTrades();
     if (currentActiveId) await window.accounts.setActive(currentActiveId);
-    if (!res.ok) return { pnl: null, isBlown: false, floor: null, tradeCount: 0, winrate: 0, isValidated: false, isExpressFunded };
+    if (!res.ok) return { pnl: null, isBlown: manuallyBlown, manuallyBlown, floor: null, tradeCount: 0, winrate: 0, isValidated: false, isExpressFunded };
     const trades = res.data;
     const sorted = [...trades]
       .filter(t => (t.result_net ?? t.result) != null)
       .sort((a, b) => (a.entered_at || a.date || '').localeCompare(b.entered_at || b.date || ''));
+    // Floor capped at account size (same trailing DD logic as Lucid/Topstep pages)
     let hwm = rules.size, floor = rules.size - rules.maxLoss, bal = rules.size;
     for (const t of sorted) {
       bal += t.result_net ?? t.result ?? 0;
-      if (bal > hwm) { hwm = bal; floor = hwm - rules.maxLoss; }
+      if (bal > hwm) { hwm = bal; floor = Math.min(rules.size, hwm - rules.maxLoss); }
     }
     const totalPnl = trades.reduce((s, t) => s + (t.result_net ?? t.result ?? 0), 0);
     const wins = trades.filter(t => (t.result_net ?? t.result ?? 0) > 0).length;
+    const autoBlown = rules.size + totalPnl <= floor;
 
-    // Validated: challenge + total pnl >= 3000 + first day respected consistency (< 1500)
     let isValidated = false;
     if (CHALLENGE_TYPES.has(acc.type) && sorted.length > 0) {
       const firstDate = sorted[0].entered_at?.slice(0, 10) ?? sorted[0].date ?? '';
@@ -138,17 +141,18 @@ async function computeAccountStatus(acc, currentActiveId) {
     }
 
     return {
-      pnl:        Math.round(totalPnl * 100) / 100,
-      isBlown:    rules.size + totalPnl <= floor,
-      floor:      Math.round(floor * 100) / 100,
-      tradeCount: trades.length,
-      winrate:    trades.length > 0 ? Math.round((wins / trades.length) * 100) : 0,
+      pnl:          Math.round(totalPnl * 100) / 100,
+      isBlown:      manuallyBlown || autoBlown,
+      manuallyBlown,
+      floor:        Math.round(floor * 100) / 100,
+      tradeCount:   trades.length,
+      winrate:      trades.length > 0 ? Math.round((wins / trades.length) * 100) : 0,
       isValidated,
       isExpressFunded,
     };
   } catch {
     if (currentActiveId) { try { await window.accounts.setActive(currentActiveId); } catch {} }
-    return { pnl: null, isBlown: false, floor: null, tradeCount: 0, winrate: 0, isValidated: false, isExpressFunded };
+    return { pnl: null, isBlown: manuallyBlown, manuallyBlown, floor: null, tradeCount: 0, winrate: 0, isValidated: false, isExpressFunded };
   }
 }
 
@@ -425,7 +429,7 @@ function EditAccountModal({ acc, onClose, onSave }) {
 }
 
 // ── Account Card ──────────────────────────────────────────────
-function AccountCard({ acc, isActive, status, onSelect, onEdit, onDelete }) {
+function AccountCard({ acc, isActive, status, onSelect, onEdit, onDelete, onMarkBlown, onRestoreBlown }) {
   const typeInfo    = TYPE_LABELS[acc.type] ?? { label: 'Autre', color: acc.color ?? '#ff6644', platform: 'perso' };
   const isBlown     = status?.isBlown ?? false;
   const hasStats    = status?.pnl != null;
@@ -501,6 +505,24 @@ function AccountCard({ acc, isActive, status, onSelect, onEdit, onDelete }) {
       <div style={{ fontSize: '10px', color: '#2a4a30', marginTop: '2px' }}>Créé le {new Date(acc.createdAt).toLocaleDateString('fr-FR')}</div>
 
       <div style={{ position: 'absolute', bottom: '10px', right: '10px', display: 'flex', gap: '4px' }}>
+        {/* Restaurer — uniquement si cramé manuellement */}
+        {status?.manuallyBlown && (
+          <button onClick={e => { e.stopPropagation(); onRestoreBlown(acc.id); }}
+            style={{ background: 'none', border: 'none', color: '#2a4a30', cursor: 'pointer', fontSize: '13px', padding: '2px 6px', borderRadius: '3px', transition: 'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#00ff88'; e.currentTarget.style.background = 'rgba(0,255,136,0.1)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#2a4a30'; e.currentTarget.style.background = 'none'; }}
+            title="Restaurer ce compte"
+          >↺</button>
+        )}
+        {/* Marquer cramé — uniquement si pas encore cramé */}
+        {!isBlown && (
+          <button onClick={e => { e.stopPropagation(); onMarkBlown(acc.id); }}
+            style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '13px', padding: '2px 6px', borderRadius: '3px', transition: 'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#ff4455'; e.currentTarget.style.background = 'rgba(255,68,85,0.08)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#1a3a20'; e.currentTarget.style.background = 'none'; }}
+            title="Marquer comme cramé"
+          >💀</button>
+        )}
         <button onClick={e => { e.stopPropagation(); onEdit(acc); }}
           style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '13px', padding: '2px 6px', borderRadius: '3px', transition: 'all 0.15s' }}
           onMouseEnter={e => { e.currentTarget.style.color = '#00aaff'; e.currentTarget.style.background = 'rgba(0,170,255,0.1)'; }}
@@ -564,30 +586,50 @@ export default function AccountSelect({ onSelect, onBack }) {
     loadAccounts();
   }
 
+  async function handleMarkBlown(id) {
+    if (!window.confirm('Marquer ce compte comme cramé ? Il sera déplacé dans la section CRAMÉS.')) return;
+    await window.accounts.update(id, { blown: true });
+    loadAccounts();
+  }
+
+  async function handleRestoreBlown(id) {
+    if (!window.confirm('Restaurer ce compte ? Il reviendra dans sa section d\'origine.')) return;
+    await window.accounts.update(id, { blown: false });
+    loadAccounts();
+  }
+
   if (loading) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#060c10', color: '#3a6a4a', fontSize: '12px', letterSpacing: '2px', fontFamily: 'monospace' }}>CHARGEMENT...</div>
   );
 
   // ── Section ordering (top → bottom) ──────────────────────────
-  // 1. LIVE  : Express Funded Topstep + Tradovate Live
-  // 2. CHALLENGE : active Topstep challenges (not validated)
-  // 3. VALIDÉ : validated challenges
-  // 4. AUTRES : perso, autre, tradovate_demo (active)
-  // 5. CRAMÉ : blown
+  // 0. ACTIF  : compte actuellement sélectionné (épinglé en tête)
+  // 1. LIVE   : Express Funded Topstep + Tradovate Live (sauf actif)
+  // 2. CHALLENGE : Topstep en cours non validés (sauf actif)
+  // 3. VALIDÉ : challenges réussis (sauf actif)
+  // 4. AUTRES : perso, demo, autre (sauf actif)
+  // 5. CRAMÉS : blown (manuellement ou auto)
+  const activeAcc = data.accounts.find(a => a.id === data.activeId && !statuses[a.id]?.isBlown);
+  const isNotActive = a => a.id !== data.activeId;
+
   const blownAccounts     = data.accounts.filter(a => statuses[a.id]?.isBlown);
   const liveAccounts      = data.accounts.filter(a =>
-    !statuses[a.id]?.isBlown && (statuses[a.id]?.isExpressFunded || a.type === 'tradovate_live')
+    !statuses[a.id]?.isBlown && isNotActive(a) &&
+    (statuses[a.id]?.isExpressFunded || a.type === 'tradovate_live')
   );
   const challengeAccounts = data.accounts.filter(a =>
-    !statuses[a.id]?.isBlown && !statuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' &&
+    !statuses[a.id]?.isBlown && isNotActive(a) &&
+    !statuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' &&
     !statuses[a.id]?.isValidated && CHALLENGE_TYPES.has(a.type)
   );
   const validatedAccounts = data.accounts.filter(a =>
-    !statuses[a.id]?.isBlown && !statuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' &&
+    !statuses[a.id]?.isBlown && isNotActive(a) &&
+    !statuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' &&
     statuses[a.id]?.isValidated
   );
   const otherAccounts     = data.accounts.filter(a =>
-    !statuses[a.id]?.isBlown && !statuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' &&
+    !statuses[a.id]?.isBlown && isNotActive(a) &&
+    !statuses[a.id]?.isExpressFunded && a.type !== 'tradovate_live' &&
     !statuses[a.id]?.isValidated && !CHALLENGE_TYPES.has(a.type)
   );
 
@@ -597,7 +639,7 @@ export default function AccountSelect({ onSelect, onBack }) {
         {header}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: '14px' }}>
           {accounts.map(acc => (
-            <AccountCard key={acc.id} acc={acc} isActive={acc.id === data.activeId} status={statuses[acc.id]} onSelect={handleSelect} onEdit={setEditingAcc} onDelete={handleDelete} />
+            <AccountCard key={acc.id} acc={acc} isActive={acc.id === data.activeId} status={statuses[acc.id]} onSelect={handleSelect} onEdit={setEditingAcc} onDelete={handleDelete} onMarkBlown={handleMarkBlown} onRestoreBlown={handleRestoreBlown} />
           ))}
         </div>
       </div>
@@ -642,6 +684,20 @@ export default function AccountSelect({ onSelect, onBack }) {
           </div>
         ) : (
           <>
+            {/* ── 0. COMPTE ACTIF (épinglé en tête) ── */}
+            {activeAcc && (
+              <div style={{ marginBottom: '28px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: activeAcc.color, boxShadow: `0 0 12px ${activeAcc.color}` }} />
+                  <span style={{ fontSize: '10px', color: activeAcc.color, letterSpacing: '2px', fontWeight: '700' }}>COMPTE ACTIF</span>
+                  <span style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '1px' }}>En cours de trading</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: '14px' }}>
+                  <AccountCard acc={activeAcc} isActive={true} status={statuses[activeAcc.id]} onSelect={handleSelect} onEdit={setEditingAcc} onDelete={handleDelete} onMarkBlown={handleMarkBlown} onRestoreBlown={handleRestoreBlown} />
+                </div>
+              </div>
+            )}
+
             {/* ── 1. LIVE : Express Funded + Tradovate Live ── */}
             {liveAccounts.length > 0 && renderSection(liveAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
@@ -682,6 +738,7 @@ export default function AccountSelect({ onSelect, onBack }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#ff4455', boxShadow: '0 0 8px #ff4455' }} />
                 <span style={{ fontSize: '10px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', opacity: 0.8 }}>CRAMÉS — {blownAccounts.length}</span>
+                <span style={{ fontSize: '9px', color: '#5a2a2a', letterSpacing: '1px' }}>↺ = restaurer</span>
               </div>
             ))}
           </>
