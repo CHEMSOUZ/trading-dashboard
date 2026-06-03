@@ -1365,6 +1365,28 @@ export default function Bot() {
     await window.bot.setPort(p);
   }
 
+  const [testStatus, setTestStatus] = useState(null); // null | 'ok' | 'err'
+
+  async function handleTestWebhook() {
+    setTestStatus(null);
+    try {
+      const res = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bot: 'ICT_5min', symbol: 'MNQ', signal: 'LONG',
+          entry: 20000, sl: 19950, tp: 20100, rr: '1:2',
+          context: 'TEST LOCAL', timeframe: '5'
+        })
+      });
+      const data = await res.json();
+      setTestStatus(data.ok ? 'ok' : 'err');
+      if (data.ok) { setTab('signals'); setTimeout(() => setTestStatus(null), 4000); }
+    } catch(e) {
+      setTestStatus('err');
+    }
+  }
+
   async function handleSaveSignal(signal) {
     setSaving(true); setSaveMsg('');
     const dir   = (signal.signal ?? signal.direction ?? '').toUpperCase();
@@ -1815,6 +1837,48 @@ export default function Bot() {
       {/* ── Tab: CONFIGURATION ── */}
       {tab === 'setup' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* ── DIAGNOSTIQUE RAPIDE ── */}
+          <div style={{ background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.15)', borderRadius: '8px', padding: '16px 20px' }}>
+            <div style={{ fontSize: '10px', color: '#00ff88', letterSpacing: '2px', marginBottom: '14px', fontWeight: '700' }}>🔍 DIAGNOSTIQUE RAPIDE</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+              {/* Serveur local */}
+              <div style={{ background: serverOk ? 'rgba(0,255,136,0.06)' : 'rgba(255,68,85,0.06)', border: `1px solid ${serverOk ? 'rgba(0,255,136,0.2)' : 'rgba(255,68,85,0.2)'}`, borderRadius: '6px', padding: '10px 12px' }}>
+                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '6px' }}>SERVEUR LOCAL</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: serverOk ? '#00ff88' : '#ff4455', boxShadow: serverOk ? '0 0 6px #00ff88' : '0 0 6px #ff4455' }} />
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: serverOk ? '#00ff88' : '#ff4455' }}>{serverOk ? 'ACTIF' : 'ERREUR'}</span>
+                </div>
+                <div style={{ fontSize: '10px', color: '#3a6a4a', marginTop: '4px' }}>Port {port}</div>
+              </div>
+              {/* Test local */}
+              <div style={{ background: testStatus === 'ok' ? 'rgba(0,255,136,0.06)' : testStatus === 'err' ? 'rgba(255,68,85,0.06)' : 'rgba(10,28,18,0.3)', border: `1px solid ${testStatus === 'ok' ? 'rgba(0,255,136,0.2)' : testStatus === 'err' ? 'rgba(255,68,85,0.2)' : 'rgba(0,255,136,0.08)'}`, borderRadius: '6px', padding: '10px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '6px' }}>TEST LOCAL</div>
+                {testStatus === 'ok' && <div style={{ fontSize: '11px', color: '#00ff88', fontWeight: '700' }}>✓ Signal reçu !</div>}
+                {testStatus === 'err' && <div style={{ fontSize: '11px', color: '#ff4455', fontWeight: '700' }}>✗ Serveur KO</div>}
+                {testStatus === null && <div style={{ fontSize: '10px', color: '#3a6a4a' }}>Envoi direct localhost</div>}
+                <button onClick={handleTestWebhook} style={{ marginTop: '6px', padding: '4px 10px', background: 'transparent', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '4px', color: '#00aa55', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.08)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >TESTER →</button>
+              </div>
+              {/* Signaux reçus */}
+              <div style={{ background: 'rgba(10,28,18,0.3)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '10px 12px' }}>
+                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '6px' }}>SIGNAUX REÇUS</div>
+                <div style={{ fontSize: '20px', fontWeight: '700', color: signals.length > 0 ? '#00ff88' : '#3a6a4a' }}>{signals.length}</div>
+                <div style={{ fontSize: '10px', color: '#3a6a4a', marginTop: '2px' }}>
+                  {signals.length > 0 ? `dernier : ${fmtTime(signals[0]?._receivedAt)}` : 'aucun signal reçu'}
+                </div>
+              </div>
+            </div>
+            <div style={{ fontSize: '11px', color: '#3a5a3a', lineHeight: '1.7', background: 'rgba(0,0,0,0.2)', padding: '10px 12px', borderRadius: '5px' }}>
+              <strong style={{ color: '#f0c020' }}>Alertes non reçues ?</strong> Vérifie dans l'ordre :<br/>
+              <span style={{ color: '#c8d8c8' }}>① Clique TESTER</span> — si ça fonctionne, le serveur local est OK → le problème est <strong style={{ color: '#f0c020' }}>ngrok ou TradingView</strong><br/>
+              <span style={{ color: '#c8d8c8' }}>② Vérifie que ngrok tourne</span> avec la bonne URL dans l'alerte TradingView<br/>
+              <span style={{ color: '#c8d8c8' }}>③ Dans TradingView → Alerte</span> : condition = <strong style={{ color: '#00ff88' }}>"Alert() function calls only"</strong>, message = <strong style={{ color: '#00ff88' }}>vide</strong>
+            </div>
+          </div>
+
           <div style={{ fontSize: '12px', color: '#5a8a6a', lineHeight: '1.6', background: 'rgba(0,255,136,0.03)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: '6px', padding: '16px 20px' }}>
             <div style={{ fontSize: '10px', color: '#00ff88', letterSpacing: '2px', marginBottom: '12px', fontWeight: '700' }}>COMMENT ÇA FONCTIONNE</div>
             Le bot reçoit les alertes de TradingView via un <strong style={{ color: '#00ff88' }}>webhook</strong>. Comme TradingView envoie depuis ses serveurs, il faut exposer ton serveur local sur Internet via <strong style={{ color: '#00ff88' }}>ngrok</strong> (gratuit).
@@ -1842,16 +1906,16 @@ export default function Bot() {
             {
               n: '2', title: 'Configure l\'alerte TradingView',
               content: (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px', color: '#5a8a6a', lineHeight: '1.7' }}>
-                  <div>1. Dans TradingView, ajoute le <strong style={{ color: '#c8d8c8' }}>Pine Script</strong> (onglet PINE SCRIPT)</div>
-                  <div>2. Clique <strong style={{ color: '#c8d8c8' }}>Créer une Alerte</strong> sur l'indicateur</div>
-                  <div>3. Active <strong style={{ color: '#c8d8c8' }}>Webhook URL</strong> et colle :</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                    <code style={{ flex: 1, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(240,192,32,0.2)', borderRadius: '4px', padding: '7px 12px', fontSize: '12px', color: '#f0c020', fontFamily: 'monospace' }}>
-                      https://TON_URL_NGROK/webhook
-                    </code>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px', color: '#5a8a6a', lineHeight: '1.7' }}>
+                  <div>1. Dans TradingView, ajoute le <strong style={{ color: '#c8d8c8' }}>Pine Script</strong> (onglet PINE SCRIPT) sur la chart MNQ1! au bon TF</div>
+                  <div>2. Clique l'icône <strong style={{ color: '#c8d8c8' }}>Horloge ⏰ → Créer une Alerte</strong></div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'rgba(255,68,85,0.05)', border: '1px solid rgba(255,68,85,0.15)', borderRadius: '5px', padding: '8px 12px' }}>
+                    <div style={{ fontSize: '10px', color: '#ff6644', fontWeight: '700', letterSpacing: '1px' }}>⚠ RÉGLAGES CRITIQUES</div>
+                    <div>• Condition : <code style={{ color: '#00ff88', background: 'rgba(0,255,136,0.1)', padding: '1px 5px', borderRadius: '3px', fontSize: '10px' }}>Alert() function calls only</code></div>
+                    <div>• Message : <code style={{ color: '#00ff88', background: 'rgba(0,255,136,0.1)', padding: '1px 5px', borderRadius: '3px', fontSize: '10px' }}>laisser VIDE</code> — le script envoie son propre JSON</div>
+                    <div>• Webhook URL : <code style={{ color: '#f0c020', background: 'rgba(240,192,32,0.1)', padding: '1px 5px', borderRadius: '3px', fontSize: '10px' }}>https://TON_URL_NGROK/webhook</code></div>
                   </div>
-                  <div style={{ marginTop: '4px' }}>4. Dans <strong style={{ color: '#c8d8c8' }}>Message</strong>, laisse <code style={{ color: '#00ff88', fontSize: '10px', background: 'rgba(0,255,136,0.08)', padding: '1px 5px', borderRadius: '3px' }}>{'{{strategy.order.alert_message}}'}</code> (le Pine Script gère le JSON)</div>
+                  <div style={{ color: '#2a5a3a', fontSize: '10px' }}>→ Si "Alert() function calls only" n'est pas sélectionné, TradingView envoie le champ Message (vide ou texte) au lieu du JSON du script → 400 Bad Request</div>
                 </div>
               )
             },
