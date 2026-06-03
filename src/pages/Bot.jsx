@@ -224,32 +224,32 @@ sell_signal = bear_mss and bear_fvg_active and close >= bear_fvg_lo and close <=
 // ─── BUY ──────────────────────────────────────────────────────────────────
 if buy_signal
     label.new(bar_index, low, 'BUY ✓', color = bull_col, textcolor = color.white, style = label.style_label_up, size = size.normal)
-
-if buy_signal and not na(sweep_low_val)
-    stop_v  = math.round((sweep_low_val - 5) * 100) / 100
-    risk_v  = close - stop_v
-    tp_v    = math.round((close + risk_v * 2) * 100) / 100
-    tp2_v   = math.round((close + risk_v * 3) * 100) / 100
-    entry_v = math.round(close * 100) / 100
-    line.new(bar_index, stop_v, bar_index + 30, stop_v, color = bear_col, style = line.style_dotted, width = 2)
-    line.new(bar_index, tp_v,   bar_index + 30, tp_v,   color = bull_col, style = line.style_dotted, width = 1)
-    line.new(bar_index, tp2_v,  bar_index + 30, tp2_v,  color = bull_col, style = line.style_dashed, width = 1)
-    alert('{"type":"test","bot":"ICT_EDIT","symbol":"MNQ","signal":"LONG","entry":' + str.tostring(entry_v) + ',"sl":' + str.tostring(stop_v) + ',"tp":' + str.tostring(tp_v) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '","timestamp":"{{time}}"}', alert.freq_once_per_bar)
+    if not na(sweep_low_val)
+        sl_v  = sweep_low_val - 5.0
+        risk  = close - sl_v
+        tp_v  = close + risk * 2.0
+        tp2_v = close + risk * 3.0
+        line.new(bar_index, sl_v,  bar_index + 30, sl_v,  color = bear_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, tp_v,  bar_index + 30, tp_v,  color = bull_col, style = line.style_dotted, width = 1)
+        line.new(bar_index, tp2_v, bar_index + 30, tp2_v, color = bull_col, style = line.style_dashed, width = 1)
+        alert('{"type":"test","bot":"ICT_EDIT","symbol":"MNQ","signal":"LONG","entry":' + str.tostring(close) + ',"sl":' + str.tostring(sl_v) + ',"tp":' + str.tostring(tp_v) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
+    else
+        alert('{"type":"test","bot":"ICT_EDIT","symbol":"MNQ","signal":"LONG","entry":' + str.tostring(close) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
 
 // ─── SELL ─────────────────────────────────────────────────────────────────
 if sell_signal
     label.new(bar_index, high, 'SELL ✓', color = bear_col, textcolor = color.white, style = label.style_label_down, size = size.normal)
-
-if sell_signal and not na(sweep_high_val)
-    stop_v  = math.round((sweep_high_val + 5) * 100) / 100
-    risk_v  = stop_v - close
-    tp_v    = math.round((close - risk_v * 2) * 100) / 100
-    tp2_v   = math.round((close - risk_v * 3) * 100) / 100
-    entry_v = math.round(close * 100) / 100
-    line.new(bar_index, stop_v, bar_index + 30, stop_v, color = bull_col, style = line.style_dotted, width = 2)
-    line.new(bar_index, tp_v,   bar_index + 30, tp_v,   color = bear_col, style = line.style_dotted, width = 1)
-    line.new(bar_index, tp2_v,  bar_index + 30, tp2_v,  color = bear_col, style = line.style_dashed, width = 1)
-    alert('{"type":"test","bot":"ICT_EDIT","symbol":"MNQ","signal":"SHORT","entry":' + str.tostring(entry_v) + ',"sl":' + str.tostring(stop_v) + ',"tp":' + str.tostring(tp_v) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '","timestamp":"{{time}}"}', alert.freq_once_per_bar)
+    if not na(sweep_high_val)
+        sl_v  = sweep_high_val + 5.0
+        risk  = sl_v - close
+        tp_v  = close - risk * 2.0
+        tp2_v = close - risk * 3.0
+        line.new(bar_index, sl_v,  bar_index + 30, sl_v,  color = bull_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, tp_v,  bar_index + 30, tp_v,  color = bear_col, style = line.style_dotted, width = 1)
+        line.new(bar_index, tp2_v, bar_index + 30, tp2_v, color = bear_col, style = line.style_dashed, width = 1)
+        alert('{"type":"test","bot":"ICT_EDIT","symbol":"MNQ","signal":"SHORT","entry":' + str.tostring(close) + ',"sl":' + str.tostring(sl_v) + ',"tp":' + str.tostring(tp_v) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
+    else
+        alert('{"type":"test","bot":"ICT_EDIT","symbol":"MNQ","signal":"SHORT","entry":' + str.tostring(close) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
 `.trim();
 
 function generateScript({ name, botId, sl, htfTf, minScore }) {

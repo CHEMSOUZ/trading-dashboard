@@ -124,8 +124,9 @@ function startBotServer(port) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } catch(e) {
+          console.error('[webhook] JSON parse error:', e.message, '| body:', body.slice(0, 300));
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, error: 'Invalid JSON' }));
+          res.end(JSON.stringify({ ok: false, error: 'Invalid JSON', body: body.slice(0, 200) }));
         }
       });
     } else {
