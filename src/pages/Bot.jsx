@@ -73,6 +73,185 @@ const PINE_BOTS = [
   { id: 'standard', name: 'ICT Standard', botId: 'ICT_15min', tf: '15min', color: '#00ff88', sl: 1.5, htfTf: '240', minScore: 4, desc: 'Intraday · HTF 4H · score ≥ 4 · TP R:R 1:2' },
 ];
 
+const PINE_EDIT_SCRIPT = `//@version=6
+indicator('ICT Setup — Liquidity + MSS + FVG', overlay = true, max_boxes_count = 50, max_lines_count = 100)
+
+// ─── INPUTS ───────────────────────────────────────────────────────────────
+var g1 = 'Swing Detection'
+swing_len = input.int(5, 'Swing Length', group = g1)
+
+var g2 = 'Liquidity'
+liq_len = input.int(20, 'Lookback Equal H/L', group = g2)
+liq_tol = input.float(0.10, 'Tolerance % égalité', group = g2, step = 0.01)
+
+var g3 = 'FVG'
+fvg_min_pts = input.float(5.0, 'Taille min FVG (pts)', group = g3)
+
+var g4 = 'Display'
+show_liq = input.bool(true, 'Afficher liquidité', group = g4)
+show_mss = input.bool(true, 'Afficher MSS', group = g4)
+show_fvg = input.bool(true, 'Afficher FVG', group = g4)
+show_ob  = input.bool(true, 'Afficher Order Block', group = g4)
+
+// ─── COULEURS ─────────────────────────────────────────────────────────────
+bull_col = color.new(color.teal, 0)
+bull_bg  = color.new(color.teal, 85)
+bear_col = color.new(color.red, 0)
+bear_bg  = color.new(color.red, 85)
+liq_col  = color.new(color.orange, 0)
+mss_col  = color.new(color.purple, 0)
+
+// ─── SWING HIGH / LOW ─────────────────────────────────────────────────────
+swing_high = ta.pivothigh(high, swing_len, swing_len)
+swing_low  = ta.pivotlow(low,  swing_len, swing_len)
+
+var float last_sh     = na
+var float last_sl     = na
+var int   last_sh_bar = na
+var int   last_sl_bar = na
+
+if not na(swing_high)
+    last_sh     := swing_high
+    last_sh_bar := bar_index - swing_len
+
+if not na(swing_low)
+    last_sl     := swing_low
+    last_sl_bar := bar_index - swing_len
+
+// ─── EQUAL HIGHS / LOWS (LIQUIDITÉ) ───────────────────────────────────────
+var array<float> eq_highs = array.new_float()
+var array<float> eq_lows  = array.new_float()
+
+if not na(swing_high)
+    sh = swing_high
+    for i = 1 to liq_len by 1
+        prev = high[i + swing_len]
+        if math.abs(sh - prev) / sh * 100 < liq_tol
+            array.push(eq_highs, sh)
+            if show_liq
+                line.new(bar_index - swing_len - i, prev, bar_index - swing_len, sh, color = liq_col, style = line.style_dashed, width = 1)
+            break
+
+if not na(swing_low)
+    sl = swing_low
+    for i = 1 to liq_len by 1
+        prev = low[i + swing_len]
+        if math.abs(sl - prev) / sl * 100 < liq_tol
+            array.push(eq_lows, sl)
+            if show_liq
+                line.new(bar_index - swing_len - i, prev, bar_index - swing_len, sl, color = liq_col, style = line.style_dashed, width = 1)
+            break
+
+// ─── LIQUIDITY SWEEP ──────────────────────────────────────────────────────
+var bool  bull_sweep      = false
+var bool  bear_sweep      = false
+var float sweep_low_val   = na
+var float sweep_high_val  = na
+
+if array.size(eq_lows) > 0
+    lvl = array.get(eq_lows, array.size(eq_lows) - 1)
+    if low < lvl and close > lvl
+        bull_sweep    := true
+        sweep_low_val := low
+        array.clear(eq_lows)
+
+if array.size(eq_highs) > 0
+    lvl = array.get(eq_highs, array.size(eq_highs) - 1)
+    if high > lvl and close < lvl
+        bear_sweep     := true
+        sweep_high_val := high
+        array.clear(eq_highs)
+
+// ─── MSS (MARKET STRUCTURE SHIFT) ─────────────────────────────────────────
+var bool bull_mss = false
+var bool bear_mss = false
+
+if bull_sweep and not na(last_sh)
+    if close > last_sh
+        bull_mss   := true
+        bull_sweep := false
+        if show_mss
+            label.new(bar_index, high, 'MSS ▲', color = bull_bg, textcolor = bull_col, style = label.style_label_down, size = size.small)
+
+if bear_sweep and not na(last_sl)
+    if close < last_sl
+        bear_mss   := true
+        bear_sweep := false
+        if show_mss
+            label.new(bar_index, low, 'MSS ▼', color = bear_bg, textcolor = bear_col, style = label.style_label_up, size = size.small)
+
+// ─── FVG (FAIR VALUE GAP) ─────────────────────────────────────────────────
+var bool  bull_fvg_active = false
+var float bull_fvg_hi     = na
+var float bull_fvg_lo     = na
+var bool  bear_fvg_active = false
+var float bear_fvg_hi     = na
+var float bear_fvg_lo     = na
+
+bull_fvg_size = low - high[2]
+if bull_fvg_size > fvg_min_pts
+    bull_fvg_active := true
+    bull_fvg_hi     := low
+    bull_fvg_lo     := high[2]
+    if show_fvg
+        box.new(bar_index - 2, bull_fvg_hi, bar_index + 20, bull_fvg_lo, bgcolor = bull_bg, border_color = bull_col, border_width = 1)
+
+bear_fvg_size = low[2] - high
+if bear_fvg_size > fvg_min_pts
+    bear_fvg_active := true
+    bear_fvg_hi     := low[2]
+    bear_fvg_lo     := high
+    if show_fvg
+        box.new(bar_index - 2, bear_fvg_hi, bar_index + 20, bear_fvg_lo, bgcolor = bear_bg, border_color = bear_col, border_width = 1)
+
+// ─── ORDER BLOCK ──────────────────────────────────────────────────────────
+displacement_up   = close > close[1] * 1.002 and close[1] > close[2] * 1.002
+displacement_down = close < close[1] * 0.998 and close[1] < close[2] * 0.998
+
+bull_ob = displacement_up   and close[3] < open[3]
+bear_ob = displacement_down and close[3] > open[3]
+
+if bull_ob and show_ob
+    box.new(bar_index - 3, high[3], bar_index + 20, low[3], bgcolor = color.new(color.teal, 80), border_color = color.teal, border_width = 1, text = 'OB Bull', text_color = color.teal, text_size = size.small)
+
+if bear_ob and show_ob
+    box.new(bar_index - 3, high[3], bar_index + 20, low[3], bgcolor = color.new(color.red, 80), border_color = color.red, border_width = 1, text = 'OB Bear', text_color = color.red, text_size = size.small)
+
+// ─── SIGNAL D'ENTRÉE COMPLET ──────────────────────────────────────────────
+buy_signal  = bull_mss and bull_fvg_active and close >= bull_fvg_lo and close <= bull_fvg_hi
+sell_signal = bear_mss and bear_fvg_active and close >= bear_fvg_lo and close <= bear_fvg_hi
+
+// ─── BUY ──────────────────────────────────────────────────────────────────
+if buy_signal
+    label.new(bar_index, low, 'BUY ✓', color = bull_col, textcolor = color.white, style = label.style_label_up, size = size.normal)
+
+if buy_signal and not na(sweep_low_val)
+    stop_v  = math.round((sweep_low_val - 5) * 100) / 100
+    risk_v  = close - stop_v
+    tp_v    = math.round((close + risk_v * 2) * 100) / 100
+    tp2_v   = math.round((close + risk_v * 3) * 100) / 100
+    entry_v = math.round(close * 100) / 100
+    line.new(bar_index, stop_v, bar_index + 30, stop_v, color = bear_col, style = line.style_dotted, width = 2)
+    line.new(bar_index, tp_v,   bar_index + 30, tp_v,   color = bull_col, style = line.style_dotted, width = 1)
+    line.new(bar_index, tp2_v,  bar_index + 30, tp2_v,  color = bull_col, style = line.style_dashed, width = 1)
+    alert('{"type":"test","bot":"ICT_EDIT","symbol":"MNQ","signal":"LONG","entry":' + str.tostring(entry_v) + ',"sl":' + str.tostring(stop_v) + ',"tp":' + str.tostring(tp_v) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '","timestamp":"{{time}}"}', alert.freq_once_per_bar)
+
+// ─── SELL ─────────────────────────────────────────────────────────────────
+if sell_signal
+    label.new(bar_index, high, 'SELL ✓', color = bear_col, textcolor = color.white, style = label.style_label_down, size = size.normal)
+
+if sell_signal and not na(sweep_high_val)
+    stop_v  = math.round((sweep_high_val + 5) * 100) / 100
+    risk_v  = stop_v - close
+    tp_v    = math.round((close - risk_v * 2) * 100) / 100
+    tp2_v   = math.round((close - risk_v * 3) * 100) / 100
+    entry_v = math.round(close * 100) / 100
+    line.new(bar_index, stop_v, bar_index + 30, stop_v, color = bull_col, style = line.style_dotted, width = 2)
+    line.new(bar_index, tp_v,   bar_index + 30, tp_v,   color = bear_col, style = line.style_dotted, width = 1)
+    line.new(bar_index, tp2_v,  bar_index + 30, tp2_v,  color = bear_col, style = line.style_dashed, width = 1)
+    alert('{"type":"test","bot":"ICT_EDIT","symbol":"MNQ","signal":"SHORT","entry":' + str.tostring(entry_v) + ',"sl":' + str.tostring(stop_v) + ',"tp":' + str.tostring(tp_v) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '","timestamp":"{{time}}"}', alert.freq_once_per_bar)
+`.trim();
+
 function generateScript({ name, botId, sl, htfTf, minScore }) {
   return `//@version=6
 indicator("${name}", overlay=true, max_bars_back=500, max_lines_count=200, max_boxes_count=200, max_labels_count=200)
@@ -435,6 +614,7 @@ function SignalCard({ signal, onSave, isLatest }) {
           )}
           <div style={{ fontSize: '9px', color: '#2a4a30' }}>heure Paris</div>
         </div>
+        {signal.type === 'test' && <div style={{ fontSize: '8px', background: 'rgba(240,120,32,0.15)', border: '1px solid rgba(240,120,32,0.4)', color: '#f07820', padding: '2px 6px', borderRadius: '3px', letterSpacing: '1px', fontWeight: '700' }}>TEST</div>}
         {isLatest && <div style={{ fontSize: '8px', background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', padding: '2px 6px', borderRadius: '3px', letterSpacing: '1px', fontWeight: '700' }}>NOUVEAU</div>}
       </div>
 
@@ -1338,6 +1518,7 @@ export default function Bot() {
                               <td style={{ padding: '8px 10px', color: '#4a7a5a', fontSize: '10px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sig.context || '—'}</td>
                               <td style={{ padding: '6px 8px' }}>
                                 <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                                  {sig.type === 'test' && <span style={{ fontSize: '8px', background: 'rgba(240,120,32,0.15)', border: '1px solid rgba(240,120,32,0.4)', color: '#f07820', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', letterSpacing: '1px', marginRight: '2px' }}>TEST</span>}
                                   {[['win','W','#00ff88'],['loss','L','#ff4455'],['be','BE','#f0c020']].map(([key, label, c]) => {
                                     const sel = sig._outcome === key;
                                     return (
@@ -1420,6 +1601,7 @@ export default function Bot() {
                               <td style={{ padding: '8px 10px', color: '#4a7a5a', fontSize: '10px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sig.context || '—'}</td>
                               <td style={{ padding: '6px 8px' }}>
                                 <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                                  {sig.type === 'test' && <span style={{ fontSize: '8px', background: 'rgba(240,120,32,0.15)', border: '1px solid rgba(240,120,32,0.4)', color: '#f07820', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', letterSpacing: '1px', marginRight: '2px' }}>TEST</span>}
                                   {sig._autoOutcome && sig._outcome && (
                                     <span style={{ fontSize: '8px', background: 'rgba(0,170,255,0.15)', border: '1px solid rgba(0,170,255,0.3)', color: '#00aaff', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', letterSpacing: '1px', marginRight: '2px' }}>AUTO</span>
                                   )}
@@ -1677,6 +1859,45 @@ export default function Bot() {
               </div>
             ))}
             <div style={{ marginTop: '6px', color: '#2a5a4a', fontSize: '10px' }}>Tous les bots pointent vers le même webhook URL ngrok — les signaux arrivent séparés par bot ID.</div>
+          </div>
+
+          {/* ── PINE EDIT — Indicateur Analyse ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0' }}>
+            <div style={{ height: '1px', flex: 1, background: 'rgba(240,120,32,0.2)' }} />
+            <span style={{ fontSize: '10px', color: '#f07820', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>🔬 INDICATEUR ANALYSE — ICT EDIT</span>
+            <div style={{ height: '1px', flex: 1, background: 'rgba(240,120,32,0.2)' }} />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', padding: '14px 16px', background: 'rgba(240,120,32,0.05)', border: '1px solid rgba(240,120,32,0.2)', borderRadius: '7px' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: '#f07820', marginBottom: '5px' }}>ICT Setup — Liquidity + MSS + FVG</div>
+              <div style={{ fontSize: '11px', color: '#5a5a3a', lineHeight: '1.7' }}>
+                Indicateur d'analyse visuelle qui envoie des signaux <span style={{ background: 'rgba(240,120,32,0.15)', border: '1px solid rgba(240,120,32,0.4)', color: '#f07820', padding: '0px 5px', borderRadius: '2px', fontSize: '9px', fontWeight: '700' }}>TEST</span> dans le dashboard.
+              </div>
+              <div style={{ fontSize: '10px', color: '#4a4a2a', lineHeight: '1.8', marginTop: '4px' }}>
+                <div>→ Liquidity sweep (EQH/EQL) · MSS · FVG · Order Block</div>
+                <div>→ Bot ID : <code style={{ color: '#f07820', fontSize: '10px' }}>ICT_EDIT</code> · R:R 1:2 · TP calculé dynamiquement</div>
+                <div>→ Signaux intégrés aux stats globales — noter W/L/BE manuellement</div>
+              </div>
+            </div>
+            <button onClick={() => copyText(PINE_EDIT_SCRIPT, 'pine_edit')}
+              style={{ padding: '8px 16px', background: copied === 'pine_edit' ? 'rgba(240,120,32,0.25)' : 'transparent', border: '1px solid rgba(240,120,32,0.5)', borderRadius: '5px', color: '#f07820', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.15s', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              {copied === 'pine_edit' ? '✓ COPIÉ' : 'COPIER'}
+            </button>
+          </div>
+
+          <div style={{ background: 'rgba(4,12,8,0.9)', border: '1px solid rgba(240,120,32,0.15)', borderRadius: '6px', overflow: 'auto', maxHeight: '320px' }}>
+            <pre style={{ margin: 0, padding: '16px 18px', fontSize: '11px', color: '#7aaa8a', fontFamily: "'JetBrains Mono','Fira Code',monospace", lineHeight: '1.65', whiteSpace: 'pre' }}>
+              {PINE_EDIT_SCRIPT.split('\n').map((line, i) => {
+                let color = '#7aaa8a';
+                if (line.startsWith('//')) color = '#3a6a4a';
+                else if (line.startsWith('//@')) color = '#3a5a4a';
+                else if (line.match(/^(if|and|or|not)\b/)) color = '#aa88ff';
+                else if (line.match(/\b(alert|label\.new|line\.new|box\.new|ta\.)\b/)) color = '#00aaff';
+                else if (line.match(/["'][^"']*["']/)) color = '#f07820';
+                return <span key={i} style={{ display: 'block', color }}>{line}</span>;
+              })}
+            </pre>
           </div>
         </div>
       )}
