@@ -225,8 +225,9 @@ if bear_ob and show_ob
 buy_signal  = bull_mss and bull_fvg_active and close >= bull_fvg_lo and close <= bull_fvg_hi
 sell_signal = bear_mss and bear_fvg_active and close >= bear_fvg_lo and close <= bear_fvg_hi
 
-// ─── OPTION BE MANUEL ─────────────────────────────────────────────────────
-be_manual = input.bool(false, "🟡 Clôturer en BE (cocher = BE immédiat)", group = "Tracking")
+// ─── BE MANUEL — compteur (incrémenter = libérer le slot une fois) ────────
+be_count = input.int(0, "🟡 BE Manuel — incrémenter pour libérer (0→1→2…)", group = "Tracking", minval = 0, step = 1)
+var int be_last = 0
 
 // ─── TRACKING POSITION ────────────────────────────────────────────────────
 var float trk_entry = na
@@ -237,13 +238,14 @@ var bool  trk_open  = false
 var float trk_peak  = na   // meilleur prix atteint depuis l'entrée
 
 // ─── CLÔTURE AUTOMATIQUE (prioritaire) ────────────────────────────────────
+new_be_req = be_count > be_last and barstate.islast
 if trk_open
-    trk_peak := trk_long ? (na(trk_peak) ? high : math.max(trk_peak, high))
-                         : (na(trk_peak) ? low  : math.min(trk_peak, low))
-    hit_tp   = trk_long ? high >= trk_tp : low  <= trk_tp
-    hit_sl   = trk_long ? low  <= trk_sl : high >= trk_sl
-    had_run  = trk_long ? trk_peak >= trk_entry + 5.0 : trk_peak <= trk_entry - 5.0
-    hit_be   = be_manual or (had_run and (trk_long ? close <= trk_entry : close >= trk_entry))
+    trk_peak   := trk_long ? (na(trk_peak) ? high : math.max(trk_peak, high))
+                           : (na(trk_peak) ? low  : math.min(trk_peak, low))
+    hit_tp     = trk_long ? high >= trk_tp : low  <= trk_tp
+    hit_sl     = trk_long ? low  <= trk_sl : high >= trk_sl
+    had_run    = trk_long ? trk_peak >= trk_entry + 5.0 : trk_peak <= trk_entry - 5.0
+    hit_be     = new_be_req or (had_run and (trk_long ? close <= trk_entry : close >= trk_entry))
     if hit_tp
         alert('{"type":"close","result":"win","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
         trk_open := false
@@ -256,6 +258,12 @@ if trk_open
         alert('{"type":"close","result":"be","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
         trk_open := false
         trk_peak := na
+        if new_be_req
+            be_last := be_count
+
+// Consommer l'incrément si slot déjà libre (évite un BE sur le prochain signal)
+if not trk_open and new_be_req
+    be_last := be_count
 
 // ─── SIGNAL BUY (slot libre uniquement) ───────────────────────────────────
 if buy_signal and not trk_open and not na(sweep_low_val)
@@ -571,8 +579,9 @@ atr     = ta.atr(14)
 sl_mult = ${sl}
 tp_mult = ${sl * 2}
 
-// ── Option BE Manuel ──────────────────────────────────────────
-be_manual = input.bool(false, "🟡 Clôturer en BE (cocher = BE immédiat)", group="Tracking")
+// ── BE Manuel — compteur (incrémenter = libérer le slot une fois) ─────────
+be_count = input.int(0, "🟡 BE Manuel — incrémenter pour libérer (0→1→2…)", group="Tracking", minval=0, step=1)
+var int be_last = 0
 
 // Tracking position ouverte pour détection automatique TP/SL/BE
 var float trk_entry = na
@@ -583,14 +592,14 @@ var bool  trk_open  = false
 var float trk_peak  = na   // meilleur prix atteint depuis l'entrée
 
 // ── Clôture automatique (prioritaire sur tout nouveau signal) ──
+new_be_req = be_count > be_last and barstate.islast
 if trk_open
     trk_peak := trk_long ? (na(trk_peak) ? high : math.max(trk_peak, high))
                          : (na(trk_peak) ? low  : math.min(trk_peak, low))
     hit_tp   = trk_long ? high >= trk_tp : low  <= trk_tp
     hit_sl   = trk_long ? low  <= trk_sl : high >= trk_sl
-    // BE auto : retour à l'entrée après avoir bougé de 5 pts dans la bonne direction
     had_run  = trk_long ? trk_peak >= trk_entry + 5.0 : trk_peak <= trk_entry - 5.0
-    hit_be   = be_manual or (had_run and (trk_long ? close <= trk_entry : close >= trk_entry))
+    hit_be   = new_be_req or (had_run and (trk_long ? close <= trk_entry : close >= trk_entry))
     if hit_tp
         alert('{"type":"close","result":"win","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
         trk_open := false
@@ -603,6 +612,12 @@ if trk_open
         alert('{"type":"close","result":"be","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
         trk_open := false
         trk_peak := na
+        if new_be_req
+            be_last := be_count
+
+// Consommer l'incrément si slot déjà libre
+if not trk_open and new_be_req
+    be_last := be_count
 
 // ── Nouveau signal uniquement si aucune position ouverte sur ce TF ──
 if entry_long and not trk_open
