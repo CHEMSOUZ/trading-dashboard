@@ -1621,22 +1621,31 @@ export default function Bot() {
       {tab === 'pine' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-          {/* Bot selector — grille 2×2 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+          {/* Bot selector — grille adaptative */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(168px, 1fr))', gap: '8px' }}>
             {PINE_BOTS.map(bot => (
               <button key={bot.id} onClick={() => setSelectedPine(bot.id)}
                 style={{ padding: '12px 14px', borderRadius: '7px', border: `1px solid ${selectedPine === bot.id ? bot.color + '60' : 'rgba(0,255,136,0.1)'}`, background: selectedPine === bot.id ? `${bot.color}12` : 'rgba(10,28,18,0.4)', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-                <div style={{ fontSize: '12px', fontWeight: '700', color: selectedPine === bot.id ? bot.color : '#c8d8c8', marginBottom: '3px' }}>{bot.name}</div>
-                <div style={{ fontSize: '10px', color: '#3a6a4a' }}>{bot.tf} · ATR ×{bot.sl}/{bot.tp1}/{bot.tp2} · score ≥ {bot.minScore}</div>
-                <div style={{ fontSize: '10px', color: '#2a5a3a', marginTop: '2px' }}>{bot.desc}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: selectedPine === bot.id ? bot.color : '#c8d8c8' }}>{bot.name}</div>
+                  <div style={{ fontSize: '9px', background: `${bot.color}18`, border: `1px solid ${bot.color}30`, color: bot.color, padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{bot.tf}</div>
+                </div>
+                <div style={{ fontSize: '10px', color: '#3a6a4a' }}>SL ×{bot.sl} · TP ×{(bot.sl * 2).toFixed(1)} · R:R 1:2</div>
+                <div style={{ fontSize: '10px', color: '#3a6a4a' }}>HTF {bot.htfTf === 'D' ? '1J' : bot.htfTf + 'min'} · score ≥ {bot.minScore}/5</div>
               </button>
             ))}
           </div>
 
           {/* Info + copy */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: `${activePine.color}08`, border: `1px solid ${activePine.color}20`, borderRadius: '6px' }}>
-            <div style={{ flex: 1, fontSize: '11px', color: '#5a8a6a', lineHeight: '1.6' }}>
-              Bot ID : <code style={{ color: activePine.color, background: `${activePine.color}15`, padding: '1px 6px', borderRadius: '3px' }}>{activePine.botId}</code> — les signaux apparaîtront sous cet identifiant dans l'onglet SIGNAUX. Même webhook URL pour tous les bots.
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: `${activePine.color}08`, border: `1px solid ${activePine.color}25`, borderRadius: '7px' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '11px', color: '#5a8a6a', lineHeight: '1.7' }}>
+                Bot ID : <code style={{ color: activePine.color, background: `${activePine.color}15`, padding: '1px 6px', borderRadius: '3px', fontSize: '11px' }}>{activePine.botId}</code>
+                {' '}— TF <strong style={{ color: activePine.color }}>{activePine.tf}</strong> · HTF {activePine.htfTf === 'D' ? '1J' : activePine.htfTf + 'min'} · SL ×{activePine.sl} · TP ×{(activePine.sl * 2).toFixed(1)}
+              </div>
+              <div style={{ fontSize: '10px', color: '#3a5a3a', marginTop: '2px' }}>
+                Déployer sur une chart MNQ1! <strong style={{ color: '#c8d8c8' }}>{activePine.tf}</strong> · créer une alerte → webhook vers l'URL ngrok
+              </div>
             </div>
             <button onClick={() => copyText(generateScript(activePine), `pine_${activePine.id}`)}
               style={{ padding: '8px 16px', background: copied === `pine_${activePine.id}` ? `${activePine.color}25` : 'transparent', border: `1px solid ${activePine.color}50`, borderRadius: '5px', color: activePine.color, fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
@@ -1659,8 +1668,15 @@ export default function Bot() {
             </pre>
           </div>
 
-          <div style={{ padding: '10px 14px', background: 'rgba(0,170,255,0.04)', border: '1px solid rgba(0,170,255,0.12)', borderRadius: '5px', fontSize: '11px', color: '#3a5a6a', lineHeight: '1.6' }}>
-            <strong style={{ color: '#00aaff' }}>Multi-bot :</strong> Ajoute chaque script sur un graphique TradingView différent (MNQ1! 5min / 15min / 1H) et crée une alerte séparée pour chacun. Tous pointent vers le même webhook URL ngrok. Les signaux arrivent séparés par bot dans le dashboard.
+          <div style={{ padding: '12px 16px', background: 'rgba(0,170,255,0.04)', border: '1px solid rgba(0,170,255,0.12)', borderRadius: '6px', fontSize: '11px', color: '#3a5a6a', lineHeight: '1.8' }}>
+            <div style={{ color: '#00aaff', fontWeight: '700', letterSpacing: '1px', marginBottom: '6px' }}>DÉPLOIEMENT MULTI-BOT — 1 chart TradingView par bot</div>
+            {PINE_BOTS.map(bot => (
+              <div key={bot.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                <span style={{ fontSize: '9px', background: `${bot.color}18`, border: `1px solid ${bot.color}30`, color: bot.color, padding: '1px 5px', borderRadius: '2px', fontWeight: '700', minWidth: '36px', textAlign: 'center' }}>{bot.tf}</span>
+                <span style={{ color: '#4a7a5a' }}>→ chart MNQ1! <strong style={{ color: '#8aaa90' }}>{bot.tf}</strong> · indicateur <code style={{ color: bot.color, fontSize: '10px' }}>{bot.botId}</code> · alerte webhook</span>
+              </div>
+            ))}
+            <div style={{ marginTop: '6px', color: '#2a5a4a', fontSize: '10px' }}>Tous les bots pointent vers le même webhook URL ngrok — les signaux arrivent séparés par bot ID.</div>
           </div>
         </div>
       )}
