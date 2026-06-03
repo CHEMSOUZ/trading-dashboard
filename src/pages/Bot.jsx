@@ -74,7 +74,11 @@ const PINE_BOTS = [
 ];
 
 const PINE_EDIT_SCRIPT = `//@version=6
-indicator('ICT Setup — Liquidity + MSS + FVG', overlay = true, max_boxes_count = 50, max_lines_count = 100)
+indicator('ICT Setup — LIQ + MSS + FVG [EDIT]', overlay = true, max_boxes_count = 50, max_lines_count = 100, max_labels_count = 100)
+
+// ─── IDENTITÉ ─────────────────────────────────────────────────────────────
+bot_name    = "ICT_EDIT"
+symbol_name = "MNQ"
 
 // ─── INPUTS ───────────────────────────────────────────────────────────────
 var g1 = 'Swing Detection'
@@ -217,39 +221,116 @@ if bull_ob and show_ob
 if bear_ob and show_ob
     box.new(bar_index - 3, high[3], bar_index + 20, low[3], bgcolor = color.new(color.red, 80), border_color = color.red, border_width = 1, text = 'OB Bear', text_color = color.red, text_size = size.small)
 
-// ─── SIGNAL D'ENTRÉE COMPLET ──────────────────────────────────────────────
+// ─── SIGNAL COMPLET ───────────────────────────────────────────────────────
 buy_signal  = bull_mss and bull_fvg_active and close >= bull_fvg_lo and close <= bull_fvg_hi
 sell_signal = bear_mss and bear_fvg_active and close >= bear_fvg_lo and close <= bear_fvg_hi
 
-// ─── BUY ──────────────────────────────────────────────────────────────────
-if buy_signal
-    label.new(bar_index, low, 'BUY ✓', color = bull_col, textcolor = color.white, style = label.style_label_up, size = size.normal)
-    if not na(sweep_low_val)
-        sl_v  = sweep_low_val - 5.0
-        risk  = close - sl_v
-        tp_v  = close + risk * 2.0
-        tp2_v = close + risk * 3.0
-        line.new(bar_index, sl_v,  bar_index + 30, sl_v,  color = bear_col, style = line.style_dotted, width = 2)
-        line.new(bar_index, tp_v,  bar_index + 30, tp_v,  color = bull_col, style = line.style_dotted, width = 1)
-        line.new(bar_index, tp2_v, bar_index + 30, tp2_v, color = bull_col, style = line.style_dashed, width = 1)
-        alert('{"type":"test","bot":"ICT_EDIT","symbol":"MNQ","signal":"LONG","entry":' + str.tostring(close) + ',"sl":' + str.tostring(sl_v) + ',"tp":' + str.tostring(tp_v) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
-    else
-        alert('{"type":"test","bot":"ICT_EDIT","symbol":"MNQ","signal":"LONG","entry":' + str.tostring(close) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
+// ─── TRACKING POSITION ────────────────────────────────────────────────────
+var float trk_entry = na
+var float trk_sl    = na
+var float trk_tp    = na
+var bool  trk_long  = false
+var bool  trk_open  = false
 
-// ─── SELL ─────────────────────────────────────────────────────────────────
-if sell_signal
+// ─── CLÔTURE AUTOMATIQUE (prioritaire) ────────────────────────────────────
+if trk_open
+    hit_tp = trk_long ? high >= trk_tp : low  <= trk_tp
+    hit_sl = trk_long ? low  <= trk_sl : high >= trk_sl
+    if hit_tp
+        alert('{"type":"close","result":"win","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
+        trk_open := false
+    else if hit_sl
+        alert('{"type":"close","result":"loss","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
+        trk_open := false
+
+// ─── SIGNAL BUY (slot libre uniquement) ───────────────────────────────────
+if buy_signal and not trk_open and not na(sweep_low_val)
+    sl_v  = sweep_low_val - 5.0
+    risk  = close - sl_v
+    tp_v  = close + risk * 2.0
+    tp2_v = close + risk * 3.0
+    label.new(bar_index, low, 'BUY ✓', color = bull_col, textcolor = color.white, style = label.style_label_up, size = size.normal)
+    line.new(bar_index, sl_v,  bar_index + 30, sl_v,  color = bear_col, style = line.style_dotted, width = 2)
+    line.new(bar_index, tp_v,  bar_index + 30, tp_v,  color = bull_col, style = line.style_dotted, width = 1)
+    line.new(bar_index, tp2_v, bar_index + 30, tp2_v, color = bull_col, style = line.style_dashed, width = 1)
+    alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"LONG","entry":' + str.tostring(close) + ',"sl":' + str.tostring(sl_v) + ',"tp":' + str.tostring(tp_v) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
+    trk_entry := close
+    trk_sl    := sl_v
+    trk_tp    := tp_v
+    trk_long  := true
+    trk_open  := true
+
+// ─── SIGNAL SELL (slot libre uniquement) ──────────────────────────────────
+if sell_signal and not trk_open and not na(sweep_high_val)
+    sl_v  = sweep_high_val + 5.0
+    risk  = sl_v - close
+    tp_v  = close - risk * 2.0
+    tp2_v = close - risk * 3.0
     label.new(bar_index, high, 'SELL ✓', color = bear_col, textcolor = color.white, style = label.style_label_down, size = size.normal)
-    if not na(sweep_high_val)
-        sl_v  = sweep_high_val + 5.0
-        risk  = sl_v - close
-        tp_v  = close - risk * 2.0
-        tp2_v = close - risk * 3.0
-        line.new(bar_index, sl_v,  bar_index + 30, sl_v,  color = bull_col, style = line.style_dotted, width = 2)
-        line.new(bar_index, tp_v,  bar_index + 30, tp_v,  color = bear_col, style = line.style_dotted, width = 1)
-        line.new(bar_index, tp2_v, bar_index + 30, tp2_v, color = bear_col, style = line.style_dashed, width = 1)
-        alert('{"type":"test","bot":"ICT_EDIT","symbol":"MNQ","signal":"SHORT","entry":' + str.tostring(close) + ',"sl":' + str.tostring(sl_v) + ',"tp":' + str.tostring(tp_v) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
-    else
-        alert('{"type":"test","bot":"ICT_EDIT","symbol":"MNQ","signal":"SHORT","entry":' + str.tostring(close) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
+    line.new(bar_index, sl_v,  bar_index + 30, sl_v,  color = bull_col, style = line.style_dotted, width = 2)
+    line.new(bar_index, tp_v,  bar_index + 30, tp_v,  color = bear_col, style = line.style_dotted, width = 1)
+    line.new(bar_index, tp2_v, bar_index + 30, tp2_v, color = bear_col, style = line.style_dashed, width = 1)
+    alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"SHORT","entry":' + str.tostring(close) + ',"sl":' + str.tostring(sl_v) + ',"tp":' + str.tostring(tp_v) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
+    trk_entry := close
+    trk_sl    := sl_v
+    trk_tp    := tp_v
+    trk_long  := false
+    trk_open  := true
+
+// ─── BAR ALERT (fallback détection TP/SL côté dashboard) ─────────────────
+alert('{"type":"bar","bot":"' + bot_name + '","h":' + str.tostring(math.round(high * 100) / 100) + ',"l":' + str.tostring(math.round(low * 100) / 100) + '}', alert.freq_once_per_bar_close)
+
+// ─── DASHBOARD TABLE ──────────────────────────────────────────────────────
+var table dash = table.new(position.top_right, 2, 9,
+    border_color = color.new(color.gray, 60), border_width = 1,
+    bgcolor      = color.new(#1a1a2e, 10))
+
+f_ok(v) => v ? "✅" : "❌"
+f_row(t, ok, r, v) =>
+    table.cell(t, 0, r, v,          text_color = color.white, bgcolor = color.new(#1a1a2e, 30),                                 text_size = size.small)
+    table.cell(t, 1, r, f_ok(ok),  text_color = color.white, bgcolor = ok ? color.new(#00e676, 60) : color.new(#ff1744, 60),  text_size = size.small)
+
+if barstate.islast
+    c1    = array.size(eq_lows) > 0 or array.size(eq_highs) > 0
+    c2    = bull_sweep or bear_sweep
+    c3    = bull_mss   or bear_mss
+    c4    = bull_fvg_active or bear_fvg_active
+    c5    = not na(sweep_low_val) or not na(sweep_high_val)
+    score = (c1 ? 1 : 0) + (c2 ? 1 : 0) + (c3 ? 1 : 0) + (c4 ? 1 : 0) + (c5 ? 1 : 0)
+
+    table.cell(dash, 0, 0, "ICT EDIT [" + timeframe.period + "m]",
+        text_color = color.white, bgcolor = color.new(#0d1117, 20), text_size = size.small)
+    table.cell(dash, 1, 0, buy_signal ? "BUY" : sell_signal ? "SELL" : "SCAN",
+        text_color = color.white,
+        bgcolor = buy_signal ? color.new(color.teal, 40) : sell_signal ? color.new(color.red, 40) : color.new(color.gray, 40),
+        text_size = size.small)
+    f_row(dash, c1, 1, "1. EQH / EQL")
+    f_row(dash, c2, 2, "2. Sweep liquidité")
+    f_row(dash, c3, 3, "3. MSS")
+    f_row(dash, c4, 4, "4. FVG actif")
+    f_row(dash, c5, 5, "5. SL référence")
+    f_row(dash, buy_signal or sell_signal, 6, "→ SIGNAL 5/5")
+    table.cell(dash, 0, 7, "Score: " + str.tostring(score) + "/5",
+        text_color = color.white, bgcolor = color.new(#0d1117, 20), text_size = size.small)
+    table.cell(dash, 1, 7,
+        buy_signal  and not trk_open ? "BUY  ✓" :
+        sell_signal and not trk_open ? "SELL ✓" :
+        trk_open ? "⏳ EN COURS" : "—",
+        text_color = color.white,
+        bgcolor =
+            buy_signal  and not trk_open ? color.new(color.teal, 40) :
+            sell_signal and not trk_open ? color.new(color.red,  40) :
+            trk_open ? color.new(#f0c020, 50) : color.new(color.gray, 60),
+        text_size = size.small)
+    table.cell(dash, 0, 8, trk_open ? "🔒 SLOT OCCUPÉ" : "🟢 SLOT LIBRE",
+        text_color = color.white,
+        bgcolor    = trk_open ? color.new(#f0c020, 40) : color.new(#00e676, 70),
+        text_size  = size.small)
+    table.cell(dash, 1, 8,
+        trk_open ? (trk_long ? "▲ " + str.tostring(trk_entry) : "▼ " + str.tostring(trk_entry)) : "—",
+        text_color = color.white,
+        bgcolor    = color.new(#1a1a2e, 20),
+        text_size  = size.small)
 `.trim();
 
 function generateScript({ name, botId, sl, htfTf, minScore }) {
