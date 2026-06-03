@@ -225,23 +225,37 @@ if bear_ob and show_ob
 buy_signal  = bull_mss and bull_fvg_active and close >= bull_fvg_lo and close <= bull_fvg_hi
 sell_signal = bear_mss and bear_fvg_active and close >= bear_fvg_lo and close <= bear_fvg_hi
 
+// ─── OPTION BE MANUEL ─────────────────────────────────────────────────────
+be_manual = input.bool(false, "🟡 Clôturer en BE (cocher = BE immédiat)", group = "Tracking")
+
 // ─── TRACKING POSITION ────────────────────────────────────────────────────
 var float trk_entry = na
 var float trk_sl    = na
 var float trk_tp    = na
 var bool  trk_long  = false
 var bool  trk_open  = false
+var float trk_peak  = na   // meilleur prix atteint depuis l'entrée
 
 // ─── CLÔTURE AUTOMATIQUE (prioritaire) ────────────────────────────────────
 if trk_open
-    hit_tp = trk_long ? high >= trk_tp : low  <= trk_tp
-    hit_sl = trk_long ? low  <= trk_sl : high >= trk_sl
+    trk_peak := trk_long ? (na(trk_peak) ? high : math.max(trk_peak, high))
+                         : (na(trk_peak) ? low  : math.min(trk_peak, low))
+    hit_tp   = trk_long ? high >= trk_tp : low  <= trk_tp
+    hit_sl   = trk_long ? low  <= trk_sl : high >= trk_sl
+    had_run  = trk_long ? trk_peak >= trk_entry + 5.0 : trk_peak <= trk_entry - 5.0
+    hit_be   = be_manual or (had_run and (trk_long ? close <= trk_entry : close >= trk_entry))
     if hit_tp
         alert('{"type":"close","result":"win","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
         trk_open := false
+        trk_peak := na
     else if hit_sl
         alert('{"type":"close","result":"loss","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
         trk_open := false
+        trk_peak := na
+    else if hit_be
+        alert('{"type":"close","result":"be","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
+        trk_open := false
+        trk_peak := na
 
 // ─── SIGNAL BUY (slot libre uniquement) ───────────────────────────────────
 if buy_signal and not trk_open and not na(sweep_low_val)
@@ -557,23 +571,38 @@ atr     = ta.atr(14)
 sl_mult = ${sl}
 tp_mult = ${sl * 2}
 
-// Tracking position ouverte pour détection automatique TP/SL
+// ── Option BE Manuel ──────────────────────────────────────────
+be_manual = input.bool(false, "🟡 Clôturer en BE (cocher = BE immédiat)", group="Tracking")
+
+// Tracking position ouverte pour détection automatique TP/SL/BE
 var float trk_entry = na
 var float trk_sl    = na
 var float trk_tp    = na
 var bool  trk_long  = false
 var bool  trk_open  = false
+var float trk_peak  = na   // meilleur prix atteint depuis l'entrée
 
 // ── Clôture automatique (prioritaire sur tout nouveau signal) ──
 if trk_open
-    hit_tp = trk_long ? high >= trk_tp : low  <= trk_tp
-    hit_sl = trk_long ? low  <= trk_sl : high >= trk_sl
+    trk_peak := trk_long ? (na(trk_peak) ? high : math.max(trk_peak, high))
+                         : (na(trk_peak) ? low  : math.min(trk_peak, low))
+    hit_tp   = trk_long ? high >= trk_tp : low  <= trk_tp
+    hit_sl   = trk_long ? low  <= trk_sl : high >= trk_sl
+    // BE auto : retour à l'entrée après avoir bougé de 5 pts dans la bonne direction
+    had_run  = trk_long ? trk_peak >= trk_entry + 5.0 : trk_peak <= trk_entry - 5.0
+    hit_be   = be_manual or (had_run and (trk_long ? close <= trk_entry : close >= trk_entry))
     if hit_tp
         alert('{"type":"close","result":"win","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
         trk_open := false
+        trk_peak := na
     else if hit_sl
         alert('{"type":"close","result":"loss","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
         trk_open := false
+        trk_peak := na
+    else if hit_be
+        alert('{"type":"close","result":"be","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
+        trk_open := false
+        trk_peak := na
 
 // ── Nouveau signal uniquement si aucune position ouverte sur ce TF ──
 if entry_long and not trk_open
@@ -1581,91 +1610,84 @@ export default function Bot() {
                 <SignalCard signal={latest} onSave={saving ? null : handleSaveSignal} isLatest={true} />
               </div>
 
-              {/* ── EN COURS ── */}
+              {/* ── SLOTS EN COURS — cartes de position ── */}
               {activeSignals.length > 0 && (
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                     <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#f0c020', boxShadow: '0 0 6px #f0c020', animation: 'pulse 2s infinite', flexShrink: 0 }} />
-                    <span style={{ fontSize: '10px', color: '#f0c020', letterSpacing: '2px', fontWeight: '700' }}>EN COURS</span>
+                    <span style={{ fontSize: '10px', color: '#f0c020', letterSpacing: '2px', fontWeight: '700' }}>SLOTS EN COURS</span>
                     <span style={{ fontSize: '10px', background: 'rgba(240,192,32,0.12)', border: '1px solid rgba(240,192,32,0.3)', color: '#f0c020', padding: '1px 8px', borderRadius: '10px', fontWeight: '700' }}>{activeSignals.length}</span>
-                    <span style={{ fontSize: '10px', color: '#3a5a3a' }}>— en attente de résultat</span>
+                    <span style={{ fontSize: '10px', color: '#3a5a3a' }}>— BE manuel ou auto (retour entrée) libère le slot TradingView</span>
                   </div>
-                  <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(240,192,32,0.08)', borderRadius: '6px', overflow: 'hidden' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                      <thead>
-                        <tr style={{ background: 'rgba(240,192,32,0.03)', borderBottom: '1px solid rgba(240,192,32,0.07)' }}>
-                          {['HEURE', 'BOT', 'TF', 'DIR', 'ENTRY', 'SL', 'TP', 'R:R', 'CONTEXTE', 'RÉSULTAT', ''].map(h => (
-                            <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: '9px', color: '#5a6a3a', letterSpacing: '1.5px', fontWeight: '700' }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {activeSignals.map((sig, i) => {
-                          const dir     = (sig.signal ?? sig.direction ?? '').toUpperCase();
-                          const isL     = dir === 'LONG';
-                          const color   = isL ? '#00ff88' : '#ff4455';
-                          const time    = fmtTime(sig._receivedAt);
-                          const tp      = parseFloat(sig.tp) || parseFloat(sig.tp2) || parseFloat(sig.tp1) || null;
-                          const tf      = fmtTf(sig.timeframe);
-                          const botMeta = PINE_BOTS.find(b => b.botId === sig.bot);
-                          const botColor = botMeta?.color ?? '#aa88ff';
-                          return (
-                            <tr key={sig._id ?? i} style={{ borderBottom: '1px solid rgba(240,192,32,0.04)', transition: 'background 0.1s' }}
-                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(240,192,32,0.02)'}
-                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                            >
-                              <td style={{ padding: '8px 10px', color: '#5a8a6a' }}>{time}</td>
-                              <td style={{ padding: '8px 6px' }}>
-                                {sig.bot
-                                  ? <span style={{ fontSize: '9px', color: botColor, background: `${botColor}15`, border: `1px solid ${botColor}40`, padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{sig.bot}</span>
-                                  : <span style={{ fontSize: '10px', color: '#3a4a2a' }}>—</span>
-                                }
-                              </td>
-                              <td style={{ padding: '8px 6px' }}>
-                                {tf
-                                  ? <span style={{ fontSize: '10px', color: '#b09020', background: 'rgba(240,192,32,0.08)', border: '1px solid rgba(240,192,32,0.2)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{tf}</span>
-                                  : <span style={{ fontSize: '10px', color: '#3a4a2a' }}>—</span>
-                                }
-                              </td>
-                              <td style={{ padding: '8px 10px', fontWeight: '700', color }}>{isL ? '▲' : '▼'} {dir}</td>
-                              <td style={{ padding: '8px 10px', color: '#c8d8c8' }}>{parseFloat(sig.entry)?.toFixed(2) ?? '—'}</td>
-                              <td style={{ padding: '8px 10px', color: '#ff7788' }}>{parseFloat(sig.sl)?.toFixed(2) ?? '—'}</td>
-                              <td style={{ padding: '8px 10px', color: '#00ff88' }}>{tp?.toFixed(2) ?? '—'}</td>
-                              <td style={{ padding: '8px 10px', color }}>{sig.rr || '—'}</td>
-                              <td style={{ padding: '8px 10px', color: '#4a7a5a', fontSize: '10px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sig.context || '—'}</td>
-                              <td style={{ padding: '6px 8px' }}>
-                                <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-                                  {sig.type === 'test' && <span style={{ fontSize: '8px', background: 'rgba(240,120,32,0.15)', border: '1px solid rgba(240,120,32,0.4)', color: '#f07820', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', letterSpacing: '1px', marginRight: '2px' }}>TEST</span>}
-                                  {[['win','W','#00ff88'],['loss','L','#ff4455'],['be','BE','#f0c020']].map(([key, label, c]) => {
-                                    const sel = sig._outcome === key;
-                                    return (
-                                      <button key={key} onClick={() => handleUpdateOutcome(sig._id, sig._outcome, key)}
-                                        style={{ padding: '2px 6px', borderRadius: '3px', border: `1px solid ${sel ? c + '80' : 'rgba(0,255,136,0.1)'}`, background: sel ? `${c}20` : 'transparent', color: sel ? c : '#3a6a4a', fontSize: '10px', fontFamily: 'inherit', fontWeight: sel ? '700' : '400', cursor: 'pointer', transition: 'all 0.12s' }}
-                                        onMouseEnter={e => { if (!sel) { e.currentTarget.style.color = c; e.currentTarget.style.borderColor = `${c}50`; }}}
-                                        onMouseLeave={e => { if (!sel) { e.currentTarget.style.color = '#3a6a4a'; e.currentTarget.style.borderColor = 'rgba(0,255,136,0.1)'; }}}
-                                      >{label}</button>
-                                    );
-                                  })}
-                                  <button onClick={() => { if (window.confirm('Ignorer ce signal ? Il sera retiré de EN COURS sans résultat.')) handleUpdateOutcome(sig._id, sig._outcome, 'skip'); }}
-                                    style={{ padding: '2px 6px', borderRadius: '3px', border: '1px solid rgba(100,100,100,0.2)', background: 'transparent', color: '#3a3a3a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s' }}
-                                    onMouseEnter={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'rgba(100,100,100,0.4)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.color = '#3a3a3a'; e.currentTarget.style.borderColor = 'rgba(100,100,100,0.2)'; }}
-                                    title="Ignorer — sortie manuelle, non comptabilisé"
-                                  >✕</button>
-                                </div>
-                              </td>
-                              <td style={{ padding: '6px 8px' }}>
-                                <button onClick={() => handleSaveSignal(sig)}
-                                  style={{ background: 'none', border: '1px solid rgba(0,255,136,0.15)', borderRadius: '3px', color: '#3a6a4a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', padding: '2px 7px', transition: 'all 0.12s' }}
-                                  onMouseEnter={e => { e.currentTarget.style.color = '#00ff88'; e.currentTarget.style.borderColor = 'rgba(0,255,136,0.4)'; }}
-                                  onMouseLeave={e => { e.currentTarget.style.color = '#3a6a4a'; e.currentTarget.style.borderColor = 'rgba(0,255,136,0.15)'; }}
-                                >+</button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {activeSignals.map((sig, i) => {
+                      const dir      = (sig.signal ?? sig.direction ?? '').toUpperCase();
+                      const isL      = dir === 'LONG';
+                      const dirColor = isL ? '#00ff88' : '#ff4455';
+                      const dirRgb   = isL ? '0,255,136' : '255,68,85';
+                      const entry    = parseFloat(sig.entry) || 0;
+                      const sl       = parseFloat(sig.sl) || 0;
+                      const tp       = parseFloat(sig.tp) || parseFloat(sig.tp2) || parseFloat(sig.tp1) || 0;
+                      const tf       = fmtTf(sig.timeframe);
+                      const botMeta  = PINE_BOTS.find(b => b.botId === sig.bot);
+                      const botColor = botMeta?.color ?? '#aa88ff';
+                      const slPts    = entry && sl ? Math.abs(entry - sl).toFixed(2) : null;
+                      const tpPts    = entry && tp ? Math.abs(tp - entry).toFixed(2) : null;
+                      return (
+                        <div key={sig._id ?? i} style={{ background: `rgba(${dirRgb},0.04)`, border: `1px solid rgba(${dirRgb},0.15)`, borderLeft: `3px solid ${dirColor}`, borderRadius: '7px', padding: '12px 16px' }}>
+                          {/* Header */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                            <div style={{ fontSize: '14px', fontWeight: '800', color: dirColor, letterSpacing: '1px' }}>{isL ? '▲' : '▼'} {dir}</div>
+                            {sig.bot && <span style={{ fontSize: '9px', color: botColor, background: `${botColor}15`, border: `1px solid ${botColor}40`, padding: '1px 6px', borderRadius: '3px', fontWeight: '700' }}>{sig.bot}</span>}
+                            {tf && <span style={{ fontSize: '9px', color: '#b09020', background: 'rgba(240,192,32,0.1)', border: '1px solid rgba(240,192,32,0.25)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{tf}</span>}
+                            {sig.type === 'test' && <span style={{ fontSize: '8px', background: 'rgba(240,120,32,0.15)', border: '1px solid rgba(240,120,32,0.4)', color: '#f07820', padding: '1px 4px', borderRadius: '2px', fontWeight: '700' }}>TEST</span>}
+                            <span style={{ marginLeft: 'auto', fontSize: '10px', color: '#4a7a5a' }}>{fmtTime(sig._receivedAt)}</span>
+                          </div>
+                          {/* Niveaux */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '10px' }}>
+                            <div style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '5px', padding: '7px 10px' }}>
+                              <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '2px' }}>📍 ENTRÉE</div>
+                              <div style={{ fontSize: '13px', fontWeight: '700', color: '#e8f8e8' }}>{entry.toFixed(2)}</div>
+                            </div>
+                            <div style={{ background: 'rgba(255,68,85,0.06)', borderRadius: '5px', padding: '7px 10px' }}>
+                              <div style={{ fontSize: '9px', color: '#5a2a2a', letterSpacing: '1px', marginBottom: '2px' }}>🛑 SL {slPts && <span style={{ color: '#3a2a2a' }}>−{slPts}pts</span>}</div>
+                              <div style={{ fontSize: '13px', fontWeight: '700', color: '#ff7788' }}>{sl ? sl.toFixed(2) : '—'}</div>
+                            </div>
+                            <div style={{ background: `rgba(${dirRgb},0.05)`, borderRadius: '5px', padding: '7px 10px' }}>
+                              <div style={{ fontSize: '9px', color: '#2a5a3a', letterSpacing: '1px', marginBottom: '2px' }}>🎯 TP {tpPts && <span style={{ color: '#2a5a3a' }}>+{tpPts}pts</span>}</div>
+                              <div style={{ fontSize: '13px', fontWeight: '700', color: '#00ff88' }}>{tp ? tp.toFixed(2) : '—'}</div>
+                            </div>
+                          </div>
+                          {/* Actions */}
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '10px', color: '#3a5a3a', marginRight: '2px' }}>Clôturer :</span>
+                            {[['win','✓ WIN','#00ff88'],['loss','✗ LOSS','#ff4455'],['be','— BE','#f0c020']].map(([key, label, c]) => (
+                              <button key={key} onClick={() => handleUpdateOutcome(sig._id, sig._outcome, key)}
+                                style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${c}60`, background: `${c}15`, color: c, fontSize: '11px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', transition: 'all 0.12s', letterSpacing: '0.5px' }}
+                                onMouseEnter={e => e.currentTarget.style.background = `${c}25`}
+                                onMouseLeave={e => e.currentTarget.style.background = `${c}15`}
+                              >{label}</button>
+                            ))}
+                            <div style={{ marginLeft: 'auto', display: 'flex', gap: '5px' }}>
+                              <button onClick={() => handleSaveSignal(sig)} title="Sauvegarder dans le journal"
+                                style={{ padding: '4px 10px', background: 'none', border: '1px solid rgba(0,255,136,0.15)', borderRadius: '4px', color: '#3a6a4a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s' }}
+                                onMouseEnter={e => { e.currentTarget.style.color = '#00ff88'; e.currentTarget.style.borderColor = 'rgba(0,255,136,0.4)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = '#3a6a4a'; e.currentTarget.style.borderColor = 'rgba(0,255,136,0.15)'; }}
+                              >+ Journal</button>
+                              <button onClick={() => { if (window.confirm('Ignorer ce signal ?')) handleUpdateOutcome(sig._id, sig._outcome, 'skip'); }} title="Ignorer — sortie non comptabilisée"
+                                style={{ padding: '4px 8px', background: 'none', border: '1px solid rgba(100,100,100,0.15)', borderRadius: '4px', color: '#3a3a3a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s' }}
+                                onMouseEnter={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.borderColor = 'rgba(100,100,100,0.35)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = '#3a3a3a'; e.currentTarget.style.borderColor = 'rgba(100,100,100,0.15)'; }}
+                              >✕</button>
+                            </div>
+                          </div>
+                          {sig.context && <div style={{ marginTop: '6px', fontSize: '10px', color: '#3a6a4a', fontStyle: 'italic' }}>{sig.context}</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ marginTop: '8px', fontSize: '10px', color: '#2a4a30', lineHeight: '1.6' }}>
+                    💡 <strong style={{ color: '#f0c020' }}>BE = Break Even</strong> — libère le slot dans le dashboard. Sur TradingView, cocher "🟡 Clôturer en BE" dans les settings du script OU attendre le retour auto au prix d'entrée (≥5pts de profit puis retour).
                   </div>
                 </div>
               )}
@@ -2042,7 +2064,12 @@ export default function Bot() {
               <div style={{ fontSize: '10px', color: '#4a4a2a', lineHeight: '1.8', marginTop: '4px' }}>
                 <div>→ Liquidity sweep (EQH/EQL) · MSS · FVG · Order Block</div>
                 <div>→ Bot ID : <code style={{ color: '#f07820', fontSize: '10px' }}>ICT_EDIT</code> · R:R 1:2 · TP calculé dynamiquement</div>
-                <div>→ Signaux intégrés aux stats globales — noter W/L/BE manuellement</div>
+                <div>→ BE auto si retour à l'entrée · BE manuel via settings Pine</div>
+              </div>
+              <div style={{ marginTop: '8px', background: 'rgba(255,68,85,0.06)', border: '1px solid rgba(255,68,85,0.2)', borderRadius: '5px', padding: '8px 12px', fontSize: '10px', color: '#7a4a3a', lineHeight: '1.7' }}>
+                <strong style={{ color: '#ff6644' }}>⚠ Alertes ICT EDIT non reçues ?</strong><br/>
+                Les signaux ne se déclenchent que si <strong style={{ color: '#c8d8c8' }}>toutes les conditions s'alignent</strong> : EQH/EQL présent → Sweep → MSS → FVG actif → prix dans le FVG. Vérifier le tableau de bord sur la chart TradingView (5 ✅).<br/>
+                Alerte TradingView : condition = <strong style={{ color: '#00ff88' }}>"Alert() function calls only"</strong>, message = <strong style={{ color: '#00ff88' }}>vide</strong>.
               </div>
             </div>
             <button onClick={() => copyText(PINE_EDIT_SCRIPT, 'pine_edit')}
