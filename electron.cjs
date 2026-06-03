@@ -74,6 +74,46 @@ function startBotServer(port) {
             return;
           }
 
+          // ── Données de barre — détection TP/SL côté backend ──────
+          if (signal.type === 'bar') {
+            const h       = parseFloat(signal.h);
+            const l       = parseFloat(signal.l);
+            const botName = signal.bot;
+            if (!isNaN(h) && !isNaN(l)) {
+              const opens = botSignals.filter(s =>
+                !s.type && !s._outcome &&
+                (!botName || s.bot === botName) &&
+                s.tp2 && s.sl && (s.signal || s.direction)
+              );
+              let changed = false;
+              for (const sig of opens) {
+                const tp2 = parseFloat(sig.tp2);
+                const sl  = parseFloat(sig.sl);
+                const dir = (sig.signal || sig.direction || '').toUpperCase();
+                let outcome = null;
+                if (dir === 'LONG') {
+                  if (h >= tp2)      outcome = 'win';
+                  else if (l <= sl)  outcome = 'loss';
+                } else if (dir === 'SHORT') {
+                  if (l <= tp2)      outcome = 'win';
+                  else if (h >= sl)  outcome = 'loss';
+                }
+                if (outcome) {
+                  sig._outcome     = outcome;
+                  sig._autoOutcome = true;
+                  changed = true;
+                  mainWindow?.webContents.send('bot:outcome-update', {
+                    id: String(sig._id), outcome, auto: true,
+                  });
+                }
+              }
+              if (changed) saveBotSignalsToFile();
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true }));
+            return;
+          }
+
           // ── Signal d'entrée normal ──
           signal._id         = Date.now() + Math.random();
           signal._receivedAt = new Date().toISOString();

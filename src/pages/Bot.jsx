@@ -73,7 +73,7 @@ const PINE_BOTS = [
 ];
 
 function generateScript({ name, botId, sl, tp1, tp2, htfTf, minScore }) {
-  return `//@version=5
+  return `//@version=6
 indicator("${name}", overlay=true, max_bars_back=500, max_lines_count=200, max_boxes_count=200, max_labels_count=200)
 
 // ── Identité ──────────────────────────────────────────────────
@@ -358,6 +358,9 @@ if entry_short
     trk_tp2   := t2
     trk_long  := false
     trk_open  := true
+
+// Alerte barre — fallback détection TP/SL côté dashboard
+alert('{"type":"bar","bot":"' + bot_name + '","h":' + str.tostring(math.round(high * 100) / 100) + ',"l":' + str.tostring(math.round(low * 100) / 100) + '}', alert.freq_once_per_bar_close)
 
 // ── 10. DASHBOARD TABLE ───────────────────────────────────────
 var table dash = table.new(position.top_right, 2, 9,
