@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts';
 
-// MNQ : 10 contrats × $2.00/pt = $20.00 par point
-const MNQ_CONTRACTS  = 10;
+// MNQ : 5 contrats × $2.00/pt = $10.00 par point
+const MNQ_CONTRACTS  = 5;
 const MNQ_PTS_TO_USD = 2 * MNQ_CONTRACTS;
 
 function calcPts(a, b) { return Math.abs(a - b); }
@@ -741,7 +741,7 @@ function SignalCard({ signal, onSave, isLatest }) {
           <div style={{ fontSize: '18px', fontWeight: '700', color: '#ff7788' }}>{sl.toFixed(2)}</div>
           <div style={{ fontSize: '10px', color: '#5a3a3a', marginTop: '2px' }}>
             {slPts.toFixed(2)} pts · <span style={{ color: '#ff4455' }}>-${calcUsd(slPts)}</span>
-            <span style={{ color: '#3a2a2a', marginLeft: '4px' }}>(10 MNQ)</span>
+            <span style={{ color: '#3a2a2a', marginLeft: '4px' }}>(5 MNQ)</span>
           </div>
         </div>
         {/* TP unique */}
@@ -751,7 +751,7 @@ function SignalCard({ signal, onSave, isLatest }) {
             <div style={{ fontSize: '18px', fontWeight: '700', color: '#00ff88' }}>{tp.toFixed(2)}</div>
             <div style={{ fontSize: '10px', color: '#2a5a3a', marginTop: '2px' }}>
               {tpPts.toFixed(2)} pts · <span style={{ color: '#00ff88' }}>+${calcUsd(tpPts)}</span>
-              <span style={{ color: '#2a5a3a', marginLeft: '4px' }}>(10 MNQ)</span>
+              <span style={{ color: '#2a5a3a', marginLeft: '4px' }}>(5 MNQ)</span>
             </div>
           </div>
         )}
@@ -997,7 +997,7 @@ function BotStats({ signals }) {
 
       {/* ── KPI ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
-        <BSStatCard label="P&L NET (10 MNQ)"  value={fmtUsd(totalPnl, true)}         color={pnlColor(totalPnl)}           sub={`Pts: ${(totalPnl / MNQ_PTS_TO_USD >= 0 ? '+' : '') + (totalPnl / MNQ_PTS_TO_USD).toFixed(2)}`} />
+        <BSStatCard label="P&L NET (5 MNQ)"  value={fmtUsd(totalPnl, true)}         color={pnlColor(totalPnl)}           sub={`Pts: ${(totalPnl / MNQ_PTS_TO_USD >= 0 ? '+' : '') + (totalPnl / MNQ_PTS_TO_USD).toFixed(2)}`} />
         <BSStatCard label="WINRATE"            value={winrate != null ? `${winrate}%` : '—'} color={winrate != null && winrate >= 50 ? '#00ff88' : '#ff4455'} sub={`${wins.length}W · ${losses.length}L · ${bes.length}BE`} />
         <BSStatCard label="PROFIT FACTOR"      value={pf === 999 ? '∞' : pf.toFixed(2)} color={pf >= 1.5 ? '#00ff88' : '#f0c020'} sub={`Gains $${grossW.toFixed(0)} / Pertes $${grossL.toFixed(0)}`} />
         <BSStatCard label="R:R MOYEN"          value={avgRR ? `1:${avgRR}` : '—'}      color="#f0c020"                       sub={`${rrVals.length} signaux`} />
@@ -1083,7 +1083,7 @@ function BotStats({ signals }) {
 
         {/* By bot */}
         {byBot.length > 0 && (
-          <BSSection title="🤖 P&L NET PAR BOT (10 MNQ)">
+          <BSSection title="🤖 P&L NET PAR BOT (5 MNQ)">
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={byBot} barSize={32} barCategoryGap="35%" margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
                 <CartesianGrid stroke="rgba(0,255,136,0.04)" strokeDasharray="3 3" />
@@ -1110,7 +1110,7 @@ function BotStats({ signals }) {
         )}
 
         {/* By direction */}
-        <BSSection title="📊 P&L NET PAR DIRECTION (10 MNQ)">
+        <BSSection title="📊 P&L NET PAR DIRECTION (5 MNQ)">
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={byDir.filter(d => d.total > 0)} barSize={48} barCategoryGap="40%" margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
               <CartesianGrid stroke="rgba(0,255,136,0.04)" strokeDasharray="3 3" />
@@ -1137,7 +1137,7 @@ function BotStats({ signals }) {
 
       {/* ── Kill Zones ── */}
       {byKZ.length > 0 && (
-        <BSSection title="⏰ P&L NET PAR SESSION KILL ZONE (10 MNQ)">
+        <BSSection title="⏰ P&L NET PAR SESSION KILL ZONE (5 MNQ)">
           <ResponsiveContainer width="100%" height={140}>
             <BarChart data={byKZ} barSize={28} barCategoryGap="30%" margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
               <CartesianGrid stroke="rgba(0,255,136,0.04)" strokeDasharray="3 3" />
@@ -1232,7 +1232,7 @@ function BotStats({ signals }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
             <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
               <tr style={{ background: 'rgba(6,12,8,0.95)', borderBottom: '1px solid rgba(0,255,136,0.08)' }}>
-                {['HEURE', 'TF', 'BOT', 'DIR', 'ENTRY', 'SL', 'TP', 'R:R', 'PTS', 'P&L (10 MNQ)', 'SESSION KZ', 'RÉSULTAT'].map(h => (
+                {['HEURE', 'TF', 'BOT', 'DIR', 'ENTRY', 'SL', 'TP', 'R:R', 'PTS', 'P&L (5 MNQ)', 'SESSION KZ', 'RÉSULTAT'].map(h => (
                   <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: '9px', color: '#3a6a4a', letterSpacing: '1.5px', fontWeight: '700', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -1580,8 +1580,8 @@ export default function Bot() {
                 {[
                   { label: 'WINRATE', value: st.winrate != null ? `${st.winrate}%` : '—', sub: `${st.wins}W · ${st.losses}L${st.bes > 0 ? ` · ${st.bes}BE` : ''}`, color: st.winrate != null && st.winrate >= 50 ? '#00ff88' : '#ff4455' },
                   { label: 'R:R MOYEN', value: st.avgRR ? `1:${st.avgRR}` : '—', sub: `${st.total} terminé${st.total > 1 ? 's' : ''}`, color: '#f0c020' },
-                  { label: 'POINTS NET', value: `${st.totalPts >= 0 ? '+' : ''}${st.totalPts} pts`, sub: '10 MNQ', color: ptsColor },
-                  { label: 'P&L NET', value: `${st.totalUsd >= 0 ? '+' : ''}$${st.totalUsd}`, sub: '10 × $2/pt', color: ptsColor },
+                  { label: 'POINTS NET', value: `${st.totalPts >= 0 ? '+' : ''}${st.totalPts} pts`, sub: '5 MNQ', color: ptsColor },
+                  { label: 'P&L NET', value: `${st.totalUsd >= 0 ? '+' : ''}$${st.totalUsd}`, sub: '5 × $2/pt', color: ptsColor },
                 ].map(card => (
                   <div key={card.label} style={{ background: 'rgba(10,28,18,0.5)', border: `1px solid ${card.color}20`, borderRadius: '6px', padding: '10px 14px' }}>
                     <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>{card.label}</div>
