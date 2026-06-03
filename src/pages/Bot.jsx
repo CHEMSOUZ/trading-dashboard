@@ -976,11 +976,13 @@ export default function Bot() {
     navigator.clipboard.writeText(text).then(() => { setCopied(key); setTimeout(() => setCopied(''), 2000); });
   }
 
-  const webhookUrl   = `http://localhost:${port}/webhook`;
-  const botIds       = ['TOUS', ...Array.from(new Set(signals.map(s => s.bot).filter(Boolean)))];
-  const filtered     = selectedBot === 'TOUS' ? signals : signals.filter(s => s.bot === selectedBot);
-  const latest       = filtered[0] ?? null;
-  const activePine   = PINE_BOTS.find(b => b.id === selectedPine) ?? PINE_BOTS[0];
+  const webhookUrl       = `http://localhost:${port}/webhook`;
+  const botIds           = ['TOUS', ...Array.from(new Set(signals.map(s => s.bot).filter(Boolean)))];
+  const filtered         = selectedBot === 'TOUS' ? signals : signals.filter(s => s.bot === selectedBot);
+  const latest           = filtered[0] ?? null;
+  const activePine       = PINE_BOTS.find(b => b.id === selectedPine) ?? PINE_BOTS[0];
+  const activeSignals    = filtered.filter(s => !s._outcome);
+  const completedSignals = filtered.filter(s => s._outcome === 'win' || s._outcome === 'loss' || s._outcome === 'be');
 
   const inp = { background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.15)', borderRadius: '5px', padding: '7px 10px', color: '#c8d8c8', fontSize: '12px', fontFamily: 'inherit', outline: 'none', width: '80px', boxSizing: 'border-box' };
 
@@ -1092,19 +1094,17 @@ export default function Bot() {
             </div>
           )}
 
-          {/* Stats panel */}
-          {(() => {
-            const st = computeTradeStats(filtered);
-            if (st.total === 0) return null;
+          {/* Stats panel — signaux terminés uniquement */}
+          {completedSignals.length > 0 && (() => {
+            const st = computeTradeStats(completedSignals);
             const ptsColor = st.totalPts >= 0 ? '#00ff88' : '#ff4455';
-            const usdColor = st.totalUsd >= 0 ? '#00ff88' : '#ff4455';
             return (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px', marginBottom: '16px' }}>
                 {[
-                  { label: 'WINRATE', value: st.winrate != null ? `${st.winrate}%` : '—', sub: `${st.wins}W · ${st.losses}L${st.bes > 0 ? ` · ${st.bes}BE` : ''}`, color: st.winrate >= 50 ? '#00ff88' : '#ff4455' },
-                  { label: 'R:R MOYEN', value: st.avgRR ? `1:${st.avgRR}` : '—', sub: `${st.total} signal${st.total > 1 ? 's' : ''} noté${st.total > 1 ? 's' : ''}`, color: '#f0c020' },
+                  { label: 'WINRATE', value: st.winrate != null ? `${st.winrate}%` : '—', sub: `${st.wins}W · ${st.losses}L${st.bes > 0 ? ` · ${st.bes}BE` : ''}`, color: st.winrate != null && st.winrate >= 50 ? '#00ff88' : '#ff4455' },
+                  { label: 'R:R MOYEN', value: st.avgRR ? `1:${st.avgRR}` : '—', sub: `${st.total} terminé${st.total > 1 ? 's' : ''}`, color: '#f0c020' },
                   { label: 'POINTS NET', value: `${st.totalPts >= 0 ? '+' : ''}${st.totalPts} pts`, sub: '10 MNQ', color: ptsColor },
-                  { label: 'P&L NET', value: `${st.totalUsd >= 0 ? '+' : ''}$${st.totalUsd}`, sub: '10 × $2/pt', color: usdColor },
+                  { label: 'P&L NET', value: `${st.totalUsd >= 0 ? '+' : ''}$${st.totalUsd}`, sub: '10 × $2/pt', color: ptsColor },
                 ].map(card => (
                   <div key={card.label} style={{ background: 'rgba(10,28,18,0.5)', border: `1px solid ${card.color}20`, borderRadius: '6px', padding: '10px 14px' }}>
                     <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>{card.label}</div>
@@ -1132,47 +1132,139 @@ export default function Bot() {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {/* Latest signal — large */}
               <div>
                 <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>DERNIER SIGNAL</div>
                 <SignalCard signal={latest} onSave={saving ? null : handleSaveSignal} isLatest={true} />
               </div>
 
-              {/* History */}
-              {filtered.length > 1 && (
+              {/* ── EN COURS ── */}
+              {activeSignals.length > 0 && (
                 <div>
-                  <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>HISTORIQUE — {filtered.length - 1} signal{filtered.length > 2 ? 's' : ''} précédent{filtered.length > 2 ? 's' : ''}</div>
-                  <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                    <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#f0c020', boxShadow: '0 0 6px #f0c020', animation: 'pulse 2s infinite', flexShrink: 0 }} />
+                    <span style={{ fontSize: '10px', color: '#f0c020', letterSpacing: '2px', fontWeight: '700' }}>EN COURS</span>
+                    <span style={{ fontSize: '10px', background: 'rgba(240,192,32,0.12)', border: '1px solid rgba(240,192,32,0.3)', color: '#f0c020', padding: '1px 8px', borderRadius: '10px', fontWeight: '700' }}>{activeSignals.length}</span>
+                    <span style={{ fontSize: '10px', color: '#3a5a3a' }}>— en attente de résultat</span>
+                  </div>
+                  <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(240,192,32,0.08)', borderRadius: '6px', overflow: 'hidden' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                       <thead>
-                        <tr style={{ background: 'rgba(0,255,136,0.04)', borderBottom: '1px solid rgba(0,255,136,0.08)' }}>
-                          {['HEURE', 'DIR', 'ENTRY', 'SL', 'TP1', 'TP2', 'R:R', 'CONTEXTE', 'RÉSULTAT', ''].map(h => (
-                            <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: '9px', color: '#3a6a4a', letterSpacing: '1.5px', fontWeight: '700' }}>{h}</th>
+                        <tr style={{ background: 'rgba(240,192,32,0.03)', borderBottom: '1px solid rgba(240,192,32,0.07)' }}>
+                          {['HEURE', 'TF', 'DIR', 'ENTRY', 'SL', 'TP1', 'TP2', 'R:R', 'CONTEXTE', 'RÉSULTAT', ''].map(h => (
+                            <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: '9px', color: '#5a6a3a', letterSpacing: '1.5px', fontWeight: '700' }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {filtered.slice(1).map((sig, i) => {
+                        {activeSignals.map((sig, i) => {
                           const dir   = (sig.signal ?? sig.direction ?? '').toUpperCase();
                           const isL   = dir === 'LONG';
                           const color = isL ? '#00ff88' : '#ff4455';
                           const time  = fmtTime(sig._receivedAt);
                           return (
-                            <tr key={sig._id ?? i} style={{ borderBottom: '1px solid rgba(0,255,136,0.04)', transition: 'background 0.1s' }}
+                            <tr key={sig._id ?? i} style={{ borderBottom: '1px solid rgba(240,192,32,0.04)', transition: 'background 0.1s' }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(240,192,32,0.02)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            >
+                              <td style={{ padding: '8px 10px', color: '#5a8a6a' }}>{time}</td>
+                              <td style={{ padding: '8px 6px' }}>
+                                {sig.timeframe
+                                  ? <span style={{ fontSize: '10px', color: '#b09020', background: 'rgba(240,192,32,0.08)', border: '1px solid rgba(240,192,32,0.2)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{sig.timeframe}M</span>
+                                  : <span style={{ fontSize: '10px', color: '#3a4a2a' }}>—</span>
+                                }
+                              </td>
+                              <td style={{ padding: '8px 10px', fontWeight: '700', color }}>{isL ? '▲' : '▼'} {dir}</td>
+                              <td style={{ padding: '8px 10px', color: '#c8d8c8' }}>{parseFloat(sig.entry)?.toFixed(2) ?? '—'}</td>
+                              <td style={{ padding: '8px 10px', color: '#ff7788' }}>{parseFloat(sig.sl)?.toFixed(2) ?? '—'}</td>
+                              <td style={{ padding: '8px 10px', color: '#00cc66' }}>{parseFloat(sig.tp1)?.toFixed(2) ?? '—'}</td>
+                              <td style={{ padding: '8px 10px', color: '#00ff88' }}>{parseFloat(sig.tp2)?.toFixed(2) ?? '—'}</td>
+                              <td style={{ padding: '8px 10px', color }}>{sig.rr || '—'}</td>
+                              <td style={{ padding: '8px 10px', color: '#4a7a5a', fontSize: '10px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sig.context || '—'}</td>
+                              <td style={{ padding: '6px 8px' }}>
+                                <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                                  {[['win','W','#00ff88'],['loss','L','#ff4455'],['be','BE','#f0c020']].map(([key, label, c]) => {
+                                    const sel = sig._outcome === key;
+                                    return (
+                                      <button key={key} onClick={() => handleUpdateOutcome(sig._id, sig._outcome, key)}
+                                        style={{ padding: '2px 6px', borderRadius: '3px', border: `1px solid ${sel ? c + '80' : 'rgba(0,255,136,0.1)'}`, background: sel ? `${c}20` : 'transparent', color: sel ? c : '#3a6a4a', fontSize: '10px', fontFamily: 'inherit', fontWeight: sel ? '700' : '400', cursor: 'pointer', transition: 'all 0.12s' }}
+                                        onMouseEnter={e => { if (!sel) { e.currentTarget.style.color = c; e.currentTarget.style.borderColor = `${c}50`; }}}
+                                        onMouseLeave={e => { if (!sel) { e.currentTarget.style.color = '#3a6a4a'; e.currentTarget.style.borderColor = 'rgba(0,255,136,0.1)'; }}}
+                                      >{label}</button>
+                                    );
+                                  })}
+                                </div>
+                              </td>
+                              <td style={{ padding: '6px 8px' }}>
+                                <button onClick={() => handleSaveSignal(sig)}
+                                  style={{ background: 'none', border: '1px solid rgba(0,255,136,0.15)', borderRadius: '3px', color: '#3a6a4a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', padding: '2px 7px', transition: 'all 0.12s' }}
+                                  onMouseEnter={e => { e.currentTarget.style.color = '#00ff88'; e.currentTarget.style.borderColor = 'rgba(0,255,136,0.4)'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.color = '#3a6a4a'; e.currentTarget.style.borderColor = 'rgba(0,255,136,0.15)'; }}
+                                >+</button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ── TERMINÉS ── */}
+              {completedSignals.length > 0 && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', fontWeight: '700' }}>TERMINÉS</span>
+                    <span style={{ fontSize: '10px', background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.15)', color: '#3a9a5a', padding: '1px 8px', borderRadius: '10px', fontWeight: '700' }}>{completedSignals.length}</span>
+                    {completedSignals.filter(s => s._outcome === 'win').length > 0 && (
+                      <span style={{ fontSize: '10px', color: '#00ff88', fontWeight: '700' }}>✓ {completedSignals.filter(s => s._outcome === 'win').length}W</span>
+                    )}
+                    {completedSignals.filter(s => s._outcome === 'loss').length > 0 && (
+                      <span style={{ fontSize: '10px', color: '#ff4455', fontWeight: '700' }}>✗ {completedSignals.filter(s => s._outcome === 'loss').length}L</span>
+                    )}
+                    {completedSignals.filter(s => s._outcome === 'be').length > 0 && (
+                      <span style={{ fontSize: '10px', color: '#f0c020', fontWeight: '700' }}>— {completedSignals.filter(s => s._outcome === 'be').length}BE</span>
+                    )}
+                  </div>
+                  <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                      <thead>
+                        <tr style={{ background: 'rgba(0,255,136,0.04)', borderBottom: '1px solid rgba(0,255,136,0.08)' }}>
+                          {['HEURE', 'TF', 'DIR', 'ENTRY', 'SL', 'TP1', 'TP2', 'R:R', 'CONTEXTE', 'RÉSULTAT', ''].map(h => (
+                            <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: '9px', color: '#3a6a4a', letterSpacing: '1.5px', fontWeight: '700' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {completedSignals.map((sig, i) => {
+                          const dir   = (sig.signal ?? sig.direction ?? '').toUpperCase();
+                          const isL   = dir === 'LONG';
+                          const color = isL ? '#00ff88' : '#ff4455';
+                          const time  = fmtTime(sig._receivedAt);
+                          const outColor = sig._outcome === 'win' ? '#00ff88' : sig._outcome === 'loss' ? '#ff4455' : '#f0c020';
+                          return (
+                            <tr key={sig._id ?? i} style={{ borderBottom: '1px solid rgba(0,255,136,0.04)', transition: 'background 0.1s', borderLeft: `2px solid ${outColor}25` }}
                               onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.03)'}
                               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             >
-                              <td style={{ padding: '8px 12px', color: '#5a8a6a' }}>{time}</td>
-                              <td style={{ padding: '8px 12px', fontWeight: '700', color }}>{isL ? '▲' : '▼'} {dir}</td>
-                              <td style={{ padding: '8px 12px', color: '#c8d8c8' }}>{parseFloat(sig.entry)?.toFixed(2) ?? '—'}</td>
-                              <td style={{ padding: '8px 12px', color: '#ff7788' }}>{parseFloat(sig.sl)?.toFixed(2) ?? '—'}</td>
-                              <td style={{ padding: '8px 12px', color: '#00cc66' }}>{parseFloat(sig.tp1)?.toFixed(2) ?? '—'}</td>
-                              <td style={{ padding: '8px 12px', color: '#00ff88' }}>{parseFloat(sig.tp2)?.toFixed(2) ?? '—'}</td>
-                              <td style={{ padding: '8px 12px', color }}>{sig.rr || '—'}</td>
-                              <td style={{ padding: '8px 12px', color: '#4a7a5a', fontSize: '10px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sig.context || '—'}</td>
+                              <td style={{ padding: '8px 10px', color: '#5a8a6a' }}>{time}</td>
+                              <td style={{ padding: '8px 6px' }}>
+                                {sig.timeframe
+                                  ? <span style={{ fontSize: '10px', color: '#3a9a5a', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.12)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{sig.timeframe}M</span>
+                                  : <span style={{ fontSize: '10px', color: '#2a4a30' }}>—</span>
+                                }
+                              </td>
+                              <td style={{ padding: '8px 10px', fontWeight: '700', color }}>{isL ? '▲' : '▼'} {dir}</td>
+                              <td style={{ padding: '8px 10px', color: '#c8d8c8' }}>{parseFloat(sig.entry)?.toFixed(2) ?? '—'}</td>
+                              <td style={{ padding: '8px 10px', color: '#ff7788' }}>{parseFloat(sig.sl)?.toFixed(2) ?? '—'}</td>
+                              <td style={{ padding: '8px 10px', color: '#00cc66' }}>{parseFloat(sig.tp1)?.toFixed(2) ?? '—'}</td>
+                              <td style={{ padding: '8px 10px', color: '#00ff88' }}>{parseFloat(sig.tp2)?.toFixed(2) ?? '—'}</td>
+                              <td style={{ padding: '8px 10px', color }}>{sig.rr || '—'}</td>
+                              <td style={{ padding: '8px 10px', color: '#4a7a5a', fontSize: '10px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sig.context || '—'}</td>
                               <td style={{ padding: '6px 8px' }}>
-                                <div style={{ display: 'flex', gap: '3px' }}>
+                                <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
                                   {sig._autoOutcome && sig._outcome && (
                                     <span style={{ fontSize: '8px', background: 'rgba(0,170,255,0.15)', border: '1px solid rgba(0,170,255,0.3)', color: '#00aaff', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', letterSpacing: '1px', marginRight: '2px' }}>AUTO</span>
                                   )}

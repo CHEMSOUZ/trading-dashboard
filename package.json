@@ -1,55 +1,55 @@
 {
-    "name":  "trading-dashboard",
-    "version":  "1.4.42",
-    "private":  true,
-    "main":  "electron.cjs",
-    "scripts":  {
-                    "dev":  "vite",
-                    "build":  "vite build",
-                    "electron":  "set NODE_ENV=development \u0026\u0026 electron electron.cjs",
-                    "dist":  "vite build \u0026\u0026 electron-builder"
-                },
-    "dependencies":  {
-                         "electron-updater":  "^6.8.3",
-                         "react":  "^19.0.0",
-                         "react-dom":  "^19.0.0",
-                         "react-router-dom":  "^6.22.0",
-                         "recharts":  "^3.8.1",
-                         "sql.js":  "^1.14.1"
-                     },
-    "devDependencies":  {
-                            "@vitejs/plugin-react":  "^4.0.0",
-                            "electron":  "^42.0.0",
-                            "electron-builder":  "^26.0.0",
-                            "vite":  "^6.0.0"
-                        },
-    "build":  {
-                  "appId":  "com.trading.dashboard",
-                  "productName":  "Trading Dashboard",
-                  "publish":  {
-                                  "provider":  "github",
-                                  "owner":  "CHEMSOUZ",
-                                  "repo":  "trading-dashboard"
-                              },
-                  "files":  [
-                                "dist/**/*",
-                                "electron.cjs",
-                                "preload.cjs",
-                                "database.cjs",
-                                "accounts.cjs"
-                            ],
-                  "extraResources":  [
-                                         {
-                                             "from":  "node_modules/sql.js/dist/sql-wasm.wasm",
-                                             "to":  "sql-wasm.wasm"
-                                         }
-                                     ],
-                  "win":  {
-                              "target":  "nsis"
-                          },
-                  "nsis":  {
-                               "oneClick":  false,
-                               "allowToChangeInstallationDirectory":  true
-                           }
-              }
+  "name": "trading-dashboard",
+  "version": "1.4.43",
+  "private": true,
+  "main": "electron.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "electron": "set NODE_ENV=development && electron electron.cjs",
+    "dist": "vite build && electron-builder"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^6.22.0",
+    "recharts": "^3.8.1",
+    "sql.js": "^1.14.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.0",
+    "electron": "^42.0.0",
+    "electron-builder": "^26.0.0",
+    "vite": "^6.0.0"
+  },
+  "build": {
+    "appId": "com.trading.dashboard",
+    "productName": "Trading Dashboard",
+    "publish": {
+      "provider": "github",
+      "owner": "CHEMSOUZ",
+      "repo": "trading-dashboard"
+    },
+    "files": [
+      "dist/**/*",
+      "electron.cjs",
+      "preload.cjs",
+      "database.cjs",
+      "accounts.cjs"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/sql.js/dist/sql-wasm.wasm",
+        "to": "sql-wasm.wasm"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
 }
