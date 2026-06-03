@@ -52,6 +52,29 @@ function startBotServer(port) {
       req.on('end', () => {
         try {
           const signal = JSON.parse(body);
+
+          // ── Signal de fermeture automatique (TP/SL détecté par TV) ──
+          if (signal.type === 'close') {
+            const outcome  = signal.result; // 'win' | 'loss'
+            const botName  = signal.bot;
+            const target   = botSignals.find(s =>
+              !s.type && !s._outcome &&
+              (!botName || s.bot === botName)
+            );
+            if (target) {
+              target._outcome     = outcome;
+              target._autoOutcome = true;
+              saveBotSignalsToFile();
+              mainWindow?.webContents.send('bot:outcome-update', {
+                id: String(target._id), outcome, auto: true,
+              });
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, matched: !!target }));
+            return;
+          }
+
+          // ── Signal d'entrée normal ──
           signal._id         = Date.now() + Math.random();
           signal._receivedAt = new Date().toISOString();
           botSignals.unshift(signal);

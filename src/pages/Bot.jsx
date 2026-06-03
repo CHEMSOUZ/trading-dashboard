@@ -297,6 +297,24 @@ sl_mult  = ${sl}
 tp1_mult = ${tp1}
 tp2_mult = ${tp2}
 
+// Tracking position ouverte pour détection automatique TP/SL
+var float trk_entry = na
+var float trk_sl    = na
+var float trk_tp2   = na
+var bool  trk_long  = false
+var bool  trk_open  = false
+
+// Vérifier clôture automatique (avant la détection d'un nouveau signal)
+if trk_open and not (entry_long or entry_short)
+    hit_tp = trk_long ? high >= trk_tp2 : low  <= trk_tp2
+    hit_sl = trk_long ? low  <= trk_sl  : high >= trk_sl
+    if hit_tp
+        alert('{"type":"close","result":"win","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
+        trk_open := false
+    else if hit_sl
+        alert('{"type":"close","result":"loss","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
+        trk_open := false
+
 if entry_long
     e   = close
     s   = math.round((e - atr * sl_mult)  * 100) / 100
@@ -313,6 +331,11 @@ if entry_long
           '","context":"' + ctx +
           '","timeframe":"{{interval}}","timestamp":"{{time}}"}'
     alert(msg, alert.freq_once_per_bar_close)
+    trk_entry := e
+    trk_sl    := s
+    trk_tp2   := t2
+    trk_long  := true
+    trk_open  := true
 
 if entry_short
     e   = close
@@ -330,6 +353,11 @@ if entry_short
           '","context":"' + ctx +
           '","timeframe":"{{interval}}","timestamp":"{{time}}"}'
     alert(msg, alert.freq_once_per_bar_close)
+    trk_entry := e
+    trk_sl    := s
+    trk_tp2   := t2
+    trk_long  := false
+    trk_open  := true
 
 // ── 10. DASHBOARD TABLE ───────────────────────────────────────
 var table dash = table.new(position.top_right, 2, 9,
@@ -880,10 +908,22 @@ export default function Bot() {
     const onReady = (p) => { setPort(p); setPortInput(String(p)); setServerOk(true); };
     const onError = () => setServerOk(false);
 
+    const onOutcome = ({ id, outcome, auto }) => {
+      setSignals(prev => prev.map(s =>
+        String(s._id) === String(id)
+          ? { ...s, _outcome: outcome, _autoOutcome: auto }
+          : s
+      ));
+    };
+
     window.bot.onSignal(onSignal);
     window.bot.onServerReady(onReady);
     window.bot.onServerError(onError);
-    return () => { window.bot.offSignal(onSignal); };
+    window.bot.onOutcomeUpdate(onOutcome);
+    return () => {
+      window.bot.offSignal(onSignal);
+      window.bot.offOutcomeUpdate(onOutcome);
+    };
   }, []);
 
   async function handleUpdateOutcome(id, current, outcome) {
@@ -1130,6 +1170,9 @@ export default function Bot() {
                               <td style={{ padding: '8px 12px', color: '#4a7a5a', fontSize: '10px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sig.context || '—'}</td>
                               <td style={{ padding: '6px 8px' }}>
                                 <div style={{ display: 'flex', gap: '3px' }}>
+                                  {sig._autoOutcome && sig._outcome && (
+                                    <span style={{ fontSize: '8px', background: 'rgba(0,170,255,0.15)', border: '1px solid rgba(0,170,255,0.3)', color: '#00aaff', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', letterSpacing: '1px', marginRight: '2px' }}>AUTO</span>
+                                  )}
                                   {[['win','W','#00ff88'],['loss','L','#ff4455'],['be','BE','#f0c020']].map(([key, label, c]) => {
                                     const sel = sig._outcome === key;
                                     return (
