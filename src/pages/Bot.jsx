@@ -426,7 +426,7 @@ function SignalCard({ signal, onSave, isLatest }) {
         </div>
         <div style={{ fontSize: '13px', color: '#8aaa90', fontWeight: '600' }}>{signal.symbol || 'MNQ'}</div>
         {signal.bot && (() => { const b = PINE_BOTS.find(x => x.botId === signal.bot); const c = b?.color ?? '#aa88ff'; return <div style={{ fontSize: '10px', color: c, background: `${c}15`, border: `1px solid ${c}40`, padding: '2px 8px', borderRadius: '3px', fontWeight: '700', letterSpacing: '1px' }}>{signal.bot}</div>; })()}
-        {signal.timeframe && <div style={{ fontSize: '11px', color: '#3a6a4a', background: 'rgba(0,255,136,0.05)', border: '1px solid rgba(0,255,136,0.1)', padding: '2px 7px', borderRadius: '3px' }}>{signal.timeframe}M</div>}
+        {fmtTf(signal.timeframe) && <div style={{ fontSize: '11px', color: '#3a6a4a', background: 'rgba(0,255,136,0.05)', border: '1px solid rgba(0,255,136,0.1)', padding: '2px 7px', borderRadius: '3px' }}>{fmtTf(signal.timeframe)}</div>}
         <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px' }}>
           <div style={{ fontSize: '13px', color: '#c8d8c8', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{timeRecu}</div>
           {timeBougie && timeBougie !== timeRecu && (
@@ -522,6 +522,13 @@ function signalPnl(sig) {
   return 0;
 }
 function signalPts(sig) { return signalPnl(sig) / MNQ_PTS_TO_USD; }
+function fmtTf(tf) {
+  if (!tf || String(tf).includes('{')) return null;
+  const n = parseInt(tf);
+  if (isNaN(n)) return String(tf).toUpperCase(); // D, W…
+  if (n >= 60 && n % 60 === 0) return `${n / 60}H`;
+  return `${n}M`;
+}
 function getHourFr(iso) {
   if (!iso) return null;
   const d = new Date(iso);
@@ -761,7 +768,7 @@ function BotStats({ signals }) {
                     const dir = (sig.signal ?? sig.direction ?? '').toUpperCase();
                     const isL = dir === 'LONG';
                     const pnl = signalPnl(sig);
-                    const tf  = sig.timeframe ? `${sig.timeframe}M` : null;
+                    const tf  = fmtTf(sig.timeframe);
                     return (
                       <div key={sig._id ?? i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 10px', background: 'rgba(10,28,18,0.5)', borderRadius: '4px', borderLeft: `2px solid ${ocColor}60` }}>
                         <span style={{ fontSize: '10px', color: '#4a7a5a', minWidth: '70px' }}>{fmtTime(sig._receivedAt)}</span>
@@ -961,7 +968,7 @@ function BotStats({ signals }) {
                   >
                     <td style={{ padding: '7px 10px', color: '#4a7a5a', fontSize: '11px', whiteSpace: 'nowrap' }}>{fmtTime(sig._receivedAt)}</td>
                     <td style={{ padding: '7px 6px' }}>
-                      {sig.timeframe ? <span style={{ fontSize: '9px', color: '#3a9a5a', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.1)', padding: '1px 4px', borderRadius: '2px', fontWeight: '700' }}>{sig.timeframe}M</span> : <span style={{ color: '#2a4a30' }}>—</span>}
+                      {fmtTf(sig.timeframe) ? <span style={{ fontSize: '9px', color: '#3a9a5a', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.1)', padding: '1px 4px', borderRadius: '2px', fontWeight: '700' }}>{fmtTf(sig.timeframe)}</span> : <span style={{ color: '#2a4a30' }}>—</span>}
                     </td>
                     <td style={{ padding: '7px 10px', fontSize: '10px', color: '#aa88ff' }}>{sig.bot ?? '—'}</td>
                     <td style={{ padding: '7px 10px' }}>
@@ -1315,8 +1322,8 @@ export default function Bot() {
                             >
                               <td style={{ padding: '8px 10px', color: '#5a8a6a' }}>{time}</td>
                               <td style={{ padding: '8px 6px' }}>
-                                {sig.timeframe
-                                  ? <span style={{ fontSize: '10px', color: '#b09020', background: 'rgba(240,192,32,0.08)', border: '1px solid rgba(240,192,32,0.2)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{sig.timeframe}M</span>
+                                {fmtTf(sig.timeframe)
+                                  ? <span style={{ fontSize: '10px', color: '#b09020', background: 'rgba(240,192,32,0.08)', border: '1px solid rgba(240,192,32,0.2)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{fmtTf(sig.timeframe)}</span>
                                   : <span style={{ fontSize: '10px', color: '#3a4a2a' }}>—</span>
                                 }
                               </td>
@@ -1396,8 +1403,8 @@ export default function Bot() {
                             >
                               <td style={{ padding: '8px 10px', color: '#5a8a6a' }}>{time}</td>
                               <td style={{ padding: '8px 6px' }}>
-                                {sig.timeframe
-                                  ? <span style={{ fontSize: '10px', color: '#3a9a5a', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.12)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{sig.timeframe}M</span>
+                                {fmtTf(sig.timeframe)
+                                  ? <span style={{ fontSize: '10px', color: '#3a9a5a', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.12)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{fmtTf(sig.timeframe)}</span>
                                   : <span style={{ fontSize: '10px', color: '#2a4a30' }}>—</span>
                                 }
                               </td>
