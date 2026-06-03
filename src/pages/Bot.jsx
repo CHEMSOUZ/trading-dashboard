@@ -1610,11 +1610,14 @@ export default function Bot() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              {/* Latest signal — large */}
-              <div>
-                <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>DERNIER SIGNAL</div>
-                <SignalCard signal={latest} onSave={saving ? null : handleSaveSignal} isLatest={true} />
-              </div>
+
+              {/* DERNIER SIGNAL — affiché uniquement quand aucun slot actif (évite le double affichage) */}
+              {activeSignals.length === 0 && latest && (
+                <div>
+                  <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>DERNIER SIGNAL</div>
+                  <SignalCard signal={latest} onSave={saving ? null : handleSaveSignal} isLatest={true} />
+                </div>
+              )}
 
               {/* ── SLOTS EN COURS — cartes de position ── */}
               {activeSignals.length > 0 && (
