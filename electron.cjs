@@ -178,6 +178,14 @@ function registerHandlers() {
     try { startBotServer(parseInt(port) || 3001); return { ok: true, data: botPort }; }
     catch(e) { return { ok: false, error: e.message }; }
   });
+  ipcMain.handle('bot:updateOutcome', (_, id, outcome) => {
+    const sig = botSignals.find(s => String(s._id) === String(id));
+    if (!sig) return { ok: false, error: 'Signal introuvable' };
+    if (outcome === null) delete sig._outcome; else sig._outcome = outcome;
+    saveBotSignalsToFile();
+    return { ok: true };
+  });
+
   ipcMain.handle('bot:getStats',    () => {
     const total   = botSignals.length;
     const longs   = botSignals.filter(s => (s.signal ?? s.direction ?? '').toUpperCase() === 'LONG').length;

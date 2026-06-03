@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// MNQ : 1 point = $2.00 (micro contract)
-const MNQ_PTS_TO_USD = 2;
+// MNQ : 10 contrats × $2.00/pt = $20.00 par point
+const MNQ_CONTRACTS  = 10;
+const MNQ_PTS_TO_USD = 2 * MNQ_CONTRACTS;
 
 function calcPts(a, b) { return Math.abs(a - b); }
 function calcUsd(pts)   { return (pts * MNQ_PTS_TO_USD).toFixed(2); }
@@ -27,6 +28,39 @@ function fmtTime(raw, showSeconds = false) {
   const dayD    = d.toLocaleDateString('fr-FR', { timeZone: tz, day: '2-digit', month: '2-digit' });
   const dayNow  = now.toLocaleDateString('fr-FR', { timeZone: tz, day: '2-digit', month: '2-digit' });
   return dayD !== dayNow ? `${dayD} ${timeStr}` : timeStr;
+}
+
+// ── Calcul stats signaux ──────────────────────────────────────
+function computeTradeStats(signals) {
+  const rated  = signals.filter(s => s._outcome === 'win' || s._outcome === 'loss' || s._outcome === 'be');
+  const wins   = rated.filter(s => s._outcome === 'win');
+  const losses = rated.filter(s => s._outcome === 'loss');
+  const bes    = rated.filter(s => s._outcome === 'be');
+  const wl     = wins.length + losses.length;
+
+  const winrate = wl > 0 ? Math.round(wins.length / wl * 100) : null;
+
+  const rrVals = signals
+    .filter(s => s.rr)
+    .map(s => { const n = parseFloat(String(s.rr).replace('1:', '')); return isNaN(n) ? null : n; })
+    .filter(Boolean);
+  const avgRR = rrVals.length > 0 ? (rrVals.reduce((a, b) => a + b, 0) / rrVals.length).toFixed(2) : null;
+
+  let totalPts = 0;
+  for (const sig of rated) {
+    const e  = parseFloat(sig.entry) || 0;
+    const sl = parseFloat(sig.sl)    || 0;
+    const tp = parseFloat(sig.tp2) || parseFloat(sig.tp1) || 0;
+    if (sig._outcome === 'win'  && tp) totalPts += Math.abs(tp - e);
+    if (sig._outcome === 'loss' && sl) totalPts -= Math.abs(e - sl);
+  }
+
+  return {
+    total: rated.length, wins: wins.length, losses: losses.length, bes: bes.length,
+    winrate, avgRR,
+    totalPts: Math.round(totalPts * 100) / 100,
+    totalUsd: Math.round(totalPts * MNQ_PTS_TO_USD * 100) / 100,
+  };
 }
 
 // ── Pine Script multi-bot (ICT Full Strategy) ─────────────────
@@ -384,6 +418,7 @@ function SignalCard({ signal, onSave, isLatest }) {
           <div style={{ fontSize: '18px', fontWeight: '700', color: '#ff7788' }}>{sl.toFixed(2)}</div>
           <div style={{ fontSize: '10px', color: '#5a3a3a', marginTop: '2px' }}>
             {slPts.toFixed(2)} pts · <span style={{ color: '#ff4455' }}>-${calcUsd(slPts)}</span>
+            <span style={{ color: '#3a2a2a', marginLeft: '4px' }}>(10 MNQ)</span>
           </div>
         </div>
         {/* TP1 */}
@@ -393,6 +428,7 @@ function SignalCard({ signal, onSave, isLatest }) {
             <div style={{ fontSize: '18px', fontWeight: '700', color: '#00cc66' }}>{tp1.toFixed(2)}</div>
             <div style={{ fontSize: '10px', color: '#2a5a3a', marginTop: '2px' }}>
               {tp1Pts.toFixed(2)} pts · <span style={{ color: '#00ff88' }}>+${calcUsd(tp1Pts)}</span>
+            <span style={{ color: '#2a5a3a', marginLeft: '4px' }}>(10 MNQ)</span>
             </div>
           </div>
         )}
@@ -403,6 +439,7 @@ function SignalCard({ signal, onSave, isLatest }) {
             <div style={{ fontSize: '18px', fontWeight: '700', color: '#00ff88' }}>{tp2.toFixed(2)}</div>
             <div style={{ fontSize: '10px', color: '#2a5a3a', marginTop: '2px' }}>
               {tp2Pts.toFixed(2)} pts · <span style={{ color: '#00ff88' }}>+${calcUsd(tp2Pts)}</span>
+            <span style={{ color: '#2a5a3a', marginLeft: '4px' }}>(10 MNQ)</span>
             </div>
           </div>
         )}
@@ -503,6 +540,15 @@ export default function Bot() {
     window.bot.onServerError(onError);
     return () => { window.bot.offSignal(onSignal); };
   }, []);
+
+  async function handleUpdateOutcome(id, current, outcome) {
+    const next = current === outcome ? null : outcome;
+    await window.bot.updateOutcome(id, next);
+    setSignals(prev => prev.map(s => String(s._id) === String(id)
+      ? { ...s, _outcome: next === null ? undefined : next }
+      : s
+    ));
+  }
 
   async function handleClearSignals() {
     if (!window.confirm(`Effacer l'historique complet ? (${signals.length} signaux supprimés définitivement)`)) return;
@@ -658,6 +704,30 @@ export default function Bot() {
             </div>
           )}
 
+          {/* Stats panel */}
+          {(() => {
+            const st = computeTradeStats(filtered);
+            if (st.total === 0) return null;
+            const ptsColor = st.totalPts >= 0 ? '#00ff88' : '#ff4455';
+            const usdColor = st.totalUsd >= 0 ? '#00ff88' : '#ff4455';
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px', marginBottom: '16px' }}>
+                {[
+                  { label: 'WINRATE', value: st.winrate != null ? `${st.winrate}%` : '—', sub: `${st.wins}W · ${st.losses}L${st.bes > 0 ? ` · ${st.bes}BE` : ''}`, color: st.winrate >= 50 ? '#00ff88' : '#ff4455' },
+                  { label: 'R:R MOYEN', value: st.avgRR ? `1:${st.avgRR}` : '—', sub: `${st.total} signal${st.total > 1 ? 's' : ''} noté${st.total > 1 ? 's' : ''}`, color: '#f0c020' },
+                  { label: 'POINTS NET', value: `${st.totalPts >= 0 ? '+' : ''}${st.totalPts} pts`, sub: '10 MNQ', color: ptsColor },
+                  { label: 'P&L NET', value: `${st.totalUsd >= 0 ? '+' : ''}$${st.totalUsd}`, sub: '10 × $2/pt', color: usdColor },
+                ].map(card => (
+                  <div key={card.label} style={{ background: 'rgba(10,28,18,0.5)', border: `1px solid ${card.color}20`, borderRadius: '6px', padding: '10px 14px' }}>
+                    <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>{card.label}</div>
+                    <div style={{ fontSize: '16px', fontWeight: '700', color: card.color }}>{card.value}</div>
+                    <div style={{ fontSize: '10px', color: '#3a5a3a', marginTop: '2px' }}>{card.sub}</div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
           {saveMsg && (
             <div style={{ marginBottom: '14px', padding: '10px 14px', background: saveMsg.startsWith('Erreur') ? 'rgba(255,68,85,0.1)' : 'rgba(0,255,136,0.1)', border: `1px solid ${saveMsg.startsWith('Erreur') ? 'rgba(255,68,85,0.3)' : 'rgba(0,255,136,0.3)'}`, borderRadius: '5px', fontSize: '12px', color: saveMsg.startsWith('Erreur') ? '#ff4455' : '#00ff88' }}>
               {saveMsg}
@@ -689,7 +759,7 @@ export default function Bot() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                       <thead>
                         <tr style={{ background: 'rgba(0,255,136,0.04)', borderBottom: '1px solid rgba(0,255,136,0.08)' }}>
-                          {['HEURE', 'DIR', 'ENTRY', 'SL', 'TP1', 'TP2', 'R:R', 'CONTEXTE', ''].map(h => (
+                          {['HEURE', 'DIR', 'ENTRY', 'SL', 'TP1', 'TP2', 'R:R', 'CONTEXTE', 'RÉSULTAT', ''].map(h => (
                             <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: '9px', color: '#3a6a4a', letterSpacing: '1.5px', fontWeight: '700' }}>{h}</th>
                           ))}
                         </tr>
@@ -712,8 +782,22 @@ export default function Bot() {
                               <td style={{ padding: '8px 12px', color: '#00cc66' }}>{parseFloat(sig.tp1)?.toFixed(2) ?? '—'}</td>
                               <td style={{ padding: '8px 12px', color: '#00ff88' }}>{parseFloat(sig.tp2)?.toFixed(2) ?? '—'}</td>
                               <td style={{ padding: '8px 12px', color }}>{sig.rr || '—'}</td>
-                              <td style={{ padding: '8px 12px', color: '#4a7a5a', fontSize: '10px', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sig.context || '—'}</td>
-                              <td style={{ padding: '8px 12px' }}>
+                              <td style={{ padding: '8px 12px', color: '#4a7a5a', fontSize: '10px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sig.context || '—'}</td>
+                              <td style={{ padding: '6px 8px' }}>
+                                <div style={{ display: 'flex', gap: '3px' }}>
+                                  {[['win','W','#00ff88'],['loss','L','#ff4455'],['be','BE','#f0c020']].map(([key, label, c]) => {
+                                    const sel = sig._outcome === key;
+                                    return (
+                                      <button key={key} onClick={() => handleUpdateOutcome(sig._id, sig._outcome, key)}
+                                        style={{ padding: '2px 6px', borderRadius: '3px', border: `1px solid ${sel ? c + '80' : 'rgba(0,255,136,0.1)'}`, background: sel ? `${c}20` : 'transparent', color: sel ? c : '#3a6a4a', fontSize: '10px', fontFamily: 'inherit', fontWeight: sel ? '700' : '400', cursor: 'pointer', transition: 'all 0.12s' }}
+                                        onMouseEnter={e => { if (!sel) { e.currentTarget.style.color = c; e.currentTarget.style.borderColor = `${c}50`; }}}
+                                        onMouseLeave={e => { if (!sel) { e.currentTarget.style.color = '#3a6a4a'; e.currentTarget.style.borderColor = 'rgba(0,255,136,0.1)'; }}}
+                                      >{label}</button>
+                                    );
+                                  })}
+                                </div>
+                              </td>
+                              <td style={{ padding: '6px 8px' }}>
                                 <button onClick={() => handleSaveSignal(sig)}
                                   style={{ background: 'none', border: '1px solid rgba(0,255,136,0.15)', borderRadius: '3px', color: '#3a6a4a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', padding: '2px 7px', transition: 'all 0.12s' }}
                                   onMouseEnter={e => { e.currentTarget.style.color = '#00ff88'; e.currentTarget.style.borderColor = 'rgba(0,255,136,0.4)'; }}
