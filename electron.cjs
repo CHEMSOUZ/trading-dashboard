@@ -19,6 +19,24 @@ let globalDbPath = null;
 let botServer    = null;
 let botPort      = 3001;
 let botSignals   = [];
+let botSignalsFile = null;
+
+function loadBotSignalsFromFile() {
+  try {
+    if (botSignalsFile && fs.existsSync(botSignalsFile)) {
+      const raw = fs.readFileSync(botSignalsFile, 'utf-8');
+      const data = JSON.parse(raw);
+      if (Array.isArray(data)) return data;
+    }
+  } catch(e) { console.error('[Bot] Erreur chargement historique:', e.message); }
+  return [];
+}
+
+function saveBotSignalsToFile() {
+  try {
+    if (botSignalsFile) fs.writeFileSync(botSignalsFile, JSON.stringify(botSignals), 'utf-8');
+  } catch(e) { console.error('[Bot] Erreur sauvegarde historique:', e.message); }
+}
 
 function startBotServer(port) {
   if (botServer) { try { botServer.close(); } catch(_) {} }
@@ -37,7 +55,8 @@ function startBotServer(port) {
           signal._id         = Date.now() + Math.random();
           signal._receivedAt = new Date().toISOString();
           botSignals.unshift(signal);
-          if (botSignals.length > 200) botSignals = botSignals.slice(0, 200);
+          if (botSignals.length > 2000) botSignals = botSignals.slice(0, 2000);
+          saveBotSignalsToFile();
           mainWindow?.webContents.send('bot:signal', signal);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
@@ -123,6 +142,8 @@ app.whenReady().then(async () => {
   await loadActiveDb();
   await loadGlobalDb();
   registerHandlers();
+  botSignalsFile = path.join(app.getPath('userData'), 'bot_signals.json');
+  botSignals     = loadBotSignalsFromFile();
   createWindow();
   startBotServer(3001);
 
@@ -151,11 +172,20 @@ function registerHandlers() {
 
   // ── Bot handlers ──────────────────────────────────────────
   ipcMain.handle('bot:getSignals',  () => ({ ok: true, data: botSignals }));
-  ipcMain.handle('bot:clearSignals',() => { botSignals = []; return { ok: true }; });
+  ipcMain.handle('bot:clearSignals',() => { botSignals = []; saveBotSignalsToFile(); return { ok: true }; });
   ipcMain.handle('bot:getPort',     () => ({ ok: true, data: botPort }));
   ipcMain.handle('bot:setPort',     (_, port) => {
     try { startBotServer(parseInt(port) || 3001); return { ok: true, data: botPort }; }
     catch(e) { return { ok: false, error: e.message }; }
+  });
+  ipcMain.handle('bot:getStats',    () => {
+    const total   = botSignals.length;
+    const longs   = botSignals.filter(s => (s.signal ?? s.direction ?? '').toUpperCase() === 'LONG').length;
+    const shorts  = total - longs;
+    const oldest  = botSignals.length > 0 ? botSignals[botSignals.length - 1]._receivedAt : null;
+    const newest  = botSignals.length > 0 ? botSignals[0]._receivedAt : null;
+    const bots    = [...new Set(botSignals.map(s => s.bot).filter(Boolean))];
+    return { ok: true, data: { total, longs, shorts, oldest, newest, bots } };
   });
 
   // ── Account handlers ──────────────────────────────────────

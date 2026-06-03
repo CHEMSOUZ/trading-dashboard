@@ -457,6 +457,7 @@ function CustomTVInput() {
 export default function Bot() {
   const navigate  = useNavigate();
   const [signals, setSignals]   = useState([]);
+  const [stats, setStats]       = useState(null);
   const [port, setPort]         = useState(3001);
   const [portInput, setPortInput] = useState('3001');
   const [tab, setTab]           = useState('signals');
@@ -474,10 +475,20 @@ export default function Bot() {
       if (portRes.ok) { setPort(portRes.data); setPortInput(String(portRes.data)); }
       const sigRes  = await window.bot.getSignals();
       if (sigRes.ok) setSignals(sigRes.data);
+      const stRes   = await window.bot.getStats();
+      if (stRes.ok) setStats(stRes.data);
     })();
 
     const onSignal = (sig) => {
-      setSignals(prev => [sig, ...prev].slice(0, 200));
+      setSignals(prev => [sig, ...prev].slice(0, 2000));
+      setStats(prev => prev ? {
+        ...prev,
+        total:  prev.total + 1,
+        longs:  (sig.signal ?? '').toUpperCase() === 'LONG'  ? prev.longs + 1 : prev.longs,
+        shorts: (sig.signal ?? '').toUpperCase() === 'SHORT' ? prev.shorts + 1 : prev.shorts,
+        newest: sig._receivedAt,
+        bots:   [...new Set([...(prev.bots ?? []), sig.bot].filter(Boolean))],
+      } : null);
       setTab('signals');
       if (flashRef.current) {
         flashRef.current.style.boxShadow = '0 0 40px rgba(0,255,136,0.4)';
@@ -494,9 +505,10 @@ export default function Bot() {
   }, []);
 
   async function handleClearSignals() {
-    if (!window.confirm('Effacer tout l\'historique des signaux ?')) return;
+    if (!window.confirm(`Effacer l'historique complet ? (${signals.length} signaux supprimés définitivement)`)) return;
     await window.bot.clearSignals();
     setSignals([]);
+    setStats(s => s ? { ...s, total: 0, longs: 0, shorts: 0, oldest: null, newest: null } : null);
   }
 
   async function handleSetPort() {
@@ -598,6 +610,32 @@ export default function Bot() {
           >EFFACER</button>
         )}
       </div>
+
+      {/* ── Bandeau historique persistant ── */}
+      {stats && stats.total > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '10px 16px', background: 'rgba(0,255,136,0.03)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00ff88', boxShadow: '0 0 6px #00ff88' }} />
+            <span style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px' }}>HISTORIQUE SAUVEGARDÉ</span>
+          </div>
+          <div style={{ display: 'flex', gap: '14px', flex: 1, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '12px', color: '#c8d8c8', fontWeight: '700' }}>{stats.total} signal{stats.total > 1 ? 's' : ''}</span>
+            <span style={{ fontSize: '12px', color: '#00ff88' }}>▲ {stats.longs} LONG</span>
+            <span style={{ fontSize: '12px', color: '#ff4455' }}>▼ {stats.shorts} SHORT</span>
+            {stats.oldest && (
+              <span style={{ fontSize: '11px', color: '#3a6a4a' }}>
+                depuis {fmtTime(stats.oldest)}
+              </span>
+            )}
+            {stats.bots?.length > 0 && (
+              <span style={{ fontSize: '11px', color: '#3a6a4a' }}>
+                {stats.bots.join(' · ')}
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: '9px', color: '#2a4a30', fontStyle: 'italic' }}>persisté au redémarrage</div>
+        </div>
+      )}
 
       {/* ── Tab: SIGNAUX ── */}
       {tab === 'signals' && (

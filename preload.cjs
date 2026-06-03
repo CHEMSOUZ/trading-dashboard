@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('bot', {
   clearSignals: ()       => ipcRenderer.invoke('bot:clearSignals'),
   getPort:      ()       => ipcRenderer.invoke('bot:getPort'),
   setPort:      (port)   => ipcRenderer.invoke('bot:setPort', port),
+  getStats:     ()       => ipcRenderer.invoke('bot:getStats'),
   onSignal:     (cb)     => ipcRenderer.on('bot:signal',       (_, d) => cb(d)),
   onServerReady:(cb)     => ipcRenderer.on('bot:server-ready', (_, d) => cb(d)),
   onServerError:(cb)     => ipcRenderer.on('bot:server-error', (_, d) => cb(d)),
