@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from 'recharts';
 
 // MNQ : 10 contrats × $2.00/pt = $20.00 par point
 const MNQ_CONTRACTS  = 10;
@@ -467,6 +468,350 @@ function SignalCard({ signal, onSave, isLatest }) {
   );
 }
 
+// ── Bot Stats helpers ─────────────────────────────────────────
+function pnlColor(v) { return v > 0 ? '#00ff88' : v < 0 ? '#ff4455' : '#8aaa90'; }
+function fmtUsd(n, sign = false) {
+  if (n == null || isNaN(n)) return '—';
+  return `${sign && n >= 0 ? '+' : ''}${n.toFixed(2)}$`;
+}
+function getTimeFrDec(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d);
+  const h = parseInt(parts.find(p => p.type === 'hour')?.value ?? '0');
+  const m = parseInt(parts.find(p => p.type === 'minute')?.value ?? '0');
+  return h + m / 60;
+}
+function getKZLabel(iso) {
+  const t = getTimeFrDec(iso);
+  if (t === null) return 'Hors KZ';
+  if (t >= 2    && t < 6)                return '🌏 Asia';
+  if (t >= 8    && t < 11)               return '🇬🇧 London';
+  if (t >= 13   && t < 17.5)             return '🗽 NY AM';
+  if (t >= 17.5 && t < 19.5)             return '🍽 NY Lunch';
+  if (t >= 19.5 && t < (22 + 14 / 60))   return '🗽 NY PM';
+  return 'Hors KZ';
+}
+function signalPnl(sig) {
+  const e  = parseFloat(sig.entry) || 0;
+  const sl = parseFloat(sig.sl)    || 0;
+  const tp = parseFloat(sig.tp2) || parseFloat(sig.tp1) || 0;
+  if (sig._outcome === 'win'  && tp && e) return  Math.abs(tp - e) * MNQ_PTS_TO_USD;
+  if (sig._outcome === 'loss' && sl && e) return -Math.abs(e - sl) * MNQ_PTS_TO_USD;
+  return 0;
+}
+function signalPts(sig) { return signalPnl(sig) / MNQ_PTS_TO_USD; }
+
+// ── GlobalView-style sub-components ──────────────────────────
+function BSStatCard({ label, value, sub, color = '#c8d8c8' }) {
+  return (
+    <div style={{ background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.08)', borderTop: `2px solid ${color}`, borderRadius: '6px', padding: '14px 16px' }}>
+      <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '6px' }}>{label}</div>
+      <div style={{ fontSize: '19px', fontWeight: '700', color, lineHeight: 1 }}>{value}</div>
+      {sub && <div style={{ fontSize: '11px', color: '#4a7a5a', marginTop: '5px' }}>{sub}</div>}
+    </div>
+  );
+}
+function BSSection({ title, children }) {
+  return (
+    <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', fontWeight: '700' }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+function BSInsight({ icon, title, value, desc, color }) {
+  const rgb = color === '#00ff88' ? '0,255,136' : color === '#ff4455' ? '255,68,85' : color === '#00aaff' ? '0,170,255' : color === '#f0c020' ? '240,192,32' : '170,136,255';
+  return (
+    <div style={{ background: `rgba(${rgb},0.06)`, border: `1px solid ${color}25`, borderRadius: '8px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ fontSize: '26px', flexShrink: 0 }}>{icon}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '3px' }}>{title}</div>
+        <div style={{ fontSize: '15px', fontWeight: '700', color, marginBottom: '2px' }}>{value}</div>
+        <div style={{ fontSize: '11px', color: '#4a7a5a' }}>{desc}</div>
+      </div>
+    </div>
+  );
+}
+function BSTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: 'rgba(6,18,12,0.97)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '4px', padding: '8px 12px', fontSize: '12px', fontFamily: 'inherit' }}>
+      <div style={{ color: '#3a6a4a', marginBottom: '4px' }}>{label}</div>
+      {payload.map((p, i) => (
+        <div key={i} style={{ color: (p.value ?? 0) >= 0 ? '#00ff88' : '#ff4455', fontWeight: '700' }}>
+          {fmtUsd(p.value, true)} · {p.payload?.wr ?? '—'}% WR
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── BotStats main component ───────────────────────────────────
+function BotStats({ signals }) {
+  const [filter, setFilter] = useState('ALL');
+  const [botFilter, setBotFilter] = useState('TOUS');
+
+  const rated  = signals.filter(s => s._outcome === 'win' || s._outcome === 'loss' || s._outcome === 'be');
+  const wins   = rated.filter(s => s._outcome === 'win');
+  const losses = rated.filter(s => s._outcome === 'loss');
+  const bes    = rated.filter(s => s._outcome === 'be');
+  const wl     = wins.length + losses.length;
+
+  const winrate  = wl > 0 ? Math.round(wins.length / wl * 100) : null;
+  const totalPnl = rated.reduce((s, sig) => s + signalPnl(sig), 0);
+  const grossW   = wins.reduce((s, sig) => s + signalPnl(sig), 0);
+  const grossL   = losses.reduce((s, sig) => s + Math.abs(signalPnl(sig)), 0);
+  const pf       = grossL > 0 ? grossW / grossL : grossW > 0 ? 999 : 0;
+
+  const rrVals = signals.filter(s => s.rr).map(s => parseFloat(String(s.rr).replace('1:', ''))).filter(v => !isNaN(v));
+  const avgRR  = rrVals.length > 0 ? (rrVals.reduce((a, b) => a + b, 0) / rrVals.length).toFixed(2) : null;
+
+  // ── By bot ────────────────────────────────────────────────
+  const botNames = [...new Set(signals.map(s => s.bot).filter(Boolean))];
+  const byBot = botNames.map(b => {
+    const bs   = rated.filter(s => s.bot === b);
+    const bw   = bs.filter(s => s._outcome === 'win').length;
+    const bpnl = bs.reduce((s, sig) => s + signalPnl(sig), 0);
+    return { label: b, total: bs.length, wins: bw, pnl: Math.round(bpnl * 100) / 100, wr: bs.length > 0 ? Math.round(bw / bs.length * 100) : 0 };
+  }).sort((a, b) => b.pnl - a.pnl);
+
+  // ── By direction ──────────────────────────────────────────
+  const byDir = ['LONG', 'SHORT'].map(dir => {
+    const ds   = rated.filter(s => (s.signal ?? s.direction ?? '').toUpperCase() === dir);
+    const dw   = ds.filter(s => s._outcome === 'win').length;
+    const dpnl = ds.reduce((s, sig) => s + signalPnl(sig), 0);
+    return { label: dir, total: ds.length, wins: dw, pnl: Math.round(dpnl * 100) / 100, wr: ds.length > 0 ? Math.round(dw / ds.length * 100) : 0 };
+  });
+
+  // ── By Kill Zone ──────────────────────────────────────────
+  const KZ_LABELS = ['🌏 Asia', '🇬🇧 London', '🗽 NY AM', '🍽 NY Lunch', '🗽 NY PM', 'Hors KZ'];
+  const byKZ = KZ_LABELS.map(kz => {
+    const ks   = rated.filter(s => getKZLabel(s._receivedAt) === kz);
+    const kw   = ks.filter(s => s._outcome === 'win').length;
+    const kpnl = ks.reduce((s, sig) => s + signalPnl(sig), 0);
+    return { label: kz, total: ks.length, wins: kw, pnl: Math.round(kpnl * 100) / 100, wr: ks.length > 0 ? Math.round(kw / ks.length * 100) : 0 };
+  }).filter(k => k.total > 0);
+
+  // ── Insights ──────────────────────────────────────────────
+  const bestBot   = [...byBot].sort((a, b) => b.pnl - a.pnl)[0];
+  const worstBot  = [...byBot].filter(b => b.pnl < 0).sort((a, b) => a.pnl - b.pnl)[0];
+  const bestDir   = [...byDir].filter(d => d.total > 0).sort((a, b) => b.pnl - a.pnl)[0];
+  const worstDir  = [...byDir].filter(d => d.total > 0).sort((a, b) => a.pnl - b.pnl)[0];
+  const bestKZ    = [...byKZ].sort((a, b) => b.pnl - a.pnl)[0];
+  const worstKZ   = [...byKZ].filter(k => k.pnl < 0).sort((a, b) => a.pnl - b.pnl)[0];
+
+  // ── Filtered signal list ──────────────────────────────────
+  const botList = ['TOUS', ...new Set(rated.map(s => s.bot).filter(Boolean))];
+  const listSignals = rated
+    .filter(s => filter === 'ALL' || s._outcome === filter.toLowerCase())
+    .filter(s => botFilter === 'TOUS' || s.bot === botFilter)
+    .sort((a, b) => (b._receivedAt ?? '').localeCompare(a._receivedAt ?? ''));
+
+  if (rated.length === 0) return (
+    <div style={{ textAlign: 'center', padding: '60px 20px', border: '1px dashed rgba(0,255,136,0.1)', borderRadius: '8px' }}>
+      <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.4 }}>📊</div>
+      <div style={{ fontSize: '13px', color: '#3a6a4a', marginBottom: '6px' }}>Aucun signal noté</div>
+      <div style={{ fontSize: '11px', color: '#2a4a30' }}>Utilise les boutons W / L / BE dans l'onglet SIGNAUX pour noter chaque position</div>
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+      {/* ── KPI ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
+        <BSStatCard label="P&L NET (10 MNQ)"  value={fmtUsd(totalPnl, true)}         color={pnlColor(totalPnl)}           sub={`Pts: ${(totalPnl / MNQ_PTS_TO_USD >= 0 ? '+' : '') + (totalPnl / MNQ_PTS_TO_USD).toFixed(2)}`} />
+        <BSStatCard label="WINRATE"            value={winrate != null ? `${winrate}%` : '—'} color={winrate != null && winrate >= 50 ? '#00ff88' : '#ff4455'} sub={`${wins.length}W · ${losses.length}L · ${bes.length}BE`} />
+        <BSStatCard label="PROFIT FACTOR"      value={pf === 999 ? '∞' : pf.toFixed(2)} color={pf >= 1.5 ? '#00ff88' : '#f0c020'} sub={`Gains $${grossW.toFixed(0)} / Pertes $${grossL.toFixed(0)}`} />
+        <BSStatCard label="R:R MOYEN"          value={avgRR ? `1:${avgRR}` : '—'}      color="#f0c020"                       sub={`${rrVals.length} signaux`} />
+        <BSStatCard label="SIGNAUX NOTÉS"      value={rated.length}                    color="#c8d8c8"                       sub={`sur ${signals.length} reçus`} />
+      </div>
+
+      {/* ── Points forts ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ height: '1px', flex: 1, background: 'rgba(0,255,136,0.1)' }} />
+        <span style={{ fontSize: '11px', color: '#00ff88', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>✅ POINTS FORTS</span>
+        <div style={{ height: '1px', flex: 1, background: 'rgba(0,255,136,0.1)' }} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+        {bestBot  && <BSInsight icon="🤖" title="MEILLEUR BOT"         value={bestBot.label}  desc={`${fmtUsd(bestBot.pnl, true)} · ${bestBot.wr}% WR · ${bestBot.total}T`}  color="#00ff88" />}
+        {bestDir  && <BSInsight icon="📊" title="MEILLEURE DIRECTION"  value={bestDir.label}  desc={`${fmtUsd(bestDir.pnl, true)} · ${bestDir.wr}% WR · ${bestDir.total}T`}  color="#00aaff" />}
+        {bestKZ   && <BSInsight icon="⏰" title="MEILLEURE SESSION KZ" value={bestKZ.label}   desc={`${fmtUsd(bestKZ.pnl, true)} · ${bestKZ.wr}% WR · ${bestKZ.total}T`}    color="#f0c020" />}
+      </div>
+
+      {/* ── Points faibles ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ height: '1px', flex: 1, background: 'rgba(255,68,85,0.1)' }} />
+        <span style={{ fontSize: '11px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>❌ POINTS FAIBLES</span>
+        <div style={{ height: '1px', flex: 1, background: 'rgba(255,68,85,0.1)' }} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+        {worstBot && <BSInsight icon="🤖" title="PIRE BOT"            value={worstBot.label} desc={`${fmtUsd(worstBot.pnl, true)} · ${worstBot.wr}% WR · ${worstBot.total}T`} color="#ff4455" />}
+        {worstDir && <BSInsight icon="📊" title="PIRE DIRECTION"      value={worstDir.label} desc={`${fmtUsd(worstDir.pnl, true)} · ${worstDir.wr}% WR · ${worstDir.total}T`} color="#ff4455" />}
+        {worstKZ  && <BSInsight icon="⏰" title="PIRE SESSION KZ"     value={worstKZ.label}  desc={`${fmtUsd(worstKZ.pnl, true)} · ${worstKZ.wr}% WR · ${worstKZ.total}T`}  color="#ff4455" />}
+      </div>
+
+      {/* ── Graphiques ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+
+        {/* By bot */}
+        {byBot.length > 0 && (
+          <BSSection title="🤖 P&L NET PAR BOT (10 MNQ)">
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={byBot} barSize={32} barCategoryGap="35%" margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
+                <CartesianGrid stroke="rgba(0,255,136,0.04)" strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fill: '#3a6a4a', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#3a6a4a', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} width={60} />
+                <Tooltip content={<BSTooltip />} />
+                <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
+                <Bar dataKey="pnl" radius={[3, 3, 0, 0]} maxBarSize={40}>
+                  {byBot.map((d, i) => <Cell key={i} fill={pnlColor(d.pnl)} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {byBot.map(b => (
+                <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', background: 'rgba(10,28,18,0.4)', borderRadius: '4px', borderLeft: `2px solid ${pnlColor(b.pnl)}` }}>
+                  <span style={{ fontSize: '12px', color: '#c8d8c8', flex: 1 }}>{b.label}</span>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: pnlColor(b.pnl) }}>{fmtUsd(b.pnl, true)}</span>
+                  <span style={{ fontSize: '11px', color: b.wr >= 50 ? '#00ff88' : '#ff4455' }}>{b.wr}% WR</span>
+                  <span style={{ fontSize: '11px', color: '#3a6a4a' }}>{b.total}T</span>
+                </div>
+              ))}
+            </div>
+          </BSSection>
+        )}
+
+        {/* By direction */}
+        <BSSection title="📊 P&L NET PAR DIRECTION (10 MNQ)">
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={byDir.filter(d => d.total > 0)} barSize={48} barCategoryGap="40%" margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
+              <CartesianGrid stroke="rgba(0,255,136,0.04)" strokeDasharray="3 3" />
+              <XAxis dataKey="label" tick={{ fill: '#3a6a4a', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#3a6a4a', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} width={60} />
+              <Tooltip content={<BSTooltip />} />
+              <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
+              <Bar dataKey="pnl" radius={[3, 3, 0, 0]} maxBarSize={60}>
+                {byDir.filter(d => d.total > 0).map((d, i) => <Cell key={i} fill={d.label === 'LONG' ? '#00ff88' : '#ff4455'} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            {byDir.filter(d => d.total > 0).map(d => (
+              <div key={d.label} style={{ background: 'rgba(10,28,18,0.4)', borderRadius: '6px', padding: '10px 14px', borderLeft: `3px solid ${d.label === 'LONG' ? '#00ff88' : '#ff4455'}` }}>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: d.label === 'LONG' ? '#00ff88' : '#ff4455', marginBottom: '4px' }}>{d.label}</div>
+                <div style={{ fontSize: '16px', fontWeight: '700', color: pnlColor(d.pnl) }}>{fmtUsd(d.pnl, true)}</div>
+                <div style={{ fontSize: '11px', color: '#4a7a5a', marginTop: '3px' }}>{d.wr}% WR · {d.wins}W {d.total - d.wins}L</div>
+              </div>
+            ))}
+          </div>
+        </BSSection>
+      </div>
+
+      {/* ── Kill Zones ── */}
+      {byKZ.length > 0 && (
+        <BSSection title="⏰ P&L NET PAR SESSION KILL ZONE (10 MNQ)">
+          <ResponsiveContainer width="100%" height={140}>
+            <BarChart data={byKZ} barSize={28} barCategoryGap="30%" margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
+              <CartesianGrid stroke="rgba(0,255,136,0.04)" strokeDasharray="3 3" />
+              <XAxis dataKey="label" tick={{ fill: '#3a6a4a', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#3a6a4a', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} width={60} />
+              <Tooltip content={<BSTooltip />} />
+              <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
+              <Bar dataKey="pnl" radius={[3, 3, 0, 0]} maxBarSize={36}>
+                {byKZ.map((k, i) => <Cell key={i} fill={pnlColor(k.pnl)} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {byKZ.map(k => (
+              <div key={k.label} style={{ background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.06)', borderRadius: '5px', padding: '6px 10px', textAlign: 'center' }}>
+                <div style={{ fontSize: '11px', color: '#4a7a5a', marginBottom: '2px' }}>{k.label}</div>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: pnlColor(k.pnl) }}>{fmtUsd(k.pnl, true)}</div>
+                <div style={{ fontSize: '10px', color: k.wr >= 50 ? '#00ff88' : '#ff4455' }}>{k.wr}% WR · {k.total}T</div>
+              </div>
+            ))}
+          </div>
+        </BSSection>
+      )}
+
+      {/* ── Tableau des signaux notés ── */}
+      <BSSection title={`📋 TOUS LES SIGNAUX NOTÉS (${rated.length})`}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {['ALL', 'WIN', 'LOSS', 'BE'].map(f => {
+            const c = f === 'WIN' ? '#00ff88' : f === 'LOSS' ? '#ff4455' : f === 'BE' ? '#f0c020' : '#c8d8c8';
+            const count = f === 'ALL' ? rated.length : f === 'WIN' ? wins.length : f === 'LOSS' ? losses.length : bes.length;
+            return (
+              <button key={f} onClick={() => setFilter(f)}
+                style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${filter === f ? c : '#1a3a22'}`, background: filter === f ? `${c}18` : 'transparent', color: filter === f ? c : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>
+                {f} ({count})
+              </button>
+            );
+          })}
+          {botList.length > 2 && botList.map(b => (
+            <button key={b} onClick={() => setBotFilter(b)}
+              style={{ padding: '4px 10px', borderRadius: '4px', border: `1px solid ${botFilter === b ? '#aa88ff' : 'rgba(0,255,136,0.08)'}`, background: botFilter === b ? 'rgba(170,136,255,0.12)' : 'transparent', color: botFilter === b ? '#aa88ff' : '#3a5a3a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>
+              {b}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ overflowX: 'auto', maxHeight: '420px', overflowY: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+            <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+              <tr style={{ background: 'rgba(6,12,8,0.95)', borderBottom: '1px solid rgba(0,255,136,0.08)' }}>
+                {['HEURE', 'BOT', 'DIR', 'ENTRY', 'SL', 'TP2', 'R:R', 'PTS', 'P&L (10 MNQ)', 'SESSION KZ', 'RÉSULTAT'].map(h => (
+                  <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: '9px', color: '#3a6a4a', letterSpacing: '1.5px', fontWeight: '700', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {listSignals.length === 0 && (
+                <tr><td colSpan={11} style={{ padding: '24px', textAlign: 'center', color: '#2a4a30', fontSize: '12px' }}>Aucun signal</td></tr>
+              )}
+              {listSignals.map((sig, i) => {
+                const dir    = (sig.signal ?? sig.direction ?? '').toUpperCase();
+                const isL    = dir === 'LONG';
+                const pnl    = signalPnl(sig);
+                const pts    = signalPts(sig);
+                const oc     = sig._outcome;
+                const ocC    = oc === 'win' ? '#00ff88' : oc === 'loss' ? '#ff4455' : '#f0c020';
+                const ocTxt  = oc === 'win' ? '✅ WIN' : oc === 'loss' ? '❌ LOSS' : '🔄 BE';
+                const kzLabel = getKZLabel(sig._receivedAt);
+                return (
+                  <tr key={sig._id ?? i}
+                    style={{ borderBottom: '1px solid rgba(0,255,136,0.04)', borderLeft: `2px solid ${pnlColor(pnl)}` }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.03)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <td style={{ padding: '7px 10px', color: '#4a7a5a', fontSize: '11px', whiteSpace: 'nowrap' }}>{fmtTime(sig._receivedAt)}</td>
+                    <td style={{ padding: '7px 10px', fontSize: '10px', color: '#aa88ff' }}>{sig.bot ?? '—'}</td>
+                    <td style={{ padding: '7px 10px' }}>
+                      <span style={{ color: isL ? '#00ff88' : '#ff4455', background: `rgba(${isL ? '0,255,136' : '255,68,85'},0.08)`, padding: '1px 5px', borderRadius: '3px', fontSize: '11px', fontWeight: '600' }}>{dir}</span>
+                    </td>
+                    <td style={{ padding: '7px 10px', color: '#8aaa90' }}>{parseFloat(sig.entry)?.toFixed(2) ?? '—'}</td>
+                    <td style={{ padding: '7px 10px', color: '#ff7788' }}>{parseFloat(sig.sl)?.toFixed(2) ?? '—'}</td>
+                    <td style={{ padding: '7px 10px', color: '#00ff88' }}>{parseFloat(sig.tp2)?.toFixed(2) ?? parseFloat(sig.tp1)?.toFixed(2) ?? '—'}</td>
+                    <td style={{ padding: '7px 10px', color: '#f0c020' }}>{sig.rr ?? '—'}</td>
+                    <td style={{ padding: '7px 10px', color: pnlColor(pts), fontWeight: '600' }}>{pts ? `${pts >= 0 ? '+' : ''}${pts.toFixed(2)}` : '—'}</td>
+                    <td style={{ padding: '7px 10px', color: pnlColor(pnl), fontWeight: '700' }}>{fmtUsd(pnl, true)}</td>
+                    <td style={{ padding: '7px 10px', fontSize: '10px', color: '#3a6a4a', whiteSpace: 'nowrap' }}>{kzLabel}</td>
+                    <td style={{ padding: '7px 10px' }}>
+                      <span style={{ fontSize: '10px', fontWeight: '700', color: ocC, background: `${ocC}15`, border: `1px solid ${ocC}40`, padding: '2px 7px', borderRadius: '3px' }}>{ocTxt}</span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </BSSection>
+    </div>
+  );
+}
+
 // ── Custom TradingView Input ──────────────────────────────────
 function CustomTVInput() {
   const [sym, setSym]   = useState('CME_MINI:MNQ1!');
@@ -639,7 +984,7 @@ export default function Bot() {
       <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid rgba(0,255,136,0.08)', paddingBottom: '0' }}>
         {[
           { key: 'signals', label: `SIGNAUX${signals.length > 0 ? ` (${signals.length})` : ''}` },
-
+          { key: 'stats',   label: 'STATS' },
           { key: 'chart',   label: 'GRAPHIQUE TV' },
           { key: 'setup',   label: 'CONFIGURATION' },
           { key: 'pine',    label: 'PINE SCRIPT' },
@@ -816,6 +1161,9 @@ export default function Bot() {
           )}
         </div>
       )}
+
+      {/* ── Tab: STATS ── */}
+      {tab === 'stats' && <BotStats signals={filtered} />}
 
       {/* ── Tab: GRAPHIQUE TV ── */}
       {tab === 'chart' && (
