@@ -16,10 +16,17 @@ let globalDb     = null;
 let globalDbPath = null;
 
 // ── Bot webhook server ────────────────────────────────────────
-let botServer    = null;
-let botPort      = 3001;
-let botSignals   = [];
+let botServer      = null;
+let botPort        = 3001;
+let botSignals     = [];
 let botSignalsFile = null;
+let webhookLogs    = []; // max 50 dernières requêtes
+
+function pushWebhookLog(entry) {
+  webhookLogs.unshift(entry);
+  if (webhookLogs.length > 50) webhookLogs = webhookLogs.slice(0, 50);
+  mainWindow?.webContents.send('bot:webhook-log', entry);
+}
 
 function loadBotSignalsFromFile() {
   try {
@@ -47,15 +54,20 @@ function startBotServer(port) {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
     if (req.method === 'POST' && req.url === '/webhook') {
+      const from = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '?';
       let body = '';
       req.on('data', chunk => { body += chunk; if (body.length > 8192) req.destroy(); });
       req.on('end', () => {
+        const ts = new Date().toISOString();
         try {
           const signal = JSON.parse(body);
+          const logType = signal.type === 'bar' ? 'bar' : signal.type === 'close' ? 'close' : 'signal';
+          const logLabel = signal.type === 'bar' ? `BAR ${signal.bot ?? ''}` : signal.type === 'close' ? `CLOSE ${signal.result?.toUpperCase() ?? ''} ${signal.bot ?? ''}` : `${(signal.signal ?? signal.direction ?? '').toUpperCase() || 'SIGNAL'} ${signal.bot ?? ''} ${signal.symbol ?? ''}`;
+          pushWebhookLog({ ts, from, type: logType, label: logLabel.trim(), status: 200 });
 
           // ── Signal de fermeture automatique (TP/SL détecté par TV) ──
           if (signal.type === 'close') {
-            const outcome  = signal.result; // 'win' | 'loss'
+            const outcome  = signal.result; // 'win' | 'loss' | 'be'
             const botName  = signal.bot;
             const target   = botSignals.find(s =>
               !s.type && !s._outcome &&
@@ -133,6 +145,7 @@ function startBotServer(port) {
           res.end(JSON.stringify({ ok: true }));
         } catch(e) {
           console.error('[webhook] JSON parse error:', e.message, '| body:', body.slice(0, 300));
+          pushWebhookLog({ ts: new Date().toISOString(), from, type: 'error', label: `400 JSON INVALIDE — ${body.slice(0, 60)}`, status: 400 });
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: false, error: 'Invalid JSON', body: body.slice(0, 200) }));
         }
@@ -243,9 +256,10 @@ function registerHandlers() {
   ipcMain.handle('shell:openExternal', (_, url) => { shell.openExternal(url); return { ok: true }; });
 
   // ── Bot handlers ──────────────────────────────────────────
-  ipcMain.handle('bot:getSignals',  () => ({ ok: true, data: botSignals }));
-  ipcMain.handle('bot:clearSignals',() => { botSignals = []; saveBotSignalsToFile(); return { ok: true }; });
-  ipcMain.handle('bot:getPort',     () => ({ ok: true, data: botPort }));
+  ipcMain.handle('bot:getSignals',     () => ({ ok: true, data: botSignals }));
+  ipcMain.handle('bot:clearSignals',   () => { botSignals = []; saveBotSignalsToFile(); return { ok: true }; });
+  ipcMain.handle('bot:getPort',        () => ({ ok: true, data: botPort }));
+  ipcMain.handle('bot:getWebhookLogs', () => ({ ok: true, data: webhookLogs }));
   ipcMain.handle('bot:setPort',     (_, port) => {
     try { startBotServer(parseInt(port) || 3001); return { ok: true, data: botPort }; }
     catch(e) { return { ok: false, error: e.message }; }

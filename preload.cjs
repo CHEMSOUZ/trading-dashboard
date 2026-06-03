@@ -46,10 +46,13 @@ contextBridge.exposeInMainWorld('bot', {
   setPort:      (port)   => ipcRenderer.invoke('bot:setPort', port),
   getStats:      ()           => ipcRenderer.invoke('bot:getStats'),
   updateOutcome: (id, outcome) => ipcRenderer.invoke('bot:updateOutcome', id, outcome),
+  getWebhookLogs:  ()   => ipcRenderer.invoke('bot:getWebhookLogs'),
   onSignal:        (cb) => ipcRenderer.on('bot:signal',          (_, d) => cb(d)),
   onServerReady:   (cb) => ipcRenderer.on('bot:server-ready',    (_, d) => cb(d)),
   onServerError:   (cb) => ipcRenderer.on('bot:server-error',    (_, d) => cb(d)),
   onOutcomeUpdate: (cb) => ipcRenderer.on('bot:outcome-update',  (_, d) => cb(d)),
+  onWebhookLog:    (cb) => ipcRenderer.on('bot:webhook-log',     (_, d) => cb(d)),
   offSignal:       (cb) => ipcRenderer.removeListener('bot:signal', cb),
   offOutcomeUpdate:(cb) => ipcRenderer.removeListener('bot:outcome-update', cb),
+  offWebhookLog:   (cb) => ipcRenderer.removeListener('bot:webhook-log', cb),
 });

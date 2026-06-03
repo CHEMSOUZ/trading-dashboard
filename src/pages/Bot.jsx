@@ -1320,9 +1320,10 @@ export default function Bot() {
   const [selectedBot, setSelectedBot] = useState('TOUS');
   const [selectedPine, setSelectedPine] = useState('standard');
   const [copied, setCopied]     = useState('');
-  const [saving, setSaving]     = useState(false);
-  const [saveMsg, setSaveMsg]   = useState('');
-  const [serverOk, setServerOk] = useState(true);
+  const [saving, setSaving]       = useState(false);
+  const [saveMsg, setSaveMsg]     = useState('');
+  const [serverOk, setServerOk]   = useState(true);
+  const [webhookLogs, setWebhookLogs] = useState([]);
   const flashRef = useRef(null);
 
   useEffect(() => {
@@ -1362,13 +1363,18 @@ export default function Bot() {
       ));
     };
 
+    window.bot.getWebhookLogs().then(r => { if (r.ok) setWebhookLogs(r.data); });
+    const onLog = (entry) => setWebhookLogs(prev => [entry, ...prev].slice(0, 50));
+
     window.bot.onSignal(onSignal);
     window.bot.onServerReady(onReady);
     window.bot.onServerError(onError);
     window.bot.onOutcomeUpdate(onOutcome);
+    window.bot.onWebhookLog(onLog);
     return () => {
       window.bot.offSignal(onSignal);
       window.bot.offOutcomeUpdate(onOutcome);
+      window.bot.offWebhookLog(onLog);
     };
   }, []);
 
@@ -1898,6 +1904,41 @@ export default function Bot() {
               <span style={{ color: '#c8d8c8' }}>① Clique TESTER</span> — si ça fonctionne, le serveur local est OK → le problème est <strong style={{ color: '#f0c020' }}>ngrok ou TradingView</strong><br/>
               <span style={{ color: '#c8d8c8' }}>② Vérifie que ngrok tourne</span> avec la bonne URL dans l'alerte TradingView<br/>
               <span style={{ color: '#c8d8c8' }}>③ Dans TradingView → Alerte</span> : condition = <strong style={{ color: '#00ff88' }}>"Alert() function calls only"</strong>, message = <strong style={{ color: '#00ff88' }}>vide</strong>
+            </div>
+          </div>
+
+          {/* ── LOG WEBHOOK EN TEMPS RÉEL ── */}
+          <div style={{ background: 'rgba(4,12,8,0.8)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: '8px', padding: '14px 18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+              <div style={{ fontSize: '10px', color: '#00ff88', letterSpacing: '2px', fontWeight: '700' }}>📡 LOG WEBHOOK — TEMPS RÉEL</div>
+              <span style={{ fontSize: '10px', color: '#3a6a4a' }}>{webhookLogs.length} requête{webhookLogs.length > 1 ? 's' : ''}</span>
+              {webhookLogs.length > 0 && (
+                <button onClick={() => setWebhookLogs([])} style={{ marginLeft: 'auto', fontSize: '9px', padding: '1px 7px', background: 'transparent', border: '1px solid rgba(255,68,85,0.2)', borderRadius: '3px', color: '#4a2a2a', cursor: 'pointer', fontFamily: 'inherit' }}>EFFACER</button>
+              )}
+            </div>
+            {webhookLogs.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '20px', fontSize: '11px', color: '#2a4a30' }}>
+                Aucune requête reçue — les alertes TradingView apparaîtront ici en temps réel
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '220px', overflowY: 'auto' }}>
+                {webhookLogs.map((log, i) => {
+                  const typeColor = log.status === 400 ? '#ff4455' : log.type === 'signal' ? '#00ff88' : log.type === 'close' ? '#00aaff' : '#3a6a4a';
+                  const typeBg = log.status === 400 ? 'rgba(255,68,85,0.08)' : log.type === 'signal' ? 'rgba(0,255,136,0.05)' : 'rgba(10,28,18,0.4)';
+                  const time = log.ts ? new Date(log.ts).toLocaleTimeString('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 8px', background: typeBg, borderRadius: '4px', borderLeft: `2px solid ${typeColor}` }}>
+                      <span style={{ fontSize: '9px', color: '#3a6a4a', minWidth: '50px', fontFamily: 'monospace' }}>{time}</span>
+                      <span style={{ fontSize: '9px', background: `${typeColor}20`, color: typeColor, padding: '0px 5px', borderRadius: '2px', fontWeight: '700', minWidth: '45px', textAlign: 'center' }}>{log.status}</span>
+                      <span style={{ fontSize: '10px', color: log.status === 400 ? '#ff7766' : '#8aaa90', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.label}</span>
+                      <span style={{ fontSize: '9px', color: '#2a4a30', fontFamily: 'monospace' }}>{log.from?.replace('::ffff:', '') ?? ''}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{ marginTop: '10px', fontSize: '10px', color: '#2a5a3a', lineHeight: '1.6' }}>
+              Si les alertes TradingView <strong style={{ color: '#c8d8c8' }}>n'apparaissent pas ici</strong> mais que le test local fonctionne → <strong style={{ color: '#f0c020' }}>ngrok n'est plus actif ou l'URL a changé.</strong> Relance ngrok et mets à jour l'URL dans TradingView.
             </div>
           </div>
 
