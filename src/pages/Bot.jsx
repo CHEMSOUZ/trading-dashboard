@@ -1263,7 +1263,7 @@ export default function Bot() {
   }, []);
 
   async function handleUpdateOutcome(id, current, outcome) {
-    const next = current === outcome ? null : outcome;
+    const next = outcome === 'skip' ? 'skip' : (current === outcome ? null : outcome);
     await window.bot.updateOutcome(id, next);
     setSignals(prev => prev.map(s => String(s._id) === String(id)
       ? { ...s, _outcome: next === null ? undefined : next }
@@ -1529,6 +1529,12 @@ export default function Bot() {
                                       >{label}</button>
                                     );
                                   })}
+                                  <button onClick={() => { if (window.confirm('Ignorer ce signal ? Il sera retiré de EN COURS sans résultat.')) handleUpdateOutcome(sig._id, sig._outcome, 'skip'); }}
+                                    style={{ padding: '2px 6px', borderRadius: '3px', border: '1px solid rgba(100,100,100,0.2)', background: 'transparent', color: '#3a3a3a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s' }}
+                                    onMouseEnter={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'rgba(100,100,100,0.4)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.color = '#3a3a3a'; e.currentTarget.style.borderColor = 'rgba(100,100,100,0.2)'; }}
+                                    title="Ignorer — sortie manuelle, non comptabilisé"
+                                  >✕</button>
                                 </div>
                               </td>
                               <td style={{ padding: '6px 8px' }}>

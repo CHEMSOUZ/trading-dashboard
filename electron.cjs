@@ -80,11 +80,19 @@ function startBotServer(port) {
             const l       = parseFloat(signal.l);
             const botName = signal.bot;
             if (!isNaN(h) && !isNaN(l)) {
-              const opens = botSignals.filter(s =>
+              // Filtre principal : même bot
+              let opens = botSignals.filter(s =>
                 !s.type && !s._outcome &&
                 (!botName || s.bot === botName) &&
                 (s.tp || s.tp2 || s.tp1) && s.sl && (s.signal || s.direction)
               );
+              // Fallback : signaux sans champ bot (anciens signaux)
+              if (opens.length === 0 && botName) {
+                opens = botSignals.filter(s =>
+                  !s.type && !s._outcome && !s.bot &&
+                  (s.tp || s.tp2 || s.tp1) && s.sl && (s.signal || s.direction)
+                );
+              }
               let changed = false;
               for (const sig of opens) {
                 const tp  = parseFloat(sig.tp) || parseFloat(sig.tp2) || parseFloat(sig.tp1);
