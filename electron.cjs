@@ -83,19 +83,19 @@ function startBotServer(port) {
               const opens = botSignals.filter(s =>
                 !s.type && !s._outcome &&
                 (!botName || s.bot === botName) &&
-                s.tp2 && s.sl && (s.signal || s.direction)
+                (s.tp || s.tp2 || s.tp1) && s.sl && (s.signal || s.direction)
               );
               let changed = false;
               for (const sig of opens) {
-                const tp2 = parseFloat(sig.tp2);
+                const tp  = parseFloat(sig.tp) || parseFloat(sig.tp2) || parseFloat(sig.tp1);
                 const sl  = parseFloat(sig.sl);
                 const dir = (sig.signal || sig.direction || '').toUpperCase();
                 let outcome = null;
                 if (dir === 'LONG') {
-                  if (h >= tp2)      outcome = 'win';
+                  if (h >= tp)       outcome = 'win';
                   else if (l <= sl)  outcome = 'loss';
                 } else if (dir === 'SHORT') {
-                  if (l <= tp2)      outcome = 'win';
+                  if (l <= tp)       outcome = 'win';
                   else if (h >= sl)  outcome = 'loss';
                 }
                 if (outcome) {

@@ -1304,7 +1304,7 @@ export default function Bot() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                       <thead>
                         <tr style={{ background: 'rgba(240,192,32,0.03)', borderBottom: '1px solid rgba(240,192,32,0.07)' }}>
-                          {['HEURE', 'TF', 'DIR', 'ENTRY', 'SL', 'TP1', 'TP2', 'R:R', 'CONTEXTE', 'RÉSULTAT', ''].map(h => (
+                          {['HEURE', 'TF', 'DIR', 'ENTRY', 'SL', 'TP', 'R:R', 'CONTEXTE', 'RÉSULTAT', ''].map(h => (
                             <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: '9px', color: '#5a6a3a', letterSpacing: '1.5px', fontWeight: '700' }}>{h}</th>
                           ))}
                         </tr>
@@ -1315,6 +1315,8 @@ export default function Bot() {
                           const isL   = dir === 'LONG';
                           const color = isL ? '#00ff88' : '#ff4455';
                           const time  = fmtTime(sig._receivedAt);
+                          const tp    = parseFloat(sig.tp) || parseFloat(sig.tp2) || parseFloat(sig.tp1) || null;
+                          const tf    = fmtTf(sig.timeframe);
                           return (
                             <tr key={sig._id ?? i} style={{ borderBottom: '1px solid rgba(240,192,32,0.04)', transition: 'background 0.1s' }}
                               onMouseEnter={e => e.currentTarget.style.background = 'rgba(240,192,32,0.02)'}
@@ -1322,16 +1324,15 @@ export default function Bot() {
                             >
                               <td style={{ padding: '8px 10px', color: '#5a8a6a' }}>{time}</td>
                               <td style={{ padding: '8px 6px' }}>
-                                {fmtTf(sig.timeframe)
-                                  ? <span style={{ fontSize: '10px', color: '#b09020', background: 'rgba(240,192,32,0.08)', border: '1px solid rgba(240,192,32,0.2)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{fmtTf(sig.timeframe)}</span>
+                                {tf
+                                  ? <span style={{ fontSize: '10px', color: '#b09020', background: 'rgba(240,192,32,0.08)', border: '1px solid rgba(240,192,32,0.2)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{tf}</span>
                                   : <span style={{ fontSize: '10px', color: '#3a4a2a' }}>—</span>
                                 }
                               </td>
                               <td style={{ padding: '8px 10px', fontWeight: '700', color }}>{isL ? '▲' : '▼'} {dir}</td>
                               <td style={{ padding: '8px 10px', color: '#c8d8c8' }}>{parseFloat(sig.entry)?.toFixed(2) ?? '—'}</td>
                               <td style={{ padding: '8px 10px', color: '#ff7788' }}>{parseFloat(sig.sl)?.toFixed(2) ?? '—'}</td>
-                              <td style={{ padding: '8px 10px', color: '#00cc66' }}>{parseFloat(sig.tp1)?.toFixed(2) ?? '—'}</td>
-                              <td style={{ padding: '8px 10px', color: '#00ff88' }}>{parseFloat(sig.tp2)?.toFixed(2) ?? '—'}</td>
+                              <td style={{ padding: '8px 10px', color: '#00ff88' }}>{tp?.toFixed(2) ?? '—'}</td>
                               <td style={{ padding: '8px 10px', color }}>{sig.rr || '—'}</td>
                               <td style={{ padding: '8px 10px', color: '#4a7a5a', fontSize: '10px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sig.context || '—'}</td>
                               <td style={{ padding: '6px 8px' }}>
@@ -1384,18 +1385,20 @@ export default function Bot() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                       <thead>
                         <tr style={{ background: 'rgba(0,255,136,0.04)', borderBottom: '1px solid rgba(0,255,136,0.08)' }}>
-                          {['HEURE', 'TF', 'DIR', 'ENTRY', 'SL', 'TP1', 'TP2', 'R:R', 'CONTEXTE', 'RÉSULTAT', ''].map(h => (
+                          {['HEURE', 'TF', 'DIR', 'ENTRY', 'SL', 'TP', 'R:R', 'CONTEXTE', 'RÉSULTAT', ''].map(h => (
                             <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: '9px', color: '#3a6a4a', letterSpacing: '1.5px', fontWeight: '700' }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {completedSignals.map((sig, i) => {
-                          const dir   = (sig.signal ?? sig.direction ?? '').toUpperCase();
-                          const isL   = dir === 'LONG';
-                          const color = isL ? '#00ff88' : '#ff4455';
-                          const time  = fmtTime(sig._receivedAt);
+                          const dir      = (sig.signal ?? sig.direction ?? '').toUpperCase();
+                          const isL      = dir === 'LONG';
+                          const color    = isL ? '#00ff88' : '#ff4455';
+                          const time     = fmtTime(sig._receivedAt);
                           const outColor = sig._outcome === 'win' ? '#00ff88' : sig._outcome === 'loss' ? '#ff4455' : '#f0c020';
+                          const tp       = parseFloat(sig.tp) || parseFloat(sig.tp2) || parseFloat(sig.tp1) || null;
+                          const tf       = fmtTf(sig.timeframe);
                           return (
                             <tr key={sig._id ?? i} style={{ borderBottom: '1px solid rgba(0,255,136,0.04)', transition: 'background 0.1s', borderLeft: `2px solid ${outColor}25` }}
                               onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.03)'}
@@ -1403,16 +1406,15 @@ export default function Bot() {
                             >
                               <td style={{ padding: '8px 10px', color: '#5a8a6a' }}>{time}</td>
                               <td style={{ padding: '8px 6px' }}>
-                                {fmtTf(sig.timeframe)
-                                  ? <span style={{ fontSize: '10px', color: '#3a9a5a', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.12)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{fmtTf(sig.timeframe)}</span>
+                                {tf
+                                  ? <span style={{ fontSize: '10px', color: '#3a9a5a', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.12)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{tf}</span>
                                   : <span style={{ fontSize: '10px', color: '#2a4a30' }}>—</span>
                                 }
                               </td>
                               <td style={{ padding: '8px 10px', fontWeight: '700', color }}>{isL ? '▲' : '▼'} {dir}</td>
                               <td style={{ padding: '8px 10px', color: '#c8d8c8' }}>{parseFloat(sig.entry)?.toFixed(2) ?? '—'}</td>
                               <td style={{ padding: '8px 10px', color: '#ff7788' }}>{parseFloat(sig.sl)?.toFixed(2) ?? '—'}</td>
-                              <td style={{ padding: '8px 10px', color: '#00cc66' }}>{parseFloat(sig.tp1)?.toFixed(2) ?? '—'}</td>
-                              <td style={{ padding: '8px 10px', color: '#00ff88' }}>{parseFloat(sig.tp2)?.toFixed(2) ?? '—'}</td>
+                              <td style={{ padding: '8px 10px', color: '#00ff88' }}>{tp?.toFixed(2) ?? '—'}</td>
                               <td style={{ padding: '8px 10px', color }}>{sig.rr || '—'}</td>
                               <td style={{ padding: '8px 10px', color: '#4a7a5a', fontSize: '10px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sig.context || '—'}</td>
                               <td style={{ padding: '6px 8px' }}>
