@@ -1393,9 +1393,9 @@ export default function Bot() {
   const webhookUrl       = `http://localhost:${port}/webhook`;
   const botIds           = ['TOUS', ...Array.from(new Set(signals.map(s => s.bot).filter(Boolean)))];
   const filtered         = selectedBot === 'TOUS' ? signals : signals.filter(s => s.bot === selectedBot);
-  const latest           = filtered[0] ?? null;
+  const latest           = signals[0] ?? null; // toujours le signal le plus récent, tous bots confondus
   const activePine       = PINE_BOTS.find(b => b.id === selectedPine) ?? PINE_BOTS[0];
-  const activeSignals    = filtered.filter(s => !s._outcome);
+  const activeSignals    = signals.filter(s => !s._outcome); // TOUS bots — aucune position ouverte cachée
   const completedSignals = filtered.filter(s => s._outcome === 'win' || s._outcome === 'loss' || s._outcome === 'be');
 
   const inp = { background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.15)', borderRadius: '5px', padding: '7px 10px', color: '#c8d8c8', fontSize: '12px', fontFamily: 'inherit', outline: 'none', width: '80px', boxSizing: 'border-box' };
@@ -1494,14 +1494,20 @@ export default function Bot() {
           {botIds.length > 1 && (
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
               {botIds.map(bid => {
-                const bot  = PINE_BOTS.find(b => b.botId === bid);
-                const c    = bid === 'TOUS' ? '#c8d8c8' : (bot?.color ?? '#aa88ff');
-                const cnt  = bid === 'TOUS' ? signals.length : signals.filter(s => s.bot === bid).length;
-                const sel  = selectedBot === bid;
+                const bot      = PINE_BOTS.find(b => b.botId === bid);
+                const c        = bid === 'TOUS' ? '#c8d8c8' : (bot?.color ?? '#aa88ff');
+                const cnt      = bid === 'TOUS' ? signals.length : signals.filter(s => s.bot === bid).length;
+                const activeCnt = bid === 'TOUS'
+                  ? signals.filter(s => !s._outcome).length
+                  : signals.filter(s => s.bot === bid && !s._outcome).length;
+                const sel      = selectedBot === bid;
                 return (
                   <button key={bid} onClick={() => setSelectedBot(bid)}
-                    style={{ padding: '5px 14px', borderRadius: '4px', border: `1px solid ${sel ? c + '80' : 'rgba(0,255,136,0.1)'}`, background: sel ? `${c}15` : 'transparent', color: sel ? c : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', fontWeight: sel ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '1px' }}>
+                    style={{ padding: '5px 14px', borderRadius: '4px', border: `1px solid ${sel ? c + '80' : 'rgba(0,255,136,0.1)'}`, background: sel ? `${c}15` : 'transparent', color: sel ? c : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', fontWeight: sel ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '1px', position: 'relative' }}>
                     {bid} <span style={{ opacity: 0.6 }}>({cnt})</span>
+                    {activeCnt > 0 && (
+                      <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#f0c020', color: '#1a1a00', fontSize: '8px', fontWeight: '900', borderRadius: '8px', padding: '0px 4px', minWidth: '14px', textAlign: 'center', lineHeight: '14px', animation: 'pulse 2s infinite' }}>{activeCnt}</span>
+                    )}
                   </button>
                 );
               })}
@@ -1566,25 +1572,33 @@ export default function Bot() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                       <thead>
                         <tr style={{ background: 'rgba(240,192,32,0.03)', borderBottom: '1px solid rgba(240,192,32,0.07)' }}>
-                          {['HEURE', 'TF', 'DIR', 'ENTRY', 'SL', 'TP', 'R:R', 'CONTEXTE', 'RÉSULTAT', ''].map(h => (
+                          {['HEURE', 'BOT', 'TF', 'DIR', 'ENTRY', 'SL', 'TP', 'R:R', 'CONTEXTE', 'RÉSULTAT', ''].map(h => (
                             <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: '9px', color: '#5a6a3a', letterSpacing: '1.5px', fontWeight: '700' }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {activeSignals.map((sig, i) => {
-                          const dir   = (sig.signal ?? sig.direction ?? '').toUpperCase();
-                          const isL   = dir === 'LONG';
-                          const color = isL ? '#00ff88' : '#ff4455';
-                          const time  = fmtTime(sig._receivedAt);
-                          const tp    = parseFloat(sig.tp) || parseFloat(sig.tp2) || parseFloat(sig.tp1) || null;
-                          const tf    = fmtTf(sig.timeframe);
+                          const dir     = (sig.signal ?? sig.direction ?? '').toUpperCase();
+                          const isL     = dir === 'LONG';
+                          const color   = isL ? '#00ff88' : '#ff4455';
+                          const time    = fmtTime(sig._receivedAt);
+                          const tp      = parseFloat(sig.tp) || parseFloat(sig.tp2) || parseFloat(sig.tp1) || null;
+                          const tf      = fmtTf(sig.timeframe);
+                          const botMeta = PINE_BOTS.find(b => b.botId === sig.bot);
+                          const botColor = botMeta?.color ?? '#aa88ff';
                           return (
                             <tr key={sig._id ?? i} style={{ borderBottom: '1px solid rgba(240,192,32,0.04)', transition: 'background 0.1s' }}
                               onMouseEnter={e => e.currentTarget.style.background = 'rgba(240,192,32,0.02)'}
                               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             >
                               <td style={{ padding: '8px 10px', color: '#5a8a6a' }}>{time}</td>
+                              <td style={{ padding: '8px 6px' }}>
+                                {sig.bot
+                                  ? <span style={{ fontSize: '9px', color: botColor, background: `${botColor}15`, border: `1px solid ${botColor}40`, padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{sig.bot}</span>
+                                  : <span style={{ fontSize: '10px', color: '#3a4a2a' }}>—</span>
+                                }
+                              </td>
                               <td style={{ padding: '8px 6px' }}>
                                 {tf
                                   ? <span style={{ fontSize: '10px', color: '#b09020', background: 'rgba(240,192,32,0.08)', border: '1px solid rgba(240,192,32,0.2)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{tf}</span>
