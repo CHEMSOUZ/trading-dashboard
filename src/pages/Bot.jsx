@@ -51,7 +51,7 @@ function computeTradeStats(signals) {
   for (const sig of rated) {
     const e  = parseFloat(sig.entry) || 0;
     const sl = parseFloat(sig.sl)    || 0;
-    const tp = parseFloat(sig.tp2) || parseFloat(sig.tp1) || 0;
+    const tp = parseFloat(sig.tp2) || parseFloat(sig.tp1) || parseFloat(sig.tp) || 0;
     if (sig._outcome === 'win'  && tp) totalPts += Math.abs(tp - e);
     if (sig._outcome === 'loss' && sl) totalPts -= Math.abs(e - sl);
   }
@@ -66,13 +66,13 @@ function computeTradeStats(signals) {
 
 // ── Pine Script multi-bot (ICT Full Strategy) ─────────────────
 const PINE_BOTS = [
-  { id: 'ultra',        name: 'ICT Ultra',        botId: 'ICT_1min',  tf: '1min',  color: '#ff6644', sl: 0.8, tp1: 1.2, tp2: 2.0, htfTf: '15',  minScore: 3, desc: 'Scalping · HTF 15min · score ≥ 3' },
-  { id: 'agressif',     name: 'ICT Agressif',      botId: 'ICT_5min',  tf: '5min',  color: '#f0c020', sl: 1.0, tp1: 1.5, tp2: 2.5, htfTf: '60',  minScore: 3, desc: 'Scalping · HTF 1H · score ≥ 3' },
-  { id: 'standard',     name: 'ICT Standard',      botId: 'ICT_15min', tf: '15min', color: '#00ff88', sl: 1.5, tp1: 2.0, tp2: 3.5, htfTf: '240', minScore: 4, desc: 'Intraday · HTF 4H · score ≥ 4' },
-  { id: 'conservateur', name: 'ICT Conservateur',  botId: 'ICT_1H',    tf: '1H',    color: '#00aaff', sl: 2.0, tp1: 3.0, tp2: 5.0, htfTf: 'D',   minScore: 4, desc: 'Swing · HTF Daily · score ≥ 4' },
+  { id: 'ultra',        name: 'ICT Ultra',        botId: 'ICT_1min',  tf: '1min',  color: '#ff6644', sl: 0.8, htfTf: '15',  minScore: 3, desc: 'Scalping · HTF 15min · score ≥ 3 · TP R:R 1:2' },
+  { id: 'agressif',     name: 'ICT Agressif',      botId: 'ICT_5min',  tf: '5min',  color: '#f0c020', sl: 1.0, htfTf: '60',  minScore: 3, desc: 'Scalping · HTF 1H · score ≥ 3 · TP R:R 1:2' },
+  { id: 'standard',     name: 'ICT Standard',      botId: 'ICT_15min', tf: '15min', color: '#00ff88', sl: 1.5, htfTf: '240', minScore: 4, desc: 'Intraday · HTF 4H · score ≥ 4 · TP R:R 1:2' },
+  { id: 'conservateur', name: 'ICT Conservateur',  botId: 'ICT_1H',    tf: '1H',    color: '#00aaff', sl: 2.0, htfTf: 'D',   minScore: 4, desc: 'Swing · HTF Daily · score ≥ 4 · TP R:R 1:2' },
 ];
 
-function generateScript({ name, botId, sl, tp1, tp2, htfTf, minScore }) {
+function generateScript({ name, botId, sl, htfTf, minScore }) {
   return `//@version=6
 indicator("${name}", overlay=true, max_bars_back=500, max_lines_count=200, max_boxes_count=200, max_labels_count=200)
 
@@ -292,22 +292,21 @@ plotshape(entry_long,  title="ICT Long",  style=shape.triangleup,   location=loc
 plotshape(entry_short, title="ICT Short", style=shape.triangledown,  location=location.abovebar, color=col_bear, size=size.normal, text="ICT S")
 
 // ── 9. ALERTES WEBHOOK (JSON → dashboard) ─────────────────────
-atr      = ta.atr(14)
-sl_mult  = ${sl}
-tp1_mult = ${tp1}
-tp2_mult = ${tp2}
+atr     = ta.atr(14)
+sl_mult = ${sl}
+tp_mult = ${sl * 2}
 
 // Tracking position ouverte pour détection automatique TP/SL
 var float trk_entry = na
 var float trk_sl    = na
-var float trk_tp2   = na
+var float trk_tp    = na
 var bool  trk_long  = false
 var bool  trk_open  = false
 
-// Vérifier clôture automatique (avant la détection d'un nouveau signal)
-if trk_open and not (entry_long or entry_short)
-    hit_tp = trk_long ? high >= trk_tp2 : low  <= trk_tp2
-    hit_sl = trk_long ? low  <= trk_sl  : high >= trk_sl
+// ── Clôture automatique (prioritaire sur tout nouveau signal) ──
+if trk_open
+    hit_tp = trk_long ? high >= trk_tp : low  <= trk_tp
+    hit_sl = trk_long ? low  <= trk_sl : high >= trk_sl
     if hit_tp
         alert('{"type":"close","result":"win","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
         trk_open := false
@@ -315,47 +314,42 @@ if trk_open and not (entry_long or entry_short)
         alert('{"type":"close","result":"loss","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
         trk_open := false
 
-if entry_long
+// ── Nouveau signal uniquement si aucune position ouverte sur ce TF ──
+if entry_long and not trk_open
     e   = close
-    s   = math.round((e - atr * sl_mult)  * 100) / 100
-    t1  = math.round((e + atr * tp1_mult) * 100) / 100
-    t2  = math.round((e + atr * tp2_mult) * 100) / 100
-    rr  = str.tostring(math.round(tp2_mult / sl_mult * 10) / 10.0)
+    s   = math.round((e - atr * sl_mult) * 100) / 100
+    t   = math.round((e + atr * tp_mult) * 100) / 100
     ctx = (recent_fvg_bull ? "FVG " : "") + (recent_ob_bull ? "OB " : "") + (mss_bull_sig ? "MSS " : "") + "KZ:" + (in_kz ? "Y" : "N") + " score:" + str.tostring(score_bull)
     msg = '{"bot":"' + bot_name + '","symbol":"' + symbol_name +
           '","signal":"LONG","entry":' + str.tostring(e) +
           ',"sl":' + str.tostring(s) +
-          ',"tp1":' + str.tostring(t1) +
-          ',"tp2":' + str.tostring(t2) +
-          ',"rr":"1:' + rr +
+          ',"tp":' + str.tostring(t) +
+          ',"rr":"1:2' +
           '","context":"' + ctx +
-          '","timeframe":"{{interval}}","timestamp":"{{time}}"}'
+          '","timeframe":"' + timeframe.period + '","timestamp":"{{time}}"}'
     alert(msg, alert.freq_once_per_bar_close)
     trk_entry := e
     trk_sl    := s
-    trk_tp2   := t2
+    trk_tp    := t
     trk_long  := true
     trk_open  := true
 
-if entry_short
+if entry_short and not trk_open
     e   = close
-    s   = math.round((e + atr * sl_mult)  * 100) / 100
-    t1  = math.round((e - atr * tp1_mult) * 100) / 100
-    t2  = math.round((e - atr * tp2_mult) * 100) / 100
-    rr  = str.tostring(math.round(tp2_mult / sl_mult * 10) / 10.0)
+    s   = math.round((e + atr * sl_mult) * 100) / 100
+    t   = math.round((e - atr * tp_mult) * 100) / 100
     ctx = (recent_fvg_bear ? "FVG " : "") + (recent_ob_bear ? "OB " : "") + (mss_bear_sig ? "MSS " : "") + "KZ:" + (in_kz ? "Y" : "N") + " score:" + str.tostring(score_bear)
     msg = '{"bot":"' + bot_name + '","symbol":"' + symbol_name +
           '","signal":"SHORT","entry":' + str.tostring(e) +
           ',"sl":' + str.tostring(s) +
-          ',"tp1":' + str.tostring(t1) +
-          ',"tp2":' + str.tostring(t2) +
-          ',"rr":"1:' + rr +
+          ',"tp":' + str.tostring(t) +
+          ',"rr":"1:2' +
           '","context":"' + ctx +
-          '","timeframe":"{{interval}}","timestamp":"{{time}}"}'
+          '","timeframe":"' + timeframe.period + '","timestamp":"{{time}}"}'
     alert(msg, alert.freq_once_per_bar_close)
     trk_entry := e
     trk_sl    := s
-    trk_tp2   := t2
+    trk_tp    := t
     trk_long  := false
     trk_open  := true
 
@@ -363,7 +357,7 @@ if entry_short
 alert('{"type":"bar","bot":"' + bot_name + '","h":' + str.tostring(math.round(high * 100) / 100) + ',"l":' + str.tostring(math.round(low * 100) / 100) + '}', alert.freq_once_per_bar_close)
 
 // ── 10. DASHBOARD TABLE ───────────────────────────────────────
-var table dash = table.new(position.top_right, 2, 9,
+var table dash = table.new(position.top_right, 2, 10,
   border_color=color.new(color.gray, 60), border_width=1,
   bgcolor=color.new(#1a1a2e, 10))
 
@@ -373,7 +367,7 @@ f_row(t, ok, r, v) =>
     table.cell(t, 1, r, f_ok(ok), text_color=color.white, bgcolor=ok ? color.new(#00e676, 60) : color.new(#ff1744, 60), text_size=size.small)
 
 if barstate.islast
-    table.cell(dash, 0, 0, "ICT [" + bot_name + "]",
+    table.cell(dash, 0, 0, "ICT [" + bot_name + "] " + timeframe.period + "m",
       text_color=color.white, bgcolor=color.new(#0d1117, 20), text_size=size.small)
     table.cell(dash, 1, 0, htf_bullish ? "BULL" : htf_bearish ? "BEAR" : "RANGE",
       text_color=color.white,
@@ -389,9 +383,17 @@ if barstate.islast
     score_max = math.max(score_bull, score_bear)
     table.cell(dash, 0, 8, "Score: " + str.tostring(score_max) + "/5",
       text_color=color.white, bgcolor=color.new(#0d1117, 20), text_size=size.small)
-    table.cell(dash, 1, 8, entry_long ? "LONG 🟢" : entry_short ? "SHORT 🔴" : "—",
+    table.cell(dash, 1, 8, entry_long and not trk_open ? "LONG 🟢" : entry_short and not trk_open ? "SHORT 🔴" : trk_open ? "⏳ EN COURS" : "—",
       text_color=color.white,
-      bgcolor=entry_long ? color.new(col_bull, 40) : entry_short ? color.new(col_bear, 40) : color.new(color.gray, 60),
+      bgcolor=entry_long and not trk_open ? color.new(col_bull, 40) : entry_short and not trk_open ? color.new(col_bear, 40) : trk_open ? color.new(#f0c020, 50) : color.new(color.gray, 60),
+      text_size=size.small)
+    table.cell(dash, 0, 9, trk_open ? "🔒 SLOT " + timeframe.period + "m OCCUPÉ" : "🟢 SLOT " + timeframe.period + "m LIBRE",
+      text_color=color.white,
+      bgcolor=trk_open ? color.new(#f0c020, 40) : color.new(#00e676, 70),
+      text_size=size.small)
+    table.cell(dash, 1, 9, trk_open ? (trk_long ? "▲ " + str.tostring(trk_entry) : "▼ " + str.tostring(trk_entry)) : "—",
+      text_color=color.white,
+      bgcolor=trk_open ? color.new(#1a1a2e, 20) : color.new(color.gray, 80),
       text_size=size.small)
 `;
 }
@@ -402,12 +404,10 @@ function SignalCard({ signal, onSave, isLatest }) {
   const isLong   = dir === 'LONG';
   const entry    = parseFloat(signal.entry)  || 0;
   const sl       = parseFloat(signal.sl)     || 0;
-  const tp1      = parseFloat(signal.tp1)    || 0;
-  const tp2      = parseFloat(signal.tp2)    || parseFloat(signal.tp) || 0;
+  const tp       = parseFloat(signal.tp) || parseFloat(signal.tp2) || parseFloat(signal.tp1) || 0;
   const slPts    = calcPts(entry, sl);
-  const tp1Pts   = tp1 ? calcPts(entry, tp1) : null;
-  const tp2Pts   = tp2 ? calcPts(entry, tp2) : null;
-  const rrAuto   = tp2 ? calcRR(entry, sl, tp2) : tp1 ? calcRR(entry, sl, tp1) : null;
+  const tpPts    = tp ? calcPts(entry, tp) : null;
+  const rrAuto   = tp ? calcRR(entry, sl, tp) : null;
   const rrDisplay= signal.rr || (rrAuto ? `1:${rrAuto}` : '—');
 
   const accentColor = isLong ? '#00ff88' : '#ff4455';
@@ -453,25 +453,14 @@ function SignalCard({ signal, onSave, isLatest }) {
             <span style={{ color: '#3a2a2a', marginLeft: '4px' }}>(10 MNQ)</span>
           </div>
         </div>
-        {/* TP1 */}
-        {tp1 > 0 && (
-          <div style={{ background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.12)', borderRadius: '6px', padding: '10px 14px' }}>
-            <div style={{ fontSize: '9px', color: '#2a5a3a', letterSpacing: '2px', marginBottom: '4px' }}>🎯 TP1</div>
-            <div style={{ fontSize: '18px', fontWeight: '700', color: '#00cc66' }}>{tp1.toFixed(2)}</div>
-            <div style={{ fontSize: '10px', color: '#2a5a3a', marginTop: '2px' }}>
-              {tp1Pts.toFixed(2)} pts · <span style={{ color: '#00ff88' }}>+${calcUsd(tp1Pts)}</span>
-            <span style={{ color: '#2a5a3a', marginLeft: '4px' }}>(10 MNQ)</span>
-            </div>
-          </div>
-        )}
-        {/* TP2 */}
-        {tp2 > 0 && (
+        {/* TP unique */}
+        {tp > 0 && (
           <div style={{ background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '6px', padding: '10px 14px' }}>
-            <div style={{ fontSize: '9px', color: '#2a5a3a', letterSpacing: '2px', marginBottom: '4px' }}>🎯 TP2</div>
-            <div style={{ fontSize: '18px', fontWeight: '700', color: '#00ff88' }}>{tp2.toFixed(2)}</div>
+            <div style={{ fontSize: '9px', color: '#2a5a3a', letterSpacing: '2px', marginBottom: '4px' }}>🎯 TP  <span style={{ color: '#3a9a5a', fontSize: '8px', marginLeft: '4px' }}>R:R 1:2</span></div>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: '#00ff88' }}>{tp.toFixed(2)}</div>
             <div style={{ fontSize: '10px', color: '#2a5a3a', marginTop: '2px' }}>
-              {tp2Pts.toFixed(2)} pts · <span style={{ color: '#00ff88' }}>+${calcUsd(tp2Pts)}</span>
-            <span style={{ color: '#2a5a3a', marginLeft: '4px' }}>(10 MNQ)</span>
+              {tpPts.toFixed(2)} pts · <span style={{ color: '#00ff88' }}>+${calcUsd(tpPts)}</span>
+              <span style={{ color: '#2a5a3a', marginLeft: '4px' }}>(10 MNQ)</span>
             </div>
           </div>
         )}
@@ -527,12 +516,25 @@ function getKZLabel(iso) {
 function signalPnl(sig) {
   const e  = parseFloat(sig.entry) || 0;
   const sl = parseFloat(sig.sl)    || 0;
-  const tp = parseFloat(sig.tp2) || parseFloat(sig.tp1) || 0;
+  const tp = parseFloat(sig.tp2) || parseFloat(sig.tp1) || parseFloat(sig.tp) || 0;
   if (sig._outcome === 'win'  && tp && e) return  Math.abs(tp - e) * MNQ_PTS_TO_USD;
   if (sig._outcome === 'loss' && sl && e) return -Math.abs(e - sl) * MNQ_PTS_TO_USD;
   return 0;
 }
 function signalPts(sig) { return signalPnl(sig) / MNQ_PTS_TO_USD; }
+function getHourFr(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  const parts = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', hour12: false }).formatToParts(d);
+  return parts.find(p => p.type === 'hour')?.value ?? null;
+}
+function getDayFr(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  return new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', weekday: 'short' }).format(d);
+}
 
 // ── GlobalView-style sub-components ──────────────────────────
 function BSStatCard({ label, value, sub, color = '#c8d8c8' }) {
@@ -552,16 +554,20 @@ function BSSection({ title, children }) {
     </div>
   );
 }
-function BSInsight({ icon, title, value, desc, color }) {
+function BSInsight({ icon, title, value, desc, color, onClick, active }) {
   const rgb = color === '#00ff88' ? '0,255,136' : color === '#ff4455' ? '255,68,85' : color === '#00aaff' ? '0,170,255' : color === '#f0c020' ? '240,192,32' : '170,136,255';
   return (
-    <div style={{ background: `rgba(${rgb},0.06)`, border: `1px solid ${color}25`, borderRadius: '8px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div onClick={onClick} style={{ background: active ? `rgba(${rgb},0.14)` : `rgba(${rgb},0.06)`, border: `1px solid ${active ? color + '70' : color + '25'}`, borderRadius: '8px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: onClick ? 'pointer' : 'default', transition: 'all 0.15s', position: 'relative' }}
+      onMouseEnter={e => { if (onClick) e.currentTarget.style.background = `rgba(${rgb},0.12)`; }}
+      onMouseLeave={e => { if (onClick) e.currentTarget.style.background = active ? `rgba(${rgb},0.14)` : `rgba(${rgb},0.06)`; }}
+    >
       <div style={{ fontSize: '26px', flexShrink: 0 }}>{icon}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '3px' }}>{title}</div>
         <div style={{ fontSize: '15px', fontWeight: '700', color, marginBottom: '2px' }}>{value}</div>
         <div style={{ fontSize: '11px', color: '#4a7a5a' }}>{desc}</div>
       </div>
+      {onClick && <div style={{ fontSize: '10px', color: active ? color : '#2a4a30', letterSpacing: '1px' }}>{active ? '▲' : '▼'}</div>}
     </div>
   );
 }
@@ -581,8 +587,9 @@ function BSTooltip({ active, payload, label }) {
 
 // ── BotStats main component ───────────────────────────────────
 function BotStats({ signals }) {
-  const [filter, setFilter] = useState('ALL');
+  const [filter, setFilter]       = useState('ALL');
   const [botFilter, setBotFilter] = useState('TOUS');
+  const [drill, setDrill]         = useState(null); // { type, value, label, color }
 
   const rated  = signals.filter(s => s._outcome === 'win' || s._outcome === 'loss' || s._outcome === 'be');
   const wins   = rated.filter(s => s._outcome === 'win');
@@ -625,6 +632,25 @@ function BotStats({ signals }) {
     return { label: kz, total: ks.length, wins: kw, pnl: Math.round(kpnl * 100) / 100, wr: ks.length > 0 ? Math.round(kw / ks.length * 100) : 0 };
   }).filter(k => k.total > 0);
 
+  // ── By Hour ───────────────────────────────────────────────
+  const allHours = [...new Set(rated.map(s => getHourFr(s._receivedAt)).filter(Boolean))].sort();
+  const byHour = allHours.map(h => {
+    const hs   = rated.filter(s => getHourFr(s._receivedAt) === h);
+    const hw   = hs.filter(s => s._outcome === 'win').length;
+    const hpnl = hs.reduce((s, sig) => s + signalPnl(sig), 0);
+    return { label: `${h}h`, total: hs.length, wins: hw, pnl: Math.round(hpnl * 100) / 100, wr: hs.length > 0 ? Math.round(hw / hs.length * 100) : 0 };
+  }).filter(h => h.total > 0);
+
+  // ── By Day ────────────────────────────────────────────────
+  const DAY_ORDER = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+  const allDays   = [...new Set(rated.map(s => getDayFr(s._receivedAt)).filter(Boolean))];
+  const byDay = allDays.map(day => {
+    const ds   = rated.filter(s => getDayFr(s._receivedAt) === day);
+    const dw   = ds.filter(s => s._outcome === 'win').length;
+    const dpnl = ds.reduce((s, sig) => s + signalPnl(sig), 0);
+    return { label: day, total: ds.length, wins: dw, pnl: Math.round(dpnl * 100) / 100, wr: ds.length > 0 ? Math.round(dw / ds.length * 100) : 0 };
+  }).sort((a, b) => (DAY_ORDER.indexOf(a.label) ?? 9) - (DAY_ORDER.indexOf(b.label) ?? 9));
+
   // ── Insights ──────────────────────────────────────────────
   const bestBot   = [...byBot].sort((a, b) => b.pnl - a.pnl)[0];
   const worstBot  = [...byBot].filter(b => b.pnl < 0).sort((a, b) => a.pnl - b.pnl)[0];
@@ -632,6 +658,26 @@ function BotStats({ signals }) {
   const worstDir  = [...byDir].filter(d => d.total > 0).sort((a, b) => a.pnl - b.pnl)[0];
   const bestKZ    = [...byKZ].sort((a, b) => b.pnl - a.pnl)[0];
   const worstKZ   = [...byKZ].filter(k => k.pnl < 0).sort((a, b) => a.pnl - b.pnl)[0];
+  const bestHour  = [...byHour].sort((a, b) => b.pnl - a.pnl)[0];
+  const worstHour = [...byHour].filter(h => h.pnl < 0).sort((a, b) => a.pnl - b.pnl)[0];
+  const bestDay   = [...byDay].sort((a, b) => b.pnl - a.pnl)[0];
+  const worstDay  = [...byDay].filter(d => d.pnl < 0).sort((a, b) => a.pnl - b.pnl)[0];
+
+  // ── Drill helpers ─────────────────────────────────────────
+  function getDrillSignals(d) {
+    if (!d) return [];
+    if (d.type === 'bot')  return rated.filter(s => s.bot === d.value);
+    if (d.type === 'dir')  return rated.filter(s => (s.signal ?? s.direction ?? '').toUpperCase() === d.value);
+    if (d.type === 'kz')   return rated.filter(s => getKZLabel(s._receivedAt) === d.value);
+    if (d.type === 'hour') return rated.filter(s => getHourFr(s._receivedAt) === d.value);
+    if (d.type === 'day')  return rated.filter(s => getDayFr(s._receivedAt) === d.value);
+    return [];
+  }
+  function toggleDrill(type, value, label, color) {
+    setDrill(prev => prev && prev.type === type && prev.value === value ? null : { type, value, label, color });
+  }
+
+  const drillSignals = getDrillSignals(drill);
 
   // ── Filtered signal list ──────────────────────────────────
   const botList = ['TOUS', ...new Set(rated.map(s => s.bot).filter(Boolean))];
@@ -663,26 +709,76 @@ function BotStats({ signals }) {
       {/* ── Points forts ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{ height: '1px', flex: 1, background: 'rgba(0,255,136,0.1)' }} />
-        <span style={{ fontSize: '11px', color: '#00ff88', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>✅ POINTS FORTS</span>
+        <span style={{ fontSize: '11px', color: '#00ff88', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>✅ POINTS FORTS — cliquer pour voir les positions</span>
         <div style={{ height: '1px', flex: 1, background: 'rgba(0,255,136,0.1)' }} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-        {bestBot  && <BSInsight icon="🤖" title="MEILLEUR BOT"         value={bestBot.label}  desc={`${fmtUsd(bestBot.pnl, true)} · ${bestBot.wr}% WR · ${bestBot.total}T`}  color="#00ff88" />}
-        {bestDir  && <BSInsight icon="📊" title="MEILLEURE DIRECTION"  value={bestDir.label}  desc={`${fmtUsd(bestDir.pnl, true)} · ${bestDir.wr}% WR · ${bestDir.total}T`}  color="#00aaff" />}
-        {bestKZ   && <BSInsight icon="⏰" title="MEILLEURE SESSION KZ" value={bestKZ.label}   desc={`${fmtUsd(bestKZ.pnl, true)} · ${bestKZ.wr}% WR · ${bestKZ.total}T`}    color="#f0c020" />}
+        {bestBot  && <BSInsight icon="🤖" title="MEILLEUR BOT"         value={bestBot.label}  desc={`${fmtUsd(bestBot.pnl, true)} · ${bestBot.wr}% WR · ${bestBot.total}T`}  color="#00ff88" onClick={() => toggleDrill('bot', bestBot.label, bestBot.label, '#00ff88')} active={drill?.type === 'bot' && drill?.value === bestBot.label} />}
+        {bestDir  && <BSInsight icon="📊" title="MEILLEURE DIRECTION"  value={bestDir.label}  desc={`${fmtUsd(bestDir.pnl, true)} · ${bestDir.wr}% WR · ${bestDir.total}T`}  color="#00aaff" onClick={() => toggleDrill('dir', bestDir.label, bestDir.label, '#00aaff')} active={drill?.type === 'dir' && drill?.value === bestDir.label} />}
+        {bestKZ   && <BSInsight icon="⏰" title="MEILLEURE SESSION KZ" value={bestKZ.label}   desc={`${fmtUsd(bestKZ.pnl, true)} · ${bestKZ.wr}% WR · ${bestKZ.total}T`}    color="#f0c020" onClick={() => toggleDrill('kz', bestKZ.label, bestKZ.label, '#f0c020')} active={drill?.type === 'kz' && drill?.value === bestKZ.label} />}
+        {bestHour && <BSInsight icon="🕐" title="MEILLEUR HORAIRE"     value={bestHour.label} desc={`${fmtUsd(bestHour.pnl, true)} · ${bestHour.wr}% WR · ${bestHour.total}T`} color="#00ff88" onClick={() => toggleDrill('hour', bestHour.label.replace('h',''), bestHour.label, '#00ff88')} active={drill?.type === 'hour' && drill?.label === bestHour.label} />}
+        {bestDay  && <BSInsight icon="📅" title="MEILLEUR JOUR"        value={bestDay.label}  desc={`${fmtUsd(bestDay.pnl, true)} · ${bestDay.wr}% WR · ${bestDay.total}T`}  color="#00ff88" onClick={() => toggleDrill('day', bestDay.label, bestDay.label, '#00ff88')} active={drill?.type === 'day' && drill?.value === bestDay.label} />}
       </div>
 
       {/* ── Points faibles ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{ height: '1px', flex: 1, background: 'rgba(255,68,85,0.1)' }} />
-        <span style={{ fontSize: '11px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>❌ POINTS FAIBLES</span>
+        <span style={{ fontSize: '11px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>❌ POINTS FAIBLES — cliquer pour voir les positions</span>
         <div style={{ height: '1px', flex: 1, background: 'rgba(255,68,85,0.1)' }} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-        {worstBot && <BSInsight icon="🤖" title="PIRE BOT"            value={worstBot.label} desc={`${fmtUsd(worstBot.pnl, true)} · ${worstBot.wr}% WR · ${worstBot.total}T`} color="#ff4455" />}
-        {worstDir && <BSInsight icon="📊" title="PIRE DIRECTION"      value={worstDir.label} desc={`${fmtUsd(worstDir.pnl, true)} · ${worstDir.wr}% WR · ${worstDir.total}T`} color="#ff4455" />}
-        {worstKZ  && <BSInsight icon="⏰" title="PIRE SESSION KZ"     value={worstKZ.label}  desc={`${fmtUsd(worstKZ.pnl, true)} · ${worstKZ.wr}% WR · ${worstKZ.total}T`}  color="#ff4455" />}
+        {worstBot  && <BSInsight icon="🤖" title="PIRE BOT"            value={worstBot.label}  desc={`${fmtUsd(worstBot.pnl, true)} · ${worstBot.wr}% WR · ${worstBot.total}T`}  color="#ff4455" onClick={() => toggleDrill('bot', worstBot.label, worstBot.label, '#ff4455')} active={drill?.type === 'bot' && drill?.value === worstBot.label} />}
+        {worstDir  && <BSInsight icon="📊" title="PIRE DIRECTION"      value={worstDir.label}  desc={`${fmtUsd(worstDir.pnl, true)} · ${worstDir.wr}% WR · ${worstDir.total}T`}  color="#ff4455" onClick={() => toggleDrill('dir', worstDir.label, worstDir.label, '#ff4455')} active={drill?.type === 'dir' && drill?.value === worstDir.label} />}
+        {worstKZ   && <BSInsight icon="⏰" title="PIRE SESSION KZ"     value={worstKZ.label}   desc={`${fmtUsd(worstKZ.pnl, true)} · ${worstKZ.wr}% WR · ${worstKZ.total}T`}   color="#ff4455" onClick={() => toggleDrill('kz', worstKZ.label, worstKZ.label, '#ff4455')} active={drill?.type === 'kz' && drill?.value === worstKZ.label} />}
+        {worstHour && <BSInsight icon="🕐" title="PIRE HORAIRE"        value={worstHour.label} desc={`${fmtUsd(worstHour.pnl, true)} · ${worstHour.wr}% WR · ${worstHour.total}T`} color="#ff4455" onClick={() => toggleDrill('hour', worstHour.label.replace('h',''), worstHour.label, '#ff4455')} active={drill?.type === 'hour' && drill?.label === worstHour.label} />}
+        {worstDay  && <BSInsight icon="📅" title="PIRE JOUR"           value={worstDay.label}  desc={`${fmtUsd(worstDay.pnl, true)} · ${worstDay.wr}% WR · ${worstDay.total}T`}  color="#ff4455" onClick={() => toggleDrill('day', worstDay.label, worstDay.label, '#ff4455')} active={drill?.type === 'day' && drill?.value === worstDay.label} />}
       </div>
+
+      {/* ── Drill-down panel ── */}
+      {drill && drillSignals.length > 0 && (
+        <div style={{ background: 'rgba(6,18,12,0.6)', border: `1px solid ${drill.color}30`, borderRadius: '8px', padding: '16px 18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <span style={{ fontSize: '11px', color: drill.color, letterSpacing: '2px', fontWeight: '700' }}>{drill.label}</span>
+            <span style={{ fontSize: '10px', background: `${drill.color}15`, border: `1px solid ${drill.color}30`, color: drill.color, padding: '1px 8px', borderRadius: '10px' }}>{drillSignals.length} trades</span>
+            <span style={{ fontSize: '10px', color: '#00ff88', fontWeight: '700' }}>✓ {drillSignals.filter(s => s._outcome === 'win').length}W</span>
+            <span style={{ fontSize: '10px', color: '#ff4455', fontWeight: '700' }}>✗ {drillSignals.filter(s => s._outcome === 'loss').length}L</span>
+            {drillSignals.filter(s => s._outcome === 'be').length > 0 && <span style={{ fontSize: '10px', color: '#f0c020', fontWeight: '700' }}>— {drillSignals.filter(s => s._outcome === 'be').length}BE</span>}
+            <button onClick={() => setDrill(null)} style={{ marginLeft: 'auto', background: 'none', border: '1px solid rgba(255,68,85,0.2)', borderRadius: '3px', color: '#5a3a3a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', padding: '2px 8px' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#ff4455'; e.currentTarget.style.borderColor = 'rgba(255,68,85,0.4)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#5a3a3a'; e.currentTarget.style.borderColor = 'rgba(255,68,85,0.2)'; }}
+            >✕ FERMER</button>
+          </div>
+          {['win', 'loss', 'be'].map(oc => {
+            const ocSigs = drillSignals.filter(s => s._outcome === oc);
+            if (ocSigs.length === 0) return null;
+            const ocColor = oc === 'win' ? '#00ff88' : oc === 'loss' ? '#ff4455' : '#f0c020';
+            const ocLabel = oc === 'win' ? '✅ WIN' : oc === 'loss' ? '❌ LOSS' : '🔄 BE';
+            return (
+              <div key={oc} style={{ marginBottom: '10px' }}>
+                <div style={{ fontSize: '10px', color: ocColor, letterSpacing: '2px', fontWeight: '700', marginBottom: '6px' }}>{ocLabel} ({ocSigs.length})</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  {ocSigs.map((sig, i) => {
+                    const dir = (sig.signal ?? sig.direction ?? '').toUpperCase();
+                    const isL = dir === 'LONG';
+                    const pnl = signalPnl(sig);
+                    const tf  = sig.timeframe ? `${sig.timeframe}M` : null;
+                    return (
+                      <div key={sig._id ?? i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 10px', background: 'rgba(10,28,18,0.5)', borderRadius: '4px', borderLeft: `2px solid ${ocColor}60` }}>
+                        <span style={{ fontSize: '10px', color: '#4a7a5a', minWidth: '70px' }}>{fmtTime(sig._receivedAt)}</span>
+                        {tf && <span style={{ fontSize: '9px', color: '#3a7a5a', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.1)', padding: '0px 4px', borderRadius: '2px', fontWeight: '700' }}>{tf}</span>}
+                        <span style={{ fontSize: '10px', color: isL ? '#00ff88' : '#ff4455', fontWeight: '700' }}>{isL ? '▲' : '▼'} {dir}</span>
+                        {sig.bot && <span style={{ fontSize: '9px', color: '#7a5a9a' }}>{sig.bot}</span>}
+                        <span style={{ fontSize: '10px', color: '#6a8a7a' }}>{parseFloat(sig.entry)?.toFixed(2) ?? '—'}</span>
+                        <span style={{ fontSize: '10px', color: pnlColor(pnl), fontWeight: '700', marginLeft: 'auto' }}>{fmtUsd(pnl, true)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Graphiques ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -768,6 +864,51 @@ function BotStats({ signals }) {
         </BSSection>
       )}
 
+      {/* ── Horaire & Jour ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        {byHour.length > 0 && (
+          <BSSection title="🕐 P&L NET PAR HEURE (Paris)">
+            <ResponsiveContainer width="100%" height={140}>
+              <BarChart data={byHour} barSize={18} barCategoryGap="20%" margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
+                <CartesianGrid stroke="rgba(0,255,136,0.04)" strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fill: '#3a6a4a', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#3a6a4a', fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} width={55} />
+                <Tooltip content={<BSTooltip />} />
+                <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
+                <Bar dataKey="pnl" radius={[3, 3, 0, 0]}>
+                  {byHour.map((h, i) => <Cell key={i} fill={pnlColor(h.pnl)} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </BSSection>
+        )}
+        {byDay.length > 0 && (
+          <BSSection title="📅 P&L NET PAR JOUR">
+            <ResponsiveContainer width="100%" height={140}>
+              <BarChart data={byDay} barSize={32} barCategoryGap="30%" margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
+                <CartesianGrid stroke="rgba(0,255,136,0.04)" strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fill: '#3a6a4a', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#3a6a4a', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} width={55} />
+                <Tooltip content={<BSTooltip />} />
+                <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
+                <Bar dataKey="pnl" radius={[3, 3, 0, 0]} maxBarSize={40}>
+                  {byDay.map((d, i) => <Cell key={i} fill={pnlColor(d.pnl)} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {byDay.map(d => (
+                <div key={d.label} style={{ background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.06)', borderRadius: '5px', padding: '5px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#4a7a5a', textTransform: 'capitalize' }}>{d.label}</div>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: pnlColor(d.pnl) }}>{fmtUsd(d.pnl, true)}</div>
+                  <div style={{ fontSize: '9px', color: d.wr >= 50 ? '#00ff88' : '#ff4455' }}>{d.wr}% · {d.total}T</div>
+                </div>
+              ))}
+            </div>
+          </BSSection>
+        )}
+      </div>
+
       {/* ── Tableau des signaux notés ── */}
       <BSSection title={`📋 TOUS LES SIGNAUX NOTÉS (${rated.length})`}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -793,14 +934,14 @@ function BotStats({ signals }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
             <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
               <tr style={{ background: 'rgba(6,12,8,0.95)', borderBottom: '1px solid rgba(0,255,136,0.08)' }}>
-                {['HEURE', 'BOT', 'DIR', 'ENTRY', 'SL', 'TP2', 'R:R', 'PTS', 'P&L (10 MNQ)', 'SESSION KZ', 'RÉSULTAT'].map(h => (
+                {['HEURE', 'TF', 'BOT', 'DIR', 'ENTRY', 'SL', 'TP', 'R:R', 'PTS', 'P&L (10 MNQ)', 'SESSION KZ', 'RÉSULTAT'].map(h => (
                   <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: '9px', color: '#3a6a4a', letterSpacing: '1.5px', fontWeight: '700', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {listSignals.length === 0 && (
-                <tr><td colSpan={11} style={{ padding: '24px', textAlign: 'center', color: '#2a4a30', fontSize: '12px' }}>Aucun signal</td></tr>
+                <tr><td colSpan={12} style={{ padding: '24px', textAlign: 'center', color: '#2a4a30', fontSize: '12px' }}>Aucun signal</td></tr>
               )}
               {listSignals.map((sig, i) => {
                 const dir    = (sig.signal ?? sig.direction ?? '').toUpperCase();
@@ -811,6 +952,7 @@ function BotStats({ signals }) {
                 const ocC    = oc === 'win' ? '#00ff88' : oc === 'loss' ? '#ff4455' : '#f0c020';
                 const ocTxt  = oc === 'win' ? '✅ WIN' : oc === 'loss' ? '❌ LOSS' : '🔄 BE';
                 const kzLabel = getKZLabel(sig._receivedAt);
+                const tp      = parseFloat(sig.tp2) || parseFloat(sig.tp1) || parseFloat(sig.tp) || null;
                 return (
                   <tr key={sig._id ?? i}
                     style={{ borderBottom: '1px solid rgba(0,255,136,0.04)', borderLeft: `2px solid ${pnlColor(pnl)}` }}
@@ -818,13 +960,16 @@ function BotStats({ signals }) {
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
                     <td style={{ padding: '7px 10px', color: '#4a7a5a', fontSize: '11px', whiteSpace: 'nowrap' }}>{fmtTime(sig._receivedAt)}</td>
+                    <td style={{ padding: '7px 6px' }}>
+                      {sig.timeframe ? <span style={{ fontSize: '9px', color: '#3a9a5a', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.1)', padding: '1px 4px', borderRadius: '2px', fontWeight: '700' }}>{sig.timeframe}M</span> : <span style={{ color: '#2a4a30' }}>—</span>}
+                    </td>
                     <td style={{ padding: '7px 10px', fontSize: '10px', color: '#aa88ff' }}>{sig.bot ?? '—'}</td>
                     <td style={{ padding: '7px 10px' }}>
                       <span style={{ color: isL ? '#00ff88' : '#ff4455', background: `rgba(${isL ? '0,255,136' : '255,68,85'},0.08)`, padding: '1px 5px', borderRadius: '3px', fontSize: '11px', fontWeight: '600' }}>{dir}</span>
                     </td>
                     <td style={{ padding: '7px 10px', color: '#8aaa90' }}>{parseFloat(sig.entry)?.toFixed(2) ?? '—'}</td>
                     <td style={{ padding: '7px 10px', color: '#ff7788' }}>{parseFloat(sig.sl)?.toFixed(2) ?? '—'}</td>
-                    <td style={{ padding: '7px 10px', color: '#00ff88' }}>{parseFloat(sig.tp2)?.toFixed(2) ?? parseFloat(sig.tp1)?.toFixed(2) ?? '—'}</td>
+                    <td style={{ padding: '7px 10px', color: '#00ff88' }}>{tp?.toFixed(2) ?? '—'}</td>
                     <td style={{ padding: '7px 10px', color: '#f0c020' }}>{sig.rr ?? '—'}</td>
                     <td style={{ padding: '7px 10px', color: pnlColor(pts), fontWeight: '600' }}>{pts ? `${pts >= 0 ? '+' : ''}${pts.toFixed(2)}` : '—'}</td>
                     <td style={{ padding: '7px 10px', color: pnlColor(pnl), fontWeight: '700' }}>{fmtUsd(pnl, true)}</td>
@@ -956,7 +1101,7 @@ export default function Bot() {
     const dir   = (signal.signal ?? signal.direction ?? '').toUpperCase();
     const entry = parseFloat(signal.entry)  || 0;
     const sl    = parseFloat(signal.sl)     || 0;
-    const tp    = parseFloat(signal.tp2)    || parseFloat(signal.tp1) || parseFloat(signal.tp) || 0;
+    const tp    = parseFloat(signal.tp) || parseFloat(signal.tp2) || parseFloat(signal.tp1) || 0;
     const rr    = tp ? parseFloat(calcRR(entry, sl, tp)) : null;
     const date  = (signal._receivedAt ?? new Date().toISOString()).slice(0, 10);
     const payload = {
