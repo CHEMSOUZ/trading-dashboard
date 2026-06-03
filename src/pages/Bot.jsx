@@ -66,10 +66,11 @@ function computeTradeStats(signals) {
 
 // ── Pine Script multi-bot (ICT Full Strategy) ─────────────────
 const PINE_BOTS = [
-  { id: 'ultra',        name: 'ICT Ultra',        botId: 'ICT_1min',  tf: '1min',  color: '#ff6644', sl: 0.8, htfTf: '15',  minScore: 3, desc: 'Scalping · HTF 15min · score ≥ 3 · TP R:R 1:2' },
-  { id: 'agressif',     name: 'ICT Agressif',      botId: 'ICT_5min',  tf: '5min',  color: '#f0c020', sl: 1.0, htfTf: '60',  minScore: 3, desc: 'Scalping · HTF 1H · score ≥ 3 · TP R:R 1:2' },
-  { id: 'standard',     name: 'ICT Standard',      botId: 'ICT_15min', tf: '15min', color: '#00ff88', sl: 1.5, htfTf: '240', minScore: 4, desc: 'Intraday · HTF 4H · score ≥ 4 · TP R:R 1:2' },
-  { id: 'conservateur', name: 'ICT Conservateur',  botId: 'ICT_1H',    tf: '1H',    color: '#00aaff', sl: 2.0, htfTf: 'D',   minScore: 4, desc: 'Swing · HTF Daily · score ≥ 4 · TP R:R 1:2' },
+  { id: 'ultra',    name: 'ICT Ultra',    botId: 'ICT_1min',  tf: '1min',  color: '#ff6644', sl: 0.8, htfTf: '15',  minScore: 3, desc: 'Scalping · HTF 15min · score ≥ 3 · TP R:R 1:2' },
+  { id: 'micro',    name: 'ICT Micro',    botId: 'ICT_2min',  tf: '2min',  color: '#ff44aa', sl: 0.8, htfTf: '15',  minScore: 3, desc: 'Scalping · HTF 15min · score ≥ 3 · TP R:R 1:2' },
+  { id: 'rapide',   name: 'ICT Rapide',   botId: 'ICT_3min',  tf: '3min',  color: '#aa44ff', sl: 0.9, htfTf: '15',  minScore: 3, desc: 'Scalping · HTF 15min · score ≥ 3 · TP R:R 1:2' },
+  { id: 'agressif', name: 'ICT Agressif', botId: 'ICT_5min',  tf: '5min',  color: '#f0c020', sl: 1.0, htfTf: '60',  minScore: 3, desc: 'Scalping · HTF 1H · score ≥ 3 · TP R:R 1:2' },
+  { id: 'standard', name: 'ICT Standard', botId: 'ICT_15min', tf: '15min', color: '#00ff88', sl: 1.5, htfTf: '240', minScore: 4, desc: 'Intraday · HTF 4H · score ≥ 4 · TP R:R 1:2' },
 ];
 
 function generateScript({ name, botId, sl, htfTf, minScore }) {
