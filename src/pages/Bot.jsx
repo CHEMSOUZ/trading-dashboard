@@ -319,7 +319,7 @@ if new_d_bar and show_htf_fvg
             box.delete(array.shift(fvgD_box))
             array.shift(fvgD_hi) ; array.shift(fvgD_lo) ; array.shift(fvgD_bull)
 
-f_clean_htf_fvg(array<float> hi_arr, array<float> lo_arr, array<bool> bull_arr, array<box> box_arr) =>
+f_clean_htf_fvg(hi_arr, lo_arr, bull_arr, box_arr) =>
     i = 0
     while i < array.size(hi_arr)
         hi      = array.get(hi_arr,   i)
@@ -338,7 +338,7 @@ f_clean_htf_fvg(array<float> hi_arr, array<float> lo_arr, array<bool> bull_arr, 
 f_clean_htf_fvg(fvg4h_hi, fvg4h_lo, fvg4h_bull, fvg4h_box)
 f_clean_htf_fvg(fvgD_hi,  fvgD_lo,  fvgD_bull,  fvgD_box)
 
-f_price_in_htf_fvg(array<float> hi_arr, array<float> lo_arr, array<bool> bull_arr, bool is_long_trade) =>
+f_price_in_htf_fvg(hi_arr, lo_arr, bull_arr, is_long_trade) =>
     result = false
     n = array.size(hi_arr)
     if n > 0
@@ -392,7 +392,7 @@ if in_ny
     ny_h   := na(ny_h)   ? high : math.max(ny_h,   high)
     ny_l   := na(ny_l)   ? low  : math.min(ny_l,   low)
 
-f_sess_lines(float h, float l, color col, string lbl_h, string lbl_l) =>
+f_sess_lines(h, l, col, lbl_h, lbl_l) =>
     line.new(bar_index - 50, h, bar_index + 100, h, color = col, style = line.style_dashed, width = 2)
     line.new(bar_index - 50, l, bar_index + 100, l, color = col, style = line.style_dashed, width = 2)
     label.new(bar_index, h, lbl_h, color = color.new(col, 70), textcolor = col, style = label.style_label_left, size = size.tiny)
@@ -485,7 +485,7 @@ if not na(swing_low)
 // ═══════════════════════════════════════════════════════════════════════════
 // ─── FONCTION TP ──────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
-f_find_tp(float entry, float sl, bool is_long) =>
+f_find_tp(entry, sl, is_long) =>
     risk       = math.abs(entry - sl)
     candidates = array.new_float()
 
@@ -832,28 +832,7 @@ if trk_open
 if not trk_open and new_be_req
     be_last := be_count
 
-// ─── FONCTION ENTREE ──────────────────────────────────────────────────────
-f_enter(float entry, float sl_v, bool is_long, string setup_type, string htf_ctx) =>
-    tp_v    = f_find_tp(entry, sl_v, is_long)
-    valid   = not na(tp_v)
-    rr_real = valid ? math.abs(tp_v - entry) / math.abs(entry - sl_v) : float(na)
-    if valid and not trk_open
-        tp2_v   = is_long ? entry + math.abs(entry - sl_v) * (rr_real + 1.0)
-                          : entry - math.abs(entry - sl_v) * (rr_real + 1.0)
-        sig_col = is_long ? bull_col : bear_col
-        htf_tag = htf_ctx != "" ? '\\n📊 ' + htf_ctx : ''
-        sig_txt = (is_long ? 'BUY ✓\\n' : 'SELL ✓\\n') + setup_type + '\\nRR ' + str.tostring(rr_real, "#.##") + htf_tag
-        label.new(bar_index, is_long ? low : high, sig_txt,
-             color = sig_col, textcolor = color.white,
-             style = is_long ? label.style_label_up : label.style_label_down, size = size.normal)
-        line.new(bar_index, sl_v,  bar_index + 40, sl_v,  color = is_long ? bear_col : bull_col, style = line.style_dotted, width = 2)
-        line.new(bar_index, tp_v,  bar_index + 40, tp_v,  color = sig_col, style = line.style_dotted, width = 2)
-        line.new(bar_index, tp2_v, bar_index + 40, tp2_v, color = sig_col, style = line.style_dashed, width = 1)
-        sig_dir = is_long ? "LONG" : "SHORT"
-        alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"' + sig_dir + '","entry":' + str.tostring(entry) + ',"sl":' + str.tostring(sl_v) + ',"tp":' + str.tostring(tp_v) + ',"rr":"' + str.tostring(rr_real, "#.##") + '","setup":"' + setup_type + '","htf":"' + htf_ctx + '","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
-    [valid, tp_v, rr_real]
-
-f_htf_context(bool is_long) =>
+f_htf_context(is_long) =>
     ctx = ""
     if is_long
         if in_htf_fvg_bull
@@ -874,42 +853,82 @@ f_htf_context(bool is_long) =>
 var bool last_rejected = false
 
 if buy_signal and not trk_open and not na(sweep_low_val)
-    _sl  = sweep_low_val - 5.0
-    _ctx = f_htf_context(true)
-    [ok, _tp, _rr] = f_enter(close, _sl, true, "MSS", _ctx)
-    if ok
-        trk_entry := close ; trk_sl := _sl ; trk_tp := _tp
-        trk_rr := _rr ; trk_long := true ; trk_open := true
-        trk_type := "MSS" ; trk_htf_ctx := _ctx
-    last_rejected := not ok
+    _sl    = sweep_low_val - 5.0
+    _tp    = f_find_tp(close, _sl, true)
+    _valid = not na(_tp)
+    if _valid
+        _rr   = math.abs(_tp - close) / math.abs(close - _sl)
+        _tp2  = close + math.abs(close - _sl) * (_rr + 1.0)
+        _ctx  = f_htf_context(true)
+        _htag = _ctx != "" ? '\\n📊 ' + _ctx : ''
+        label.new(bar_index, low, 'BUY ✓\\nMSS\\nRR ' + str.tostring(_rr, "#.##") + _htag,
+             color = bull_col, textcolor = color.white, style = label.style_label_up, size = size.normal)
+        line.new(bar_index, _sl,  bar_index + 40, _sl,  color = bear_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, _tp,  bar_index + 40, _tp,  color = bull_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, _tp2, bar_index + 40, _tp2, color = bull_col, style = line.style_dashed,  width = 1)
+        alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"LONG","entry":' + str.tostring(close) + ',"sl":' + str.tostring(_sl) + ',"tp":' + str.tostring(_tp) + ',"rr":"' + str.tostring(_rr, "#.##") + '","setup":"MSS","htf":"' + _ctx + '","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
+        trk_entry := close ; trk_sl := _sl  ; trk_tp := _tp
+        trk_rr    := _rr   ; trk_long := true ; trk_open := true
+        trk_type  := "MSS" ; trk_htf_ctx := _ctx
+    last_rejected := not _valid
 
 if sell_signal and not trk_open and not na(sweep_high_val)
-    _sl  = sweep_high_val + 5.0
-    _ctx = f_htf_context(false)
-    [ok, _tp, _rr] = f_enter(close, _sl, false, "MSS", _ctx)
-    if ok
-        trk_entry := close ; trk_sl := _sl ; trk_tp := _tp
-        trk_rr := _rr ; trk_long := false ; trk_open := true
-        trk_type := "MSS" ; trk_htf_ctx := _ctx
-    last_rejected := not ok
+    _sl    = sweep_high_val + 5.0
+    _tp    = f_find_tp(close, _sl, false)
+    _valid = not na(_tp)
+    if _valid
+        _rr   = math.abs(_tp - close) / math.abs(close - _sl)
+        _tp2  = close - math.abs(close - _sl) * (_rr + 1.0)
+        _ctx  = f_htf_context(false)
+        _htag = _ctx != "" ? '\\n📊 ' + _ctx : ''
+        label.new(bar_index, high, 'SELL ✓\\nMSS\\nRR ' + str.tostring(_rr, "#.##") + _htag,
+             color = bear_col, textcolor = color.white, style = label.style_label_down, size = size.normal)
+        line.new(bar_index, _sl,  bar_index + 40, _sl,  color = bull_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, _tp,  bar_index + 40, _tp,  color = bear_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, _tp2, bar_index + 40, _tp2, color = bear_col, style = line.style_dashed,  width = 1)
+        alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"SHORT","entry":' + str.tostring(close) + ',"sl":' + str.tostring(_sl) + ',"tp":' + str.tostring(_tp) + ',"rr":"' + str.tostring(_rr, "#.##") + '","setup":"MSS","htf":"' + _ctx + '","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
+        trk_entry := close ; trk_sl := _sl   ; trk_tp := _tp
+        trk_rr    := _rr   ; trk_long := false ; trk_open := true
+        trk_type  := "MSS" ; trk_htf_ctx := _ctx
+    last_rejected := not _valid
 
 if ob_fvg_bull_signal and not trk_open
-    _ctx = f_htf_context(true)
-    [ok, _tp, _rr] = f_enter(close, ob_fvg_bull_sl, true, "OB_CONT", _ctx)
-    if ok
+    _tp    = f_find_tp(close, ob_fvg_bull_sl, true)
+    _valid = not na(_tp)
+    if _valid
+        _rr   = math.abs(_tp - close) / math.abs(close - ob_fvg_bull_sl)
+        _tp2  = close + math.abs(close - ob_fvg_bull_sl) * (_rr + 1.0)
+        _ctx  = f_htf_context(true)
+        _htag = _ctx != "" ? '\\n📊 ' + _ctx : ''
+        label.new(bar_index, low, 'BUY ✓\\nOB_CONT\\nRR ' + str.tostring(_rr, "#.##") + _htag,
+             color = bull_col, textcolor = color.white, style = label.style_label_up, size = size.normal)
+        line.new(bar_index, ob_fvg_bull_sl, bar_index + 40, ob_fvg_bull_sl, color = bear_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, _tp,  bar_index + 40, _tp,  color = bull_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, _tp2, bar_index + 40, _tp2, color = bull_col, style = line.style_dashed,  width = 1)
+        alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"LONG","entry":' + str.tostring(close) + ',"sl":' + str.tostring(ob_fvg_bull_sl) + ',"tp":' + str.tostring(_tp) + ',"rr":"' + str.tostring(_rr, "#.##") + '","setup":"OB_CONT","htf":"' + _ctx + '","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
         trk_entry := close ; trk_sl := ob_fvg_bull_sl ; trk_tp := _tp
-        trk_rr := _rr ; trk_long := true ; trk_open := true
-        trk_type := "OB_CONT" ; trk_htf_ctx := _ctx
-    last_rejected := not ok
+        trk_rr    := _rr   ; trk_long := true ; trk_open := true
+        trk_type  := "OB_CONT" ; trk_htf_ctx := _ctx
+    last_rejected := not _valid
 
 if ob_fvg_bear_signal and not trk_open
-    _ctx = f_htf_context(false)
-    [ok, _tp, _rr] = f_enter(close, ob_fvg_bear_sl, false, "OB_CONT", _ctx)
-    if ok
+    _tp    = f_find_tp(close, ob_fvg_bear_sl, false)
+    _valid = not na(_tp)
+    if _valid
+        _rr   = math.abs(_tp - close) / math.abs(close - ob_fvg_bear_sl)
+        _tp2  = close - math.abs(close - ob_fvg_bear_sl) * (_rr + 1.0)
+        _ctx  = f_htf_context(false)
+        _htag = _ctx != "" ? '\\n📊 ' + _ctx : ''
+        label.new(bar_index, high, 'SELL ✓\\nOB_CONT\\nRR ' + str.tostring(_rr, "#.##") + _htag,
+             color = bear_col, textcolor = color.white, style = label.style_label_down, size = size.normal)
+        line.new(bar_index, ob_fvg_bear_sl, bar_index + 40, ob_fvg_bear_sl, color = bull_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, _tp,  bar_index + 40, _tp,  color = bear_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, _tp2, bar_index + 40, _tp2, color = bear_col, style = line.style_dashed,  width = 1)
+        alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"SHORT","entry":' + str.tostring(close) + ',"sl":' + str.tostring(ob_fvg_bear_sl) + ',"tp":' + str.tostring(_tp) + ',"rr":"' + str.tostring(_rr, "#.##") + '","setup":"OB_CONT","htf":"' + _ctx + '","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
         trk_entry := close ; trk_sl := ob_fvg_bear_sl ; trk_tp := _tp
-        trk_rr := _rr ; trk_long := false ; trk_open := true
-        trk_type := "OB_CONT" ; trk_htf_ctx := _ctx
-    last_rejected := not ok
+        trk_rr    := _rr   ; trk_long := false ; trk_open := true
+        trk_type  := "OB_CONT" ; trk_htf_ctx := _ctx
+    last_rejected := not _valid
 
 // ─── BAR ALERT ────────────────────────────────────────────────────────────
 alert('{"type":"bar","bot":"' + bot_name + '","h":' + str.tostring(math.round(high * 100) / 100) + ',"l":' + str.tostring(math.round(low * 100) / 100) + '}', alert.freq_once_per_bar_close)
@@ -921,8 +940,8 @@ var table dash = table.new(position.top_right, 2, 18,
     border_color = color.new(color.gray, 60), border_width = 1,
     bgcolor      = color.new(#1a1a2e, 10))
 
-f_ok(bool v) => v ? "✅" : "❌"
-f_row(table t, bool ok, int r, string v) =>
+f_ok(v) => v ? "✅" : "❌"
+f_row(t, ok, r, v) =>
     table.cell(t, 0, r, v,        text_color = color.white, bgcolor = color.new(#1a1a2e, 30),                                text_size = size.small)
     table.cell(t, 1, r, f_ok(ok), text_color = color.white, bgcolor = ok ? color.new(#00e676, 60) : color.new(#ff1744, 60), text_size = size.small)
 
@@ -1316,8 +1335,8 @@ var table dash = table.new(position.top_right, 2, 10,
   border_color=color.new(color.gray, 60), border_width=1,
   bgcolor=color.new(#1a1a2e, 10))
 
-f_ok(bool v) => v ? "✅" : "❌"
-f_row(table t, bool ok, int r, string v) =>
+f_ok(v) => v ? "✅" : "❌"
+f_row(t, ok, r, v) =>
     table.cell(t, 0, r, v,      text_color=color.white, bgcolor=color.new(#1a1a2e, 30),   text_size=size.small)
     table.cell(t, 1, r, f_ok(ok), text_color=color.white, bgcolor=ok ? color.new(#00e676, 60) : color.new(#ff1744, 60), text_size=size.small)
 
