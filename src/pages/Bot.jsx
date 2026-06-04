@@ -74,7 +74,7 @@ const PINE_BOTS = [
 ];
 
 const PINE_EDIT_SCRIPT = `//@version=6
-indicator('ICT Setup — LIQ + MSS + FVG [EDIT]', overlay = true, max_boxes_count = 50, max_lines_count = 100, max_labels_count = 100)
+indicator('ICT Setup — LIQ + MSS + FVG [EDIT v6]', overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)
 
 // ─── IDENTITÉ ─────────────────────────────────────────────────────────────
 bot_name    = "ICT_EDIT"
@@ -85,44 +85,384 @@ var g1 = 'Swing Detection'
 swing_len = input.int(5, 'Swing Length', group = g1)
 
 var g2 = 'Liquidity'
-liq_len = input.int(20, 'Lookback Equal H/L', group = g2)
-liq_tol = input.float(0.10, 'Tolerance % égalité', group = g2, step = 0.01)
+liq_len   = input.int(20,     'Lookback Equal H/L',         group = g2)
+liq_tol   = input.float(0.10, 'Tolerance % égalité',        group = g2, step = 0.01)
+show_sess = input.bool(true,  'Afficher liquidité sessions', group = g2)
 
 var g3 = 'FVG'
-fvg_min_pts = input.float(5.0, 'Taille min FVG (pts)', group = g3)
+fvg_min_pts = input.float(5.0, 'Taille min FVG LTF (pts)',  group = g3)
 
 var g4 = 'Display'
-show_liq = input.bool(true, 'Afficher liquidité', group = g4)
-show_mss = input.bool(true, 'Afficher MSS', group = g4)
-show_fvg = input.bool(true, 'Afficher FVG', group = g4)
-show_ob  = input.bool(true, 'Afficher Order Block', group = g4)
+show_liq      = input.bool(true, 'Afficher liquidité EQH/EQL LTF', group = g4)
+show_mss      = input.bool(true, 'Afficher MSS',                   group = g4)
+show_fvg      = input.bool(true, 'Afficher FVG LTF',               group = g4)
+show_ob       = input.bool(true, 'Afficher Order Block',            group = g4)
+show_cont     = input.bool(true, 'Afficher Continuation FVG',       group = g4)
+show_htf      = input.bool(true, 'Afficher niveaux Daily/Weekly',   group = g4)
+show_htf_fvg  = input.bool(true, 'Afficher FVG 4H / Daily',        group = g4)
+show_daily_eq = input.bool(true, 'Afficher EQH/EQL Daily semaine',  group = g4)
+
+var g5 = 'Fibonacci'
+show_fib    = input.bool(true,  'Afficher Fibonacci',     group = g5)
+fib_min_pts = input.float(20.0, 'Taille min jambe (pts)', group = g5)
+
+var g6 = 'Risk / Reward'
+min_rr = input.float(2.0, 'RR minimum strict', group = g6, step = 0.1, minval = 1.0)
 
 // ─── COULEURS ─────────────────────────────────────────────────────────────
-bull_col = color.new(color.teal, 0)
-bull_bg  = color.new(color.teal, 85)
-bear_col = color.new(color.red, 0)
-bear_bg  = color.new(color.red, 85)
-liq_col  = color.new(color.orange, 0)
-mss_col  = color.new(color.purple, 0)
+bull_col     = color.new(color.teal,    0)
+bull_bg      = color.new(color.teal,   85)
+bear_col     = color.new(color.red,     0)
+bear_bg      = color.new(color.red,    85)
+liq_col      = color.new(color.orange,  0)
+cont_col     = color.new(color.blue,    0)
+cont_bg      = color.new(color.blue,   80)
+fib_col      = color.new(color.white,  60)
+fib_50_col   = color.new(color.yellow,  0)
+fib_618_col  = color.new(color.orange,  0)
+col_asia     = color.new(color.aqua,    0)
+col_lon      = color.new(color.yellow,  0)
+col_ny       = color.new(color.lime,    0)
+col_daily    = color.new(color.fuchsia, 0)
+col_weekly   = color.new(color.white,   0)
+col_4h_fvg   = color.new(color.purple, 70)
+col_d_fvg    = color.new(color.orange, 70)
 
-// ─── SWING HIGH / LOW ─────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── DONNÉES HTF via request.security ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Daily : H/L/O/C des 5 derniers jours + pivots EQH/EQL ─────────────────
+[d_h0, d_l0] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead = barmerge.lookahead_on)
+[d_h1, d_l1] = request.security(syminfo.tickerid, "D", [high[2], low[2]], lookahead = barmerge.lookahead_on)
+[d_h2, d_l2] = request.security(syminfo.tickerid, "D", [high[3], low[3]], lookahead = barmerge.lookahead_on)
+[d_h3, d_l3] = request.security(syminfo.tickerid, "D", [high[4], low[4]], lookahead = barmerge.lookahead_on)
+[d_h4, d_l4] = request.security(syminfo.tickerid, "D", [high[5], low[5]], lookahead = barmerge.lookahead_on)
+
+// ── Weekly : H/L semaine en cours et precedente ────────────────────────────
+[w_h0, w_l0] = request.security(syminfo.tickerid, "W", [high[1], low[1]], lookahead = barmerge.lookahead_on)
+[w_h1, w_l1] = request.security(syminfo.tickerid, "W", [high[2], low[2]], lookahead = barmerge.lookahead_on)
+
+// ── FVG 4H ─────────────────────────────────────────────────────────────────
+[h4_high0, h4_low0, h4_high2, h4_low2] = request.security(syminfo.tickerid, "240",
+     [high, low, high[2], low[2]], lookahead = barmerge.lookahead_off)
+
+h4_bull_fvg_size = h4_low0  - h4_high2
+h4_bear_fvg_size = h4_low2  - h4_high0
+
+// ── FVG Daily ──────────────────────────────────────────────────────────────
+[d_high0, d_low0, d_high2, d_low2] = request.security(syminfo.tickerid, "D",
+     [high, low, high[2], low[2]], lookahead = barmerge.lookahead_off)
+
+d_bull_fvg_size = d_low0  - d_high2
+d_bear_fvg_size = d_low2  - d_high0
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── TRACE NIVEAUX DAILY / WEEKLY ─────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+var bool daily_drawn  = false
+var bool weekly_drawn = false
+
+is_new_day  = ta.change(time("D"))  != 0
+is_new_week = ta.change(time("W"))  != 0
+
+var array<float> daily_highs = array.new_float()
+var array<float> daily_lows  = array.new_float()
+var array<float> weekly_highs= array.new_float()
+var array<float> weekly_lows = array.new_float()
+
+f_htf_line(lvl, col, lbl, lbl_style) =>
+    l  = line.new(bar_index, lvl, bar_index + 200, lvl, color = col, style = line.style_dashed, width = 1)
+    lb = label.new(bar_index + 200, lvl, lbl, color = color.new(col, 80), textcolor = col, style = lbl_style, size = size.tiny)
+
+if is_new_day and show_htf
+    array.clear(daily_highs)
+    array.clear(daily_lows)
+
+    days_available = math.min(dayofweek - 2, 4)
+    if days_available >= 0
+        array.push(daily_highs, d_h0) ; array.push(daily_lows, d_l0)
+    if days_available >= 1
+        array.push(daily_highs, d_h1) ; array.push(daily_lows, d_l1)
+    if days_available >= 2
+        array.push(daily_highs, d_h2) ; array.push(daily_lows, d_l2)
+    if days_available >= 3
+        array.push(daily_highs, d_h3) ; array.push(daily_lows, d_l3)
+    if days_available >= 4
+        array.push(daily_highs, d_h4) ; array.push(daily_lows, d_l4)
+
+    if not na(d_h0)
+        line.new(bar_index, d_h0, bar_index + 200, d_h0, color = col_daily, style = line.style_dashed, width = 2)
+        line.new(bar_index, d_l0, bar_index + 200, d_l0, color = col_daily, style = line.style_dashed, width = 2)
+        label.new(bar_index + 200, d_h0, 'PDH', color = color.new(col_daily, 80), textcolor = col_daily, style = label.style_label_left, size = size.tiny)
+        label.new(bar_index + 200, d_l0, 'PDL', color = color.new(col_daily, 80), textcolor = col_daily, style = label.style_label_left, size = size.tiny)
+
+    if days_available >= 1 and not na(d_h1)
+        line.new(bar_index, d_h1, bar_index + 200, d_h1, color = color.new(col_daily, 40), style = line.style_dotted, width = 1)
+        line.new(bar_index, d_l1, bar_index + 200, d_l1, color = color.new(col_daily, 40), style = line.style_dotted, width = 1)
+    if days_available >= 2 and not na(d_h2)
+        line.new(bar_index, d_h2, bar_index + 200, d_h2, color = color.new(col_daily, 55), style = line.style_dotted, width = 1)
+        line.new(bar_index, d_l2, bar_index + 200, d_l2, color = color.new(col_daily, 55), style = line.style_dotted, width = 1)
+    if days_available >= 3 and not na(d_h3)
+        line.new(bar_index, d_h3, bar_index + 200, d_h3, color = color.new(col_daily, 65), style = line.style_dotted, width = 1)
+        line.new(bar_index, d_l3, bar_index + 200, d_l3, color = color.new(col_daily, 65), style = line.style_dotted, width = 1)
+    if days_available >= 4 and not na(d_h4)
+        line.new(bar_index, d_h4, bar_index + 200, d_h4, color = color.new(col_daily, 75), style = line.style_dotted, width = 1)
+        line.new(bar_index, d_l4, bar_index + 200, d_l4, color = color.new(col_daily, 75), style = line.style_dotted, width = 1)
+
+if is_new_week and show_htf
+    array.clear(weekly_highs)
+    array.clear(weekly_lows)
+    if not na(w_h0)
+        array.push(weekly_highs, w_h0) ; array.push(weekly_lows, w_l0)
+        line.new(bar_index, w_h0, bar_index + 300, w_h0, color = col_weekly, style = line.style_dashed, width = 2)
+        line.new(bar_index, w_l0, bar_index + 300, w_l0, color = col_weekly, style = line.style_dashed, width = 2)
+        label.new(bar_index + 300, w_h0, 'PWH', color = color.new(col_weekly, 80), textcolor = col_weekly, style = label.style_label_left, size = size.tiny)
+        label.new(bar_index + 300, w_l0, 'PWL', color = color.new(col_weekly, 80), textcolor = col_weekly, style = label.style_label_left, size = size.tiny)
+    if not na(w_h1)
+        array.push(weekly_highs, w_h1) ; array.push(weekly_lows, w_l1)
+
+// ─── EQH/EQL DAILY ────────────────────────────────────────────────────────
+var array<float> eq_highs_daily = array.new_float()
+var array<float> eq_lows_daily  = array.new_float()
+
+if is_new_day and show_daily_eq
+    array.clear(eq_highs_daily)
+    array.clear(eq_lows_daily)
+
+    daily_h_pool = array.from(d_h0, d_h1, d_h2, d_h3, d_h4)
+    daily_l_pool = array.from(d_l0, d_l1, d_l2, d_l3, d_l4)
+
+    for i = 0 to 4 by 1
+        hi = array.get(daily_h_pool, i)
+        if na(hi)
+            continue
+        for j = i + 1 to 4 by 1
+            hj = array.get(daily_h_pool, j)
+            if na(hj)
+                continue
+            if math.abs(hi - hj) / hi * 100 < liq_tol * 3.0
+                if not array.includes(eq_highs_daily, hi)
+                    array.push(eq_highs_daily, hi)
+                if show_daily_eq
+                    line.new(bar_index - j * 2, hj, bar_index, hi,
+                         color = color.new(col_daily, 30), style = line.style_dashed, width = 2)
+                    label.new(bar_index, hi, 'EQH D', color = color.new(col_daily, 70), textcolor = col_daily, style = label.style_label_left, size = size.tiny)
+                break
+
+    for i = 0 to 4 by 1
+        li = array.get(daily_l_pool, i)
+        if na(li)
+            continue
+        for j = i + 1 to 4 by 1
+            lj = array.get(daily_l_pool, j)
+            if na(lj)
+                continue
+            if math.abs(li - lj) / li * 100 < liq_tol * 3.0
+                if not array.includes(eq_lows_daily, li)
+                    array.push(eq_lows_daily, li)
+                if show_daily_eq
+                    line.new(bar_index - j * 2, lj, bar_index, li,
+                         color = color.new(col_daily, 30), style = line.style_dashed, width = 2)
+                    label.new(bar_index, li, 'EQL D', color = color.new(col_daily, 70), textcolor = col_daily, style = label.style_label_left, size = size.tiny)
+                break
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── FVG 4H et DAILY ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+var array<float> fvg4h_hi   = array.new_float()
+var array<float> fvg4h_lo   = array.new_float()
+var array<bool>  fvg4h_bull = array.new_bool()
+var array<box>   fvg4h_box  = array.new<box>()
+
+var array<float> fvgD_hi    = array.new_float()
+var array<float> fvgD_lo    = array.new_float()
+var array<bool>  fvgD_bull  = array.new_bool()
+var array<box>   fvgD_box   = array.new<box>()
+
+new_4h_bar = ta.change(time("240")) != 0
+
+if new_4h_bar and show_htf_fvg
+    if h4_bull_fvg_size > fvg_min_pts * 2.0
+        b = box.new(bar_index - 2, h4_low0, bar_index + 300, h4_high2,
+             bgcolor = col_4h_fvg, border_color = color.new(color.purple, 40), border_width = 1,
+             text = 'FVG 4H ▲', text_color = color.new(color.purple, 20), text_size = size.tiny)
+        array.push(fvg4h_hi, h4_low0) ; array.push(fvg4h_lo, h4_high2)
+        array.push(fvg4h_bull, true)  ; array.push(fvg4h_box, b)
+        if array.size(fvg4h_hi) > 5
+            box.delete(array.shift(fvg4h_box))
+            array.shift(fvg4h_hi) ; array.shift(fvg4h_lo) ; array.shift(fvg4h_bull)
+
+    if h4_bear_fvg_size > fvg_min_pts * 2.0
+        b = box.new(bar_index - 2, h4_low2, bar_index + 300, h4_high0,
+             bgcolor = col_4h_fvg, border_color = color.new(color.purple, 40), border_width = 1,
+             text = 'FVG 4H ▼', text_color = color.new(color.purple, 20), text_size = size.tiny)
+        array.push(fvg4h_hi, h4_low2) ; array.push(fvg4h_lo, h4_high0)
+        array.push(fvg4h_bull, false)  ; array.push(fvg4h_box, b)
+        if array.size(fvg4h_hi) > 5
+            box.delete(array.shift(fvg4h_box))
+            array.shift(fvg4h_hi) ; array.shift(fvg4h_lo) ; array.shift(fvg4h_bull)
+
+new_d_bar = ta.change(time("D")) != 0
+
+if new_d_bar and show_htf_fvg
+    if d_bull_fvg_size > fvg_min_pts * 4.0
+        b = box.new(bar_index - 2, d_low0, bar_index + 400, d_high2,
+             bgcolor = col_d_fvg, border_color = color.new(color.orange, 40), border_width = 1,
+             text = 'FVG D ▲', text_color = color.new(color.orange, 20), text_size = size.tiny)
+        array.push(fvgD_hi, d_low0) ; array.push(fvgD_lo, d_high2)
+        array.push(fvgD_bull, true)  ; array.push(fvgD_box, b)
+        if array.size(fvgD_hi) > 5
+            box.delete(array.shift(fvgD_box))
+            array.shift(fvgD_hi) ; array.shift(fvgD_lo) ; array.shift(fvgD_bull)
+
+    if d_bear_fvg_size > fvg_min_pts * 4.0
+        b = box.new(bar_index - 2, d_low2, bar_index + 400, d_high0,
+             bgcolor = col_d_fvg, border_color = color.new(color.orange, 40), border_width = 1,
+             text = 'FVG D ▼', text_color = color.new(color.orange, 20), text_size = size.tiny)
+        array.push(fvgD_hi, d_low2) ; array.push(fvgD_lo, d_high0)
+        array.push(fvgD_bull, false)  ; array.push(fvgD_box, b)
+        if array.size(fvgD_hi) > 5
+            box.delete(array.shift(fvgD_box))
+            array.shift(fvgD_hi) ; array.shift(fvgD_lo) ; array.shift(fvgD_bull)
+
+f_clean_htf_fvg(hi_arr, lo_arr, bull_arr, box_arr) =>
+    i = 0
+    while i < array.size(hi_arr)
+        hi      = array.get(hi_arr,   i)
+        lo      = array.get(lo_arr,   i)
+        is_bull = array.get(bull_arr, i)
+        comble  = is_bull ? low <= lo : high >= hi
+        if comble
+            box.delete(array.get(box_arr, i))
+            array.remove(hi_arr,   i)
+            array.remove(lo_arr,   i)
+            array.remove(bull_arr, i)
+            array.remove(box_arr,  i)
+        else
+            i += 1
+
+f_clean_htf_fvg(fvg4h_hi, fvg4h_lo, fvg4h_bull, fvg4h_box)
+f_clean_htf_fvg(fvgD_hi,  fvgD_lo,  fvgD_bull,  fvgD_box)
+
+f_price_in_htf_fvg(hi_arr, lo_arr, bull_arr, is_long_trade) =>
+    result = false
+    n = array.size(hi_arr)
+    if n > 0
+        for k = 0 to n - 1 by 1
+            hi      = array.get(hi_arr,   k)
+            lo      = array.get(lo_arr,   k)
+            is_bull = array.get(bull_arr, k)
+            if is_long_trade == is_bull
+                if close >= lo and close <= hi
+                    result := true
+    result
+
+in_4h_fvg_bull = f_price_in_htf_fvg(fvg4h_hi, fvg4h_lo, fvg4h_bull, true)
+in_4h_fvg_bear = f_price_in_htf_fvg(fvg4h_hi, fvg4h_lo, fvg4h_bull, false)
+in_d_fvg_bull  = f_price_in_htf_fvg(fvgD_hi,  fvgD_lo,  fvgD_bull,  true)
+in_d_fvg_bear  = f_price_in_htf_fvg(fvgD_hi,  fvgD_lo,  fvgD_bull,  false)
+
+in_htf_fvg_bull = in_4h_fvg_bull or in_d_fvg_bull
+in_htf_fvg_bear = in_4h_fvg_bear or in_d_fvg_bear
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── SESSIONS INTRADAY ────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+t_asia_open    = timestamp("UTC", year, month, dayofmonth,  0,  0)
+t_asia_close   = timestamp("UTC", year, month, dayofmonth,  6,  0)
+t_london_open  = timestamp("UTC", year, month, dayofmonth,  8,  0)
+t_london_close = timestamp("UTC", year, month, dayofmonth, 11,  0)
+t_ny_open      = timestamp("UTC", year, month, dayofmonth, 13, 30)
+t_ny_close     = timestamp("UTC", year, month, dayofmonth, 16,  0)
+
+in_asia   = time >= t_asia_open   and time < t_asia_close
+in_london = time >= t_london_open and time < t_london_close
+in_ny     = time >= t_ny_open     and time < t_ny_close
+
+var float asia_h = na ; var float asia_l = na
+var float lon_h  = na ; var float lon_l  = na
+var float ny_h   = na ; var float ny_l   = na
+var bool  asia_done = false ; var bool lon_done = false ; var bool ny_done = false
+
+if dayofweek != dayofweek[1]
+    asia_h := na ; asia_l := na ; lon_h := na ; lon_l := na ; ny_h := na ; ny_l := na
+    asia_done := false ; lon_done := false ; ny_done := false
+
+if in_asia
+    asia_h := na(asia_h) ? high : math.max(asia_h, high)
+    asia_l := na(asia_l) ? low  : math.min(asia_l, low)
+if in_london
+    lon_h  := na(lon_h)  ? high : math.max(lon_h,  high)
+    lon_l  := na(lon_l)  ? low  : math.min(lon_l,  low)
+if in_ny
+    ny_h   := na(ny_h)   ? high : math.max(ny_h,   high)
+    ny_l   := na(ny_l)   ? low  : math.min(ny_l,   low)
+
+f_sess_lines(h, l, col, lbl_h, lbl_l) =>
+    line.new(bar_index - 50, h, bar_index + 100, h, color = col, style = line.style_dashed, width = 2)
+    line.new(bar_index - 50, l, bar_index + 100, l, color = col, style = line.style_dashed, width = 2)
+    label.new(bar_index, h, lbl_h, color = color.new(col, 70), textcolor = col, style = label.style_label_left, size = size.tiny)
+    label.new(bar_index, l, lbl_l, color = color.new(col, 70), textcolor = col, style = label.style_label_left, size = size.tiny)
+
+if not in_asia   and not na(asia_h) and not asia_done and show_sess
+    f_sess_lines(asia_h, asia_l, col_asia, 'Asia H', 'Asia L')
+    asia_done := true
+if not in_london and not na(lon_h)  and not lon_done  and show_sess
+    f_sess_lines(lon_h, lon_l, col_lon, 'London H', 'London L')
+    lon_done := true
+if not in_ny     and not na(ny_h)   and not ny_done   and show_sess
+    f_sess_lines(ny_h, ny_l, col_ny, 'NY H', 'NY L')
+    ny_done := true
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── EQH/EQL LTF ──────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+var array<float> eq_highs_1m = array.new_float()
+var array<float> eq_lows_1m  = array.new_float()
+
+[htf_ph, htf_pl] = request.security(syminfo.tickerid, "1",
+     [ta.pivothigh(high, 3, 3), ta.pivotlow(low, 3, 3)], lookahead = barmerge.lookahead_off)
+
+if not na(htf_ph) and show_liq
+    for i = 1 to 10 by 1
+        [ph_prev, _] = request.security(syminfo.tickerid, "1",
+             [ta.pivothigh(high, 3, 3)[i], ta.pivotlow(low, 3, 3)[i]], lookahead = barmerge.lookahead_off)
+        if not na(ph_prev) and math.abs(htf_ph - ph_prev) / htf_ph * 100 < liq_tol
+            line.new(bar_index - i, ph_prev, bar_index, htf_ph, color = color.new(color.orange, 50), style = line.style_dotted, width = 1)
+            array.push(eq_highs_1m, htf_ph)
+            break
+
+if not na(htf_pl) and show_liq
+    for i = 1 to 10 by 1
+        [_, pl_prev] = request.security(syminfo.tickerid, "1",
+             [ta.pivothigh(high, 3, 3)[i], ta.pivotlow(low, 3, 3)[i]], lookahead = barmerge.lookahead_off)
+        if not na(pl_prev) and math.abs(htf_pl - pl_prev) / htf_pl * 100 < liq_tol
+            line.new(bar_index - i, pl_prev, bar_index, htf_pl, color = color.new(color.orange, 50), style = line.style_dotted, width = 1)
+            array.push(eq_lows_1m, htf_pl)
+            break
+
+// ─── SWING HIGH / LOW LTF ─────────────────────────────────────────────────
 swing_high = ta.pivothigh(high, swing_len, swing_len)
 swing_low  = ta.pivotlow(low,  swing_len, swing_len)
 
-var float last_sh     = na
-var float last_sl     = na
-var int   last_sh_bar = na
-var int   last_sl_bar = na
+// ─── STRUCTURE ────────────────────────────────────────────────────────────
+var float last_sh     = na ; var float last_sl     = na
+var float prev_sh     = na ; var float prev_sl     = na
+var int   last_sh_bar = na ; var int   last_sl_bar = na
+var bool  bull_structure = na
 
 if not na(swing_high)
-    last_sh     := swing_high
-    last_sh_bar := bar_index - swing_len
+    prev_sh := last_sh ; last_sh := swing_high ; last_sh_bar := bar_index - swing_len
+    if not na(prev_sh)
+        bull_structure := swing_high > prev_sh ? true : swing_high < prev_sh ? false : bull_structure
 
 if not na(swing_low)
-    last_sl     := swing_low
-    last_sl_bar := bar_index - swing_len
+    prev_sl := last_sl ; last_sl := swing_low ; last_sl_bar := bar_index - swing_len
+    if not na(prev_sl)
+        bull_structure := swing_low < prev_sl ? false : swing_low > prev_sl ? true : bull_structure
 
-// ─── EQUAL HIGHS / LOWS (LIQUIDITÉ) ───────────────────────────────────────
+// ─── EQH/EQL LTF courant ──────────────────────────────────────────────────
 var array<float> eq_highs = array.new_float()
 var array<float> eq_lows  = array.new_float()
 
@@ -146,213 +486,504 @@ if not na(swing_low)
                 line.new(bar_index - swing_len - i, prev, bar_index - swing_len, sl, color = liq_col, style = line.style_dashed, width = 1)
             break
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── FONCTION TP ──────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+f_find_tp(entry, sl, is_long) =>
+    risk       = math.abs(entry - sl)
+    candidates = array.new_float()
+
+    if is_long
+        for k = 0 to array.size(eq_highs) - 1 by 1
+            lvl = array.get(eq_highs, k)
+            if lvl > entry
+                array.push(candidates, lvl)
+        for k = 0 to array.size(eq_highs_1m) - 1 by 1
+            lvl = array.get(eq_highs_1m, k)
+            if lvl > entry
+                array.push(candidates, lvl)
+    else
+        for k = 0 to array.size(eq_lows) - 1 by 1
+            lvl = array.get(eq_lows, k)
+            if lvl < entry
+                array.push(candidates, lvl)
+        for k = 0 to array.size(eq_lows_1m) - 1 by 1
+            lvl = array.get(eq_lows_1m, k)
+            if lvl < entry
+                array.push(candidates, lvl)
+
+    if is_long
+        if not na(asia_h) and asia_h > entry
+            array.push(candidates, asia_h)
+        if not na(lon_h)  and lon_h  > entry
+            array.push(candidates, lon_h)
+        if not na(ny_h)   and ny_h   > entry
+            array.push(candidates, ny_h)
+    else
+        if not na(asia_l) and asia_l < entry
+            array.push(candidates, asia_l)
+        if not na(lon_l)  and lon_l  < entry
+            array.push(candidates, lon_l)
+        if not na(ny_l)   and ny_l   < entry
+            array.push(candidates, ny_l)
+
+    if is_long
+        for k = 0 to array.size(daily_highs) - 1 by 1
+            lvl = array.get(daily_highs, k)
+            if not na(lvl) and lvl > entry
+                array.push(candidates, lvl)
+    else
+        for k = 0 to array.size(daily_lows) - 1 by 1
+            lvl = array.get(daily_lows, k)
+            if not na(lvl) and lvl < entry
+                array.push(candidates, lvl)
+
+    if is_long
+        for k = 0 to array.size(eq_highs_daily) - 1 by 1
+            lvl = array.get(eq_highs_daily, k)
+            if not na(lvl) and lvl > entry
+                array.push(candidates, lvl)
+    else
+        for k = 0 to array.size(eq_lows_daily) - 1 by 1
+            lvl = array.get(eq_lows_daily, k)
+            if not na(lvl) and lvl < entry
+                array.push(candidates, lvl)
+
+    if is_long
+        for k = 0 to array.size(weekly_highs) - 1 by 1
+            lvl = array.get(weekly_highs, k)
+            if not na(lvl) and lvl > entry
+                array.push(candidates, lvl)
+    else
+        for k = 0 to array.size(weekly_lows) - 1 by 1
+            lvl = array.get(weekly_lows, k)
+            if not na(lvl) and lvl < entry
+                array.push(candidates, lvl)
+
+    for k = 0 to array.size(fvg4h_hi) - 1 by 1
+        h4hi = array.get(fvg4h_hi, k)
+        h4lo = array.get(fvg4h_lo, k)
+        if is_long and h4hi > entry
+            array.push(candidates, h4hi)
+        if not is_long and h4lo < entry
+            array.push(candidates, h4lo)
+
+    for k = 0 to array.size(fvgD_hi) - 1 by 1
+        dhi = array.get(fvgD_hi, k)
+        dlo = array.get(fvgD_lo, k)
+        if is_long and dhi > entry
+            array.push(candidates, dhi)
+        if not is_long and dlo < entry
+            array.push(candidates, dlo)
+
+    best_tp = float(na)
+    for k = 0 to array.size(candidates) - 1 by 1
+        lvl    = array.get(candidates, k)
+        rr_lvl = is_long ? (lvl - entry) / risk : (entry - lvl) / risk
+        if rr_lvl >= min_rr
+            if na(best_tp)
+                best_tp := lvl
+            else
+                best_tp := is_long ? (lvl < best_tp ? lvl : best_tp)
+                                   : (lvl > best_tp ? lvl : best_tp)
+    best_tp
+
+// ═══════════════════════════════════════════════════════════════════════════
 // ─── LIQUIDITY SWEEP ──────────────────────────────────────────────────────
-var bool  bull_sweep      = false
-var bool  bear_sweep      = false
-var float sweep_low_val   = na
-var float sweep_high_val  = na
+// ═══════════════════════════════════════════════════════════════════════════
+var bool  bull_sweep     = false
+var bool  bear_sweep     = false
+var float sweep_low_val  = na
+var float sweep_high_val = na
+var bool  bull_cont      = false
+var bool  bear_cont      = false
+
+bear_fvg_on_break = (low[2] - high)    > fvg_min_pts
+bull_fvg_on_break = (low    - high[2]) > fvg_min_pts
 
 if array.size(eq_lows) > 0
     lvl = array.get(eq_lows, array.size(eq_lows) - 1)
     if low < lvl and close > lvl
-        bull_sweep    := true
-        sweep_low_val := low
+        bull_sweep := true ; sweep_low_val := low
         array.clear(eq_lows)
 
 if array.size(eq_highs) > 0
     lvl = array.get(eq_highs, array.size(eq_highs) - 1)
     if high > lvl and close < lvl
-        bear_sweep     := true
-        sweep_high_val := high
+        bear_sweep := true ; sweep_high_val := high
         array.clear(eq_highs)
 
-// ─── MSS (MARKET STRUCTURE SHIFT) ─────────────────────────────────────────
+if array.size(eq_highs) > 0
+    lvl_h = array.get(eq_highs, array.size(eq_highs) - 1)
+    if high > lvl_h and close > lvl_h and bull_fvg_on_break
+        bull_cont := true
+        if show_cont
+            box.new(bar_index - 2, low, bar_index + 20, high[2], bgcolor = cont_bg, border_color = cont_col, border_width = 1, text = 'CONT ▲', text_color = cont_col, text_size = size.small)
+        array.clear(eq_highs)
+
+if array.size(eq_lows) > 0
+    lvl_l = array.get(eq_lows, array.size(eq_lows) - 1)
+    if low < lvl_l and close < lvl_l and bear_fvg_on_break
+        bear_cont := true
+        if show_cont
+            box.new(bar_index - 2, low[2], bar_index + 20, high, bgcolor = color.new(color.blue, 80), border_color = cont_col, border_width = 1, text = 'CONT ▼', text_color = cont_col, text_size = size.small)
+        array.clear(eq_lows)
+
+// ─── MSS ──────────────────────────────────────────────────────────────────
 var bool bull_mss = false
 var bool bear_mss = false
 
 if bull_sweep and not na(last_sh)
-    if close > last_sh
-        bull_mss   := true
-        bull_sweep := false
+    if close > last_sh and (na(bull_structure) or bull_structure == false)
+        bull_mss := true ; bull_sweep := false
         if show_mss
             label.new(bar_index, high, 'MSS ▲', color = bull_bg, textcolor = bull_col, style = label.style_label_down, size = size.small)
 
 if bear_sweep and not na(last_sl)
-    if close < last_sl
-        bear_mss   := true
-        bear_sweep := false
+    if close < last_sl and (na(bull_structure) or bull_structure == true)
+        bear_mss := true ; bear_sweep := false
         if show_mss
             label.new(bar_index, low, 'MSS ▼', color = bear_bg, textcolor = bear_col, style = label.style_label_up, size = size.small)
-
-// ─── FVG (FAIR VALUE GAP) ─────────────────────────────────────────────────
-var bool  bull_fvg_active = false
-var float bull_fvg_hi     = na
-var float bull_fvg_lo     = na
-var bool  bear_fvg_active = false
-var float bear_fvg_hi     = na
-var float bear_fvg_lo     = na
-
-bull_fvg_size = low - high[2]
-if bull_fvg_size > fvg_min_pts
-    bull_fvg_active := true
-    bull_fvg_hi     := low
-    bull_fvg_lo     := high[2]
-    if show_fvg
-        box.new(bar_index - 2, bull_fvg_hi, bar_index + 20, bull_fvg_lo, bgcolor = bull_bg, border_color = bull_col, border_width = 1)
-
-bear_fvg_size = low[2] - high
-if bear_fvg_size > fvg_min_pts
-    bear_fvg_active := true
-    bear_fvg_hi     := low[2]
-    bear_fvg_lo     := high
-    if show_fvg
-        box.new(bar_index - 2, bear_fvg_hi, bar_index + 20, bear_fvg_lo, bgcolor = bear_bg, border_color = bear_col, border_width = 1)
 
 // ─── ORDER BLOCK ──────────────────────────────────────────────────────────
 displacement_up   = close > close[1] * 1.002 and close[1] > close[2] * 1.002
 displacement_down = close < close[1] * 0.998 and close[1] < close[2] * 0.998
-
 bull_ob = displacement_up   and close[3] < open[3]
 bear_ob = displacement_down and close[3] > open[3]
 
-if bull_ob and show_ob
-    box.new(bar_index - 3, high[3], bar_index + 20, low[3], bgcolor = color.new(color.teal, 80), border_color = color.teal, border_width = 1, text = 'OB Bull', text_color = color.teal, text_size = size.small)
+var float ob_bull_hi = na ; var float ob_bull_lo = na
+var float ob_bear_hi = na ; var float ob_bear_lo = na
+var bool  ob_bull_valid = false ; var bool ob_bear_valid = false
 
-if bear_ob and show_ob
-    box.new(bar_index - 3, high[3], bar_index + 20, low[3], bgcolor = color.new(color.red, 80), border_color = color.red, border_width = 1, text = 'OB Bear', text_color = color.red, text_size = size.small)
+if bull_ob
+    ob_bull_hi := high[3] ; ob_bull_lo := low[3] ; ob_bull_valid := true
+    if show_ob
+        box.new(bar_index - 3, high[3], bar_index + 20, low[3], bgcolor = color.new(color.teal, 80), border_color = color.teal, border_width = 1, text = 'OB Bull', text_color = color.teal, text_size = size.small)
+if bear_ob
+    ob_bear_hi := high[3] ; ob_bear_lo := low[3] ; ob_bear_valid := true
+    if show_ob
+        box.new(bar_index - 3, high[3], bar_index + 20, low[3], bgcolor = color.new(color.red, 80), border_color = color.red, border_width = 1, text = 'OB Bear', text_color = color.red, text_size = size.small)
 
-// ─── SIGNAL COMPLET ───────────────────────────────────────────────────────
-buy_signal  = bull_mss and bull_fvg_active and close >= bull_fvg_lo and close <= bull_fvg_hi
-sell_signal = bear_mss and bear_fvg_active and close >= bear_fvg_lo and close <= bear_fvg_hi
+if ob_bull_valid and close < ob_bull_lo
+    ob_bull_valid := false
+if ob_bear_valid and close > ob_bear_hi
+    ob_bear_valid := false
 
-// ─── BE MANUEL — compteur (incrémenter = libérer le slot une fois) ────────
-be_count = input.int(0, "🟡 BE Manuel — incrémenter pour libérer (0→1→2…)", group = "Tracking", minval = 0, step = 1)
-var int be_last = 0
+// ─── FVG LTF ──────────────────────────────────────────────────────────────
+var bool  bull_fvg_active = false ; var float bull_fvg_hi = na ; var float bull_fvg_lo = na
+var bool  bear_fvg_active = false ; var float bear_fvg_hi = na ; var float bear_fvg_lo = na
 
-// ─── TRACKING POSITION ────────────────────────────────────────────────────
-var float trk_entry = na
-var float trk_sl    = na
-var float trk_tp    = na
-var bool  trk_long  = false
-var bool  trk_open  = false
-var float trk_peak  = na   // meilleur prix atteint depuis l'entrée
+bull_fvg_size = low - high[2]
+if bull_fvg_size > fvg_min_pts
+    bull_fvg_active := true ; bull_fvg_hi := low ; bull_fvg_lo := high[2]
+    if show_fvg
+        box.new(bar_index - 2, bull_fvg_hi, bar_index + 50, bull_fvg_lo, bgcolor = bull_bg, border_color = bull_col, border_width = 1)
 
-// ─── CLÔTURE AUTOMATIQUE (prioritaire) ────────────────────────────────────
+bear_fvg_size = low[2] - high
+if bear_fvg_size > fvg_min_pts
+    bear_fvg_active := true ; bear_fvg_hi := low[2] ; bear_fvg_lo := high
+    if show_fvg
+        box.new(bar_index - 2, bear_fvg_hi, bar_index + 50, bear_fvg_lo, bgcolor = bear_bg, border_color = bear_col, border_width = 1)
+
+if bull_fvg_active and low  < bull_fvg_lo
+    bull_fvg_active := false
+if bear_fvg_active and high > bear_fvg_hi
+    bear_fvg_active := false
+
+// ─── CONTINUATION OB+FVG ──────────────────────────────────────────────────
+var bool  ob_fvg_bull_waiting = false ; var float ob_fvg_bull_sl = na
+var bool  ob_fvg_bear_waiting = false ; var float ob_fvg_bear_sl = na
+
+if ob_bull_valid and bull_fvg_active and not na(ob_bull_lo) and not na(bull_fvg_lo) and ob_bull_lo < bull_fvg_lo and not ob_fvg_bull_waiting
+    ob_fvg_bull_waiting := true ; ob_fvg_bull_sl := ob_bull_lo - 5.0
+if ob_bear_valid and bear_fvg_active and not na(ob_bear_hi) and not na(bear_fvg_hi) and ob_bear_hi > bear_fvg_hi and not ob_fvg_bear_waiting
+    ob_fvg_bear_waiting := true ; ob_fvg_bear_sl := ob_bear_hi + 5.0
+
+if not ob_bull_valid or not bull_fvg_active
+    ob_fvg_bull_waiting := false
+if not ob_bear_valid or not bear_fvg_active
+    ob_fvg_bear_waiting := false
+
+ob_fvg_bull_signal = ob_fvg_bull_waiting and close >= bull_fvg_lo and close <= bull_fvg_hi
+ob_fvg_bear_signal = ob_fvg_bear_waiting and close >= bear_fvg_lo and close <= bear_fvg_hi
+
+if ob_fvg_bull_signal
+    ob_fvg_bull_waiting := false
+if ob_fvg_bear_signal
+    ob_fvg_bear_waiting := false
+
+// ─── SIGNAL MSS + FVG ─────────────────────────────────────────────────────
+var bool waiting_buy  = false
+var bool waiting_sell = false
+
+if bull_mss and bull_fvg_active
+    waiting_buy := true ; bull_mss := false
+if bear_mss and bear_fvg_active
+    waiting_sell := true ; bear_mss := false
+if not bull_fvg_active
+    waiting_buy := false
+if not bear_fvg_active
+    waiting_sell := false
+
+buy_signal  = waiting_buy  and close >= bull_fvg_lo and close <= bull_fvg_hi
+sell_signal = waiting_sell and close >= bear_fvg_lo and close <= bear_fvg_hi
+
+if buy_signal
+    waiting_buy := false
+if sell_signal
+    waiting_sell := false
+
+// ─── FIBONACCI ────────────────────────────────────────────────────────────
+var array<float> fib_sh_arr  = array.new_float()
+var array<float> fib_sl_arr  = array.new_float()
+var array<int>   fib_bar_sh  = array.new_int()
+var array<int>   fib_bar_sl  = array.new_int()
+var array<bool>  fib_is_bull = array.new_bool()
+fib_levels = array.from(0.0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0)
+var float pending_sh = na ; var float pending_sl = na
+var int   pending_sh_bar = na ; var int pending_sl_bar = na
+var bool  last_pivot_was_high = na
+
+if not na(swing_high)
+    if not na(pending_sl) and (na(last_pivot_was_high) or last_pivot_was_high == false)
+        if swing_high - pending_sl >= fib_min_pts and show_fib
+            array.push(fib_sh_arr, swing_high) ; array.push(fib_sl_arr, pending_sl)
+            array.push(fib_bar_sh, bar_index - swing_len) ; array.push(fib_bar_sl, pending_sl_bar)
+            array.push(fib_is_bull, true)
+            if array.size(fib_sh_arr) > 6
+                array.shift(fib_sh_arr) ; array.shift(fib_sl_arr)
+                array.shift(fib_bar_sh) ; array.shift(fib_bar_sl) ; array.shift(fib_is_bull)
+    pending_sh := swing_high ; pending_sh_bar := bar_index - swing_len
+    last_pivot_was_high := true
+
+if not na(swing_low)
+    if not na(pending_sh) and (na(last_pivot_was_high) or last_pivot_was_high == true)
+        if pending_sh - swing_low >= fib_min_pts and show_fib
+            array.push(fib_sh_arr, pending_sh) ; array.push(fib_sl_arr, swing_low)
+            array.push(fib_bar_sh, pending_sh_bar) ; array.push(fib_bar_sl, bar_index - swing_len)
+            array.push(fib_is_bull, false)
+            if array.size(fib_sh_arr) > 6
+                array.shift(fib_sh_arr) ; array.shift(fib_sl_arr)
+                array.shift(fib_bar_sh) ; array.shift(fib_bar_sl) ; array.shift(fib_is_bull)
+    pending_sl := swing_low ; pending_sl_bar := bar_index - swing_len
+    last_pivot_was_high := false
+
+var line[]  fib_lines  = array.new<line>()
+var label[] fib_labels = array.new<label>()
+
+if barstate.islast and show_fib
+    for l  in fib_lines  => line.delete(l)
+    for lb in fib_labels => label.delete(lb)
+    array.clear(fib_lines) ; array.clear(fib_labels)
+    n = array.size(fib_sh_arr)
+    for i = 0 to n - 1 by 1
+        sh = array.get(fib_sh_arr, i) ; sl = array.get(fib_sl_arr, i)
+        bar_sh = array.get(fib_bar_sh, i) ; bar_sl = array.get(fib_bar_sl, i)
+        is_bull = array.get(fib_is_bull, i)
+        mid = (sh + sl) / 2.0
+        end_bar = is_bull ? bar_sh : bar_sl
+        bars_since = bar_index - end_bar
+        touched_50 = false
+        if bars_since > 0
+            for b = 0 to math.min(bars_since - 1, 500) by 1
+                if is_bull and low[b] <= mid
+                    touched_50 := true ; break
+                if not is_bull and high[b] >= mid
+                    touched_50 := true ; break
+        if not touched_50
+            fib_lv_labels = array.from("0", "0.236", "0.382", "0.5", "0.618", "0.786", "1")
+            for j = 0 to 6 by 1
+                lv = array.get(fib_levels, j)
+                px = sl + (sh - sl) * (1.0 - lv)
+                lv_col   = lv == 0.5 ? fib_50_col : lv == 0.618 ? fib_618_col : fib_col
+                lv_width = (lv == 0.5 or lv == 0.618) ? 2 : 1
+                array.push(fib_lines, line.new(is_bull ? bar_sl : bar_sh, px, bar_index + 30, px, color = lv_col, style = line.style_solid, width = lv_width))
+                if lv == 0.0 or lv == 0.5 or lv == 0.618 or lv == 1.0
+                    array.push(fib_labels, label.new(bar_index + 30, px, array.get(fib_lv_labels, j),
+                         color = color.new(color.black, 100), textcolor = lv_col, style = label.style_label_left, size = size.tiny))
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── BE MANUEL + TRACKING ─────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+be_count = input.int(0, "🟡 BE Manuel — incrementer pour liberer (0→1→2…)", group = "Tracking", minval = 0, step = 1)
+var int    be_last   = 0
+var float  trk_entry = na ; var float trk_sl   = na ; var float trk_tp  = na
+var float  trk_rr    = na ; var bool  trk_long  = false
+var bool   trk_open  = false ; var float trk_peak = na ; var string trk_type = ""
+var string trk_htf_ctx = ""
+
 new_be_req = be_count > be_last and barstate.islast
 if trk_open
-    trk_peak   := trk_long ? (na(trk_peak) ? high : math.max(trk_peak, high))
-                           : (na(trk_peak) ? low  : math.min(trk_peak, low))
-    hit_tp     = trk_long ? high >= trk_tp : low  <= trk_tp
-    hit_sl     = trk_long ? low  <= trk_sl : high >= trk_sl
-    had_run    = trk_long ? trk_peak >= trk_entry + 5.0 : trk_peak <= trk_entry - 5.0
-    hit_be     = new_be_req or (had_run and (trk_long ? close <= trk_entry : close >= trk_entry))
+    trk_peak := trk_long ? (na(trk_peak) ? high : math.max(trk_peak, high))
+                         : (na(trk_peak) ? low  : math.min(trk_peak, low))
+    hit_tp  = trk_long ? high >= trk_tp : low  <= trk_tp
+    hit_sl  = trk_long ? low  <= trk_sl : high >= trk_sl
+    had_run = trk_long ? trk_peak >= trk_entry + 5.0 : trk_peak <= trk_entry - 5.0
+    hit_be  = new_be_req or (had_run and (trk_long ? close <= trk_entry : close >= trk_entry))
     if hit_tp
-        alert('{"type":"close","result":"win","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
-        trk_open := false
-        trk_peak := na
+        alert('{"type":"close","result":"win","bot":"' + bot_name + '","setup":"' + trk_type + '","rr":"' + str.tostring(trk_rr, "#.##") + '"}', alert.freq_once_per_bar_close)
+        trk_open := false ; trk_peak := na
     else if hit_sl
-        alert('{"type":"close","result":"loss","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
-        trk_open := false
-        trk_peak := na
+        alert('{"type":"close","result":"loss","bot":"' + bot_name + '","setup":"' + trk_type + '"}', alert.freq_once_per_bar_close)
+        trk_open := false ; trk_peak := na
     else if hit_be
-        alert('{"type":"close","result":"be","bot":"' + bot_name + '"}', alert.freq_once_per_bar_close)
-        trk_open := false
-        trk_peak := na
+        alert('{"type":"close","result":"be","bot":"' + bot_name + '","setup":"' + trk_type + '"}', alert.freq_once_per_bar_close)
+        trk_open := false ; trk_peak := na
         if new_be_req
             be_last := be_count
-
-// Consommer l'incrément si slot déjà libre (évite un BE sur le prochain signal)
 if not trk_open and new_be_req
     be_last := be_count
 
-// ─── SIGNAL BUY (slot libre uniquement) ───────────────────────────────────
+// ─── FONCTION ENTREE ──────────────────────────────────────────────────────
+f_enter(entry, sl_v, is_long, setup_type, htf_ctx) =>
+    tp_v    = f_find_tp(entry, sl_v, is_long)
+    valid   = not na(tp_v)
+    rr_real = valid ? math.abs(tp_v - entry) / math.abs(entry - sl_v) : float(na)
+    if valid and not trk_open
+        tp2_v   = is_long ? entry + math.abs(entry - sl_v) * (rr_real + 1.0)
+                          : entry - math.abs(entry - sl_v) * (rr_real + 1.0)
+        sig_col = is_long ? bull_col : bear_col
+        htf_tag = htf_ctx != "" ? "\n📊 " + htf_ctx : ""
+        sig_txt = (is_long ? "BUY ✓\n" : "SELL ✓\n") + setup_type + "\nRR " + str.tostring(rr_real, "#.##") + htf_tag
+        label.new(bar_index, is_long ? low : high, sig_txt,
+             color = sig_col, textcolor = color.white,
+             style = is_long ? label.style_label_up : label.style_label_down, size = size.normal)
+        line.new(bar_index, sl_v,  bar_index + 40, sl_v,  color = is_long ? bear_col : bull_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, tp_v,  bar_index + 40, tp_v,  color = sig_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, tp2_v, bar_index + 40, tp2_v, color = sig_col, style = line.style_dashed, width = 1)
+        sig_dir = is_long ? "LONG" : "SHORT"
+        alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"' + sig_dir + '","entry":' + str.tostring(entry) + ',"sl":' + str.tostring(sl_v) + ',"tp":' + str.tostring(tp_v) + ',"rr":"' + str.tostring(rr_real, "#.##") + '","setup":"' + setup_type + '","htf":"' + htf_ctx + '","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
+        trk_entry   := entry ; trk_sl := sl_v ; trk_tp := tp_v
+        trk_rr      := rr_real ; trk_long := is_long ; trk_open := true
+        trk_type    := setup_type ; trk_htf_ctx := htf_ctx
+    valid
+
+f_htf_context(is_long) =>
+    ctx = ""
+    if is_long
+        if in_htf_fvg_bull
+            ctx := ctx + "FVG HTF"
+        if not na(d_h0) and close < d_h0
+            ctx := ctx + (ctx != "" ? "+" : "") + "PDH"
+        if not na(w_h0) and close < w_h0
+            ctx := ctx + (ctx != "" ? "+" : "") + "PWH"
+    else
+        if in_htf_fvg_bear
+            ctx := ctx + "FVG HTF"
+        if not na(d_l0) and close > d_l0
+            ctx := ctx + (ctx != "" ? "+" : "") + "PDL"
+        if not na(w_l0) and close > w_l0
+            ctx := ctx + (ctx != "" ? "+" : "") + "PWL"
+    ctx
+
+var bool last_rejected = false
+
 if buy_signal and not trk_open and not na(sweep_low_val)
-    sl_v  = sweep_low_val - 5.0
-    risk  = close - sl_v
-    tp_v  = close + risk * 2.0
-    tp2_v = close + risk * 3.0
-    label.new(bar_index, low, 'BUY ✓', color = bull_col, textcolor = color.white, style = label.style_label_up, size = size.normal)
-    line.new(bar_index, sl_v,  bar_index + 30, sl_v,  color = bear_col, style = line.style_dotted, width = 2)
-    line.new(bar_index, tp_v,  bar_index + 30, tp_v,  color = bull_col, style = line.style_dotted, width = 1)
-    line.new(bar_index, tp2_v, bar_index + 30, tp2_v, color = bull_col, style = line.style_dashed, width = 1)
-    alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"LONG","entry":' + str.tostring(close) + ',"sl":' + str.tostring(sl_v) + ',"tp":' + str.tostring(tp_v) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
-    trk_entry := close
-    trk_sl    := sl_v
-    trk_tp    := tp_v
-    trk_long  := true
-    trk_open  := true
+    sl_v = sweep_low_val - 5.0
+    last_rejected := not f_enter(close, sl_v, true, "MSS", f_htf_context(true))
 
-// ─── SIGNAL SELL (slot libre uniquement) ──────────────────────────────────
 if sell_signal and not trk_open and not na(sweep_high_val)
-    sl_v  = sweep_high_val + 5.0
-    risk  = sl_v - close
-    tp_v  = close - risk * 2.0
-    tp2_v = close - risk * 3.0
-    label.new(bar_index, high, 'SELL ✓', color = bear_col, textcolor = color.white, style = label.style_label_down, size = size.normal)
-    line.new(bar_index, sl_v,  bar_index + 30, sl_v,  color = bull_col, style = line.style_dotted, width = 2)
-    line.new(bar_index, tp_v,  bar_index + 30, tp_v,  color = bear_col, style = line.style_dotted, width = 1)
-    line.new(bar_index, tp2_v, bar_index + 30, tp2_v, color = bear_col, style = line.style_dashed, width = 1)
-    alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"SHORT","entry":' + str.tostring(close) + ',"sl":' + str.tostring(sl_v) + ',"tp":' + str.tostring(tp_v) + ',"rr":"1:2","context":"LIQ+MSS+FVG","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
-    trk_entry := close
-    trk_sl    := sl_v
-    trk_tp    := tp_v
-    trk_long  := false
-    trk_open  := true
+    sl_v = sweep_high_val + 5.0
+    last_rejected := not f_enter(close, sl_v, false, "MSS", f_htf_context(false))
 
-// ─── BAR ALERT (fallback détection TP/SL côté dashboard) ─────────────────
+if ob_fvg_bull_signal and not trk_open
+    last_rejected := not f_enter(close, ob_fvg_bull_sl, true, "OB_CONT", f_htf_context(true))
+
+if ob_fvg_bear_signal and not trk_open
+    last_rejected := not f_enter(close, ob_fvg_bear_sl, false, "OB_CONT", f_htf_context(false))
+
+// ─── BAR ALERT ────────────────────────────────────────────────────────────
 alert('{"type":"bar","bot":"' + bot_name + '","h":' + str.tostring(math.round(high * 100) / 100) + ',"l":' + str.tostring(math.round(low * 100) / 100) + '}', alert.freq_once_per_bar_close)
 
-// ─── DASHBOARD TABLE ──────────────────────────────────────────────────────
-var table dash = table.new(position.top_right, 2, 9,
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── DASHBOARD ────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+var table dash = table.new(position.top_right, 2, 18,
     border_color = color.new(color.gray, 60), border_width = 1,
     bgcolor      = color.new(#1a1a2e, 10))
 
 f_ok(v) => v ? "✅" : "❌"
 f_row(t, ok, r, v) =>
-    table.cell(t, 0, r, v,          text_color = color.white, bgcolor = color.new(#1a1a2e, 30),                                 text_size = size.small)
-    table.cell(t, 1, r, f_ok(ok),  text_color = color.white, bgcolor = ok ? color.new(#00e676, 60) : color.new(#ff1744, 60),  text_size = size.small)
+    table.cell(t, 0, r, v,        text_color = color.white, bgcolor = color.new(#1a1a2e, 30),                                text_size = size.small)
+    table.cell(t, 1, r, f_ok(ok), text_color = color.white, bgcolor = ok ? color.new(#00e676, 60) : color.new(#ff1744, 60), text_size = size.small)
 
 if barstate.islast
-    c1    = array.size(eq_lows) > 0 or array.size(eq_highs) > 0
-    c2    = bull_sweep or bear_sweep
-    c3    = bull_mss   or bear_mss
-    c4    = bull_fvg_active or bear_fvg_active
-    c5    = not na(sweep_low_val) or not na(sweep_high_val)
-    score = (c1 ? 1 : 0) + (c2 ? 1 : 0) + (c3 ? 1 : 0) + (c4 ? 1 : 0) + (c5 ? 1 : 0)
+    c1 = array.size(eq_lows) > 0 or array.size(eq_highs) > 0
+    c2 = bull_sweep or bear_sweep
+    c3 = waiting_buy or waiting_sell
+    c4 = bull_fvg_active or bear_fvg_active
+    c5 = not na(sweep_low_val) or not na(sweep_high_val)
+    c6 = bull_cont or bear_cont
+    c7 = ob_fvg_bull_waiting or ob_fvg_bear_waiting
+    score = (c1?1:0)+(c2?1:0)+(c3?1:0)+(c4?1:0)+(c5?1:0)
 
-    table.cell(dash, 0, 0, "ICT EDIT [" + timeframe.period + "m]",
+    sess_txt = in_asia ? "🌏 ASIA" : in_london ? "🇬🇧 LONDON" : in_ny ? "🇺🇸 NY" : "😴 OFF"
+
+    table.cell(dash, 0, 0, "ICT EDIT v6 [" + timeframe.period + "m]",
         text_color = color.white, bgcolor = color.new(#0d1117, 20), text_size = size.small)
-    table.cell(dash, 1, 0, buy_signal ? "BUY" : sell_signal ? "SELL" : "SCAN",
+    table.cell(dash, 1, 0, sess_txt,
+        text_color = color.white, bgcolor = color.new(#0d1117, 40), text_size = size.small)
+
+    f_row(dash, c1, 1, "1. EQH/EQL (LTF + 1m)")
+    f_row(dash, c2, 2, "2. Sweep liquidite")
+    f_row(dash, c3, 3, "3. MSS + attente FVG")
+    f_row(dash, c4, 4, "4. FVG LTF actif")
+    f_row(dash, c5, 5, "5. SL reference")
+    f_row(dash, c6, 6, "→ CONT EQH/EQL")
+    f_row(dash, c7, 7, "→ CONT OB+FVG")
+
+    htf_fvg_bull_active = array.size(fvg4h_hi) > 0 or array.size(fvgD_hi) > 0
+    f_row(dash, htf_fvg_bull_active, 8, "FVG 4H/Daily actif")
+    f_row(dash, in_htf_fvg_bull or in_htf_fvg_bear, 9, "Prix dans FVG HTF")
+
+    daily_loaded = array.size(daily_highs) > 0
+    f_row(dash, daily_loaded, 10, "Liq. Daily/Weekly chargee")
+
+    f_row(dash, buy_signal or sell_signal or ob_fvg_bull_signal or ob_fvg_bear_signal, 11, "→ SIGNAL")
+
+    rr_txt = trk_open ? "RR actif : " + str.tostring(trk_rr, "#.##") + "R"
+                      : last_rejected ? "⚠️ Rejete RR < " + str.tostring(min_rr, "#.#") : "RR min : " + str.tostring(min_rr, "#.#") + "R"
+    rr_bg  = trk_open ? color.new(color.teal, 50) : last_rejected ? color.new(color.orange, 40) : color.new(#1a1a2e, 20)
+    table.cell(dash, 0, 12, rr_txt, text_color = color.white, bgcolor = rr_bg, text_size = size.small)
+    table.cell(dash, 1, 12, trk_open ? "TP " + str.tostring(math.round(trk_tp)) : "—",
+        text_color = color.white, bgcolor = color.new(#1a1a2e, 20), text_size = size.small)
+
+    table.cell(dash, 0, 13,
+        na(bull_structure) ? "📊 Indefinie" : bull_structure ? "📈 Haussiere" : "📉 Baissiere",
         text_color = color.white,
-        bgcolor = buy_signal ? color.new(color.teal, 40) : sell_signal ? color.new(color.red, 40) : color.new(color.gray, 40),
-        text_size = size.small)
-    f_row(dash, c1, 1, "1. EQH / EQL")
-    f_row(dash, c2, 2, "2. Sweep liquidité")
-    f_row(dash, c3, 3, "3. MSS")
-    f_row(dash, c4, 4, "4. FVG actif")
-    f_row(dash, c5, 5, "5. SL référence")
-    f_row(dash, buy_signal or sell_signal, 6, "→ SIGNAL 5/5")
-    table.cell(dash, 0, 7, "Score: " + str.tostring(score) + "/5",
-        text_color = color.white, bgcolor = color.new(#0d1117, 20), text_size = size.small)
-    table.cell(dash, 1, 7,
-        buy_signal  and not trk_open ? "BUY  ✓" :
-        sell_signal and not trk_open ? "SELL ✓" :
-        trk_open ? "⏳ EN COURS" : "—",
+        bgcolor    = na(bull_structure) ? color.new(color.gray, 60) : bull_structure ? color.new(color.teal, 60) : color.new(color.red, 60),
+        text_size  = size.small)
+    table.cell(dash, 1, 13, ob_bull_valid ? "OB Bull ✅" : ob_bear_valid ? "OB Bear ✅" : "OB —",
         text_color = color.white,
-        bgcolor =
-            buy_signal  and not trk_open ? color.new(color.teal, 40) :
-            sell_signal and not trk_open ? color.new(color.red,  40) :
-            trk_open ? color.new(#f0c020, 50) : color.new(color.gray, 60),
-        text_size = size.small)
-    table.cell(dash, 0, 8, trk_open ? "🔒 SLOT OCCUPÉ" : "🟢 SLOT LIBRE",
+        bgcolor    = ob_bull_valid ? color.new(color.teal, 60) : ob_bear_valid ? color.new(color.red, 60) : color.new(color.gray, 70),
+        text_size  = size.small)
+
+    table.cell(dash, 0, 14, trk_open ? "🔒 SLOT OCCUPE" : "🟢 SLOT LIBRE",
         text_color = color.white,
         bgcolor    = trk_open ? color.new(#f0c020, 40) : color.new(#00e676, 70),
         text_size  = size.small)
-    table.cell(dash, 1, 8,
+    table.cell(dash, 1, 14,
         trk_open ? (trk_long ? "▲ " + str.tostring(trk_entry) : "▼ " + str.tostring(trk_entry)) : "—",
+        text_color = color.white, bgcolor = color.new(#1a1a2e, 20), text_size = size.small)
+
+    table.cell(dash, 0, 15, trk_open ? "📐 " + trk_type : "—",
         text_color = color.white,
-        bgcolor    = color.new(#1a1a2e, 20),
+        bgcolor    = trk_open and trk_type == "OB_CONT" ? color.new(color.purple, 50) : color.new(#1a1a2e, 20),
         text_size  = size.small)
+    table.cell(dash, 1, 15, trk_open ? "SL " + str.tostring(math.round(trk_sl)) : "—",
+        text_color = color.white, bgcolor = color.new(#1a1a2e, 20), text_size = size.small)
+
+    htf_ctx_live = trk_open and trk_htf_ctx != "" ? trk_htf_ctx : in_htf_fvg_bull ? "Dans FVG HTF Bull" : in_htf_fvg_bear ? "Dans FVG HTF Bear" : "—"
+    table.cell(dash, 0, 16, "🏛 HTF: " + htf_ctx_live,
+        text_color = in_htf_fvg_bull ? col_asia : in_htf_fvg_bear ? color.new(color.red, 0) : color.new(color.gray, 40),
+        bgcolor    = color.new(#1a1a2e, 20), text_size = size.small)
+    table.cell(dash, 1, 16, "", bgcolor = color.new(#1a1a2e, 20))
+
+    sess_lvl = not na(asia_h) ? "Asia " + str.tostring(math.round(asia_l)) + "/" + str.tostring(math.round(asia_h)) : "Asia: -"
+    pdh_txt  = not na(d_h0)  ? "PDH " + str.tostring(math.round(d_h0)) + " PDL " + str.tostring(math.round(d_l0)) : "PDH/PDL: -"
+    table.cell(dash, 0, 17, pdh_txt,  text_color = col_daily,  bgcolor = color.new(#1a1a2e, 20), text_size = size.small)
+    table.cell(dash, 1, 17, sess_lvl, text_color = col_asia,   bgcolor = color.new(#1a1a2e, 20), text_size = size.small)
+
 `.trim();
 
 function generateScript({ name, botId, sl, htfTf, minScore }) {
@@ -795,6 +1426,13 @@ function SignalCard({ signal, onSave, isLatest }) {
 }
 
 // ── Bot Stats helpers ─────────────────────────────────────────
+function getBotScriptName(botId) {
+  if (!botId) return null;
+  if (botId === 'ICT_EDIT') return { name: 'ICT TEST', color: '#f07820' };
+  const b = PINE_BOTS.find(x => x.botId === botId);
+  return b ? { name: b.name, color: b.color } : null;
+}
+
 function pnlColor(v) { return v > 0 ? '#00ff88' : v < 0 ? '#ff4455' : '#8aaa90'; }
 function fmtUsd(n, sign = false) {
   if (n == null || isNaN(n)) return '—';
@@ -1247,14 +1885,14 @@ function BotStats({ signals }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
             <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
               <tr style={{ background: 'rgba(6,12,8,0.95)', borderBottom: '1px solid rgba(0,255,136,0.08)' }}>
-                {['HEURE', 'TF', 'BOT', 'DIR', 'ENTRY', 'SL', 'TP', 'R:R', 'PTS', 'P&L (5 MNQ)', 'SESSION KZ', 'RÉSULTAT'].map(h => (
+                {['HEURE', 'TF', 'BOT', 'SCRIPT', 'DIR', 'ENTRY', 'BE', 'SL', 'TP', 'R:R', 'PTS', 'P&L (5 MNQ)', 'SESSION KZ', 'RÉSULTAT'].map(h => (
                   <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: '9px', color: '#3a6a4a', letterSpacing: '1.5px', fontWeight: '700', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {listSignals.length === 0 && (
-                <tr><td colSpan={12} style={{ padding: '24px', textAlign: 'center', color: '#2a4a30', fontSize: '12px' }}>Aucun signal</td></tr>
+                <tr><td colSpan={14} style={{ padding: '24px', textAlign: 'center', color: '#2a4a30', fontSize: '12px' }}>Aucun signal</td></tr>
               )}
               {listSignals.map((sig, i) => {
                 const dir    = (sig.signal ?? sig.direction ?? '').toUpperCase();
@@ -1277,10 +1915,14 @@ function BotStats({ signals }) {
                       {fmtTf(sig.timeframe) ? <span style={{ fontSize: '9px', color: '#3a9a5a', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.1)', padding: '1px 4px', borderRadius: '2px', fontWeight: '700' }}>{fmtTf(sig.timeframe)}</span> : <span style={{ color: '#2a4a30' }}>—</span>}
                     </td>
                     <td style={{ padding: '7px 10px', fontSize: '10px', color: '#aa88ff' }}>{sig.bot ?? '—'}</td>
+                    <td style={{ padding: '7px 6px' }}>
+                      {(() => { const s = getBotScriptName(sig.bot); return s ? <span style={{ fontSize: '9px', color: s.color, background: `${s.color}18`, border: `1px solid ${s.color}40`, padding: '2px 6px', borderRadius: '3px', fontWeight: '700', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>{s.name}</span> : <span style={{ color: '#2a4a30' }}>—</span>; })()}
+                    </td>
                     <td style={{ padding: '7px 10px' }}>
                       <span style={{ color: isL ? '#00ff88' : '#ff4455', background: `rgba(${isL ? '0,255,136' : '255,68,85'},0.08)`, padding: '1px 5px', borderRadius: '3px', fontSize: '11px', fontWeight: '600' }}>{dir}</span>
                     </td>
                     <td style={{ padding: '7px 10px', color: '#8aaa90' }}>{parseFloat(sig.entry)?.toFixed(2) ?? '—'}</td>
+                    <td style={{ padding: '7px 10px', color: '#f0c020', fontVariantNumeric: 'tabular-nums' }}>{parseFloat(sig.entry) ? parseFloat(sig.entry).toFixed(2) : '—'}</td>
                     <td style={{ padding: '7px 10px', color: '#ff7788' }}>{parseFloat(sig.sl)?.toFixed(2) ?? '—'}</td>
                     <td style={{ padding: '7px 10px', color: '#00ff88' }}>{tp?.toFixed(2) ?? '—'}</td>
                     <td style={{ padding: '7px 10px', color: '#f0c020' }}>{sig.rr ?? '—'}</td>
