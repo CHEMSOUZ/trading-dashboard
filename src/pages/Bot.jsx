@@ -133,15 +133,15 @@ col_d_fvg    = color.new(color.orange, 70)
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ── Daily : H/L/O/C des 5 derniers jours + pivots EQH/EQL ─────────────────
-[d_h0, d_l0] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead = barmerge.lookahead_on)
-[d_h1, d_l1] = request.security(syminfo.tickerid, "D", [high[2], low[2]], lookahead = barmerge.lookahead_on)
-[d_h2, d_l2] = request.security(syminfo.tickerid, "D", [high[3], low[3]], lookahead = barmerge.lookahead_on)
-[d_h3, d_l3] = request.security(syminfo.tickerid, "D", [high[4], low[4]], lookahead = barmerge.lookahead_on)
-[d_h4, d_l4] = request.security(syminfo.tickerid, "D", [high[5], low[5]], lookahead = barmerge.lookahead_on)
+[d_h0, d_l0] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead = barmerge.lookahead_off)
+[d_h1, d_l1] = request.security(syminfo.tickerid, "D", [high[2], low[2]], lookahead = barmerge.lookahead_off)
+[d_h2, d_l2] = request.security(syminfo.tickerid, "D", [high[3], low[3]], lookahead = barmerge.lookahead_off)
+[d_h3, d_l3] = request.security(syminfo.tickerid, "D", [high[4], low[4]], lookahead = barmerge.lookahead_off)
+[d_h4, d_l4] = request.security(syminfo.tickerid, "D", [high[5], low[5]], lookahead = barmerge.lookahead_off)
 
 // ── Weekly : H/L semaine en cours et precedente ────────────────────────────
-[w_h0, w_l0] = request.security(syminfo.tickerid, "W", [high[1], low[1]], lookahead = barmerge.lookahead_on)
-[w_h1, w_l1] = request.security(syminfo.tickerid, "W", [high[2], low[2]], lookahead = barmerge.lookahead_on)
+[w_h0, w_l0] = request.security(syminfo.tickerid, "W", [high[1], low[1]], lookahead = barmerge.lookahead_off)
+[w_h1, w_l1] = request.security(syminfo.tickerid, "W", [high[2], low[2]], lookahead = barmerge.lookahead_off)
 
 // ── FVG 4H ─────────────────────────────────────────────────────────────────
 [h4_high0, h4_low0, h4_high2, h4_low2] = request.security(syminfo.tickerid, "240",
