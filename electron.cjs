@@ -206,6 +206,7 @@ function createWindow() {
     width: 1400, height: 900,
     minWidth: 1000, minHeight: 700,
     backgroundColor: '#070d12',
+    title: `Trading Dashboard ${app.getVersion()}`,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
