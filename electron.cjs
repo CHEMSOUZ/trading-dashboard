@@ -221,6 +221,9 @@ function createWindow() {
   } else {
     mainWindow.loadFile(distIndex);
   }
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.setTitle(`Trading Dashboard ${app.getVersion()}`);
+  });
 }
 
 app.whenReady().then(async () => {
