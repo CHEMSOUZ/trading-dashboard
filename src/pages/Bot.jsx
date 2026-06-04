@@ -160,9 +160,6 @@ d_bear_fvg_size = d_low2  - d_high0
 // ═══════════════════════════════════════════════════════════════════════════
 // ─── TRACE NIVEAUX DAILY / WEEKLY ─────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
-var bool daily_drawn  = false
-var bool weekly_drawn = false
-
 is_new_day  = ta.change(time("D"))  != 0
 is_new_week = ta.change(time("W"))  != 0
 
@@ -170,10 +167,6 @@ var array<float> daily_highs = array.new_float()
 var array<float> daily_lows  = array.new_float()
 var array<float> weekly_highs= array.new_float()
 var array<float> weekly_lows = array.new_float()
-
-f_htf_line(lvl, col, lbl, lbl_style) =>
-    l  = line.new(bar_index, lvl, bar_index + 200, lvl, color = col, style = line.style_dashed, width = 1)
-    lb = label.new(bar_index + 200, lvl, lbl, color = color.new(col, 80), textcolor = col, style = lbl_style, size = size.tiny)
 
 if is_new_day and show_htf
     array.clear(daily_highs)
@@ -284,21 +277,21 @@ new_4h_bar = ta.change(time("240")) != 0
 
 if new_4h_bar and show_htf_fvg
     if h4_bull_fvg_size > fvg_min_pts * 2.0
-        b = box.new(bar_index - 2, h4_low0, bar_index + 300, h4_high2,
+        b_bull = box.new(bar_index - 2, h4_low0, bar_index + 300, h4_high2,
              bgcolor = col_4h_fvg, border_color = color.new(color.purple, 40), border_width = 1,
              text = 'FVG 4H ▲', text_color = color.new(color.purple, 20), text_size = size.tiny)
         array.push(fvg4h_hi, h4_low0) ; array.push(fvg4h_lo, h4_high2)
-        array.push(fvg4h_bull, true)  ; array.push(fvg4h_box, b)
+        array.push(fvg4h_bull, true)  ; array.push(fvg4h_box, b_bull)
         if array.size(fvg4h_hi) > 5
             box.delete(array.shift(fvg4h_box))
             array.shift(fvg4h_hi) ; array.shift(fvg4h_lo) ; array.shift(fvg4h_bull)
 
     if h4_bear_fvg_size > fvg_min_pts * 2.0
-        b = box.new(bar_index - 2, h4_low2, bar_index + 300, h4_high0,
+        b_bear = box.new(bar_index - 2, h4_low2, bar_index + 300, h4_high0,
              bgcolor = col_4h_fvg, border_color = color.new(color.purple, 40), border_width = 1,
              text = 'FVG 4H ▼', text_color = color.new(color.purple, 20), text_size = size.tiny)
         array.push(fvg4h_hi, h4_low2) ; array.push(fvg4h_lo, h4_high0)
-        array.push(fvg4h_bull, false)  ; array.push(fvg4h_box, b)
+        array.push(fvg4h_bull, false)  ; array.push(fvg4h_box, b_bear)
         if array.size(fvg4h_hi) > 5
             box.delete(array.shift(fvg4h_box))
             array.shift(fvg4h_hi) ; array.shift(fvg4h_lo) ; array.shift(fvg4h_bull)
@@ -307,26 +300,26 @@ new_d_bar = ta.change(time("D")) != 0
 
 if new_d_bar and show_htf_fvg
     if d_bull_fvg_size > fvg_min_pts * 4.0
-        b = box.new(bar_index - 2, d_low0, bar_index + 400, d_high2,
+        b_bull = box.new(bar_index - 2, d_low0, bar_index + 400, d_high2,
              bgcolor = col_d_fvg, border_color = color.new(color.orange, 40), border_width = 1,
              text = 'FVG D ▲', text_color = color.new(color.orange, 20), text_size = size.tiny)
         array.push(fvgD_hi, d_low0) ; array.push(fvgD_lo, d_high2)
-        array.push(fvgD_bull, true)  ; array.push(fvgD_box, b)
+        array.push(fvgD_bull, true)  ; array.push(fvgD_box, b_bull)
         if array.size(fvgD_hi) > 5
             box.delete(array.shift(fvgD_box))
             array.shift(fvgD_hi) ; array.shift(fvgD_lo) ; array.shift(fvgD_bull)
 
     if d_bear_fvg_size > fvg_min_pts * 4.0
-        b = box.new(bar_index - 2, d_low2, bar_index + 400, d_high0,
+        b_bear = box.new(bar_index - 2, d_low2, bar_index + 400, d_high0,
              bgcolor = col_d_fvg, border_color = color.new(color.orange, 40), border_width = 1,
              text = 'FVG D ▼', text_color = color.new(color.orange, 20), text_size = size.tiny)
         array.push(fvgD_hi, d_low2) ; array.push(fvgD_lo, d_high0)
-        array.push(fvgD_bull, false)  ; array.push(fvgD_box, b)
+        array.push(fvgD_bull, false)  ; array.push(fvgD_box, b_bear)
         if array.size(fvgD_hi) > 5
             box.delete(array.shift(fvgD_box))
             array.shift(fvgD_hi) ; array.shift(fvgD_lo) ; array.shift(fvgD_bull)
 
-f_clean_htf_fvg(hi_arr, lo_arr, bull_arr, box_arr) =>
+f_clean_htf_fvg(array<float> hi_arr, array<float> lo_arr, array<bool> bull_arr, array<box> box_arr) =>
     i = 0
     while i < array.size(hi_arr)
         hi      = array.get(hi_arr,   i)
@@ -345,7 +338,7 @@ f_clean_htf_fvg(hi_arr, lo_arr, bull_arr, box_arr) =>
 f_clean_htf_fvg(fvg4h_hi, fvg4h_lo, fvg4h_bull, fvg4h_box)
 f_clean_htf_fvg(fvgD_hi,  fvgD_lo,  fvgD_bull,  fvgD_box)
 
-f_price_in_htf_fvg(hi_arr, lo_arr, bull_arr, is_long_trade) =>
+f_price_in_htf_fvg(array<float> hi_arr, array<float> lo_arr, array<bool> bull_arr, bool is_long_trade) =>
     result = false
     n = array.size(hi_arr)
     if n > 0
@@ -399,7 +392,7 @@ if in_ny
     ny_h   := na(ny_h)   ? high : math.max(ny_h,   high)
     ny_l   := na(ny_l)   ? low  : math.min(ny_l,   low)
 
-f_sess_lines(h, l, col, lbl_h, lbl_l) =>
+f_sess_lines(float h, float l, color col, string lbl_h, string lbl_l) =>
     line.new(bar_index - 50, h, bar_index + 100, h, color = col, style = line.style_dashed, width = 2)
     line.new(bar_index - 50, l, bar_index + 100, l, color = col, style = line.style_dashed, width = 2)
     label.new(bar_index, h, lbl_h, color = color.new(col, 70), textcolor = col, style = label.style_label_left, size = size.tiny)
@@ -416,30 +409,33 @@ if not in_ny     and not na(ny_h)   and not ny_done   and show_sess
     ny_done := true
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ─── EQH/EQL LTF ──────────────────────────────────────────────────────────
+// ─── EQH/EQL 1m — pré-calcul au scope global (request.security interdit dans les boucles)
 // ═══════════════════════════════════════════════════════════════════════════
+[ph_1m_0, pl_1m_0] = request.security(syminfo.tickerid, "1", [ta.pivothigh(high,3,3),    ta.pivotlow(low,3,3)],    lookahead = barmerge.lookahead_off)
+[ph_1m_1, pl_1m_1] = request.security(syminfo.tickerid, "1", [ta.pivothigh(high,3,3)[1], ta.pivotlow(low,3,3)[1]], lookahead = barmerge.lookahead_off)
+[ph_1m_2, pl_1m_2] = request.security(syminfo.tickerid, "1", [ta.pivothigh(high,3,3)[2], ta.pivotlow(low,3,3)[2]], lookahead = barmerge.lookahead_off)
+[ph_1m_3, pl_1m_3] = request.security(syminfo.tickerid, "1", [ta.pivothigh(high,3,3)[3], ta.pivotlow(low,3,3)[3]], lookahead = barmerge.lookahead_off)
+[ph_1m_4, pl_1m_4] = request.security(syminfo.tickerid, "1", [ta.pivothigh(high,3,3)[4], ta.pivotlow(low,3,3)[4]], lookahead = barmerge.lookahead_off)
+
 var array<float> eq_highs_1m = array.new_float()
 var array<float> eq_lows_1m  = array.new_float()
 
-[htf_ph, htf_pl] = request.security(syminfo.tickerid, "1",
-     [ta.pivothigh(high, 3, 3), ta.pivotlow(low, 3, 3)], lookahead = barmerge.lookahead_off)
-
-if not na(htf_ph) and show_liq
-    for i = 1 to 10 by 1
-        [ph_prev, _] = request.security(syminfo.tickerid, "1",
-             [ta.pivothigh(high, 3, 3)[i], ta.pivotlow(low, 3, 3)[i]], lookahead = barmerge.lookahead_off)
-        if not na(ph_prev) and math.abs(htf_ph - ph_prev) / htf_ph * 100 < liq_tol
-            line.new(bar_index - i, ph_prev, bar_index, htf_ph, color = color.new(color.orange, 50), style = line.style_dotted, width = 1)
-            array.push(eq_highs_1m, htf_ph)
+if not na(ph_1m_0) and show_liq
+    ph_pool = array.from(ph_1m_1, ph_1m_2, ph_1m_3, ph_1m_4)
+    for i = 0 to array.size(ph_pool) - 1 by 1
+        prev_ph = array.get(ph_pool, i)
+        if not na(prev_ph) and math.abs(ph_1m_0 - prev_ph) / ph_1m_0 * 100 < liq_tol
+            line.new(bar_index - (i + 1), prev_ph, bar_index, ph_1m_0, color = color.new(color.orange, 50), style = line.style_dotted, width = 1)
+            array.push(eq_highs_1m, ph_1m_0)
             break
 
-if not na(htf_pl) and show_liq
-    for i = 1 to 10 by 1
-        [_, pl_prev] = request.security(syminfo.tickerid, "1",
-             [ta.pivothigh(high, 3, 3)[i], ta.pivotlow(low, 3, 3)[i]], lookahead = barmerge.lookahead_off)
-        if not na(pl_prev) and math.abs(htf_pl - pl_prev) / htf_pl * 100 < liq_tol
-            line.new(bar_index - i, pl_prev, bar_index, htf_pl, color = color.new(color.orange, 50), style = line.style_dotted, width = 1)
-            array.push(eq_lows_1m, htf_pl)
+if not na(pl_1m_0) and show_liq
+    pl_pool = array.from(pl_1m_1, pl_1m_2, pl_1m_3, pl_1m_4)
+    for i = 0 to array.size(pl_pool) - 1 by 1
+        prev_pl = array.get(pl_pool, i)
+        if not na(prev_pl) and math.abs(pl_1m_0 - prev_pl) / pl_1m_0 * 100 < liq_tol
+            line.new(bar_index - (i + 1), prev_pl, bar_index, pl_1m_0, color = color.new(color.orange, 50), style = line.style_dotted, width = 1)
+            array.push(eq_lows_1m, pl_1m_0)
             break
 
 // ─── SWING HIGH / LOW LTF ─────────────────────────────────────────────────
@@ -489,7 +485,7 @@ if not na(swing_low)
 // ═══════════════════════════════════════════════════════════════════════════
 // ─── FONCTION TP ──────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
-f_find_tp(entry, sl, is_long) =>
+f_find_tp(float entry, float sl, bool is_long) =>
     risk       = math.abs(entry - sl)
     candidates = array.new_float()
 
@@ -739,7 +735,7 @@ var array<float> fib_sl_arr  = array.new_float()
 var array<int>   fib_bar_sh  = array.new_int()
 var array<int>   fib_bar_sl  = array.new_int()
 var array<bool>  fib_is_bull = array.new_bool()
-fib_levels = array.from(0.0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0)
+var fib_levels = array.from(0.0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0)
 var float pending_sh = na ; var float pending_sl = na
 var int   pending_sh_bar = na ; var int pending_sl_bar = na
 var bool  last_pivot_was_high = na
@@ -768,12 +764,14 @@ if not na(swing_low)
     pending_sl := swing_low ; pending_sl_bar := bar_index - swing_len
     last_pivot_was_high := false
 
-var line[]  fib_lines  = array.new<line>()
-var label[] fib_labels = array.new<label>()
+var array<line>  fib_lines  = array.new<line>()
+var array<label> fib_labels = array.new<label>()
 
 if barstate.islast and show_fib
-    for l  in fib_lines  => line.delete(l)
-    for lb in fib_labels => label.delete(lb)
+    for l in fib_lines
+        line.delete(l)
+    for lb in fib_labels
+        label.delete(lb)
     array.clear(fib_lines) ; array.clear(fib_labels)
     n = array.size(fib_sh_arr)
     for i = 0 to n - 1 by 1
@@ -835,7 +833,7 @@ if not trk_open and new_be_req
     be_last := be_count
 
 // ─── FONCTION ENTREE ──────────────────────────────────────────────────────
-f_enter(entry, sl_v, is_long, setup_type, htf_ctx) =>
+f_enter(float entry, float sl_v, bool is_long, string setup_type, string htf_ctx) =>
     tp_v    = f_find_tp(entry, sl_v, is_long)
     valid   = not na(tp_v)
     rr_real = valid ? math.abs(tp_v - entry) / math.abs(entry - sl_v) : float(na)
@@ -843,8 +841,8 @@ f_enter(entry, sl_v, is_long, setup_type, htf_ctx) =>
         tp2_v   = is_long ? entry + math.abs(entry - sl_v) * (rr_real + 1.0)
                           : entry - math.abs(entry - sl_v) * (rr_real + 1.0)
         sig_col = is_long ? bull_col : bear_col
-        htf_tag = htf_ctx != "" ? "\n📊 " + htf_ctx : ""
-        sig_txt = (is_long ? "BUY ✓\n" : "SELL ✓\n") + setup_type + "\nRR " + str.tostring(rr_real, "#.##") + htf_tag
+        htf_tag = htf_ctx != "" ? '\\n📊 ' + htf_ctx : ''
+        sig_txt = (is_long ? 'BUY ✓\\n' : 'SELL ✓\\n') + setup_type + '\\nRR ' + str.tostring(rr_real, "#.##") + htf_tag
         label.new(bar_index, is_long ? low : high, sig_txt,
              color = sig_col, textcolor = color.white,
              style = is_long ? label.style_label_up : label.style_label_down, size = size.normal)
@@ -858,7 +856,7 @@ f_enter(entry, sl_v, is_long, setup_type, htf_ctx) =>
         trk_type    := setup_type ; trk_htf_ctx := htf_ctx
     valid
 
-f_htf_context(is_long) =>
+f_htf_context(bool is_long) =>
     ctx = ""
     if is_long
         if in_htf_fvg_bull
@@ -902,8 +900,8 @@ var table dash = table.new(position.top_right, 2, 18,
     border_color = color.new(color.gray, 60), border_width = 1,
     bgcolor      = color.new(#1a1a2e, 10))
 
-f_ok(v) => v ? "✅" : "❌"
-f_row(t, ok, r, v) =>
+f_ok(bool v) => v ? "✅" : "❌"
+f_row(table t, bool ok, int r, string v) =>
     table.cell(t, 0, r, v,        text_color = color.white, bgcolor = color.new(#1a1a2e, 30),                                text_size = size.small)
     table.cell(t, 1, r, f_ok(ok), text_color = color.white, bgcolor = ok ? color.new(#00e676, 60) : color.new(#ff1744, 60), text_size = size.small)
 
@@ -1297,8 +1295,8 @@ var table dash = table.new(position.top_right, 2, 10,
   border_color=color.new(color.gray, 60), border_width=1,
   bgcolor=color.new(#1a1a2e, 10))
 
-f_ok(v) => v ? "✅" : "❌"
-f_row(t, ok, r, v) =>
+f_ok(bool v) => v ? "✅" : "❌"
+f_row(table t, bool ok, int r, string v) =>
     table.cell(t, 0, r, v,      text_color=color.white, bgcolor=color.new(#1a1a2e, 30),   text_size=size.small)
     table.cell(t, 1, r, f_ok(ok), text_color=color.white, bgcolor=ok ? color.new(#00e676, 60) : color.new(#ff1744, 60), text_size=size.small)
 
