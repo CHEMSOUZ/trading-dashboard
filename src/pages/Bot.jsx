@@ -851,10 +851,7 @@ f_enter(float entry, float sl_v, bool is_long, string setup_type, string htf_ctx
         line.new(bar_index, tp2_v, bar_index + 40, tp2_v, color = sig_col, style = line.style_dashed, width = 1)
         sig_dir = is_long ? "LONG" : "SHORT"
         alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"' + sig_dir + '","entry":' + str.tostring(entry) + ',"sl":' + str.tostring(sl_v) + ',"tp":' + str.tostring(tp_v) + ',"rr":"' + str.tostring(rr_real, "#.##") + '","setup":"' + setup_type + '","htf":"' + htf_ctx + '","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
-        trk_entry   := entry ; trk_sl := sl_v ; trk_tp := tp_v
-        trk_rr      := rr_real ; trk_long := is_long ; trk_open := true
-        trk_type    := setup_type ; trk_htf_ctx := htf_ctx
-    valid
+    [valid, tp_v, rr_real]
 
 f_htf_context(bool is_long) =>
     ctx = ""
@@ -877,18 +874,42 @@ f_htf_context(bool is_long) =>
 var bool last_rejected = false
 
 if buy_signal and not trk_open and not na(sweep_low_val)
-    sl_v = sweep_low_val - 5.0
-    last_rejected := not f_enter(close, sl_v, true, "MSS", f_htf_context(true))
+    _sl  = sweep_low_val - 5.0
+    _ctx = f_htf_context(true)
+    [ok, _tp, _rr] = f_enter(close, _sl, true, "MSS", _ctx)
+    if ok
+        trk_entry := close ; trk_sl := _sl ; trk_tp := _tp
+        trk_rr := _rr ; trk_long := true ; trk_open := true
+        trk_type := "MSS" ; trk_htf_ctx := _ctx
+    last_rejected := not ok
 
 if sell_signal and not trk_open and not na(sweep_high_val)
-    sl_v = sweep_high_val + 5.0
-    last_rejected := not f_enter(close, sl_v, false, "MSS", f_htf_context(false))
+    _sl  = sweep_high_val + 5.0
+    _ctx = f_htf_context(false)
+    [ok, _tp, _rr] = f_enter(close, _sl, false, "MSS", _ctx)
+    if ok
+        trk_entry := close ; trk_sl := _sl ; trk_tp := _tp
+        trk_rr := _rr ; trk_long := false ; trk_open := true
+        trk_type := "MSS" ; trk_htf_ctx := _ctx
+    last_rejected := not ok
 
 if ob_fvg_bull_signal and not trk_open
-    last_rejected := not f_enter(close, ob_fvg_bull_sl, true, "OB_CONT", f_htf_context(true))
+    _ctx = f_htf_context(true)
+    [ok, _tp, _rr] = f_enter(close, ob_fvg_bull_sl, true, "OB_CONT", _ctx)
+    if ok
+        trk_entry := close ; trk_sl := ob_fvg_bull_sl ; trk_tp := _tp
+        trk_rr := _rr ; trk_long := true ; trk_open := true
+        trk_type := "OB_CONT" ; trk_htf_ctx := _ctx
+    last_rejected := not ok
 
 if ob_fvg_bear_signal and not trk_open
-    last_rejected := not f_enter(close, ob_fvg_bear_sl, false, "OB_CONT", f_htf_context(false))
+    _ctx = f_htf_context(false)
+    [ok, _tp, _rr] = f_enter(close, ob_fvg_bear_sl, false, "OB_CONT", _ctx)
+    if ok
+        trk_entry := close ; trk_sl := ob_fvg_bear_sl ; trk_tp := _tp
+        trk_rr := _rr ; trk_long := false ; trk_open := true
+        trk_type := "OB_CONT" ; trk_htf_ctx := _ctx
+    last_rejected := not ok
 
 // ─── BAR ALERT ────────────────────────────────────────────────────────────
 alert('{"type":"bar","bot":"' + bot_name + '","h":' + str.tostring(math.round(high * 100) / 100) + ',"l":' + str.tostring(math.round(low * 100) / 100) + '}', alert.freq_once_per_bar_close)
