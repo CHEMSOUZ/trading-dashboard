@@ -1,6 +1,6 @@
 {
   "name": "trading-dashboard",
-  "version": "1.4.69",
+  "version": "1.4.70",
   "private": true,
   "main": "electron.cjs",
   "scripts": {
