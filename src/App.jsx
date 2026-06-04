@@ -31,6 +31,7 @@ export default function App() {
   const [loading, setLoading]             = useState(true);
   const [showAccountSelect, setShowAccountSelect] = useState(false);
   const [reloadKey, setReloadKey]         = useState(0);
+  const [updateReady, setUpdateReady]     = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -39,6 +40,9 @@ export default function App() {
       else setShowAccountSelect(true);
       setLoading(false);
     })();
+    if (window.electron?.onUpdateDownloaded) {
+      window.electron.onUpdateDownloaded(info => setUpdateReady(info));
+    }
   }, []);
 
   if (loading) return (
@@ -92,6 +96,22 @@ export default function App() {
   return (
     <Router>
       <RouteTracker />
+      {updateReady && (
+        <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999, background: '#0d1f14', border: '1px solid rgba(0,255,136,0.4)', borderRadius: '8px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 4px 24px rgba(0,0,0,0.6)' }}>
+          <div>
+            <div style={{ fontSize: '12px', color: '#00ff88', fontWeight: '700', marginBottom: '2px' }}>Mise à jour disponible — v{updateReady.version}</div>
+            <div style={{ fontSize: '10px', color: '#3a6a4a' }}>Redémarre pour installer la nouvelle version</div>
+          </div>
+          <button onClick={() => window.electron.installUpdate()}
+            style={{ padding: '7px 14px', background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.5)', borderRadius: '5px', color: '#00ff88', fontSize: '11px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '1px' }}>
+            REDÉMARRER
+          </button>
+          <button onClick={() => setUpdateReady(null)}
+            style={{ padding: '4px 8px', background: 'none', border: 'none', color: '#3a6a4a', fontSize: '14px', cursor: 'pointer', lineHeight: 1 }}>
+            ✕
+          </button>
+        </div>
+      )}
       <div style={{ display: 'flex', height: '100vh', background: '#060c10', color: '#c8d8c8', fontFamily: "'JetBrains Mono','Fira Code',monospace", overflow: 'hidden' }}>
         <Sidebar
           activeAccount={activeAccount}

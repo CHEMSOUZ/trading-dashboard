@@ -30,9 +30,11 @@ contextBridge.exposeInMainWorld('accounts', {
 });
 
 contextBridge.exposeInMainWorld('electron', {
-  openCsvDialog:    () => ipcRenderer.invoke('dialog:openCsv'),
-  openImageDialog:  () => ipcRenderer.invoke('dialog:openImage'),
-  openImagesDialog: () => ipcRenderer.invoke('dialog:openImages'),
+  openCsvDialog:       () => ipcRenderer.invoke('dialog:openCsv'),
+  openImageDialog:     () => ipcRenderer.invoke('dialog:openImage'),
+  openImagesDialog:    () => ipcRenderer.invoke('dialog:openImages'),
+  onUpdateDownloaded:  (cb) => ipcRenderer.on('update:downloaded', (_, info) => cb(info)),
+  installUpdate:       () => ipcRenderer.invoke('update:install'),
 });
 
 contextBridge.exposeInMainWorld('shell', {
