@@ -488,21 +488,32 @@ var float prev_sh        = na
 var float prev_sl        = na
 var int   last_sh_bar    = na
 var int   last_sl_bar    = na
-var bool  bull_structure = bool(na)
+var bool  bull_structure  = false
+var bool  struct_defined  = false
 
 if not na(swing_high)
     prev_sh      := last_sh
     last_sh      := swing_high
     last_sh_bar  := bar_index - swing_len
     if not na(prev_sh)
-        bull_structure := swing_high > prev_sh ? true : swing_high < prev_sh ? false : bull_structure
+        if swing_high > prev_sh
+            bull_structure := true
+            struct_defined := true
+        else if swing_high < prev_sh
+            bull_structure := false
+            struct_defined := true
 
 if not na(swing_low)
     prev_sl      := last_sl
     last_sl      := swing_low
     last_sl_bar  := bar_index - swing_len
     if not na(prev_sl)
-        bull_structure := swing_low < prev_sl ? false : swing_low > prev_sl ? true : bull_structure
+        if swing_low < prev_sl
+            bull_structure := false
+            struct_defined := true
+        else if swing_low > prev_sl
+            bull_structure := true
+            struct_defined := true
 
 // ─── EQH/EQL LTF courant ──────────────────────────────────────────────────
 var array<float> eq_highs = array.new_float()
@@ -706,14 +717,14 @@ var bool bull_mss = false
 var bool bear_mss = false
 
 if bull_sweep and not na(last_sh)
-    if close > last_sh and (na(bull_structure) or bull_structure == false)
+    if close > last_sh and (not struct_defined or bull_structure == false)
         bull_mss   := true
         bull_sweep := false
         if show_mss
             label.new(bar_index, high, 'MSS ▲', color = bull_bg, textcolor = bull_col, style = label.style_label_down, size = size.small)
 
 if bear_sweep and not na(last_sl)
-    if close < last_sl and (na(bull_structure) or bull_structure == true)
+    if close < last_sl and (not struct_defined or bull_structure == true)
         bear_mss   := true
         bear_sweep := false
         if show_mss
@@ -888,10 +899,11 @@ var float pending_sh          = na
 var float pending_sl          = na
 var int   pending_sh_bar      = na
 var int   pending_sl_bar      = na
-var bool  last_pivot_was_high = bool(na)
+var bool  last_pivot_was_high = false
+var bool  pivot_initialized   = false
 
 if not na(swing_high)
-    if not na(pending_sl) and (na(last_pivot_was_high) or last_pivot_was_high == false)
+    if not na(pending_sl) and pivot_initialized and last_pivot_was_high == false
         if swing_high - pending_sl >= fib_min_pts and show_fib
             array.push(fib_sh_arr, swing_high)
             array.push(fib_sl_arr, pending_sl)
@@ -907,9 +919,10 @@ if not na(swing_high)
     pending_sh          := swing_high
     pending_sh_bar      := bar_index - swing_len
     last_pivot_was_high := true
+    pivot_initialized   := true
 
 if not na(swing_low)
-    if not na(pending_sh) and (na(last_pivot_was_high) or last_pivot_was_high == true)
+    if not na(pending_sh) and pivot_initialized and last_pivot_was_high == true
         if pending_sh - swing_low >= fib_min_pts and show_fib
             array.push(fib_sh_arr, pending_sh)
             array.push(fib_sl_arr, swing_low)
@@ -1243,9 +1256,9 @@ if barstate.islast
         text_color = color.white, bgcolor = color.new(#1a1a2e, 20), text_size = size.small)
 
     table.cell(dash, 0, 13,
-        na(bull_structure) ? "📊 Indefinie" : bull_structure ? "📈 Haussiere" : "📉 Baissiere",
+        not struct_defined ? "Indefinie" : bull_structure ? "Haussiere" : "Baissiere",
         text_color = color.white,
-        bgcolor    = na(bull_structure) ? color.new(color.gray, 60) : bull_structure ? color.new(color.teal, 60) : color.new(color.red, 60),
+        bgcolor    = not struct_defined ? color.new(color.gray, 60) : bull_structure ? color.new(color.teal, 60) : color.new(color.red, 60),
         text_size  = size.small)
     table.cell(dash, 1, 13, ob_bull_valid ? "OB Bull ✅" : ob_bear_valid ? "OB Bear ✅" : "OB —",
         text_color = color.white,
