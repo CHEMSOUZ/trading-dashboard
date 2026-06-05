@@ -162,69 +162,76 @@ d_bull_fvg_size = d_low0  - d_high2
 d_bear_fvg_size = d_low2  - d_high0
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ─── TRACE NIVEAUX DAILY / WEEKLY ─────────────────────────────────────────
+// ─── NIVEAUX DAILY / WEEKLY — uniquement dernier PDH/PDL + PWH/PWL ────────
 // ═══════════════════════════════════════════════════════════════════════════
-is_new_day  = ta.change(time("D"))  != 0
-is_new_week = ta.change(time("W"))  != 0
+is_new_day  = ta.change(time("D")) != 0
+is_new_week = ta.change(time("W")) != 0
 
-var array<float> daily_highs = array.new_float()
-var array<float> daily_lows  = array.new_float()
-var array<float> weekly_highs= array.new_float()
-var array<float> weekly_lows = array.new_float()
+var array<float> daily_highs  = array.new_float()
+var array<float> daily_lows   = array.new_float()
+var array<float> weekly_highs = array.new_float()
+var array<float> weekly_lows  = array.new_float()
 
-if is_new_day and show_htf
+// Lines (créées une fois par jour/semaine, extend.right = pas de point fixe)
+var line l_pdh = na
+var line l_pdl = na
+var line l_pwh = na
+var line l_pwl = na
+
+// Labels (mis à jour chaque barre via set_x pour ne jamais bouger au zoom)
+var label lb_pdh = na
+var label lb_pdl = na
+var label lb_pwh = na
+var label lb_pwl = na
+
+if is_new_day
     array.clear(daily_highs)
     array.clear(daily_lows)
-
-    days_available = math.min(dayofweek - 2, 4)
-    if days_available >= 0
+    if not na(d_h0)
         array.push(daily_highs, d_h0)
         array.push(daily_lows,  d_l0)
-    if days_available >= 1
-        array.push(daily_highs, d_h1)
-        array.push(daily_lows,  d_l1)
-    if days_available >= 2
-        array.push(daily_highs, d_h2)
-        array.push(daily_lows,  d_l2)
-    if days_available >= 3
-        array.push(daily_highs, d_h3)
-        array.push(daily_lows,  d_l3)
-    if days_available >= 4
-        array.push(daily_highs, d_h4)
-        array.push(daily_lows,  d_l4)
+    if show_htf and not na(d_h0)
+        if not na(l_pdh)
+            line.delete(l_pdh)
+        if not na(l_pdl)
+            line.delete(l_pdl)
+        l_pdh := line.new(bar_index, d_h0, bar_index + 1, d_h0, extend = extend.right, color = col_daily, style = line.style_dashed, width = 2)
+        l_pdl := line.new(bar_index, d_l0, bar_index + 1, d_l0, extend = extend.right, color = col_daily, style = line.style_dashed, width = 2)
 
-    if not na(d_h0)
-        line.new(bar_index, d_h0, bar_index + 200, d_h0, color = col_daily, style = line.style_dashed, width = 2)
-        line.new(bar_index, d_l0, bar_index + 200, d_l0, color = col_daily, style = line.style_dashed, width = 2)
-        label.new(bar_index + 200, d_h0, 'PDH', color = color.new(col_daily, 80), textcolor = col_daily, style = label.style_label_left, size = size.tiny)
-        label.new(bar_index + 200, d_l0, 'PDL', color = color.new(col_daily, 80), textcolor = col_daily, style = label.style_label_left, size = size.tiny)
-
-    if days_available >= 1 and not na(d_h1)
-        line.new(bar_index, d_h1, bar_index + 200, d_h1, color = color.new(col_daily, 40), style = line.style_dotted, width = 1)
-        line.new(bar_index, d_l1, bar_index + 200, d_l1, color = color.new(col_daily, 40), style = line.style_dotted, width = 1)
-    if days_available >= 2 and not na(d_h2)
-        line.new(bar_index, d_h2, bar_index + 200, d_h2, color = color.new(col_daily, 55), style = line.style_dotted, width = 1)
-        line.new(bar_index, d_l2, bar_index + 200, d_l2, color = color.new(col_daily, 55), style = line.style_dotted, width = 1)
-    if days_available >= 3 and not na(d_h3)
-        line.new(bar_index, d_h3, bar_index + 200, d_h3, color = color.new(col_daily, 65), style = line.style_dotted, width = 1)
-        line.new(bar_index, d_l3, bar_index + 200, d_l3, color = color.new(col_daily, 65), style = line.style_dotted, width = 1)
-    if days_available >= 4 and not na(d_h4)
-        line.new(bar_index, d_h4, bar_index + 200, d_h4, color = color.new(col_daily, 75), style = line.style_dotted, width = 1)
-        line.new(bar_index, d_l4, bar_index + 200, d_l4, color = color.new(col_daily, 75), style = line.style_dotted, width = 1)
-
-if is_new_week and show_htf
+if is_new_week
     array.clear(weekly_highs)
     array.clear(weekly_lows)
     if not na(w_h0)
         array.push(weekly_highs, w_h0)
         array.push(weekly_lows,  w_l0)
-        line.new(bar_index, w_h0, bar_index + 300, w_h0, color = col_weekly, style = line.style_dashed, width = 2)
-        line.new(bar_index, w_l0, bar_index + 300, w_l0, color = col_weekly, style = line.style_dashed, width = 2)
-        label.new(bar_index + 300, w_h0, 'PWH', color = color.new(col_weekly, 80), textcolor = col_weekly, style = label.style_label_left, size = size.tiny)
-        label.new(bar_index + 300, w_l0, 'PWL', color = color.new(col_weekly, 80), textcolor = col_weekly, style = label.style_label_left, size = size.tiny)
-    if not na(w_h1)
-        array.push(weekly_highs, w_h1)
-        array.push(weekly_lows,  w_l1)
+    if show_htf and not na(w_h0)
+        if not na(l_pwh)
+            line.delete(l_pwh)
+        if not na(l_pwl)
+            line.delete(l_pwl)
+        l_pwh := line.new(bar_index, w_h0, bar_index + 1, w_h0, extend = extend.right, color = col_weekly, style = line.style_dashed, width = 2)
+        l_pwl := line.new(bar_index, w_l0, bar_index + 1, w_l0, extend = extend.right, color = col_weekly, style = line.style_dashed, width = 2)
+
+// Labels toujours à droite du dernier bar — set_x évite le glissement au zoom
+if show_htf and not na(d_h0)
+    if na(lb_pdh)
+        lb_pdh := label.new(bar_index + 3, d_h0, 'PDH', color = color.new(col_daily, 80), textcolor = col_daily, style = label.style_label_left, size = size.tiny)
+        lb_pdl := label.new(bar_index + 3, d_l0, 'PDL', color = color.new(col_daily, 80), textcolor = col_daily, style = label.style_label_left, size = size.tiny)
+    else
+        label.set_x(lb_pdh, bar_index + 3)
+        label.set_y(lb_pdh, d_h0)
+        label.set_x(lb_pdl, bar_index + 3)
+        label.set_y(lb_pdl, d_l0)
+
+if show_htf and not na(w_h0)
+    if na(lb_pwh)
+        lb_pwh := label.new(bar_index + 3, w_h0, 'PWH', color = color.new(col_weekly, 80), textcolor = col_weekly, style = label.style_label_left, size = size.tiny)
+        lb_pwl := label.new(bar_index + 3, w_l0, 'PWL', color = color.new(col_weekly, 80), textcolor = col_weekly, style = label.style_label_left, size = size.tiny)
+    else
+        label.set_x(lb_pwh, bar_index + 3)
+        label.set_y(lb_pwh, w_h0)
+        label.set_x(lb_pwl, bar_index + 3)
+        label.set_y(lb_pwl, w_l0)
 
 // ─── EQH/EQL DAILY ────────────────────────────────────────────────────────
 var array<float> eq_highs_daily = array.new_float()
@@ -577,15 +584,7 @@ f_find_tp(entry, sl, is_long) =>
         if not na(ny_l)   and ny_l   < entry
             array.push(candidates, ny_l)
 
-    if is_long
-        for lvl in daily_highs
-            if not na(lvl) and lvl > entry
-                array.push(candidates, lvl)
-    else
-        for lvl in daily_lows
-            if not na(lvl) and lvl < entry
-                array.push(candidates, lvl)
-
+    // EQH/EQL Daily conservés (niveaux de liquidité, pas PDH/PDL bruts)
     if is_long
         for lvl in eq_highs_daily
             if not na(lvl) and lvl > entry
@@ -595,35 +594,7 @@ f_find_tp(entry, sl, is_long) =>
             if not na(lvl) and lvl < entry
                 array.push(candidates, lvl)
 
-    if is_long
-        for lvl in weekly_highs
-            if not na(lvl) and lvl > entry
-                array.push(candidates, lvl)
-    else
-        for lvl in weekly_lows
-            if not na(lvl) and lvl < entry
-                array.push(candidates, lvl)
-
-    // Boucles parallèles (deux arrays) → guard explicite
-    n4h = array.size(fvg4h_hi)
-    if n4h > 0
-        for k = 0 to n4h - 1 by 1
-            h4hi = array.get(fvg4h_hi, k)
-            h4lo = array.get(fvg4h_lo, k)
-            if is_long and h4hi > entry
-                array.push(candidates, h4hi)
-            if not is_long and h4lo < entry
-                array.push(candidates, h4lo)
-
-    nD = array.size(fvgD_hi)
-    if nD > 0
-        for k = 0 to nD - 1 by 1
-            dhi = array.get(fvgD_hi, k)
-            dlo = array.get(fvgD_lo, k)
-            if is_long and dhi > entry
-                array.push(candidates, dhi)
-            if not is_long and dlo < entry
-                array.push(candidates, dlo)
+    // PDH/PDL, PWH/PWL, FVG 4H/D → zones de retournement, pas TP
 
     best_tp = float(na)
     for lvl in candidates
@@ -1018,19 +989,25 @@ f_htf_context(is_long) =>
             ctx := ctx + "FVG HTF"
         if ifvg_bull_active
             ctx := ctx + (ctx != "" ? "+" : "") + "IFVG"
-        if not na(d_h0) and close < d_h0
-            ctx := ctx + (ctx != "" ? "+" : "") + "PDH"
-        if not na(w_h0) and close < w_h0
-            ctx := ctx + (ctx != "" ? "+" : "") + "PWH"
+        // Zone retournement haussier : prix proche du support PDL ou PWL
+        if not na(d_l0) and close >= d_l0 and close <= d_l0 * 1.002
+            ctx := ctx + (ctx != "" ? "+" : "") + "PDL Rev"
+        if not na(w_l0) and close >= w_l0 and close <= w_l0 * 1.002
+            ctx := ctx + (ctx != "" ? "+" : "") + "PWL Rev"
+        if in_4h_fvg_bull or in_d_fvg_bull
+            ctx := ctx + (ctx != "" ? "+" : "") + "FVG HTF Zone"
     else
         if in_htf_fvg_bear
             ctx := ctx + "FVG HTF"
         if ifvg_bear_active
             ctx := ctx + (ctx != "" ? "+" : "") + "IFVG"
-        if not na(d_l0) and close > d_l0
-            ctx := ctx + (ctx != "" ? "+" : "") + "PDL"
-        if not na(w_l0) and close > w_l0
-            ctx := ctx + (ctx != "" ? "+" : "") + "PWL"
+        // Zone retournement baissier : prix proche de la résistance PDH ou PWH
+        if not na(d_h0) and close <= d_h0 and close >= d_h0 * 0.998
+            ctx := ctx + (ctx != "" ? "+" : "") + "PDH Rev"
+        if not na(w_h0) and close <= w_h0 and close >= w_h0 * 0.998
+            ctx := ctx + (ctx != "" ? "+" : "") + "PWH Rev"
+        if in_4h_fvg_bear or in_d_fvg_bear
+            ctx := ctx + (ctx != "" ? "+" : "") + "FVG HTF Zone"
     ctx
 
 var bool last_rejected = false
