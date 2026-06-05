@@ -937,6 +937,10 @@ if not na(swing_low)
 var array<line>  fib_lines  = array.new<line>()
 var array<label> fib_labels = array.new<label>()
 
+// Pré-calculés au scope global : Pine Script peut dimensionner le buffer correctement
+fib_low500  = ta.lowest(low,   math.max(math.min(500, bar_index + 1), 1))
+fib_high500 = ta.highest(high, math.max(math.min(500, bar_index + 1), 1))
+
 if barstate.islast and show_fib
     for l in fib_lines
         line.delete(l)
@@ -945,35 +949,27 @@ if barstate.islast and show_fib
     array.clear(fib_lines)
     array.clear(fib_labels)
     n = array.size(fib_sh_arr)
-    for i = 0 to n - 1 by 1
-        sh      = array.get(fib_sh_arr,  i)
-        sl      = array.get(fib_sl_arr,  i)
-        bar_sh  = array.get(fib_bar_sh,  i)
-        bar_sl  = array.get(fib_bar_sl,  i)
-        is_bull = array.get(fib_is_bull, i)
-        mid = (sh + sl) / 2.0
-        end_bar = is_bull ? bar_sh : bar_sl
-        bars_since = bar_index - end_bar
-        touched_50 = false
-        if bars_since > 0
-            for b = 0 to math.min(bars_since - 1, 500) by 1
-                if is_bull and low[b] <= mid
-                    touched_50 := true
-                    break
-                if not is_bull and high[b] >= mid
-                    touched_50 := true
-                    break
-        if not touched_50
-            fib_lv_labels = array.from("0", "0.236", "0.382", "0.5", "0.618", "0.786", "1")
-            for j = 0 to 6 by 1
-                lv = array.get(fib_levels, j)
-                px = sl + (sh - sl) * (1.0 - lv)
-                lv_col   = lv == 0.5 ? fib_50_col : lv == 0.618 ? fib_618_col : fib_col
-                lv_width = (lv == 0.5 or lv == 0.618) ? 2 : 1
-                array.push(fib_lines, line.new(is_bull ? bar_sl : bar_sh, px, bar_index + 30, px, color = lv_col, style = line.style_solid, width = lv_width))
-                if lv == 0.0 or lv == 0.5 or lv == 0.618 or lv == 1.0
-                    array.push(fib_labels, label.new(bar_index + 30, px, array.get(fib_lv_labels, j),
-                         color = color.new(color.black, 100), textcolor = lv_col, style = label.style_label_left, size = size.tiny))
+    if n > 0
+        for i = 0 to n - 1 by 1
+            sh      = array.get(fib_sh_arr,  i)
+            sl      = array.get(fib_sl_arr,  i)
+            bar_sh  = array.get(fib_bar_sh,  i)
+            bar_sl  = array.get(fib_bar_sl,  i)
+            is_bull = array.get(fib_is_bull, i)
+            mid        = (sh + sl) / 2.0
+            touched_50 = is_bull ? fib_low500 <= mid : fib_high500 >= mid
+            if not touched_50
+                fib_lv_labels = array.from("0", "0.236", "0.382", "0.5", "0.618", "0.786", "1")
+                left_bar = is_bull ? bar_sl : bar_sh
+                for j = 0 to 6 by 1
+                    lv       = array.get(fib_levels, j)
+                    px       = sl + (sh - sl) * (1.0 - lv)
+                    lv_col   = lv == 0.5 ? fib_50_col : lv == 0.618 ? fib_618_col : fib_col
+                    lv_width = (lv == 0.5 or lv == 0.618) ? 2 : 1
+                    array.push(fib_lines, line.new(left_bar, px, bar_index + 30, px, color = lv_col, style = line.style_solid, width = lv_width))
+                    if lv == 0.0 or lv == 0.5 or lv == 0.618 or lv == 1.0
+                        array.push(fib_labels, label.new(bar_index + 30, px, array.get(fib_lv_labels, j),
+                             color = color.new(color.black, 100), textcolor = lv_col, style = label.style_label_left, size = size.tiny))
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ─── BE MANUEL + TRACKING ─────────────────────────────────────────────────
