@@ -178,15 +178,20 @@ if is_new_day and show_htf
 
     days_available = math.min(dayofweek - 2, 4)
     if days_available >= 0
-        array.push(daily_highs, d_h0) ; array.push(daily_lows, d_l0)
+        array.push(daily_highs, d_h0)
+        array.push(daily_lows,  d_l0)
     if days_available >= 1
-        array.push(daily_highs, d_h1) ; array.push(daily_lows, d_l1)
+        array.push(daily_highs, d_h1)
+        array.push(daily_lows,  d_l1)
     if days_available >= 2
-        array.push(daily_highs, d_h2) ; array.push(daily_lows, d_l2)
+        array.push(daily_highs, d_h2)
+        array.push(daily_lows,  d_l2)
     if days_available >= 3
-        array.push(daily_highs, d_h3) ; array.push(daily_lows, d_l3)
+        array.push(daily_highs, d_h3)
+        array.push(daily_lows,  d_l3)
     if days_available >= 4
-        array.push(daily_highs, d_h4) ; array.push(daily_lows, d_l4)
+        array.push(daily_highs, d_h4)
+        array.push(daily_lows,  d_l4)
 
     if not na(d_h0)
         line.new(bar_index, d_h0, bar_index + 200, d_h0, color = col_daily, style = line.style_dashed, width = 2)
@@ -211,13 +216,15 @@ if is_new_week and show_htf
     array.clear(weekly_highs)
     array.clear(weekly_lows)
     if not na(w_h0)
-        array.push(weekly_highs, w_h0) ; array.push(weekly_lows, w_l0)
+        array.push(weekly_highs, w_h0)
+        array.push(weekly_lows,  w_l0)
         line.new(bar_index, w_h0, bar_index + 300, w_h0, color = col_weekly, style = line.style_dashed, width = 2)
         line.new(bar_index, w_l0, bar_index + 300, w_l0, color = col_weekly, style = line.style_dashed, width = 2)
         label.new(bar_index + 300, w_h0, 'PWH', color = color.new(col_weekly, 80), textcolor = col_weekly, style = label.style_label_left, size = size.tiny)
         label.new(bar_index + 300, w_l0, 'PWL', color = color.new(col_weekly, 80), textcolor = col_weekly, style = label.style_label_left, size = size.tiny)
     if not na(w_h1)
-        array.push(weekly_highs, w_h1) ; array.push(weekly_lows, w_l1)
+        array.push(weekly_highs, w_h1)
+        array.push(weekly_lows,  w_l1)
 
 // ─── EQH/EQL DAILY ────────────────────────────────────────────────────────
 var array<float> eq_highs_daily = array.new_float()
@@ -284,21 +291,29 @@ if new_4h_bar and show_htf_fvg
         b_bull = box.new(bar_index - 2, h4_low0, bar_index + 300, h4_high2,
              bgcolor = col_4h_fvg, border_color = color.new(color.purple, 40), border_width = 1,
              text = 'FVG 4H ▲', text_color = color.new(color.purple, 20), text_size = size.tiny)
-        array.push(fvg4h_hi, h4_low0) ; array.push(fvg4h_lo, h4_high2)
-        array.push(fvg4h_bull, true)  ; array.push(fvg4h_box, b_bull)
+        array.push(fvg4h_hi,   h4_low0)
+        array.push(fvg4h_lo,   h4_high2)
+        array.push(fvg4h_bull, true)
+        array.push(fvg4h_box,  b_bull)
         if array.size(fvg4h_hi) > 5
             box.delete(array.shift(fvg4h_box))
-            array.shift(fvg4h_hi) ; array.shift(fvg4h_lo) ; array.shift(fvg4h_bull)
+            array.shift(fvg4h_hi)
+            array.shift(fvg4h_lo)
+            array.shift(fvg4h_bull)
 
     if h4_bear_fvg_size > fvg_min_pts * 2.0
         b_bear = box.new(bar_index - 2, h4_low2, bar_index + 300, h4_high0,
              bgcolor = col_4h_fvg, border_color = color.new(color.purple, 40), border_width = 1,
              text = 'FVG 4H ▼', text_color = color.new(color.purple, 20), text_size = size.tiny)
-        array.push(fvg4h_hi, h4_low2) ; array.push(fvg4h_lo, h4_high0)
-        array.push(fvg4h_bull, false)  ; array.push(fvg4h_box, b_bear)
+        array.push(fvg4h_hi,   h4_low2)
+        array.push(fvg4h_lo,   h4_high0)
+        array.push(fvg4h_bull, false)
+        array.push(fvg4h_box,  b_bear)
         if array.size(fvg4h_hi) > 5
             box.delete(array.shift(fvg4h_box))
-            array.shift(fvg4h_hi) ; array.shift(fvg4h_lo) ; array.shift(fvg4h_bull)
+            array.shift(fvg4h_hi)
+            array.shift(fvg4h_lo)
+            array.shift(fvg4h_bull)
 
 new_d_bar = ta.change(time("D")) != 0
 
@@ -307,21 +322,29 @@ if new_d_bar and show_htf_fvg
         b_bull = box.new(bar_index - 2, d_low0, bar_index + 400, d_high2,
              bgcolor = col_d_fvg, border_color = color.new(color.orange, 40), border_width = 1,
              text = 'FVG D ▲', text_color = color.new(color.orange, 20), text_size = size.tiny)
-        array.push(fvgD_hi, d_low0) ; array.push(fvgD_lo, d_high2)
-        array.push(fvgD_bull, true)  ; array.push(fvgD_box, b_bull)
+        array.push(fvgD_hi,   d_low0)
+        array.push(fvgD_lo,   d_high2)
+        array.push(fvgD_bull, true)
+        array.push(fvgD_box,  b_bull)
         if array.size(fvgD_hi) > 5
             box.delete(array.shift(fvgD_box))
-            array.shift(fvgD_hi) ; array.shift(fvgD_lo) ; array.shift(fvgD_bull)
+            array.shift(fvgD_hi)
+            array.shift(fvgD_lo)
+            array.shift(fvgD_bull)
 
     if d_bear_fvg_size > fvg_min_pts * 4.0
         b_bear = box.new(bar_index - 2, d_low2, bar_index + 400, d_high0,
              bgcolor = col_d_fvg, border_color = color.new(color.orange, 40), border_width = 1,
              text = 'FVG D ▼', text_color = color.new(color.orange, 20), text_size = size.tiny)
-        array.push(fvgD_hi, d_low2) ; array.push(fvgD_lo, d_high0)
-        array.push(fvgD_bull, false)  ; array.push(fvgD_box, b_bear)
+        array.push(fvgD_hi,   d_low2)
+        array.push(fvgD_lo,   d_high0)
+        array.push(fvgD_bull, false)
+        array.push(fvgD_box,  b_bear)
         if array.size(fvgD_hi) > 5
             box.delete(array.shift(fvgD_box))
-            array.shift(fvgD_hi) ; array.shift(fvgD_lo) ; array.shift(fvgD_bull)
+            array.shift(fvgD_hi)
+            array.shift(fvgD_lo)
+            array.shift(fvgD_bull)
 
 f_clean_htf_fvg(hi_arr, lo_arr, bull_arr, box_arr) =>
     i = 0
@@ -377,14 +400,26 @@ in_asia   = time >= t_asia_open   and time < t_asia_close
 in_london = time >= t_london_open and time < t_london_close
 in_ny     = time >= t_ny_open     and time < t_ny_close
 
-var float asia_h = na ; var float asia_l = na
-var float lon_h  = na ; var float lon_l  = na
-var float ny_h   = na ; var float ny_l   = na
-var bool  asia_done = false ; var bool lon_done = false ; var bool ny_done = false
+var float asia_h    = na
+var float asia_l    = na
+var float lon_h     = na
+var float lon_l     = na
+var float ny_h      = na
+var float ny_l      = na
+var bool  asia_done = false
+var bool  lon_done  = false
+var bool  ny_done   = false
 
 if dayofweek != dayofweek[1]
-    asia_h := na ; asia_l := na ; lon_h := na ; lon_l := na ; ny_h := na ; ny_l := na
-    asia_done := false ; lon_done := false ; ny_done := false
+    asia_h    := na
+    asia_l    := na
+    lon_h     := na
+    lon_l     := na
+    ny_h      := na
+    ny_l      := na
+    asia_done := false
+    lon_done  := false
+    ny_done   := false
 
 if in_asia
     asia_h := na(asia_h) ? high : math.max(asia_h, high)
@@ -447,18 +482,25 @@ swing_high = ta.pivothigh(high, swing_len, swing_len)
 swing_low  = ta.pivotlow(low,  swing_len, swing_len)
 
 // ─── STRUCTURE ────────────────────────────────────────────────────────────
-var float last_sh     = na ; var float last_sl     = na
-var float prev_sh     = na ; var float prev_sl     = na
-var int   last_sh_bar = na ; var int   last_sl_bar = na
+var float last_sh        = na
+var float last_sl        = na
+var float prev_sh        = na
+var float prev_sl        = na
+var int   last_sh_bar    = na
+var int   last_sl_bar    = na
 var bool  bull_structure = na
 
 if not na(swing_high)
-    prev_sh := last_sh ; last_sh := swing_high ; last_sh_bar := bar_index - swing_len
+    prev_sh      := last_sh
+    last_sh      := swing_high
+    last_sh_bar  := bar_index - swing_len
     if not na(prev_sh)
         bull_structure := swing_high > prev_sh ? true : swing_high < prev_sh ? false : bull_structure
 
 if not na(swing_low)
-    prev_sl := last_sl ; last_sl := swing_low ; last_sl_bar := bar_index - swing_len
+    prev_sl      := last_sl
+    last_sl      := swing_low
+    last_sl_bar  := bar_index - swing_len
     if not na(prev_sl)
         bull_structure := swing_low < prev_sl ? false : swing_low > prev_sl ? true : bull_structure
 
@@ -665,13 +707,15 @@ var bool bear_mss = false
 
 if bull_sweep and not na(last_sh)
     if close > last_sh and (na(bull_structure) or bull_structure == false)
-        bull_mss := true ; bull_sweep := false
+        bull_mss   := true
+        bull_sweep := false
         if show_mss
             label.new(bar_index, high, 'MSS ▲', color = bull_bg, textcolor = bull_col, style = label.style_label_down, size = size.small)
 
 if bear_sweep and not na(last_sl)
     if close < last_sl and (na(bull_structure) or bull_structure == true)
-        bear_mss := true ; bear_sweep := false
+        bear_mss   := true
+        bear_sweep := false
         if show_mss
             label.new(bar_index, low, 'MSS ▼', color = bear_bg, textcolor = bear_col, style = label.style_label_up, size = size.small)
 
@@ -681,16 +725,23 @@ displacement_down = close < close[1] * 0.998 and close[1] < close[2] * 0.998
 bull_ob = displacement_up   and close[3] < open[3]
 bear_ob = displacement_down and close[3] > open[3]
 
-var float ob_bull_hi = na ; var float ob_bull_lo = na
-var float ob_bear_hi = na ; var float ob_bear_lo = na
-var bool  ob_bull_valid = false ; var bool ob_bear_valid = false
+var float ob_bull_hi    = na
+var float ob_bull_lo    = na
+var float ob_bear_hi    = na
+var float ob_bear_lo    = na
+var bool  ob_bull_valid = false
+var bool  ob_bear_valid = false
 
 if bull_ob
-    ob_bull_hi := high[3] ; ob_bull_lo := low[3] ; ob_bull_valid := true
+    ob_bull_hi    := high[3]
+    ob_bull_lo    := low[3]
+    ob_bull_valid := true
     if show_ob
         box.new(bar_index - 3, high[3], bar_index + 20, low[3], bgcolor = color.new(color.teal, 80), border_color = color.teal, border_width = 1, text = 'OB Bull', text_color = color.teal, text_size = size.small)
 if bear_ob
-    ob_bear_hi := high[3] ; ob_bear_lo := low[3] ; ob_bear_valid := true
+    ob_bear_hi    := high[3]
+    ob_bear_lo    := low[3]
+    ob_bear_valid := true
     if show_ob
         box.new(bar_index - 3, high[3], bar_index + 20, low[3], bgcolor = color.new(color.red, 80), border_color = color.red, border_width = 1, text = 'OB Bear', text_color = color.red, text_size = size.small)
 
@@ -775,13 +826,17 @@ if ifvg_bull_active and low < ifvg_bull_lo
     ifvg_bull_active := false
 
 // ─── CONTINUATION OB+FVG ──────────────────────────────────────────────────
-var bool  ob_fvg_bull_waiting = false ; var float ob_fvg_bull_sl = na
-var bool  ob_fvg_bear_waiting = false ; var float ob_fvg_bear_sl = na
+var bool  ob_fvg_bull_waiting = false
+var float ob_fvg_bull_sl      = na
+var bool  ob_fvg_bear_waiting = false
+var float ob_fvg_bear_sl      = na
 
 if ob_bull_valid and bull_fvg_active and not na(ob_bull_lo) and not na(bull_fvg_lo) and ob_bull_lo < bull_fvg_lo and not ob_fvg_bull_waiting
-    ob_fvg_bull_waiting := true ; ob_fvg_bull_sl := ob_bull_lo - 5.0
+    ob_fvg_bull_waiting := true
+    ob_fvg_bull_sl      := ob_bull_lo - 5.0
 if ob_bear_valid and bear_fvg_active and not na(ob_bear_hi) and not na(bear_fvg_hi) and ob_bear_hi > bear_fvg_hi and not ob_fvg_bear_waiting
-    ob_fvg_bear_waiting := true ; ob_fvg_bear_sl := ob_bear_hi + 5.0
+    ob_fvg_bear_waiting := true
+    ob_fvg_bear_sl      := ob_bear_hi + 5.0
 
 if not ob_bull_valid or not bull_fvg_active
     ob_fvg_bull_waiting := false
@@ -801,9 +856,11 @@ var bool waiting_buy  = false
 var bool waiting_sell = false
 
 if bull_mss and bull_fvg_active
-    waiting_buy := true ; bull_mss := false
+    waiting_buy := true
+    bull_mss    := false
 if bear_mss and bear_fvg_active
-    waiting_sell := true ; bear_mss := false
+    waiting_sell := true
+    bear_mss     := false
 if not bull_fvg_active
     waiting_buy := false
 if not bear_fvg_active
@@ -827,32 +884,46 @@ var array<int>   fib_bar_sh  = array.new_int()
 var array<int>   fib_bar_sl  = array.new_int()
 var array<bool>  fib_is_bull = array.new_bool()
 var fib_levels = array.from(0.0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0)
-var float pending_sh = na ; var float pending_sl = na
-var int   pending_sh_bar = na ; var int pending_sl_bar = na
+var float pending_sh          = na
+var float pending_sl          = na
+var int   pending_sh_bar      = na
+var int   pending_sl_bar      = na
 var bool  last_pivot_was_high = na
 
 if not na(swing_high)
     if not na(pending_sl) and (na(last_pivot_was_high) or last_pivot_was_high == false)
         if swing_high - pending_sl >= fib_min_pts and show_fib
-            array.push(fib_sh_arr, swing_high) ; array.push(fib_sl_arr, pending_sl)
-            array.push(fib_bar_sh, bar_index - swing_len) ; array.push(fib_bar_sl, pending_sl_bar)
+            array.push(fib_sh_arr, swing_high)
+            array.push(fib_sl_arr, pending_sl)
+            array.push(fib_bar_sh, bar_index - swing_len)
+            array.push(fib_bar_sl, pending_sl_bar)
             array.push(fib_is_bull, true)
             if array.size(fib_sh_arr) > 6
-                array.shift(fib_sh_arr) ; array.shift(fib_sl_arr)
-                array.shift(fib_bar_sh) ; array.shift(fib_bar_sl) ; array.shift(fib_is_bull)
-    pending_sh := swing_high ; pending_sh_bar := bar_index - swing_len
+                array.shift(fib_sh_arr)
+                array.shift(fib_sl_arr)
+                array.shift(fib_bar_sh)
+                array.shift(fib_bar_sl)
+                array.shift(fib_is_bull)
+    pending_sh          := swing_high
+    pending_sh_bar      := bar_index - swing_len
     last_pivot_was_high := true
 
 if not na(swing_low)
     if not na(pending_sh) and (na(last_pivot_was_high) or last_pivot_was_high == true)
         if pending_sh - swing_low >= fib_min_pts and show_fib
-            array.push(fib_sh_arr, pending_sh) ; array.push(fib_sl_arr, swing_low)
-            array.push(fib_bar_sh, pending_sh_bar) ; array.push(fib_bar_sl, bar_index - swing_len)
+            array.push(fib_sh_arr, pending_sh)
+            array.push(fib_sl_arr, swing_low)
+            array.push(fib_bar_sh, pending_sh_bar)
+            array.push(fib_bar_sl, bar_index - swing_len)
             array.push(fib_is_bull, false)
             if array.size(fib_sh_arr) > 6
-                array.shift(fib_sh_arr) ; array.shift(fib_sl_arr)
-                array.shift(fib_bar_sh) ; array.shift(fib_bar_sl) ; array.shift(fib_is_bull)
-    pending_sl := swing_low ; pending_sl_bar := bar_index - swing_len
+                array.shift(fib_sh_arr)
+                array.shift(fib_sl_arr)
+                array.shift(fib_bar_sh)
+                array.shift(fib_bar_sl)
+                array.shift(fib_is_bull)
+    pending_sl          := swing_low
+    pending_sl_bar      := bar_index - swing_len
     last_pivot_was_high := false
 
 var array<line>  fib_lines  = array.new<line>()
@@ -863,11 +934,14 @@ if barstate.islast and show_fib
         line.delete(l)
     for lb in fib_labels
         label.delete(lb)
-    array.clear(fib_lines) ; array.clear(fib_labels)
+    array.clear(fib_lines)
+    array.clear(fib_labels)
     n = array.size(fib_sh_arr)
     for i = 0 to n - 1 by 1
-        sh = array.get(fib_sh_arr, i) ; sl = array.get(fib_sl_arr, i)
-        bar_sh = array.get(fib_bar_sh, i) ; bar_sl = array.get(fib_bar_sl, i)
+        sh      = array.get(fib_sh_arr,  i)
+        sl      = array.get(fib_sl_arr,  i)
+        bar_sh  = array.get(fib_bar_sh,  i)
+        bar_sl  = array.get(fib_bar_sl,  i)
         is_bull = array.get(fib_is_bull, i)
         mid = (sh + sl) / 2.0
         end_bar = is_bull ? bar_sh : bar_sl
@@ -876,9 +950,11 @@ if barstate.islast and show_fib
         if bars_since > 0
             for b = 0 to math.min(bars_since - 1, 500) by 1
                 if is_bull and low[b] <= mid
-                    touched_50 := true ; break
+                    touched_50 := true
+                    break
                 if not is_bull and high[b] >= mid
-                    touched_50 := true ; break
+                    touched_50 := true
+                    break
         if not touched_50
             fib_lv_labels = array.from("0", "0.236", "0.382", "0.5", "0.618", "0.786", "1")
             for j = 0 to 6 by 1
@@ -896,9 +972,14 @@ if barstate.islast and show_fib
 // ═══════════════════════════════════════════════════════════════════════════
 be_count = input.int(0, "🟡 BE Manuel — incrementer pour liberer (0→1→2…)", group = "Tracking", minval = 0, step = 1)
 var int    be_last   = 0
-var float  trk_entry = na ; var float trk_sl   = na ; var float trk_tp  = na
-var float  trk_rr    = na ; var bool  trk_long  = false
-var bool   trk_open  = false ; var float trk_peak = na ; var string trk_type = ""
+var float  trk_entry = na
+var float  trk_sl    = na
+var float  trk_tp    = na
+var float  trk_rr    = na
+var bool   trk_long  = false
+var bool   trk_open  = false
+var float  trk_peak  = na
+var string trk_type  = ""
 var string trk_htf_ctx = ""
 
 new_be_req = be_count > be_last and barstate.islast
@@ -911,13 +992,16 @@ if trk_open
     hit_be  = new_be_req or (had_run and (trk_long ? close <= trk_entry : close >= trk_entry))
     if hit_tp
         alert('{"type":"close","result":"win","bot":"' + bot_name + '","setup":"' + trk_type + '","rr":"' + str.tostring(trk_rr, "#.##") + '"}', alert.freq_once_per_bar_close)
-        trk_open := false ; trk_peak := na
+        trk_open := false
+        trk_peak := na
     else if hit_sl
         alert('{"type":"close","result":"loss","bot":"' + bot_name + '","setup":"' + trk_type + '"}', alert.freq_once_per_bar_close)
-        trk_open := false ; trk_peak := na
+        trk_open := false
+        trk_peak := na
     else if hit_be
         alert('{"type":"close","result":"be","bot":"' + bot_name + '","setup":"' + trk_type + '"}', alert.freq_once_per_bar_close)
-        trk_open := false ; trk_peak := na
+        trk_open := false
+        trk_peak := na
         if new_be_req
             be_last := be_count
 if not trk_open and new_be_req
@@ -955,16 +1039,21 @@ if buy_signal and not trk_open and not na(sweep_low_val)
         _rr   = math.abs(_tp - close) / math.abs(close - _sl)
         _tp2  = close + math.abs(close - _sl) * (_rr + 1.0)
         _ctx  = f_htf_context(true)
-        _htag = _ctx != "" ? '\\n📊 ' + _ctx : ''
-        label.new(bar_index, low, 'BUY ✓\\nMSS\\nRR ' + str.tostring(_rr, "#.##") + _htag,
+        _htag = _ctx != "" ? '\\n' + _ctx : ''
+        label.new(bar_index, low, 'BUY\\nMSS\\nRR ' + str.tostring(_rr, "#.##") + _htag,
              color = bull_col, textcolor = color.white, style = label.style_label_up, size = size.normal)
         line.new(bar_index, _sl,  bar_index + 40, _sl,  color = bear_col, style = line.style_dotted, width = 2)
         line.new(bar_index, _tp,  bar_index + 40, _tp,  color = bull_col, style = line.style_dotted, width = 2)
         line.new(bar_index, _tp2, bar_index + 40, _tp2, color = bull_col, style = line.style_dashed,  width = 1)
         alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"LONG","entry":' + str.tostring(close) + ',"sl":' + str.tostring(_sl) + ',"tp":' + str.tostring(_tp) + ',"rr":"' + str.tostring(_rr, "#.##") + '","setup":"MSS","htf":"' + _ctx + '","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
-        trk_entry := close ; trk_sl := _sl  ; trk_tp := _tp
-        trk_rr    := _rr   ; trk_long := true ; trk_open := true
-        trk_type  := "MSS" ; trk_htf_ctx := _ctx
+        trk_entry   := close
+        trk_sl      := _sl
+        trk_tp      := _tp
+        trk_rr      := _rr
+        trk_long    := true
+        trk_open    := true
+        trk_type    := "MSS"
+        trk_htf_ctx := _ctx
     last_rejected := not _valid
 
 if sell_signal and not trk_open and not na(sweep_high_val)
@@ -975,16 +1064,21 @@ if sell_signal and not trk_open and not na(sweep_high_val)
         _rr   = math.abs(_tp - close) / math.abs(close - _sl)
         _tp2  = close - math.abs(close - _sl) * (_rr + 1.0)
         _ctx  = f_htf_context(false)
-        _htag = _ctx != "" ? '\\n📊 ' + _ctx : ''
-        label.new(bar_index, high, 'SELL ✓\\nMSS\\nRR ' + str.tostring(_rr, "#.##") + _htag,
+        _htag = _ctx != "" ? '\\n' + _ctx : ''
+        label.new(bar_index, high, 'SELL\\nMSS\\nRR ' + str.tostring(_rr, "#.##") + _htag,
              color = bear_col, textcolor = color.white, style = label.style_label_down, size = size.normal)
         line.new(bar_index, _sl,  bar_index + 40, _sl,  color = bull_col, style = line.style_dotted, width = 2)
         line.new(bar_index, _tp,  bar_index + 40, _tp,  color = bear_col, style = line.style_dotted, width = 2)
         line.new(bar_index, _tp2, bar_index + 40, _tp2, color = bear_col, style = line.style_dashed,  width = 1)
         alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"SHORT","entry":' + str.tostring(close) + ',"sl":' + str.tostring(_sl) + ',"tp":' + str.tostring(_tp) + ',"rr":"' + str.tostring(_rr, "#.##") + '","setup":"MSS","htf":"' + _ctx + '","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
-        trk_entry := close ; trk_sl := _sl   ; trk_tp := _tp
-        trk_rr    := _rr   ; trk_long := false ; trk_open := true
-        trk_type  := "MSS" ; trk_htf_ctx := _ctx
+        trk_entry   := close
+        trk_sl      := _sl
+        trk_tp      := _tp
+        trk_rr      := _rr
+        trk_long    := false
+        trk_open    := true
+        trk_type    := "MSS"
+        trk_htf_ctx := _ctx
     last_rejected := not _valid
 
 if ifvg_bear_signal and not trk_open
@@ -1002,9 +1096,14 @@ if ifvg_bear_signal and not trk_open
         line.new(bar_index, _tp,  bar_index + 40, _tp,  color = bear_col, style = line.style_dotted, width = 2)
         line.new(bar_index, _tp2, bar_index + 40, _tp2, color = bear_col, style = line.style_dashed,  width = 1)
         alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"SHORT","entry":' + str.tostring(close) + ',"sl":' + str.tostring(_sl) + ',"tp":' + str.tostring(_tp) + ',"rr":"' + str.tostring(_rr, "#.##") + '","setup":"IFVG","htf":"' + _ctx + '","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
-        trk_entry := close ; trk_sl := _sl ; trk_tp := _tp
-        trk_rr := _rr ; trk_long := false ; trk_open := true
-        trk_type := "IFVG" ; trk_htf_ctx := _ctx
+        trk_entry        := close
+        trk_sl           := _sl
+        trk_tp           := _tp
+        trk_rr           := _rr
+        trk_long         := false
+        trk_open         := true
+        trk_type         := "IFVG"
+        trk_htf_ctx      := _ctx
         ifvg_bear_active := false
     last_rejected := not _valid
 
@@ -1023,9 +1122,14 @@ if ifvg_bull_signal and not trk_open
         line.new(bar_index, _tp,  bar_index + 40, _tp,  color = bull_col, style = line.style_dotted, width = 2)
         line.new(bar_index, _tp2, bar_index + 40, _tp2, color = bull_col, style = line.style_dashed,  width = 1)
         alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"LONG","entry":' + str.tostring(close) + ',"sl":' + str.tostring(_sl) + ',"tp":' + str.tostring(_tp) + ',"rr":"' + str.tostring(_rr, "#.##") + '","setup":"IFVG","htf":"' + _ctx + '","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
-        trk_entry := close ; trk_sl := _sl ; trk_tp := _tp
-        trk_rr := _rr ; trk_long := true ; trk_open := true
-        trk_type := "IFVG" ; trk_htf_ctx := _ctx
+        trk_entry        := close
+        trk_sl           := _sl
+        trk_tp           := _tp
+        trk_rr           := _rr
+        trk_long         := true
+        trk_open         := true
+        trk_type         := "IFVG"
+        trk_htf_ctx      := _ctx
         ifvg_bull_active := false
     last_rejected := not _valid
 
@@ -1036,16 +1140,21 @@ if ob_fvg_bull_signal and not trk_open
         _rr   = math.abs(_tp - close) / math.abs(close - ob_fvg_bull_sl)
         _tp2  = close + math.abs(close - ob_fvg_bull_sl) * (_rr + 1.0)
         _ctx  = f_htf_context(true)
-        _htag = _ctx != "" ? '\\n📊 ' + _ctx : ''
-        label.new(bar_index, low, 'BUY ✓\\nOB_CONT\\nRR ' + str.tostring(_rr, "#.##") + _htag,
+        _htag = _ctx != "" ? '\\n' + _ctx : ''
+        label.new(bar_index, low, 'BUY\\nOB_CONT\\nRR ' + str.tostring(_rr, "#.##") + _htag,
              color = bull_col, textcolor = color.white, style = label.style_label_up, size = size.normal)
         line.new(bar_index, ob_fvg_bull_sl, bar_index + 40, ob_fvg_bull_sl, color = bear_col, style = line.style_dotted, width = 2)
         line.new(bar_index, _tp,  bar_index + 40, _tp,  color = bull_col, style = line.style_dotted, width = 2)
         line.new(bar_index, _tp2, bar_index + 40, _tp2, color = bull_col, style = line.style_dashed,  width = 1)
         alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"LONG","entry":' + str.tostring(close) + ',"sl":' + str.tostring(ob_fvg_bull_sl) + ',"tp":' + str.tostring(_tp) + ',"rr":"' + str.tostring(_rr, "#.##") + '","setup":"OB_CONT","htf":"' + _ctx + '","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
-        trk_entry := close ; trk_sl := ob_fvg_bull_sl ; trk_tp := _tp
-        trk_rr    := _rr   ; trk_long := true ; trk_open := true
-        trk_type  := "OB_CONT" ; trk_htf_ctx := _ctx
+        trk_entry   := close
+        trk_sl      := ob_fvg_bull_sl
+        trk_tp      := _tp
+        trk_rr      := _rr
+        trk_long    := true
+        trk_open    := true
+        trk_type    := "OB_CONT"
+        trk_htf_ctx := _ctx
     last_rejected := not _valid
 
 if ob_fvg_bear_signal and not trk_open
@@ -1055,16 +1164,21 @@ if ob_fvg_bear_signal and not trk_open
         _rr   = math.abs(_tp - close) / math.abs(close - ob_fvg_bear_sl)
         _tp2  = close - math.abs(close - ob_fvg_bear_sl) * (_rr + 1.0)
         _ctx  = f_htf_context(false)
-        _htag = _ctx != "" ? '\\n📊 ' + _ctx : ''
-        label.new(bar_index, high, 'SELL ✓\\nOB_CONT\\nRR ' + str.tostring(_rr, "#.##") + _htag,
+        _htag = _ctx != "" ? '\\n' + _ctx : ''
+        label.new(bar_index, high, 'SELL\\nOB_CONT\\nRR ' + str.tostring(_rr, "#.##") + _htag,
              color = bear_col, textcolor = color.white, style = label.style_label_down, size = size.normal)
         line.new(bar_index, ob_fvg_bear_sl, bar_index + 40, ob_fvg_bear_sl, color = bull_col, style = line.style_dotted, width = 2)
         line.new(bar_index, _tp,  bar_index + 40, _tp,  color = bear_col, style = line.style_dotted, width = 2)
         line.new(bar_index, _tp2, bar_index + 40, _tp2, color = bear_col, style = line.style_dashed,  width = 1)
         alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"SHORT","entry":' + str.tostring(close) + ',"sl":' + str.tostring(ob_fvg_bear_sl) + ',"tp":' + str.tostring(_tp) + ',"rr":"' + str.tostring(_rr, "#.##") + '","setup":"OB_CONT","htf":"' + _ctx + '","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
-        trk_entry := close ; trk_sl := ob_fvg_bear_sl ; trk_tp := _tp
-        trk_rr    := _rr   ; trk_long := false ; trk_open := true
-        trk_type  := "OB_CONT" ; trk_htf_ctx := _ctx
+        trk_entry   := close
+        trk_sl      := ob_fvg_bear_sl
+        trk_tp      := _tp
+        trk_rr      := _rr
+        trk_long    := false
+        trk_open    := true
+        trk_type    := "OB_CONT"
+        trk_htf_ctx := _ctx
     last_rejected := not _valid
 
 // ─── BAR ALERT ────────────────────────────────────────────────────────────
