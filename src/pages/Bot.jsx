@@ -488,7 +488,7 @@ var float prev_sh        = na
 var float prev_sl        = na
 var int   last_sh_bar    = na
 var int   last_sl_bar    = na
-var bool  bull_structure = na
+var bool  bull_structure = bool(na)
 
 if not na(swing_high)
     prev_sh      := last_sh
@@ -888,7 +888,7 @@ var float pending_sh          = na
 var float pending_sl          = na
 var int   pending_sh_bar      = na
 var int   pending_sl_bar      = na
-var bool  last_pivot_was_high = na
+var bool  last_pivot_was_high = bool(na)
 
 if not na(swing_high)
     if not na(pending_sl) and (na(last_pivot_was_high) or last_pivot_was_high == false)
