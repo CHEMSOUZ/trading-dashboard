@@ -359,7 +359,7 @@ f_clean_htf_fvg(hi_arr, lo_arr, bull_arr, box_arr) =>
             array.remove(lo_arr,   i)
             array.remove(bull_arr, i)
             array.remove(box_arr,  i)
-        else
+        if not comble
             i += 1
 
 f_clean_htf_fvg(fvg4h_hi, fvg4h_lo, fvg4h_bull, fvg4h_box)
