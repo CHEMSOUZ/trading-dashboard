@@ -237,7 +237,7 @@ if is_new_day and show_daily_eq
     daily_h_pool = array.from(d_h0, d_h1, d_h2, d_h3, d_h4)
     daily_l_pool = array.from(d_l0, d_l1, d_l2, d_l3, d_l4)
 
-    for i = 0 to 4 by 1
+    for i = 0 to 3 by 1
         hi = array.get(daily_h_pool, i)
         if na(hi)
             continue
@@ -254,7 +254,7 @@ if is_new_day and show_daily_eq
                     label.new(bar_index, hi, 'EQH D', color = color.new(col_daily, 70), textcolor = col_daily, style = label.style_label_left, size = size.tiny)
                 break
 
-    for i = 0 to 4 by 1
+    for i = 0 to 3 by 1
         li = array.get(daily_l_pool, i)
         if na(li)
             continue
