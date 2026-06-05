@@ -546,22 +546,19 @@ f_find_tp(entry, sl, is_long) =>
     risk       = math.abs(entry - sl)
     candidates = array.new_float()
 
+    // for...in gère nativement les tableaux vides (pas de out-of-bounds)
     if is_long
-        for k = 0 to array.size(eq_highs) - 1 by 1
-            lvl = array.get(eq_highs, k)
+        for lvl in eq_highs
             if lvl > entry
                 array.push(candidates, lvl)
-        for k = 0 to array.size(eq_highs_1m) - 1 by 1
-            lvl = array.get(eq_highs_1m, k)
+        for lvl in eq_highs_1m
             if lvl > entry
                 array.push(candidates, lvl)
     else
-        for k = 0 to array.size(eq_lows) - 1 by 1
-            lvl = array.get(eq_lows, k)
+        for lvl in eq_lows
             if lvl < entry
                 array.push(candidates, lvl)
-        for k = 0 to array.size(eq_lows_1m) - 1 by 1
-            lvl = array.get(eq_lows_1m, k)
+        for lvl in eq_lows_1m
             if lvl < entry
                 array.push(candidates, lvl)
 
@@ -581,57 +578,55 @@ f_find_tp(entry, sl, is_long) =>
             array.push(candidates, ny_l)
 
     if is_long
-        for k = 0 to array.size(daily_highs) - 1 by 1
-            lvl = array.get(daily_highs, k)
+        for lvl in daily_highs
             if not na(lvl) and lvl > entry
                 array.push(candidates, lvl)
     else
-        for k = 0 to array.size(daily_lows) - 1 by 1
-            lvl = array.get(daily_lows, k)
+        for lvl in daily_lows
             if not na(lvl) and lvl < entry
                 array.push(candidates, lvl)
 
     if is_long
-        for k = 0 to array.size(eq_highs_daily) - 1 by 1
-            lvl = array.get(eq_highs_daily, k)
+        for lvl in eq_highs_daily
             if not na(lvl) and lvl > entry
                 array.push(candidates, lvl)
     else
-        for k = 0 to array.size(eq_lows_daily) - 1 by 1
-            lvl = array.get(eq_lows_daily, k)
+        for lvl in eq_lows_daily
             if not na(lvl) and lvl < entry
                 array.push(candidates, lvl)
 
     if is_long
-        for k = 0 to array.size(weekly_highs) - 1 by 1
-            lvl = array.get(weekly_highs, k)
+        for lvl in weekly_highs
             if not na(lvl) and lvl > entry
                 array.push(candidates, lvl)
     else
-        for k = 0 to array.size(weekly_lows) - 1 by 1
-            lvl = array.get(weekly_lows, k)
+        for lvl in weekly_lows
             if not na(lvl) and lvl < entry
                 array.push(candidates, lvl)
 
-    for k = 0 to array.size(fvg4h_hi) - 1 by 1
-        h4hi = array.get(fvg4h_hi, k)
-        h4lo = array.get(fvg4h_lo, k)
-        if is_long and h4hi > entry
-            array.push(candidates, h4hi)
-        if not is_long and h4lo < entry
-            array.push(candidates, h4lo)
+    // Boucles parallèles (deux arrays) → guard explicite
+    n4h = array.size(fvg4h_hi)
+    if n4h > 0
+        for k = 0 to n4h - 1 by 1
+            h4hi = array.get(fvg4h_hi, k)
+            h4lo = array.get(fvg4h_lo, k)
+            if is_long and h4hi > entry
+                array.push(candidates, h4hi)
+            if not is_long and h4lo < entry
+                array.push(candidates, h4lo)
 
-    for k = 0 to array.size(fvgD_hi) - 1 by 1
-        dhi = array.get(fvgD_hi, k)
-        dlo = array.get(fvgD_lo, k)
-        if is_long and dhi > entry
-            array.push(candidates, dhi)
-        if not is_long and dlo < entry
-            array.push(candidates, dlo)
+    nD = array.size(fvgD_hi)
+    if nD > 0
+        for k = 0 to nD - 1 by 1
+            dhi = array.get(fvgD_hi, k)
+            dlo = array.get(fvgD_lo, k)
+            if is_long and dhi > entry
+                array.push(candidates, dhi)
+            if not is_long and dlo < entry
+                array.push(candidates, dlo)
 
     best_tp = float(na)
-    for k = 0 to array.size(candidates) - 1 by 1
-        lvl    = array.get(candidates, k)
+    for lvl in candidates
         rr_lvl = is_long ? (lvl - entry) / risk : (entry - lvl) / risk
         if rr_lvl >= min_rr
             if na(best_tp)
