@@ -85,17 +85,19 @@ var g1 = 'Swing Detection'
 swing_len = input.int(5, 'Swing Length', group = g1)
 
 var g2 = 'Liquidity'
-liq_len   = input.int(20,     'Lookback Equal H/L',         group = g2)
-liq_tol   = input.float(0.10, 'Tolerance % égalité',        group = g2, step = 0.01)
-show_sess = input.bool(true,  'Afficher liquidité sessions', group = g2)
+liq_len         = input.int(20,     'Lookback Equal H/L',                group = g2)
+liq_tol         = input.float(0.10, 'Tolerance pct egalite',             group = g2, step = 0.01)
+show_sess       = input.bool(true,  'Afficher liquidite sessions',        group = g2)
+sweep_disp_bars = input.int(3,      'Bars max confirmation displacement', group = g2, minval = 1, maxval = 10)
 
 var g3 = 'FVG'
-fvg_min_pts = input.float(5.0, 'Taille min FVG LTF (pts)',  group = g3)
+fvg_min_pts = input.float(5.0, 'Taille min FVG LTF pts',      group = g3)
+show_ifvg   = input.bool(true, 'Afficher IFVG (MSS inverse)', group = g3)
 
 var g4 = 'Display'
-show_liq      = input.bool(true, 'Afficher liquidité EQH/EQL LTF', group = g4)
-show_mss      = input.bool(true, 'Afficher MSS',                   group = g4)
-show_fvg      = input.bool(true, 'Afficher FVG LTF',               group = g4)
+show_liq      = input.bool(true, 'Afficher liquidite EQH EQL LTF',  group = g4)
+show_mss      = input.bool(true, 'Afficher MSS',                     group = g4)
+show_fvg      = input.bool(true, 'Afficher FVG MSS LTF uniquement',  group = g4)
 show_ob       = input.bool(true, 'Afficher Order Block',            group = g4)
 show_cont     = input.bool(true, 'Afficher Continuation FVG',       group = g4)
 show_htf      = input.bool(true, 'Afficher niveaux Daily/Weekly',   group = g4)
@@ -127,6 +129,8 @@ col_daily    = color.new(color.fuchsia, 0)
 col_weekly   = color.new(color.white,   0)
 col_4h_fvg   = color.new(color.purple, 70)
 col_d_fvg    = color.new(color.orange, 70)
+col_ifvg_b   = color.new(#ff1744,      78)
+col_ifvg_h   = color.new(#00e676,      78)
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ─── DONNÉES HTF via request.security ─────────────────────────────────────
@@ -585,29 +589,59 @@ f_find_tp(entry, sl, is_long) =>
     best_tp
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ─── LIQUIDITY SWEEP ──────────────────────────────────────────────────────
+// ─── LIQUIDITY SWEEP — mèche uniquement + displacement confirmation ────────
 // ═══════════════════════════════════════════════════════════════════════════
-var bool  bull_sweep     = false
-var bool  bear_sweep     = false
-var float sweep_low_val  = na
-var float sweep_high_val = na
-var bool  bull_cont      = false
-var bool  bear_cont      = false
+var bool  bull_sweep          = false
+var bool  bear_sweep          = false
+var float sweep_low_val       = na
+var float sweep_high_val      = na
+var bool  bull_cont           = false
+var bool  bear_cont           = false
+
+var bool  pending_bull_sweep  = false
+var bool  pending_bear_sweep  = false
+var float pending_sweep_low   = na
+var float pending_sweep_high  = na
+var int   pending_bull_bar    = na
+var int   pending_bear_bar    = na
 
 bear_fvg_on_break = (low[2] - high)    > fvg_min_pts
 bull_fvg_on_break = (low    - high[2]) > fvg_min_pts
 
+bull_disp = close > open and (close - open) > fvg_min_pts
+bear_disp = close < open and (open - close) > fvg_min_pts
+
 if array.size(eq_lows) > 0
     lvl = array.get(eq_lows, array.size(eq_lows) - 1)
-    if low < lvl and close > lvl
-        bull_sweep := true ; sweep_low_val := low
+    if low < lvl and math.min(open, close) > lvl
+        pending_bull_sweep := true
+        pending_sweep_low  := low
+        pending_bull_bar   := bar_index
         array.clear(eq_lows)
 
 if array.size(eq_highs) > 0
     lvl = array.get(eq_highs, array.size(eq_highs) - 1)
-    if high > lvl and close < lvl
-        bear_sweep := true ; sweep_high_val := high
+    if high > lvl and math.max(open, close) < lvl
+        pending_bear_sweep := true
+        pending_sweep_high := high
+        pending_bear_bar   := bar_index
         array.clear(eq_highs)
+
+if pending_bull_sweep and bar_index > pending_bull_bar
+    if bull_disp or bull_fvg_on_break
+        bull_sweep         := true
+        sweep_low_val      := pending_sweep_low
+        pending_bull_sweep := false
+    else if bar_index - pending_bull_bar >= sweep_disp_bars
+        pending_bull_sweep := false
+
+if pending_bear_sweep and bar_index > pending_bear_bar
+    if bear_disp or bear_fvg_on_break
+        bear_sweep         := true
+        sweep_high_val     := pending_sweep_high
+        pending_bear_sweep := false
+    else if bar_index - pending_bear_bar >= sweep_disp_bars
+        pending_bear_sweep := false
 
 if array.size(eq_highs) > 0
     lvl_h = array.get(eq_highs, array.size(eq_highs) - 1)
@@ -665,26 +699,80 @@ if ob_bull_valid and close < ob_bull_lo
 if ob_bear_valid and close > ob_bear_hi
     ob_bear_valid := false
 
-// ─── FVG LTF ──────────────────────────────────────────────────────────────
-var bool  bull_fvg_active = false ; var float bull_fvg_hi = na ; var float bull_fvg_lo = na
-var bool  bear_fvg_active = false ; var float bear_fvg_hi = na ; var float bear_fvg_lo = na
+// ─── FVG LTF — uniquement FVG qui cassent le dernier H/L de structure ─────
+var bool  bull_fvg_active = false
+var float bull_fvg_hi     = na
+var float bull_fvg_lo     = na
+var bool  bull_fvg_is_mss = false
+
+var bool  bear_fvg_active = false
+var float bear_fvg_hi     = na
+var float bear_fvg_lo     = na
+var bool  bear_fvg_is_mss = false
+
+var bool  ifvg_bear_active = false
+var float ifvg_bear_hi     = na
+var float ifvg_bear_lo     = na
+var box   ifvg_bear_box    = na
+
+var bool  ifvg_bull_active = false
+var float ifvg_bull_hi     = na
+var float ifvg_bull_lo     = na
+var box   ifvg_bull_box    = na
 
 bull_fvg_size = low - high[2]
-if bull_fvg_size > fvg_min_pts
-    bull_fvg_active := true ; bull_fvg_hi := low ; bull_fvg_lo := high[2]
-    if show_fvg
-        box.new(bar_index - 2, bull_fvg_hi, bar_index + 50, bull_fvg_lo, bgcolor = bull_bg, border_color = bull_col, border_width = 1)
-
 bear_fvg_size = low[2] - high
-if bear_fvg_size > fvg_min_pts
-    bear_fvg_active := true ; bear_fvg_hi := low[2] ; bear_fvg_lo := high
-    if show_fvg
-        box.new(bar_index - 2, bear_fvg_hi, bar_index + 50, bear_fvg_lo, bgcolor = bear_bg, border_color = bear_col, border_width = 1)
 
-if bull_fvg_active and low  < bull_fvg_lo
+if bull_fvg_size > fvg_min_pts
+    bull_fvg_active := true
+    bull_fvg_hi     := low
+    bull_fvg_lo     := high[2]
+    bull_fvg_is_mss := not na(last_sh) and high > last_sh
+    if show_fvg and bull_fvg_is_mss
+        box.new(bar_index - 2, bull_fvg_hi, bar_index + 50, bull_fvg_lo,
+             bgcolor = bull_bg, border_color = bull_col, border_width = 2,
+             text = 'FVG MSS \\u2191', text_color = bull_col, text_size = size.small)
+
+if bear_fvg_size > fvg_min_pts
+    bear_fvg_active := true
+    bear_fvg_hi     := low[2]
+    bear_fvg_lo     := high
+    bear_fvg_is_mss := not na(last_sl) and low < last_sl
+    if show_fvg and bear_fvg_is_mss
+        box.new(bar_index - 2, bear_fvg_hi, bar_index + 50, bear_fvg_lo,
+             bgcolor = bear_bg, border_color = bear_col, border_width = 2,
+             text = 'FVG MSS \\u2193', text_color = bear_col, text_size = size.small)
+
+if bull_fvg_active and low < bull_fvg_lo
+    if bull_fvg_is_mss and show_ifvg
+        if not na(ifvg_bear_box)
+            box.delete(ifvg_bear_box)
+        ifvg_bear_active := true
+        ifvg_bear_hi     := bull_fvg_hi
+        ifvg_bear_lo     := bull_fvg_lo
+        ifvg_bear_box    := box.new(bar_index, ifvg_bear_hi, bar_index + 60, ifvg_bear_lo,
+             bgcolor = col_ifvg_b, border_color = bear_col, border_width = 2,
+             text = 'IFVG Bear', text_color = color.white, text_size = size.small)
     bull_fvg_active := false
+    bull_fvg_is_mss := false
+
 if bear_fvg_active and high > bear_fvg_hi
+    if bear_fvg_is_mss and show_ifvg
+        if not na(ifvg_bull_box)
+            box.delete(ifvg_bull_box)
+        ifvg_bull_active := true
+        ifvg_bull_hi     := bear_fvg_hi
+        ifvg_bull_lo     := bear_fvg_lo
+        ifvg_bull_box    := box.new(bar_index, ifvg_bull_hi, bar_index + 60, ifvg_bull_lo,
+             bgcolor = col_ifvg_h, border_color = bull_col, border_width = 2,
+             text = 'IFVG Bull', text_color = color.white, text_size = size.small)
     bear_fvg_active := false
+    bear_fvg_is_mss := false
+
+if ifvg_bear_active and high > ifvg_bear_hi
+    ifvg_bear_active := false
+if ifvg_bull_active and low < ifvg_bull_lo
+    ifvg_bull_active := false
 
 // ─── CONTINUATION OB+FVG ──────────────────────────────────────────────────
 var bool  ob_fvg_bull_waiting = false ; var float ob_fvg_bull_sl = na
@@ -728,6 +816,9 @@ if buy_signal
     waiting_buy := false
 if sell_signal
     waiting_sell := false
+
+ifvg_bear_signal = ifvg_bear_active and close >= ifvg_bear_lo and close <= ifvg_bear_hi
+ifvg_bull_signal = ifvg_bull_active and close >= ifvg_bull_lo and close <= ifvg_bull_hi
 
 // ─── FIBONACCI ────────────────────────────────────────────────────────────
 var array<float> fib_sh_arr  = array.new_float()
@@ -837,6 +928,8 @@ f_htf_context(is_long) =>
     if is_long
         if in_htf_fvg_bull
             ctx := ctx + "FVG HTF"
+        if ifvg_bull_active
+            ctx := ctx + (ctx != "" ? "+" : "") + "IFVG"
         if not na(d_h0) and close < d_h0
             ctx := ctx + (ctx != "" ? "+" : "") + "PDH"
         if not na(w_h0) and close < w_h0
@@ -844,6 +937,8 @@ f_htf_context(is_long) =>
     else
         if in_htf_fvg_bear
             ctx := ctx + "FVG HTF"
+        if ifvg_bear_active
+            ctx := ctx + (ctx != "" ? "+" : "") + "IFVG"
         if not na(d_l0) and close > d_l0
             ctx := ctx + (ctx != "" ? "+" : "") + "PDL"
         if not na(w_l0) and close > w_l0
@@ -890,6 +985,48 @@ if sell_signal and not trk_open and not na(sweep_high_val)
         trk_entry := close ; trk_sl := _sl   ; trk_tp := _tp
         trk_rr    := _rr   ; trk_long := false ; trk_open := true
         trk_type  := "MSS" ; trk_htf_ctx := _ctx
+    last_rejected := not _valid
+
+if ifvg_bear_signal and not trk_open
+    _sl    = ifvg_bear_hi + 5.0
+    _tp    = f_find_tp(close, _sl, false)
+    _valid = not na(_tp)
+    if _valid
+        _rr   = math.abs(_tp - close) / math.abs(close - _sl)
+        _tp2  = close - math.abs(close - _sl) * (_rr + 1.0)
+        _ctx  = f_htf_context(false)
+        _htag = _ctx != "" ? '\\n' + _ctx : ''
+        label.new(bar_index, high, 'SELL\\nIFVG\\nRR ' + str.tostring(_rr, "#.##") + _htag,
+             color = bear_col, textcolor = color.white, style = label.style_label_down, size = size.normal)
+        line.new(bar_index, _sl,  bar_index + 40, _sl,  color = bull_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, _tp,  bar_index + 40, _tp,  color = bear_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, _tp2, bar_index + 40, _tp2, color = bear_col, style = line.style_dashed,  width = 1)
+        alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"SHORT","entry":' + str.tostring(close) + ',"sl":' + str.tostring(_sl) + ',"tp":' + str.tostring(_tp) + ',"rr":"' + str.tostring(_rr, "#.##") + '","setup":"IFVG","htf":"' + _ctx + '","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
+        trk_entry := close ; trk_sl := _sl ; trk_tp := _tp
+        trk_rr := _rr ; trk_long := false ; trk_open := true
+        trk_type := "IFVG" ; trk_htf_ctx := _ctx
+        ifvg_bear_active := false
+    last_rejected := not _valid
+
+if ifvg_bull_signal and not trk_open
+    _sl    = ifvg_bull_lo - 5.0
+    _tp    = f_find_tp(close, _sl, true)
+    _valid = not na(_tp)
+    if _valid
+        _rr   = math.abs(_tp - close) / math.abs(close - _sl)
+        _tp2  = close + math.abs(close - _sl) * (_rr + 1.0)
+        _ctx  = f_htf_context(true)
+        _htag = _ctx != "" ? '\\n' + _ctx : ''
+        label.new(bar_index, low, 'BUY\\nIFVG\\nRR ' + str.tostring(_rr, "#.##") + _htag,
+             color = bull_col, textcolor = color.white, style = label.style_label_up, size = size.normal)
+        line.new(bar_index, _sl,  bar_index + 40, _sl,  color = bear_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, _tp,  bar_index + 40, _tp,  color = bull_col, style = line.style_dotted, width = 2)
+        line.new(bar_index, _tp2, bar_index + 40, _tp2, color = bull_col, style = line.style_dashed,  width = 1)
+        alert('{"bot":"' + bot_name + '","symbol":"' + symbol_name + '","signal":"LONG","entry":' + str.tostring(close) + ',"sl":' + str.tostring(_sl) + ',"tp":' + str.tostring(_tp) + ',"rr":"' + str.tostring(_rr, "#.##") + '","setup":"IFVG","htf":"' + _ctx + '","timeframe":"' + timeframe.period + '"}', alert.freq_once_per_bar_close)
+        trk_entry := close ; trk_sl := _sl ; trk_tp := _tp
+        trk_rr := _rr ; trk_long := true ; trk_open := true
+        trk_type := "IFVG" ; trk_htf_ctx := _ctx
+        ifvg_bull_active := false
     last_rejected := not _valid
 
 if ob_fvg_bull_signal and not trk_open
@@ -963,12 +1100,17 @@ if barstate.islast
         text_color = color.white, bgcolor = color.new(#0d1117, 40), text_size = size.small)
 
     f_row(dash, c1, 1, "1. EQH/EQL (LTF + 1m)")
-    f_row(dash, c2, 2, "2. Sweep liquidite")
+    sweep_lbl = pending_bull_sweep or pending_bear_sweep ? "2. Sweep (attente disp)" : "2. Sweep confirme"
+    table.cell(dash, 0, 2, sweep_lbl, text_color = color.white,
+         bgcolor = pending_bull_sweep or pending_bear_sweep ? color.new(color.yellow, 50) : color.new(#1a1a2e, 30),
+         text_size = size.small)
+    table.cell(dash, 1, 2, c2 ? "OK" : "--", text_color = color.white,
+         bgcolor = c2 ? color.new(#00e676, 60) : color.new(#ff1744, 60), text_size = size.small)
     f_row(dash, c3, 3, "3. MSS + attente FVG")
-    f_row(dash, c4, 4, "4. FVG LTF actif")
+    f_row(dash, c4, 4, "4. FVG MSS LTF")
     f_row(dash, c5, 5, "5. SL reference")
-    f_row(dash, c6, 6, "→ CONT EQH/EQL")
-    f_row(dash, c7, 7, "→ CONT OB+FVG")
+    f_row(dash, ifvg_bear_active or ifvg_bull_active, 6, "IFVG actif")
+    f_row(dash, ifvg_bear_signal or ifvg_bull_signal, 7, "IFVG signal")
 
     htf_fvg_bull_active = array.size(fvg4h_hi) > 0 or array.size(fvgD_hi) > 0
     f_row(dash, htf_fvg_bull_active, 8, "FVG 4H/Daily actif")
@@ -977,7 +1119,7 @@ if barstate.islast
     daily_loaded = array.size(daily_highs) > 0
     f_row(dash, daily_loaded, 10, "Liq. Daily/Weekly chargee")
 
-    f_row(dash, buy_signal or sell_signal or ob_fvg_bull_signal or ob_fvg_bear_signal, 11, "→ SIGNAL")
+    f_row(dash, buy_signal or sell_signal or ob_fvg_bull_signal or ob_fvg_bear_signal or ifvg_bear_signal or ifvg_bull_signal, 11, "→ SIGNAL")
 
     rr_txt = trk_open ? "RR actif : " + str.tostring(trk_rr, "#.##") + "R"
                       : last_rejected ? "⚠️ Rejete RR < " + str.tostring(min_rr, "#.#") : "RR min : " + str.tostring(min_rr, "#.#") + "R"
@@ -1011,9 +1153,17 @@ if barstate.islast
     table.cell(dash, 1, 15, trk_open ? "SL " + str.tostring(math.round(trk_sl)) : "—",
         text_color = color.white, bgcolor = color.new(#1a1a2e, 20), text_size = size.small)
 
-    htf_ctx_live = trk_open and trk_htf_ctx != "" ? trk_htf_ctx : in_htf_fvg_bull ? "Dans FVG HTF Bull" : in_htf_fvg_bear ? "Dans FVG HTF Bear" : "—"
-    table.cell(dash, 0, 16, "🏛 HTF: " + htf_ctx_live,
-        text_color = in_htf_fvg_bull ? col_asia : in_htf_fvg_bear ? color.new(color.red, 0) : color.new(color.gray, 40),
+    htf_ctx_live = trk_open and trk_htf_ctx != "" ? trk_htf_ctx :
+                   ifvg_bull_active ? "IFVG Bull actif" :
+                   ifvg_bear_active ? "IFVG Bear actif" :
+                   in_htf_fvg_bull  ? "Dans FVG HTF Bull" :
+                   in_htf_fvg_bear  ? "Dans FVG HTF Bear" : "—"
+    htf_ctx_col  = ifvg_bull_active ? bull_col :
+                   ifvg_bear_active ? bear_col :
+                   in_htf_fvg_bull  ? col_asia :
+                   in_htf_fvg_bear  ? color.new(color.red, 0) : color.new(color.gray, 40)
+    table.cell(dash, 0, 16, "HTF: " + htf_ctx_live,
+        text_color = htf_ctx_col,
         bgcolor    = color.new(#1a1a2e, 20), text_size = size.small)
     table.cell(dash, 1, 16, "", bgcolor = color.new(#1a1a2e, 20))
 
