@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "electron": "set NODE_ENV=development && electron electron.cjs",
-    "dist": "vite build && electron-builder"
+    "dist": "vite build && electron-builder",
+    "release": "vite build && electron-builder --publish always"
   },
   "dependencies": {
     "electron-updater": "^6.8.3",
@@ -29,7 +30,8 @@
     "publish": {
       "provider": "github",
       "owner": "CHEMSOUZ",
-      "repo": "trading-dashboard"
+      "repo": "trading-dashboard",
+      "draft": false
     },
     "files": [
       "dist/**/*",
