@@ -27,14 +27,19 @@
   "build": {
     "appId": "com.trading.dashboard",
     "productName": "Trading Dashboard",
+    "directories": {
+      "output": "release"
+    },
     "publish": {
       "provider": "github",
       "owner": "CHEMSOUZ",
       "repo": "trading-dashboard",
-      "draft": false
+      "releaseType": "release"
     },
     "files": [
-      "dist/**/*",
+      "dist/index.html",
+      "dist/assets/**/*",
+      "dist/favicon.svg",
       "electron.cjs",
       "preload.cjs",
       "database.cjs",
