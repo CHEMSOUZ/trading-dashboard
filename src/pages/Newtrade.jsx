@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const PAIRS = ['MNQ','NQ','MES','ES','MGC','GC','M2K','RTY','MCL','CL','NASDAQ','S&P500','DAX','GOLD','EUR/USD','GBP/USD','BTC/USD','ETH/USD','Autre'];
@@ -26,8 +26,8 @@ function saveChecklistItems(items) {
 }
 
 const inputStyle = {
-  background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.12)',
-  borderRadius: '5px', padding: '9px 12px', color: '#c8d8c8',
+  background: 'rgba(18,6,10,0.6)', border: '1px solid rgba(196,18,48,0.14)',
+  borderRadius: '5px', padding: '9px 12px', color: '#e0d0d0',
   fontSize: '13px', fontFamily: 'inherit', outline: 'none',
   width: '100%', boxSizing: 'border-box', transition: 'border-color 0.15s',
 };
@@ -35,7 +35,7 @@ const inputStyle = {
 function Field({ label, children }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-      <label style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '1.5px' }}>{label}</label>
+      <label style={{ fontSize: '12px', color: '#6a3a3a', letterSpacing: '1.5px' }}>{label}</label>
       {children}
     </div>
   );
@@ -51,8 +51,8 @@ function Lightbox({ src, onClose }) {
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <img src={src} alt="Screenshot" onClick={e => e.stopPropagation()}
-        style={{ maxWidth: '100%', maxHeight: '95vh', objectFit: 'contain', borderRadius: '4px', boxShadow: '0 0 40px rgba(0,255,136,0.15)' }} />
-      <button onClick={onClose} style={{ position: 'absolute', top: '16px', right: '20px', background: 'rgba(10,28,18,0.8)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+        style={{ maxWidth: '100%', maxHeight: '95vh', objectFit: 'contain', borderRadius: '4px', boxShadow: '0 0 40px rgba(196,18,48,0.18)' }} />
+      <button onClick={onClose} style={{ position: 'absolute', top: '16px', right: '20px', background: 'rgba(18,6,10,0.8)', border: '1px solid rgba(196,18,48,0.35)', color: '#c41230', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
       <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Appuie sur Échap pour fermer</div>
     </div>
   );
@@ -116,21 +116,21 @@ function ScreenshotZone({ screenshots, onChange }) {
         onDrop={handleDrop}
         onClick={handleClick}
         style={{
-          border: `2px dashed ${dragOver ? '#00ff88' : '#1a4a2a'}`,
+          border: `2px dashed ${dragOver ? '#c41230' : '#1a4a2a'}`,
           borderRadius: '6px', padding: '18px',
           textAlign: 'center', cursor: 'pointer',
-          background: dragOver ? 'rgba(0,255,136,0.05)' : 'rgba(10,28,18,0.3)',
+          background: dragOver ? 'rgba(196,18,48,0.06)' : 'rgba(18,6,10,0.3)',
           transition: 'all 0.2s',
           marginBottom: screenshots.length > 0 ? '10px' : '0',
         }}
       >
         <div style={{ fontSize: '22px', marginBottom: '5px' }}>📸</div>
-        <div style={{ fontSize: '13px', color: '#c8d8c8', marginBottom: '3px' }}>
+        <div style={{ fontSize: '13px', color: '#e0d0d0', marginBottom: '3px' }}>
           Glisse tes screenshots ici · Clique pour sélectionner
         </div>
-        <div style={{ fontSize: '12px', color: '#3a6a4a' }}>
+        <div style={{ fontSize: '12px', color: '#6a3a3a' }}>
           ou{' '}
-          <kbd style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)', padding: '1px 5px', borderRadius: '3px', fontSize: '11px', color: '#00ff88' }}>Ctrl+V</kbd>
+          <kbd style={{ background: 'rgba(196,18,48,0.12)', border: '1px solid rgba(196,18,48,0.22)', padding: '1px 5px', borderRadius: '3px', fontSize: '11px', color: '#c41230' }}>Ctrl+V</kbd>
           {' '}pour coller depuis le presse-papier
         </div>
       </div>
@@ -139,14 +139,14 @@ function ScreenshotZone({ screenshots, onChange }) {
       {screenshots.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
           {screenshots.map(sc => (
-            <div key={sc.id} style={{ position: 'relative', borderRadius: '5px', overflow: 'hidden', background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.1)', aspectRatio: '16/10' }}>
+            <div key={sc.id} style={{ position: 'relative', borderRadius: '5px', overflow: 'hidden', background: 'rgba(18,6,10,0.5)', border: '1px solid rgba(196,18,48,0.12)', aspectRatio: '16/10' }}>
               <img src={sc.dataUrl} alt={sc.name}
                 onClick={() => setLightbox(sc.dataUrl)}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in', display: 'block' }}
               />
               <button onClick={e => { e.stopPropagation(); remove(sc.id); }}
                 style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,68,85,0.5)', color: '#ff4455', width: '20px', height: '20px', borderRadius: '50%', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.65)', padding: '3px 6px', fontSize: '10px', color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sc.name}</div>
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.65)', padding: '3px 6px', fontSize: '10px', color: '#887070', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sc.name}</div>
             </div>
           ))}
         </div>
@@ -187,15 +187,15 @@ function Checklist({ checked, onChange, items, onItemsChange }) {
   const onDragEnd = () => { setDragId(null); setDragOverId(null); };
 
   return (
-    <div style={{ background: 'rgba(6,18,12,0.8)', border: '1px solid rgba(0,255,136,0.12)', borderRadius: '6px', overflow: 'hidden' }}>
+    <div style={{ background: 'rgba(10,3,6,0.8)', border: '1px solid rgba(196,18,48,0.14)', borderRadius: '6px', overflow: 'hidden' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid rgba(0,255,136,0.08)', background: 'rgba(0,255,136,0.03)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid rgba(196,18,48,0.10)', background: 'rgba(0,255,136,0.03)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: ratio === 1 ? '#00ff88' : '#00aa55', boxShadow: ratio === 1 ? '0 0 8px #00ff88' : 'none' }} />
+          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: ratio === 1 ? '#c41230' : '#991020', boxShadow: ratio === 1 ? '0 0 8px #c41230' : 'none' }} />
           <span style={{ fontSize: '12px', color: '#00cc66', letterSpacing: '2px' }}>CONFIRMATION CHECKLIST</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ background: 'rgba(0,255,136,0.08)', border: `1px solid ${ratio === 1 ? '#00ff88' : '#1a4a2a'}`, borderRadius: '3px', padding: '2px 8px', fontSize: '13px', fontWeight: '700', color: ratio === 1 ? '#00ff88' : '#c8d8c8' }}>{score}/{total}</div>
+          <div style={{ background: 'rgba(196,18,48,0.10)', border: `1px solid ${ratio === 1 ? '#c41230' : '#1a4a2a'}`, borderRadius: '3px', padding: '2px 8px', fontSize: '13px', fontWeight: '700', color: ratio === 1 ? '#c41230' : '#e0d0d0' }}>{score}/{total}</div>
           <button onClick={resetAll} style={{ background: 'transparent', border: '1px solid #1a2a1a', color: '#3a5a3a', padding: '2px 6px', borderRadius: '2px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}
             onMouseEnter={e => { e.currentTarget.style.color = '#ff4455'; e.currentTarget.style.borderColor = '#ff4455'; }}
             onMouseLeave={e => { e.currentTarget.style.color = '#3a5a3a'; e.currentTarget.style.borderColor = '#1a2a1a'; }}
@@ -204,7 +204,7 @@ function Checklist({ checked, onChange, items, onItemsChange }) {
       </div>
       {/* Progress */}
       <div style={{ height: '2px', background: 'rgba(14,40,24,0.8)' }}>
-        <div style={{ height: '100%', width: `${ratio * 100}%`, background: 'linear-gradient(90deg,#00aa55,#00ff88)', transition: 'width 0.3s ease', boxShadow: ratio > 0 ? '0 0 6px #00ff8860' : 'none' }} />
+        <div style={{ height: '100%', width: `${ratio * 100}%`, background: 'linear-gradient(90deg,#991020,#c41230)', transition: 'width 0.3s ease', boxShadow: ratio > 0 ? '0 0 6px #c4123060' : 'none' }} />
       </div>
       {/* Items */}
       <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
@@ -218,20 +218,20 @@ function Checklist({ checked, onChange, items, onItemsChange }) {
               onDragOver={e => onDragOver(e, item.id)}
               onDrop={e => onDrop(e, item.id)}
               onDragEnd={onDragEnd}
-              style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '7px 8px', background: isDragging ? 'rgba(0,255,136,0.12)' : isChecked ? 'rgba(0,255,136,0.05)' : 'rgba(10,28,18,0.5)', border: `1px solid ${isDragOver ? '#00ff88' : isChecked ? '#1a4a2a' : 'rgba(14,40,24,0.8)'}`, borderLeft: `2px solid ${isChecked ? '#00ff88' : '#1a3a22'}`, borderRadius: '3px', opacity: isDragging ? 0.4 : 1, transform: isDragOver ? 'translateX(3px)' : 'none', transition: 'all 0.15s ease', userSelect: 'none' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '7px 8px', background: isDragging ? 'rgba(196,18,48,0.14)' : isChecked ? 'rgba(196,18,48,0.06)' : 'rgba(18,6,10,0.5)', border: `1px solid ${isDragOver ? '#c41230' : isChecked ? '#1a4a2a' : 'rgba(14,40,24,0.8)'}`, borderLeft: `2px solid ${isChecked ? '#c41230' : '#2a1515'}`, borderRadius: '3px', opacity: isDragging ? 0.4 : 1, transform: isDragOver ? 'translateX(3px)' : 'none', transition: 'all 0.15s ease', userSelect: 'none' }}
             >
               <div style={{ cursor: 'grab', flexShrink: 0, opacity: 0.35 }}
                 onMouseEnter={e => e.currentTarget.style.opacity = '1'}
                 onMouseLeave={e => e.currentTarget.style.opacity = '0.35'}
               >
                 <svg width="8" height="12" viewBox="0 0 8 12" fill="none">
-                  {[1.5, 5.5, 9.5].map(y => <g key={y}><circle cx="2" cy={y} r="1" fill="#2a5a3a"/><circle cx="6" cy={y} r="1" fill="#2a5a3a"/></g>)}
+                  {[1.5, 5.5, 9.5].map(y => <g key={y}><circle cx="2" cy={y} r="1" fill="#3a1a1a"/><circle cx="6" cy={y} r="1" fill="#3a1a1a"/></g>)}
                 </svg>
               </div>
-              <div onClick={() => toggle(item.id)} style={{ width: '15px', height: '15px', flexShrink: 0, border: `1.5px solid ${isChecked ? '#00ff88' : '#2a5a3a'}`, borderRadius: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isChecked ? 'rgba(0,255,136,0.12)' : 'transparent', transition: 'all 0.15s', boxShadow: isChecked ? '0 0 6px #00ff8830' : 'none' }}>
-                {isChecked && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><polyline points="1,3.5 3,6 8,1" stroke="#00ff88" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+              <div onClick={() => toggle(item.id)} style={{ width: '15px', height: '15px', flexShrink: 0, border: `1.5px solid ${isChecked ? '#c41230' : '#3a1a1a'}`, borderRadius: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isChecked ? 'rgba(196,18,48,0.14)' : 'transparent', transition: 'all 0.15s', boxShadow: isChecked ? '0 0 6px #c4123030' : 'none' }}>
+                {isChecked && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><polyline points="1,3.5 3,6 8,1" stroke="#c41230" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
               </div>
-              <span onClick={() => toggle(item.id)} style={{ flex: 1, fontSize: '12px', cursor: 'pointer', color: isChecked ? '#3a8a4a' : '#8aaa90', textDecoration: isChecked ? 'line-through' : 'none', textDecorationColor: '#2a6a3a', transition: 'color 0.15s', lineHeight: '1.3' }}>{item.label}</span>
+              <span onClick={() => toggle(item.id)} style={{ flex: 1, fontSize: '12px', cursor: 'pointer', color: isChecked ? '#8a3a3a' : '#887070', textDecoration: isChecked ? 'line-through' : 'none', textDecorationColor: '#2a6a3a', transition: 'color 0.15s', lineHeight: '1.3' }}>{item.label}</span>
               <button onClick={() => removeItem(item.id)} style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '14px', padding: '0 2px', flexShrink: 0, transition: 'color 0.15s', lineHeight: 1 }}
                 onMouseEnter={e => e.currentTarget.style.color = '#ff4455'}
                 onMouseLeave={e => e.currentTarget.style.color = '#1a3a20'}
@@ -243,18 +243,18 @@ function Checklist({ checked, onChange, items, onItemsChange }) {
       {/* Add */}
       <div style={{ padding: '4px 8px 8px' }}>
         {adding ? (
-          <div style={{ display: 'flex', gap: '5px', background: 'rgba(10,28,18,0.8)', border: '1px solid #1a4a2a', borderRadius: '3px', padding: '4px 8px' }}>
+          <div style={{ display: 'flex', gap: '5px', background: 'rgba(18,6,10,0.8)', border: '1px solid #1a4a2a', borderRadius: '3px', padding: '4px 8px' }}>
             <input autoFocus value={newLabel} onChange={e => setNewLabel(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addItem(); if (e.key === 'Escape') { setAdding(false); setNewLabel(''); } }}
               placeholder="Nouvelle confirmation..."
-              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#c8d8c8', fontSize: '12px', fontFamily: 'inherit', caretColor: '#00ff88' }} />
-            <button onClick={addItem} style={{ background: '#00ff88', border: 'none', color: '#040d08', padding: '2px 8px', borderRadius: '2px', fontSize: '11px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer' }}>ADD</button>
-            <button onClick={() => { setAdding(false); setNewLabel(''); }} style={{ background: 'transparent', border: '1px solid #1a3a22', color: '#4a7a5a', padding: '2px 5px', borderRadius: '2px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>ESC</button>
+              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#e0d0d0', fontSize: '12px', fontFamily: 'inherit', caretColor: '#c41230' }} />
+            <button onClick={addItem} style={{ background: '#c41230', border: 'none', color: '#040d08', padding: '2px 8px', borderRadius: '2px', fontSize: '11px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer' }}>ADD</button>
+            <button onClick={() => { setAdding(false); setNewLabel(''); }} style={{ background: 'transparent', border: '1px solid #2a1515', color: '#7a4040', padding: '2px 5px', borderRadius: '2px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>ESC</button>
           </div>
         ) : (
-          <button onClick={() => setAdding(true)} style={{ width: '100%', background: 'transparent', border: '1px dashed #1a3a22', color: '#3a6a4a', padding: '5px', borderRadius: '3px', fontSize: '11px', fontFamily: 'inherit', letterSpacing: '2px', cursor: 'pointer', transition: 'all 0.2s' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#2a5a32'; e.currentTarget.style.color = '#00ff88'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#1a3a22'; e.currentTarget.style.color = '#3a6a4a'; }}
+          <button onClick={() => setAdding(true)} style={{ width: '100%', background: 'transparent', border: '1px dashed #2a1515', color: '#6a3a3a', padding: '5px', borderRadius: '3px', fontSize: '11px', fontFamily: 'inherit', letterSpacing: '2px', cursor: 'pointer', transition: 'all 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#4a2020'; e.currentTarget.style.color = '#c41230'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a1515'; e.currentTarget.style.color = '#6a3a3a'; }}
           >+ AJOUTER</button>
         )}
       </div>
@@ -382,10 +382,10 @@ export default function NewTrade() {
 
       {/* Header */}
       <div style={{ marginBottom: '20px' }}>
-        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: 'none', color: '#3a6a4a', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit', marginBottom: '10px', padding: '0' }}>
+        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: 'none', color: '#6a3a3a', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit', marginBottom: '10px', padding: '0' }}>
           ← Retour au dashboard
         </button>
-        <h1 style={{ fontSize: '23px', fontWeight: '700', color: '#e8f8e8', margin: 0 }}>
+        <h1 style={{ fontSize: '23px', fontWeight: '700', color: '#f0e0e2', margin: 0 }}>
           {isEdit ? 'Modifier le trade' : 'Nouveau trade'}
         </h1>
       </div>
@@ -393,7 +393,7 @@ export default function NewTrade() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '20px', alignItems: 'start' }}>
 
         {/* ── Left — Form ── */}
-        <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div style={{ background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '8px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
           {/* Date, Paire, Direction */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
@@ -408,7 +408,7 @@ export default function NewTrade() {
             <Field label="DIRECTION *">
               <div style={{ display: 'flex', gap: '6px' }}>
                 {['LONG','SHORT'].map(d => (
-                  <button key={d} onClick={() => setForm(p => ({ ...p, direction: d }))} style={{ flex: 1, padding: '8px', borderRadius: '5px', border: `1px solid ${form.direction===d?(d==='LONG'?'#00ff88':'#ff4455'):'rgba(0,255,136,0.12)'}`, background: form.direction===d?`rgba(${d==='LONG'?'0,255,136':'255,68,85'},0.12)`:'rgba(10,28,18,0.6)', color: form.direction===d?(d==='LONG'?'#00ff88':'#ff4455'):'#5a8a6a', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s' }}>{d}</button>
+                  <button key={d} onClick={() => setForm(p => ({ ...p, direction: d }))} style={{ flex: 1, padding: '8px', borderRadius: '5px', border: `1px solid ${form.direction===d?(d==='LONG'?'#c41230':'#ff4455'):'rgba(196,18,48,0.14)'}`, background: form.direction===d?`rgba(${d==='LONG'?'0,204,119':'255,51,68'},0.12)`:'rgba(18,6,10,0.6)', color: form.direction===d?(d==='LONG'?'#c41230':'#ff4455'):'#8a5050', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s' }}>{d}</button>
                 ))}
               </div>
             </Field>
@@ -418,21 +418,21 @@ export default function NewTrade() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '14px' }}>
             <Field label="ENTRÉE *">
               <input type="number" placeholder="21450" value={form.entry} onChange={set('entry')} style={inputStyle}
-                onFocus={e => e.target.style.borderColor = '#00ff88'}
-                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+                onFocus={e => e.target.style.borderColor = '#c41230'}
+                onBlur={e => e.target.style.borderColor = 'rgba(196,18,48,0.14)'} />
             </Field>
             <Field label="STOP">
               <input type="number" placeholder="21425" value={form.stop} onChange={set('stop')} style={inputStyle}
                 onFocus={e => e.target.style.borderColor = '#ff4455'}
-                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+                onBlur={e => e.target.style.borderColor = 'rgba(196,18,48,0.14)'} />
             </Field>
             <Field label="TP">
               <input type="number" placeholder="21500" value={form.tp} onChange={set('tp')} style={inputStyle}
-                onFocus={e => e.target.style.borderColor = '#00ff88'}
-                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+                onFocus={e => e.target.style.borderColor = '#c41230'}
+                onBlur={e => e.target.style.borderColor = 'rgba(196,18,48,0.14)'} />
             </Field>
             <Field label="RR (AUTO)">
-              <input readOnly value={form.rr ? `1:${form.rr}` : ''} style={{ ...inputStyle, color: '#00ff88', fontWeight: '700', background: 'rgba(0,255,136,0.05)' }} />
+              <input readOnly value={form.rr ? `1:${form.rr}` : ''} style={{ ...inputStyle, color: '#c41230', fontWeight: '700', background: 'rgba(196,18,48,0.06)' }} />
             </Field>
           </div>
 
@@ -441,26 +441,26 @@ export default function NewTrade() {
             <Field label="HEURE D'ENTRÉE">
               <input type="time" value={form.entered_time} onChange={set('entered_time')}
                 style={{ ...inputStyle, colorScheme: 'dark' }}
-                onFocus={e => e.target.style.borderColor = '#00ff88'}
-                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+                onFocus={e => e.target.style.borderColor = '#c41230'}
+                onBlur={e => e.target.style.borderColor = 'rgba(196,18,48,0.14)'} />
             </Field>
             <Field label="HEURE DE SORTIE">
               <input type="time" value={form.exited_time} onChange={set('exited_time')}
                 style={{ ...inputStyle, colorScheme: 'dark' }}
                 onFocus={e => e.target.style.borderColor = '#00aaff'}
-                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+                onBlur={e => e.target.style.borderColor = 'rgba(196,18,48,0.14)'} />
             </Field>
             <Field label="TAILLE (CONTRATS)">
               <input type="number" placeholder="1" min="0.01" step="0.01" value={form.size} onChange={set('size')}
                 style={inputStyle}
-                onFocus={e => e.target.style.borderColor = '#00ff88'}
-                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+                onFocus={e => e.target.style.borderColor = '#c41230'}
+                onBlur={e => e.target.style.borderColor = 'rgba(196,18,48,0.14)'} />
             </Field>
             <Field label="DURÉE">
               <input type="text" placeholder="2h 30m" value={form.duration} onChange={set('duration')}
                 style={inputStyle}
-                onFocus={e => e.target.style.borderColor = '#00ff88'}
-                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+                onFocus={e => e.target.style.borderColor = '#c41230'}
+                onBlur={e => e.target.style.borderColor = 'rgba(196,18,48,0.14)'} />
             </Field>
           </div>
 
@@ -468,31 +468,31 @@ export default function NewTrade() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
             <Field label="RÉSULTAT BRUT ($)">
               <input type="number" placeholder="+500 ou -250" value={form.result} onChange={set('result')}
-                style={{ ...inputStyle, color: form.result ? (parseFloat(form.result) >= 0 ? '#00ff88' : '#ff4455') : '#c8d8c8' }}
-                onFocus={e => e.target.style.borderColor = '#00ff88'}
-                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+                style={{ ...inputStyle, color: form.result ? (parseFloat(form.result) >= 0 ? '#00cc77' : '#ff3344') : '#e0d0d0' }}
+                onFocus={e => e.target.style.borderColor = '#c41230'}
+                onBlur={e => e.target.style.borderColor = 'rgba(196,18,48,0.14)'} />
             </Field>
             <Field label="FRAIS ($)">
               <input type="number" placeholder="0.00" min="0" step="0.01" value={form.fees} onChange={set('fees')}
-                style={{ ...inputStyle, color: parseFloat(form.fees) > 0 ? '#f0a020' : '#c8d8c8' }}
+                style={{ ...inputStyle, color: parseFloat(form.fees) > 0 ? '#f0a020' : '#e0d0d0' }}
                 onFocus={e => e.target.style.borderColor = '#f0a020'}
-                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+                onBlur={e => e.target.style.borderColor = 'rgba(196,18,48,0.14)'} />
             </Field>
             <Field label="COMMISSIONS ($)">
               <input type="number" placeholder="0.00" min="0" step="0.01" value={form.commissions} onChange={set('commissions')}
-                style={{ ...inputStyle, color: parseFloat(form.commissions) > 0 ? '#f0a020' : '#c8d8c8' }}
+                style={{ ...inputStyle, color: parseFloat(form.commissions) > 0 ? '#f0a020' : '#e0d0d0' }}
                 onFocus={e => e.target.style.borderColor = '#f0a020'}
-                onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+                onBlur={e => e.target.style.borderColor = 'rgba(196,18,48,0.14)'} />
             </Field>
           </div>
 
           {/* P&L net calculé */}
           {(form.result !== '' || form.fees !== '' || form.commissions !== '') && (
-            <div style={{ background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '5px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '1px' }}>P&L NET :</span>
+            <div style={{ background: 'rgba(18,6,10,0.5)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '5px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '11px', color: '#6a3a3a', letterSpacing: '1px' }}>P&L NET :</span>
               {(() => {
                 const net = (parseFloat(form.result) || 0) - (parseFloat(form.fees) || 0) - (parseFloat(form.commissions) || 0);
-                return <span style={{ fontSize: '15px', fontWeight: '700', color: net >= 0 ? '#00ff88' : '#ff4455' }}>{net >= 0 ? '+' : ''}{net.toFixed(2)}$</span>;
+                return <span style={{ fontSize: '15px', fontWeight: '700', color: net >= 0 ? '#00cc77' : '#ff3344' }}>{net >= 0 ? '+' : ''}{net.toFixed(2)}$</span>;
               })()}
               {((parseFloat(form.fees) || 0) + (parseFloat(form.commissions) || 0)) > 0 && (
                 <span style={{ fontSize: '10px', color: '#4a6a4a', marginLeft: 'auto' }}>
@@ -507,9 +507,9 @@ export default function NewTrade() {
             <Field label="OUTCOME">
               <div style={{ display: 'flex', gap: '5px' }}>
                 {['WIN','LOSS','BE'].map(o => {
-                  const c = o==='WIN'?'#00ff88':o==='LOSS'?'#ff4455':'#f0a020';
+                  const c = o==='WIN'?'#c41230':o==='LOSS'?'#ff4455':'#f0a020';
                   return (
-                    <button key={o} onClick={() => setForm(p => ({ ...p, outcome: o }))} style={{ flex: 1, padding: '7px 4px', borderRadius: '5px', border: `1px solid ${form.outcome===o?c:'rgba(0,255,136,0.12)'}`, background: form.outcome===o?`rgba(${o==='WIN'?'0,255,136':o==='LOSS'?'255,68,85':'240,160,32'},0.12)`:'rgba(10,28,18,0.6)', color: form.outcome===o?c:'#5a8a6a', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s' }}>{o}</button>
+                    <button key={o} onClick={() => setForm(p => ({ ...p, outcome: o }))} style={{ flex: 1, padding: '7px 4px', borderRadius: '5px', border: `1px solid ${form.outcome===o?c:'rgba(196,18,48,0.14)'}`, background: form.outcome===o?`rgba(${o==='WIN'?'0,255,136':o==='LOSS'?'255,68,85':'240,160,32'},0.12)`:'rgba(18,6,10,0.6)', color: form.outcome===o?c:'#8a5050', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s' }}>{o}</button>
                   );
                 })}
               </div>
@@ -525,14 +525,14 @@ export default function NewTrade() {
           <Field label="NOTES">
             <textarea placeholder="Contexte, erreurs, leçons..." value={form.notes} onChange={set('notes')}
               rows={3} style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.5' }}
-              onFocus={e => e.target.style.borderColor = '#00ff88'}
-              onBlur={e => e.target.style.borderColor = 'rgba(0,255,136,0.12)'} />
+              onFocus={e => e.target.style.borderColor = '#c41230'}
+              onBlur={e => e.target.style.borderColor = 'rgba(196,18,48,0.14)'} />
           </Field>
 
           {/* ── SCREENSHOTS ── */}
           <div>
-            <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '1.5px', marginBottom: '8px' }}>
-              SCREENSHOTS DU TRADE {screenshots.length > 0 && <span style={{ color: '#00ff88', marginLeft: '8px' }}>({screenshots.length} image{screenshots.length > 1 ? 's' : ''})</span>}
+            <div style={{ fontSize: '12px', color: '#6a3a3a', letterSpacing: '1.5px', marginBottom: '8px' }}>
+              SCREENSHOTS DU TRADE {screenshots.length > 0 && <span style={{ color: '#c41230', marginLeft: '8px' }}>({screenshots.length} image{screenshots.length > 1 ? 's' : ''})</span>}
             </div>
             <ScreenshotZone screenshots={screenshots} onChange={setScreenshots} />
           </div>
@@ -544,9 +544,9 @@ export default function NewTrade() {
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-            <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #1a3a22', background: 'transparent', color: '#5a8a6a', fontSize: '13px', fontFamily: 'inherit', letterSpacing: '1px', cursor: 'pointer' }}>ANNULER</button>
-            <button onClick={handleSubmit} disabled={saving} style={{ padding: '10px 28px', borderRadius: '5px', background: 'linear-gradient(135deg,rgba(0,255,136,0.25),rgba(0,170,85,0.15))', border: '1px solid rgba(0,255,136,0.35)', color: '#00ff88', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1.5px', cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s' }}
-              onMouseEnter={e => { if (!saving) e.currentTarget.style.boxShadow = '0 0 16px rgba(0,255,136,0.2)'; }}
+            <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #2a1515', background: 'transparent', color: '#8a5050', fontSize: '13px', fontFamily: 'inherit', letterSpacing: '1px', cursor: 'pointer' }}>ANNULER</button>
+            <button onClick={handleSubmit} disabled={saving} style={{ padding: '10px 28px', borderRadius: '5px', background: 'linear-gradient(135deg,rgba(196,18,48,0.28),rgba(0,170,85,0.15))', border: '1px solid rgba(196,18,48,0.40)', color: '#c41230', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1.5px', cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s' }}
+              onMouseEnter={e => { if (!saving) e.currentTarget.style.boxShadow = '0 0 16px rgba(196,18,48,0.22)'; }}
               onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
             >
               {saving ? 'ENREGISTREMENT...' : isEdit ? 'METTRE À JOUR' : 'ENREGISTRER'}
@@ -556,18 +556,18 @@ export default function NewTrade() {
 
         {/* ── Right — Checklist ── */}
         <div style={{ position: 'sticky', top: '24px' }}>
-          <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '8px' }}>CONFIRMATIONS</div>
+          <div style={{ fontSize: '12px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '8px' }}>CONFIRMATIONS</div>
           <Checklist
             checked={checklistChecked}
             onChange={setChecklistChecked}
             items={checklistItems}
             onItemsChange={setChecklistItems}
           />
-          <div style={{ marginTop: '8px', padding: '8px 12px', background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.06)', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '1px' }}>SCORE</span>
-            <span style={{ fontSize: '15px', fontWeight: '700', color: checklistScore === checklistTotal && checklistTotal > 0 ? '#00ff88' : '#c8d8c8' }}>
+          <div style={{ marginTop: '8px', padding: '8px 12px', background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.08)', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', color: '#6a3a3a', letterSpacing: '1px' }}>SCORE</span>
+            <span style={{ fontSize: '15px', fontWeight: '700', color: checklistScore === checklistTotal && checklistTotal > 0 ? '#c41230' : '#e0d0d0' }}>
               {checklistScore}/{checklistTotal}
-              <span style={{ fontSize: '12px', color: '#3a6a4a', marginLeft: '4px' }}>({Math.round((checklistScore / Math.max(checklistTotal, 1)) * 100)}%)</span>
+              <span style={{ fontSize: '12px', color: '#6a3a3a', marginLeft: '4px' }}>({Math.round((checklistScore / Math.max(checklistTotal, 1)) * 100)}%)</span>
             </span>
           </div>
         </div>

@@ -10,9 +10,7 @@ const NAV = [
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> },
   { to: '/global',    label: 'Vue Globale',  sub: 'Tous les comptes',
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> },
-  { to: '/topstep',   label: 'Topstep',      sub: 'Combine & Funded', badge: 'LIVE', _for: 'topstep',
-    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> },
-  { to: '/lucid',     label: 'Lucid',        sub: 'Eval & Funded', badge: 'LIVE', _for: 'tradovate',
+  { to: '/propfirm',  label: 'PropFirm',     sub: 'Challenge & Funded', badge: 'LIVE',
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> },
   { to: '/emotional', label: 'État Mental',  sub: 'Bilan pré-séance',
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
@@ -55,11 +53,16 @@ const ACCOUNT_RULES = {
   autre:               { size: null,   maxLoss: null,  dailyLoss: null },
 };
 
-const CHALLENGE_TYPES      = new Set(['topstep_50k','topstep_100k','topstep_150k']);
-const EXPRESS_FUNDED_TYPES = new Set(['topstep_ef_50k','topstep_ef_100k','topstep_ef_150k',
-                                      'lucid_funded_25k','lucid_funded_50k','lucid_funded_100k','lucid_funded_150k']);
-const LUCID_EVAL_TYPES     = new Set(['lucid_eval_25k','lucid_eval_50k','lucid_eval_100k','lucid_eval_150k','tradovate_live']);
-const LIVE_TYPES           = new Set(['lucid_live_50k','lucid_live_100k','lucid_live_150k','tradovate_live']);
+const CHALLENGE_TYPES = new Set([
+  'topstep_50k','topstep_100k','topstep_150k',
+  'lucid_eval_25k','lucid_eval_50k','lucid_eval_100k','lucid_eval_150k',
+  'tradovate_live',
+]);
+const EXPRESS_FUNDED_TYPES = new Set([
+  'topstep_ef_50k','topstep_ef_100k','topstep_ef_150k',
+  'lucid_funded_25k','lucid_funded_50k','lucid_funded_100k','lucid_funded_150k',
+]);
+const LIVE_TYPES = new Set(['lucid_live_50k','lucid_live_100k','lucid_live_150k']);
 
 async function computeBlownStatus(acc, currentActiveId) {
   const rules = ACCOUNT_RULES[acc.type];
@@ -77,18 +80,23 @@ async function computeBlownStatus(acc, currentActiveId) {
       .sort((a, b) => (a.entered_at || a.date || '').localeCompare(b.entered_at || b.date || ''));
     const totalPnl = trades.reduce((s, t) => s + (t.result_net ?? t.result ?? 0), 0);
 
-    // ── Trailing drawdown check ──────────────────────────────
     let isBlownDD = false;
     if (rules.size && rules.maxLoss) {
-      let hwm = rules.size, floor = rules.size - rules.maxLoss, bal = rules.size;
-      for (const t of sorted) {
-        bal += t.result_net ?? t.result ?? 0;
-        if (bal > hwm) { hwm = bal; floor = hwm - rules.maxLoss; }
+      if (EXPRESS_FUNDED_TYPES.has(acc.type)) {
+        const lockLevel = rules.size + rules.maxLoss;
+        let bal = rules.size, maxBal = rules.size;
+        for (const t of sorted) {
+          bal += t.result_net ?? t.result ?? 0;
+          if (bal > maxBal) maxBal = bal;
+        }
+        const floor = maxBal >= lockLevel ? rules.size : rules.size - rules.maxLoss;
+        isBlownDD = rules.size + totalPnl <= floor;
+      } else {
+        const floor = rules.size - rules.maxLoss;
+        isBlownDD = rules.size + totalPnl <= floor;
       }
-      isBlownDD = rules.size + totalPnl <= floor;
     }
 
-    // ── Daily loss check ─────────────────────────────────────
     let isBlownDaily = false;
     if (rules.dailyLoss) {
       const byDay = {};
@@ -103,7 +111,6 @@ async function computeBlownStatus(acc, currentActiveId) {
       }
     }
 
-    // ── Validated: challenge type (Topstep Combine) ─────────
     let isValidated = false;
     if (CHALLENGE_TYPES.has(acc.type) && sorted.length > 0 && rules.profitTarget) {
       const byDay2 = {};
@@ -113,24 +120,6 @@ async function computeBlownStatus(acc, currentActiveId) {
       }
       const tradingDays2 = Object.keys(byDay2).length;
       isValidated = totalPnl >= rules.profitTarget && tradingDays2 >= (rules.minDays ?? 2);
-    }
-
-    // ── Validated: Lucid Eval (tradovate_live) ───────────────
-    if (LUCID_EVAL_TYPES.has(acc.type) && !isBlownDD && !isBlownDaily && rules.profitTarget) {
-      // Group by day (byDay already computed above for daily loss check — recompute here)
-      const byDay2 = {};
-      for (const t of sorted) {
-        const d = t.entered_at?.slice(0, 10) ?? t.date ?? '';
-        if (d) byDay2[d] = (byDay2[d] ?? 0) + (t.result_net ?? t.result ?? 0);
-      }
-      const tradingDays   = Object.keys(byDay2).length;
-      const posNetPnl     = Object.values(byDay2).filter(p => p > 0).reduce((s, v) => s + v, 0);
-      const bestDayNet    = posNetPnl > 0 ? Math.max(...Object.values(byDay2).filter(p => p > 0)) : 0;
-      const bestDayPct    = posNetPnl > 0 ? bestDayNet / posNetPnl : 0;
-      const consistencyOk = bestDayPct <= (rules.consistencyPct ?? 0.40) || posNetPnl === 0;
-      isValidated = totalPnl >= rules.profitTarget &&
-                    tradingDays >= (rules.minDays ?? 5) &&
-                    consistencyOk;
     }
 
     return {
@@ -166,9 +155,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
   const dragStartWidth = useRef(0);
   const renameInputRef = useRef(null);
 
-  useEffect(() => {
-    loadAccounts();
-  }, [activeAccount]);
+  useEffect(() => { loadAccounts(); }, [activeAccount]);
 
   async function loadAccounts() {
     const res = await window.accounts.getAll();
@@ -185,13 +172,11 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
     setAccountStatuses(statuses);
   }
 
-  // Recharger quand une page change le type du compte
   useEffect(() => {
     window.addEventListener('account-updated', loadAccounts);
     return () => window.removeEventListener('account-updated', loadAccounts);
   }, []);
 
-  // ── Resize ────────────────────────────────────────────────
   const onMouseDown = useCallback((e) => {
     e.preventDefault();
     dragStartX.current = e.clientX;
@@ -214,14 +199,12 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
     return () => { window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); };
   }, [isDragging]);
 
-  // ── Switch account (no redirect) ──────────────────────────
   async function switchTo(id) {
     if (id === activeAccount?.id) { setShowSwitcher(false); return; }
     setShowSwitcher(false);
     await onSwitchAccount(id);
   }
 
-  // ── Rename account ────────────────────────────────────────
   function startRename(acc, e) {
     e.stopPropagation();
     setRenamingId(acc.id);
@@ -241,33 +224,38 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
   function cancelRename() { setRenamingId(null); setRenameValue(''); }
 
   return (
-    <aside style={{ width: `${width}px`, flexShrink: 0, background: '#060c10', borderRight: '1px solid rgba(0,255,136,0.08)', display: 'flex', flexDirection: 'column', position: 'relative', userSelect: isDragging ? 'none' : 'auto' }}>
+    <aside style={{ width: `${width}px`, flexShrink: 0, background: '#08050a', borderRight: '1px solid rgba(196,18,48,0.10)', display: 'flex', flexDirection: 'column', position: 'relative', userSelect: isDragging ? 'none' : 'auto' }}>
 
       {/* Account selector */}
-      <div style={{ padding: '10px', borderBottom: '1px solid rgba(0,255,136,0.06)' }}>
-        <div onClick={() => setShowSwitcher(s => !s)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 11px', borderRadius: '6px', cursor: 'pointer', background: showSwitcher ? 'rgba(0,255,136,0.06)' : 'transparent', border: `1px solid ${showSwitcher ? 'rgba(0,255,136,0.2)' : 'rgba(0,255,136,0.06)'}`, transition: 'all 0.15s' }}>
+      <div style={{ padding: '10px', borderBottom: '1px solid rgba(196,18,48,0.08)' }}>
+        <div onClick={() => setShowSwitcher(s => !s)}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 11px', borderRadius: '6px', cursor: 'pointer', background: showSwitcher ? 'rgba(196,18,48,0.08)' : 'transparent', border: `1px solid ${showSwitcher ? 'rgba(196,18,48,0.25)' : 'rgba(196,18,48,0.08)'}`, transition: 'all 0.15s' }}
+          onMouseEnter={e => { if (!showSwitcher) { e.currentTarget.style.background = 'rgba(196,18,48,0.05)'; e.currentTarget.style.borderColor = 'rgba(196,18,48,0.18)'; }}}
+          onMouseLeave={e => { if (!showSwitcher) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(196,18,48,0.08)'; }}}
+        >
           {(() => {
             const st = accountStatuses[activeAccount?.id];
-            const dc = st?.isBlown ? '#ff4455' : st?.isExpressFunded ? '#f0c020' : LIVE_TYPES.has(activeAccount?.type) ? '#00ddff' : '#00ff88';
-            return <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: dc, boxShadow: `0 0 7px ${dc}`, flexShrink: 0 }} />;
+            const isVal = st?.isValidated;
+            const dc = st?.isBlown ? '#ff4455' : st?.isExpressFunded ? '#f0c020' : LIVE_TYPES.has(activeAccount?.type) ? '#00ddff' : isVal ? '#00cc77' : '#c41230';
+            return <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: dc, boxShadow: `0 0 6px ${dc}88`, flexShrink: 0 }} />;
           })()}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '14px', fontWeight: '700', color: '#e8f8e8', wordBreak: 'break-word', lineHeight: '1.3' }}>{activeAccount?.name ?? 'Aucun compte'}</div>
-            <div style={{ fontSize: '12px', color: '#3a6a4a', marginTop: '2px' }}>{activeAccount?.typeInfo?.label ?? '—'}</div>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: '#f0e0e2', wordBreak: 'break-word', lineHeight: '1.3' }}>{activeAccount?.name ?? 'Aucun compte'}</div>
+            <div style={{ fontSize: '11px', color: '#6a3a3a', marginTop: '2px' }}>{activeAccount?.typeInfo?.label ?? '—'}</div>
           </div>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3a6a4a" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5a3535" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
             <polyline points={showSwitcher ? "18 15 12 9 6 15" : "6 9 12 15 18 9"}/>
           </svg>
         </div>
 
         {/* Dropdown */}
         {showSwitcher && (
-          <div style={{ position: 'absolute', top: '90px', left: '8px', right: '8px', zIndex: 50, background: '#070d12', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '8px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
+          <div style={{ position: 'absolute', top: '90px', left: '8px', right: '8px', zIndex: 50, background: '#0d060a', border: '1px solid rgba(196,18,48,0.22)', borderRadius: '8px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.7)', maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
 
             {(() => {
               const liveAccts      = accounts.filter(a => !accountStatuses[a.id]?.isBlown && LIVE_TYPES.has(a.type));
               const fundedAccts    = accounts.filter(a => !accountStatuses[a.id]?.isBlown && accountStatuses[a.id]?.isExpressFunded && !LIVE_TYPES.has(a.type));
-              const challengeAccts = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isExpressFunded && !LIVE_TYPES.has(a.type) && !accountStatuses[a.id]?.isValidated && (CHALLENGE_TYPES.has(a.type) || LUCID_EVAL_TYPES.has(a.type)));
+              const challengeAccts = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isExpressFunded && !LIVE_TYPES.has(a.type) && !accountStatuses[a.id]?.isValidated && CHALLENGE_TYPES.has(a.type));
               const validatedAccts = accounts.filter(a => !accountStatuses[a.id]?.isBlown && !accountStatuses[a.id]?.isExpressFunded && !LIVE_TYPES.has(a.type) && accountStatuses[a.id]?.isValidated);
               const blownAccts     = accounts.filter(a => accountStatuses[a.id]?.isBlown);
 
@@ -278,47 +266,48 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                 const isEF = st?.isExpressFunded ?? false;
                 const isVal = st?.isValidated ?? false;
                 const isLive = LIVE_TYPES.has(a.type);
-                const dotColor = isBlown ? '#ff4455' : isEF ? '#f0c020' : isLive ? '#00ddff' : '#00ff88';
-                const bgNormal = isBlown ? 'rgba(255,68,85,0.06)' : isEF ? 'rgba(240,192,32,0.06)' : isLive ? 'rgba(0,221,255,0.06)' : 'rgba(0,255,136,0.06)';
-                const borderAccent = isBlown ? 'rgba(255,68,85,0.4)' : isEF ? 'rgba(240,192,32,0.4)' : isLive ? 'rgba(0,221,255,0.4)' : 'transparent';
+                const dotColor = isBlown ? '#ff4455' : isEF ? '#f0c020' : isLive ? '#00ddff' : isVal ? '#00cc77' : '#c41230';
+                const bgNormal = isBlown ? 'rgba(255,68,85,0.06)' : isEF ? 'rgba(240,192,32,0.06)' : isLive ? 'rgba(0,221,255,0.06)' : isVal ? 'rgba(0,200,119,0.06)' : 'rgba(196,18,48,0.06)';
+                const borderAccent = isBlown ? 'rgba(255,68,85,0.4)' : isEF ? 'rgba(240,192,32,0.4)' : isLive ? 'rgba(0,221,255,0.4)' : isVal ? 'rgba(0,200,119,0.4)' : 'transparent';
                 return (
                   <div key={a.id} style={{ borderRadius: '5px', marginBottom: '2px', overflow: 'hidden' }}>
                     {renamingId === a.id ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '5px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', background: 'rgba(196,18,48,0.08)', border: '1px solid rgba(196,18,48,0.25)', borderRadius: '5px' }}>
                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: a.color, flexShrink: 0 }} />
                         <input
                           ref={renameInputRef}
                           value={renameValue}
                           onChange={e => setRenameValue(e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') confirmRename(a.id); if (e.key === 'Escape') cancelRename(); }}
-                          style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#e8f8e8', fontSize: '13px', fontFamily: 'inherit', caretColor: '#00ff88' }}
+                          style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#f0e0e2', fontSize: '13px', fontFamily: 'inherit', caretColor: '#c41230' }}
                         />
-                        <button onClick={() => confirmRename(a.id)} style={{ background: 'rgba(0,255,136,0.15)', border: 'none', color: '#00ff88', padding: '2px 7px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit' }}>✓</button>
-                        <button onClick={cancelRename} style={{ background: 'none', border: 'none', color: '#4a7a5a', padding: '2px 4px', cursor: 'pointer', fontSize: '13px' }}>✕</button>
+                        <button onClick={() => confirmRename(a.id)} style={{ background: 'rgba(196,18,48,0.15)', border: 'none', color: '#c41230', padding: '2px 7px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit' }}>✓</button>
+                        <button onClick={cancelRename} style={{ background: 'none', border: 'none', color: '#7a4a4a', padding: '2px 4px', cursor: 'pointer', fontSize: '13px' }}>✕</button>
                       </div>
                     ) : (
                       <div onClick={() => switchTo(a.id)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', cursor: 'pointer', background: isActive ? bgNormal : 'transparent', transition: 'background 0.12s', borderRadius: '5px', borderLeft: `2px solid ${isBlown || isEF || isLive ? borderAccent : 'transparent'}` }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', cursor: 'pointer', background: isActive ? bgNormal : 'transparent', transition: 'background 0.12s', borderRadius: '5px', borderLeft: `2px solid ${isBlown || isEF || isLive || isVal ? borderAccent : isActive ? 'rgba(196,18,48,0.4)' : 'transparent'}` }}
                         onMouseEnter={e => e.currentTarget.style.background = bgNormal}
                         onMouseLeave={e => e.currentTarget.style.background = isActive ? bgNormal : 'transparent'}
                       >
-                        <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: dotColor, boxShadow: `0 0 5px ${dotColor}`, flexShrink: 0 }} />
+                        <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: dotColor, boxShadow: `0 0 5px ${dotColor}88`, flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <span style={{ fontSize: '13px', color: isBlown ? '#ff7777' : isEF ? '#f0c020' : isLive ? '#00ddff' : isActive ? a.color : '#c8d8c8', fontWeight: isActive ? '700' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
+                            <span style={{ fontSize: '13px', color: isBlown ? '#ff7777' : isEF ? '#f0c020' : isLive ? '#00ddff' : isActive ? a.color : '#e0d0d0', fontWeight: isActive ? '700' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
                             {isBlown && <span title={st?.dailyLossBreached ? 'Perte journalière dépassée' : 'Drawdown maximum atteint'} style={{ fontSize: '8px', background: 'rgba(255,68,85,0.2)', border: '1px solid rgba(255,68,85,0.4)', color: '#ff4455', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0, cursor: 'help' }}>{st?.dailyLossBreached ? 'DAILY 🔴' : 'CRAMÉ'}</span>}
                             {!isBlown && isLive && <span style={{ fontSize: '8px', background: 'rgba(0,221,255,0.15)', border: '1px solid rgba(0,221,255,0.4)', color: '#00ddff', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>LIVE</span>}
                             {!isBlown && !isLive && isEF && <span style={{ fontSize: '8px', background: 'rgba(240,192,32,0.2)', border: '1px solid rgba(240,192,32,0.4)', color: '#f0c020', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>FUNDED</span>}
-                            {!isBlown && !isLive && isVal && <span title={LUCID_EVAL_TYPES.has(a.type) ? 'Lucid Eval validée — objectif atteint' : 'Challenge validé'} style={{ fontSize: '8px', background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0, cursor: 'help' }}>{LUCID_EVAL_TYPES.has(a.type) ? 'LUCID ✅' : 'VALIDÉ'}</span>}
+                            {!isBlown && !isLive && isVal && <span title="Challenge validé — objectif atteint" style={{ fontSize: '8px', background: 'rgba(0,200,119,0.15)', border: '1px solid rgba(0,200,119,0.3)', color: '#00cc77', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0, cursor: 'help' }}>VALIDÉ ✅</span>}
                           </div>
-                          <div style={{ fontSize: '11px', color: isBlown ? '#6a3a3a' : '#3a6a4a', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <div style={{ fontSize: '11px', color: isBlown ? '#6a3535' : '#6a3a3a', display: 'flex', alignItems: 'center', gap: '5px' }}>
                             <span>{a.typeInfo?.label}</span>
                             {st?.pnl != null && <span style={{ color: st.pnl >= 0 ? '#00aa55' : '#ff4455' }}>{st.pnl >= 0 ? '+' : ''}{st.pnl.toFixed(0)}$</span>}
                           </div>
                         </div>
-                        <button onClick={e => startRename(a, e)} title="Renommer" style={{ background: 'none', border: 'none', color: '#2a5a3a', cursor: 'pointer', fontSize: '13px', padding: '2px 4px', flexShrink: 0, opacity: 0.6, transition: 'all 0.15s' }}
-                          onMouseEnter={e => { e.stopPropagation(); e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#00ff88'; }}
-                          onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.color = '#2a5a3a'; }}
+                        <button onClick={e => startRename(a, e)} title="Renommer"
+                          style={{ background: 'none', border: 'none', color: '#4a2a2a', cursor: 'pointer', fontSize: '13px', padding: '2px 4px', flexShrink: 0, opacity: 0.6, transition: 'all 0.15s' }}
+                          onMouseEnter={e => { e.stopPropagation(); e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#c41230'; }}
+                          onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.color = '#4a2a2a'; }}
                         >✏️</button>
                       </div>
                     )}
@@ -330,7 +319,6 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
 
               return (
                 <>
-                  {/* 1. LIVE : Lucid Live + Tradovate Live */}
                   {liveAccts.length > 0 && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#00ddff', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
@@ -338,11 +326,10 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         LIVE
                       </div>
                       {liveAccts.map(renderAccItem)}
-                      {hasMore(liveAccts, fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
+                      {hasMore(liveAccts, fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(196,18,48,0.08)', margin: '4px 0 6px' }} />}
                     </>
                   )}
 
-                  {/* 2. FUNDED : Express Funded + Lucid Funded */}
                   {fundedAccts.length > 0 && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#f0c020', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
@@ -350,35 +337,32 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         FUNDED
                       </div>
                       {fundedAccts.map(renderAccItem)}
-                      {hasMore(fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
+                      {hasMore(fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(196,18,48,0.08)', margin: '4px 0 6px' }} />}
                     </>
                   )}
 
-                  {/* 3. CHALLENGE : Topstep Combine + Lucid Eval non validés */}
                   {challengeAccts.length > 0 && (
                     <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#00dd77', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
-                        <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00dd77', boxShadow: '0 0 4px #00dd77' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#c41230', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
+                        <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#c41230', boxShadow: '0 0 4px #c41230' }} />
                         CHALLENGE
                       </div>
                       {challengeAccts.map(renderAccItem)}
-                      {hasMore(challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
+                      {hasMore(challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(196,18,48,0.08)', margin: '4px 0 6px' }} />}
                     </>
                   )}
 
-                  {/* 4. VALIDÉ */}
                   {validatedAccts.length > 0 && (
                     <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#00ff88', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#00cc77', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
                         <span style={{ fontSize: '9px' }}>✅</span>
                         VALIDÉ
                       </div>
                       {validatedAccts.map(renderAccItem)}
-                      {blownAccts.length > 0 && <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '4px 0 6px' }} />}
+                      {blownAccts.length > 0 && <div style={{ borderTop: '1px solid rgba(196,18,48,0.08)', margin: '4px 0 6px' }} />}
                     </>
                   )}
 
-                  {/* 5. CRAMÉS */}
                   {blownAccts.length > 0 && (
                     <>
                       <div style={{ fontSize: '10px', color: '#ff4455', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px', opacity: 0.8 }}>CRAMÉS</div>
@@ -389,12 +373,12 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
               );
             })()}
 
-            <div style={{ borderTop: '1px solid rgba(0,255,136,0.06)', margin: '6px 0' }} />
+            <div style={{ borderTop: '1px solid rgba(196,18,48,0.08)', margin: '6px 0' }} />
 
-            {/* Manage accounts */}
-            <div onClick={() => { setShowSwitcher(false); onManageAccounts?.(); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', borderRadius: '5px', cursor: 'pointer', color: '#3a6a4a', fontSize: '12px', transition: 'all 0.12s' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,136,0.04)'; e.currentTarget.style.color = '#00ff88'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#3a6a4a'; }}
+            <div onClick={() => { setShowSwitcher(false); onManageAccounts?.(); }}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', borderRadius: '5px', cursor: 'pointer', color: '#6a3a3a', fontSize: '12px', transition: 'all 0.12s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(196,18,48,0.05)'; e.currentTarget.style.color = '#c41230'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6a3a3a'; }}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Gérer les comptes
@@ -404,43 +388,38 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
       </div>
 
       {/* Logo */}
-      <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid rgba(0,255,136,0.04)' }}>
+      <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid rgba(196,18,48,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-          <div style={{ width: '26px', height: '26px', background: 'linear-gradient(135deg,#00ff88,#00aa55)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 10px rgba(0,255,136,0.25)', flexShrink: 0 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#060c10" strokeWidth="2.5" strokeLinecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+          <div style={{ width: '28px', height: '28px', background: 'linear-gradient(135deg,#c41230,#8a0c20)', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 12px rgba(196,18,48,0.30)', flexShrink: 0 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f0e0e2" strokeWidth="2.5" strokeLinecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
           </div>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: '700', color: '#e8f8e8', letterSpacing: '1px' }}>TRADE</div>
-            <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px' }}>DASHBOARD</div>
+            <div style={{ fontSize: '13px', fontWeight: '700', color: '#f0e0e2', letterSpacing: '1.5px' }}>TRADE</div>
+            <div style={{ fontSize: '10px', color: '#6a3a3a', letterSpacing: '2.5px' }}>DASHBOARD</div>
           </div>
         </div>
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '6px 0' }}>
-        {NAV.filter(item => {
-          const isTradovate = ['tradovate_live', 'tradovate_demo'].includes(activeAccount?.type);
-          if (item._for === 'tradovate') return isTradovate;
-          if (item._for === 'topstep')   return !isTradovate;
-          return true;
-        }).map(({ to, label, sub, icon, badge }) => {
+      <nav style={{ flex: 1, padding: '6px 0', overflowY: 'auto' }}>
+        {NAV.map(({ to, label, sub, icon, badge }) => {
           const active = location.pathname === to || location.pathname.startsWith(to + '/');
           return (
             <NavLink key={to} to={to} onClick={() => setShowSwitcher(false)}
-              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 14px', margin: '1px 6px', borderRadius: '6px', textDecoration: 'none', color: active ? '#00ff88' : '#5a8a6a', background: active ? 'rgba(0,255,136,0.08)' : 'transparent', borderLeft: `2px solid ${active ? '#00ff88' : 'transparent'}`, transition: 'all 0.15s' }}
-              onMouseEnter={e => { if (!active) { e.currentTarget.style.color = '#8aaa90'; e.currentTarget.style.background = 'rgba(0,255,136,0.04)'; }}}
-              onMouseLeave={e => { if (!active) { e.currentTarget.style.color = '#5a8a6a'; e.currentTarget.style.background = 'transparent'; }}}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', margin: '1px 6px', borderRadius: '6px', textDecoration: 'none', color: active ? '#c41230' : '#6a4545', background: active ? 'rgba(196,18,48,0.10)' : 'transparent', borderLeft: `2px solid ${active ? '#c41230' : 'transparent'}`, transition: 'all 0.15s' }}
+              onMouseEnter={e => { if (!active) { e.currentTarget.style.color = '#9a6060'; e.currentTarget.style.background = 'rgba(196,18,48,0.05)'; }}}
+              onMouseLeave={e => { if (!active) { e.currentTarget.style.color = '#6a4545'; e.currentTarget.style.background = 'transparent'; }}}
             >
               <span style={{ flexShrink: 0 }}>{icon}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '14px', fontWeight: active ? '700' : '400', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
-                <div style={{ fontSize: '12px', color: active ? '#3a8a4a' : '#3a5a3a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>
+                <div style={{ fontSize: '11px', color: active ? '#8a3535' : '#4a2a2a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>
               </div>
               {badge && (() => {
-                const bc = badge === 'BOT' ? '#00aaff' : '#00ff88';
-                const bg = badge === 'BOT' ? 'rgba(0,170,255,0.15)' : 'rgba(0,255,136,0.15)';
-                const br = badge === 'BOT' ? 'rgba(0,170,255,0.3)' : 'rgba(0,255,136,0.3)';
-                return <span style={{ fontSize: '11px', letterSpacing: '1px', background: bg, border: `1px solid ${br}`, color: bc, padding: '2px 5px', borderRadius: '2px', flexShrink: 0 }}>{badge}</span>;
+                const bc = badge === 'BOT' ? '#00aaff' : '#c41230';
+                const bg = badge === 'BOT' ? 'rgba(0,170,255,0.12)' : 'rgba(196,18,48,0.12)';
+                const br = badge === 'BOT' ? 'rgba(0,170,255,0.3)' : 'rgba(196,18,48,0.30)';
+                return <span style={{ fontSize: '10px', letterSpacing: '1px', background: bg, border: `1px solid ${br}`, color: bc, padding: '2px 5px', borderRadius: '3px', flexShrink: 0, fontWeight: '700' }}>{badge}</span>;
               })()}
             </NavLink>
           );
@@ -448,11 +427,12 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
       </nav>
 
       {/* New trade */}
-      <div style={{ padding: '10px', borderTop: '1px solid rgba(0,255,136,0.06)' }}>
+      <div style={{ padding: '10px', borderTop: '1px solid rgba(196,18,48,0.08)' }}>
         <NavLink to="/dashboard/new" style={{ textDecoration: 'none' }} onClick={() => setShowSwitcher(false)}>
-          <button style={{ width: '100%', padding: '10px 0', background: 'linear-gradient(135deg,rgba(0,255,136,0.15),rgba(0,170,85,0.1))', border: '1px solid rgba(0,255,136,0.25)', borderRadius: '6px', color: '#00ff88', fontSize: '13px', fontFamily: 'inherit', letterSpacing: '1.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
-            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 14px rgba(0,255,136,0.15)'}
-            onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+          <button
+            style={{ width: '100%', padding: '11px 0', background: 'linear-gradient(135deg,rgba(196,18,48,0.18),rgba(130,10,30,0.10))', border: '1px solid rgba(196,18,48,0.30)', borderRadius: '6px', color: '#c41230', fontSize: '12px', fontFamily: 'inherit', letterSpacing: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', transition: 'all 0.2s', fontWeight: '700', whiteSpace: 'nowrap' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg,rgba(196,18,48,0.26),rgba(130,10,30,0.18))'; e.currentTarget.style.boxShadow = '0 0 16px rgba(196,18,48,0.18)'; e.currentTarget.style.borderColor = 'rgba(196,18,48,0.50)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg,rgba(196,18,48,0.18),rgba(130,10,30,0.10))'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'rgba(196,18,48,0.30)'; }}
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             NOUVEAU TRADE
@@ -460,16 +440,17 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
         </NavLink>
       </div>
 
-      <div style={{ padding: '6px', textAlign: 'center' }}>
-        <span style={{ fontSize: '12px', color: '#1a3a22', letterSpacing: '1px' }}>v1.4.0</span>
+      <div style={{ padding: '5px 0 7px', textAlign: 'center' }}>
+        <span style={{ fontSize: '10px', color: '#3a1a1a', letterSpacing: '1px' }}>v1.4.90</span>
       </div>
 
       {/* Resize handle */}
-      <div onMouseDown={onMouseDown} style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '6px', cursor: 'col-resize', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        onMouseEnter={e => e.currentTarget.querySelector('.hb').style.background = '#00ff88'}
-        onMouseLeave={e => { if (!isDragging) e.currentTarget.querySelector('.hb').style.background = 'rgba(0,255,136,0.15)'; }}
+      <div onMouseDown={onMouseDown}
+        style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '6px', cursor: 'col-resize', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        onMouseEnter={e => e.currentTarget.querySelector('.hb').style.background = '#c41230'}
+        onMouseLeave={e => { if (!isDragging) e.currentTarget.querySelector('.hb').style.background = 'rgba(196,18,48,0.18)'; }}
       >
-        <div className="hb" style={{ width: '2px', height: '40px', borderRadius: '2px', background: isDragging ? '#00ff88' : 'rgba(0,255,136,0.15)', transition: 'background 0.15s' }} />
+        <div className="hb" style={{ width: '2px', height: '40px', borderRadius: '2px', background: isDragging ? '#c41230' : 'rgba(196,18,48,0.18)', transition: 'background 0.15s' }} />
       </div>
     </aside>
   );

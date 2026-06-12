@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+﻿import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // ── CSV Parsers ────────────────────────────────────────────────
@@ -560,13 +560,13 @@ function fmt(n, sign = false) {
   return `${sign && n >= 0 ? '+' : ''}${n.toFixed(2)}$`;
 }
 function pnlColor(v) {
-  if (v > 0) return '#00ff88';
-  if (v < 0) return '#ff4455';
-  return '#8aaa90';
+  if (v > 0) return '#00cc77';
+  if (v < 0) return '#ff3344';
+  return '#887070';
 }
 
 const SOURCE_INFO = {
-  topstep:          { label: 'Topstep',                 color: '#00ff88', icon: <TopstepLogo size={18} /> },
+  topstep:          { label: 'Topstep',                 color: '#c41230', icon: <TopstepLogo size={18} /> },
   tradovate:        { label: 'Tradovate (Ledger)',       color: '#00aaff', icon: <TradovateLogo size={18} /> },
   tradovate_orders: { label: 'Tradovate (Orders)',       color: '#00aaff', icon: <TradovateLogo size={18} /> },
   tradovate_perf:   { label: 'Tradovate (Performance)',  color: '#00aaff', icon: <TradovateLogo size={18} /> },
@@ -578,10 +578,10 @@ const SOURCE_INFO = {
 function TopstepLogo({ size = 24 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
-      <rect width="40" height="40" rx="8" fill="#00ff88" fillOpacity="0.15"/>
-      <path d="M8 20 L20 8 L32 20 L20 32 Z" stroke="#00ff88" strokeWidth="2.5" fill="none" strokeLinejoin="round"/>
-      <circle cx="20" cy="20" r="4" fill="#00ff88"/>
-      <path d="M20 8 L20 16 M20 24 L20 32 M8 20 L16 20 M24 20 L32 20" stroke="#00ff88" strokeWidth="1.5" strokeLinecap="round"/>
+      <rect width="40" height="40" rx="8" fill="#c41230" fillOpacity="0.15"/>
+      <path d="M8 20 L20 8 L32 20 L20 32 Z" stroke="#c41230" strokeWidth="2.5" fill="none" strokeLinejoin="round"/>
+      <circle cx="20" cy="20" r="4" fill="#c41230"/>
+      <path d="M20 8 L20 16 M20 24 L20 32 M8 20 L16 20 M24 20 L32 20" stroke="#c41230" strokeWidth="1.5" strokeLinecap="round"/>
     </svg>
   );
 }
@@ -618,22 +618,22 @@ function DropZone({ onFile, disabled }) {
       onDrop={disabled ? undefined : handleDrop}
       onClick={() => !disabled && inputRef.current?.click()}
       style={{
-        border: `2px dashed ${dragOver ? '#00ff88' : '#1a4a2a'}`,
+        border: `2px dashed ${dragOver ? '#c41230' : '#1a4a2a'}`,
         borderRadius: '10px',
         padding: '48px 24px',
         textAlign: 'center',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        background: dragOver ? 'rgba(0,255,136,0.05)' : 'rgba(10,28,18,0.3)',
+        background: dragOver ? 'rgba(196,18,48,0.06)' : 'rgba(18,6,10,0.3)',
         transition: 'all 0.2s',
         opacity: disabled ? 0.5 : 1,
       }}
     >
       <input ref={inputRef} type="file" accept=".csv" onChange={handleChange} style={{ display: 'none' }} />
       <div style={{ fontSize: '36px', marginBottom: '12px' }}>📂</div>
-      <div style={{ fontSize: '14px', color: '#c8d8c8', marginBottom: '6px', fontWeight: '600' }}>
+      <div style={{ fontSize: '14px', color: '#e0d0d0', marginBottom: '6px', fontWeight: '600' }}>
         Glisse ton fichier CSV ici
       </div>
-      <div style={{ fontSize: '12px', color: '#3a6a4a' }}>
+      <div style={{ fontSize: '12px', color: '#6a3a3a' }}>
         ou clique pour sélectionner · Topstep &amp; Tradovate supportés
       </div>
     </div>
@@ -653,31 +653,31 @@ function PreviewRow({ trade, idx, duplicate }) {
       padding: '7px 10px',
       background: duplicate
         ? 'rgba(240,160,32,0.06)'
-        : idx % 2 === 0 ? 'rgba(10,28,18,0.4)' : 'rgba(10,28,18,0.25)',
+        : idx % 2 === 0 ? 'rgba(18,6,10,0.4)' : 'rgba(18,6,10,0.25)',
       borderLeft: `2px solid ${duplicate ? '#f0a020' : pnlColor(net)}`,
       borderRadius: '3px',
       fontSize: '11px',
       opacity: duplicate ? 0.7 : 1,
     }}>
-      <span style={{ color: '#2a5a32', fontSize: '10px' }}>{idx + 1}</span>
-      <span style={{ color: '#4a7a5a', fontSize: '10px' }}>{trade.date}</span>
+      <span style={{ color: '#4a2020', fontSize: '10px' }}>{idx + 1}</span>
+      <span style={{ color: '#7a4040', fontSize: '10px' }}>{trade.date}</span>
       <span style={{ color: '#6a8a7a', fontSize: '10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
         <span>{fmtTime(trade.entered_at)}</span>
         {trade.exited_at && trade.exited_at !== trade.entered_at && (
           <span style={{ color: '#4a6a5a' }}>↓{fmtTime(trade.exited_at)}</span>
         )}
       </span>
-      <span style={{ color: '#c8d8c8', fontWeight: '600' }}>{trade.pair}</span>
+      <span style={{ color: '#e0d0d0', fontWeight: '600' }}>{trade.pair}</span>
       <span style={{
-        color: trade.direction === 'LONG' ? '#00ff88' : '#ff4455',
+        color: trade.direction === 'LONG' ? '#00cc77' : '#ff3344',
         fontSize: '10px',
         background: `rgba(${trade.direction === 'LONG' ? '0,255,136' : '255,68,85'},0.08)`,
         padding: '1px 5px', borderRadius: '3px', textAlign: 'center',
       }}>{trade.direction}</span>
-      <span style={{ color: '#8aaa90' }}>{trade.size ?? '—'}</span>
+      <span style={{ color: '#887070' }}>{trade.size ?? '—'}</span>
       <span style={{ color: pnlColor(net), fontWeight: '700' }}>{fmt(net, true)}</span>
       <span style={{ color: '#f0a020', fontSize: '10px' }}>{totalFees > 0 ? `-${totalFees.toFixed(2)}$` : '—'}</span>
-      <span style={{ color: '#4a7a5a', fontSize: '10px' }}>{trade.duration ?? '—'}</span>
+      <span style={{ color: '#7a4040', fontSize: '10px' }}>{trade.duration ?? '—'}</span>
       {duplicate
         ? <span style={{ color: '#f0a020', fontSize: '10px' }}>⚠ Déjà importé</span>
         : <span style={{ color: pnlColor(net), fontSize: '10px', fontWeight: '700' }}>{trade.outcome ?? '—'}</span>
@@ -784,13 +784,13 @@ export default function CsvImport() {
 
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
-        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: 'none', color: '#3a6a4a', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit', marginBottom: '10px', padding: 0 }}>
+        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: 'none', color: '#6a3a3a', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit', marginBottom: '10px', padding: 0 }}>
           ← Retour au dashboard
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div>
-            <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '4px' }}>IMPORT</div>
-            <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8f8e8', margin: 0 }}>Import CSV</h1>
+            <div style={{ fontSize: '10px', color: '#6a3a3a', letterSpacing: '3px', marginBottom: '4px' }}>IMPORT</div>
+            <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#f0e0e2', margin: 0 }}>Import CSV</h1>
           </div>
         </div>
       </div>
@@ -798,13 +798,13 @@ export default function CsvImport() {
       {/* Platform badges */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
         {[
-          { key: 'topstep',   label: 'Topstep',   Logo: TopstepLogo,   color: '#00ff88' },
+          { key: 'topstep',   label: 'Topstep',   Logo: TopstepLogo,   color: '#c41230' },
           { key: 'tradovate', label: 'Tradovate',  Logo: TradovateLogo, color: '#00aaff' },
         ].map(({ key, label, Logo, color, soon }) => (
-          <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', background: `rgba(${color === '#00ff88' ? '0,255,136' : '0,170,255'},0.06)`, border: `1px solid ${color}25`, borderRadius: '6px' }}>
+          <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', background: `rgba(${color === '#c41230' ? '0,255,136' : '0,170,255'},0.06)`, border: `1px solid ${color}25`, borderRadius: '6px' }}>
             <Logo size={20} />
             <span style={{ fontSize: '12px', color, fontWeight: '600' }}>{label}</span>
-            {soon && <span style={{ fontSize: '9px', color: '#3a6a4a', background: 'rgba(0,255,136,0.08)', border: '1px solid #1a4a2a', padding: '1px 5px', borderRadius: '3px', letterSpacing: '1px' }}>BIENTÔT</span>}
+            {soon && <span style={{ fontSize: '9px', color: '#6a3a3a', background: 'rgba(196,18,48,0.10)', border: '1px solid #1a4a2a', padding: '1px 5px', borderRadius: '3px', letterSpacing: '1px' }}>BIENTÔT</span>}
           </div>
         ))}
       </div>
@@ -820,8 +820,8 @@ export default function CsvImport() {
           )}
           {/* Instructions */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div style={{ background: 'rgba(10,28,18,0.3)', border: '1px solid rgba(0,255,136,0.06)', borderRadius: '8px', padding: '16px 20px' }}>
-              <div style={{ fontSize: '10px', color: '#00ff88', letterSpacing: '2px', marginBottom: '12px' }}>TOPSTEP — EXPORT CSV</div>
+            <div style={{ background: 'rgba(18,6,10,0.3)', border: '1px solid rgba(196,18,48,0.08)', borderRadius: '8px', padding: '16px 20px' }}>
+              <div style={{ fontSize: '10px', color: '#c41230', letterSpacing: '2px', marginBottom: '12px' }}>TOPSTEP — EXPORT CSV</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {[
                   'Connecte-toi sur topstep.com',
@@ -830,8 +830,8 @@ export default function CsvImport() {
                   'Télécharge le CSV et glisse-le ici',
                 ].map((s, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#00ff88', flexShrink: 0, marginTop: '1px' }}>{i + 1}</div>
-                    <span style={{ fontSize: '11px', color: '#8aaa90', lineHeight: '1.5' }}>{s}</span>
+                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(196,18,48,0.12)', border: '1px solid rgba(196,18,48,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#c41230', flexShrink: 0, marginTop: '1px' }}>{i + 1}</div>
+                    <span style={{ fontSize: '11px', color: '#887070', lineHeight: '1.5' }}>{s}</span>
                   </div>
                 ))}
               </div>
@@ -864,13 +864,13 @@ export default function CsvImport() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
           {/* Source + file info */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: `rgba(${sourceInfo.color === '#00ff88' ? '0,255,136' : '0,170,255'},0.06)`, border: `1px solid ${sourceInfo.color}25`, borderRadius: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: `rgba(${sourceInfo.color === '#c41230' ? '0,255,136' : '0,170,255'},0.06)`, border: `1px solid ${sourceInfo.color}25`, borderRadius: '8px' }}>
             <div style={{ fontSize: '20px' }}>{sourceInfo.icon}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '13px', color: sourceInfo.color, fontWeight: '700' }}>{sourceInfo.label} détecté</div>
-              <div style={{ fontSize: '11px', color: '#4a7a5a' }}>{fileName} · {trades.length} trade{trades.length > 1 ? 's' : ''}</div>
+              <div style={{ fontSize: '11px', color: '#7a4040' }}>{fileName} · {trades.length} trade{trades.length > 1 ? 's' : ''}</div>
             </div>
-            <button onClick={() => { setStep('drop'); setTrades([]); setSource(null); setFileName(''); }} style={{ background: 'none', border: '1px solid #1a3a22', color: '#4a7a5a', padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit' }}>
+            <button onClick={() => { setStep('drop'); setTrades([]); setSource(null); setFileName(''); }} style={{ background: 'none', border: '1px solid #2a1515', color: '#7a4040', padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit' }}>
               Changer de fichier
             </button>
           </div>
@@ -878,14 +878,14 @@ export default function CsvImport() {
           {/* Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
             {[
-              { label: 'TOTAL',      value: trades.length,          color: '#c8d8c8' },
-              { label: 'NOUVEAUX',   value: newTrades.length,       color: '#00ff88' },
+              { label: 'TOTAL',      value: trades.length,          color: '#e0d0d0' },
+              { label: 'NOUVEAUX',   value: newTrades.length,       color: '#c41230' },
               { label: 'DOUBLONS',   value: duplicates.size,        color: '#f0a020' },
-              { label: 'WIN / LOSS', value: `${wins}W / ${losses}L`, color: '#c8d8c8' },
+              { label: 'WIN / LOSS', value: `${wins}W / ${losses}L`, color: '#e0d0d0' },
               { label: 'P&L NET',    value: fmt(totalNet, true),    color: pnlColor(totalNet) },
             ].map(({ label, value, color }) => (
-              <div key={label} style={{ background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.06)', borderRadius: '6px', padding: '10px 12px', borderTop: `2px solid ${color}` }}>
-                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '1.5px', marginBottom: '4px' }}>{label}</div>
+              <div key={label} style={{ background: 'rgba(18,6,10,0.5)', border: '1px solid rgba(196,18,48,0.08)', borderRadius: '6px', padding: '10px 12px', borderTop: `2px solid ${color}` }}>
+                <div style={{ fontSize: '9px', color: '#6a3a3a', letterSpacing: '1.5px', marginBottom: '4px' }}>{label}</div>
                 <div style={{ fontSize: '16px', fontWeight: '700', color }}>{value}</div>
               </div>
             ))}
@@ -899,8 +899,8 @@ export default function CsvImport() {
           )}
 
           {/* Table header */}
-          <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '28px 86px 90px 60px 60px 55px 90px 75px 70px 1fr', gap: '5px', padding: '8px 10px', fontSize: '9px', color: '#2a5a32', letterSpacing: '1.5px', borderBottom: '1px solid rgba(0,255,136,0.06)', background: 'rgba(0,0,0,0.2)' }}>
+          <div style={{ background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '8px', overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '28px 86px 90px 60px 60px 55px 90px 75px 70px 1fr', gap: '5px', padding: '8px 10px', fontSize: '9px', color: '#4a2020', letterSpacing: '1.5px', borderBottom: '1px solid rgba(196,18,48,0.08)', background: 'rgba(0,0,0,0.2)' }}>
               <span>#</span><span>DATE</span><span>ENTRÉE/SORTIE</span><span>PAIRE</span><span>DIR.</span><span>TAILLE</span><span>P&L NET</span><span style={{ color: '#5a4a20' }}>FRAIS</span><span>DURÉE</span><span>STATUT</span>
             </div>
             <div style={{ maxHeight: '380px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px', padding: '6px' }}>
@@ -917,10 +917,10 @@ export default function CsvImport() {
                 Tout importer (avec doublons)
               </button>
             )}
-            <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #1a3a22', background: 'transparent', color: '#5a8a6a', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>
+            <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #2a1515', background: 'transparent', color: '#8a5050', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>
               ANNULER
             </button>
-            <button onClick={() => handleImport(true)} disabled={newTrades.length === 0} style={{ padding: '10px 28px', borderRadius: '5px', background: newTrades.length === 0 ? 'rgba(10,28,18,0.4)' : 'linear-gradient(135deg,rgba(0,255,136,0.25),rgba(0,170,85,0.15))', border: `1px solid ${newTrades.length === 0 ? '#1a3a22' : 'rgba(0,255,136,0.35)'}`, color: newTrades.length === 0 ? '#2a5a32' : '#00ff88', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: newTrades.length === 0 ? 'not-allowed' : 'pointer' }}>
+            <button onClick={() => handleImport(true)} disabled={newTrades.length === 0} style={{ padding: '10px 28px', borderRadius: '5px', background: newTrades.length === 0 ? 'rgba(18,6,10,0.4)' : 'linear-gradient(135deg,rgba(196,18,48,0.28),rgba(0,170,85,0.15))', border: `1px solid ${newTrades.length === 0 ? '#2a1515' : 'rgba(196,18,48,0.40)'}`, color: newTrades.length === 0 ? '#4a2020' : '#c41230', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: newTrades.length === 0 ? 'not-allowed' : 'pointer' }}>
               IMPORTER {newTrades.length > 0 ? `${newTrades.length} TRADE${newTrades.length > 1 ? 'S' : ''}` : '(aucun nouveau)'}
             </button>
           </div>
@@ -930,12 +930,12 @@ export default function CsvImport() {
       {/* ── STEP: IMPORTING ── */}
       {step === 'importing' && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', padding: '60px 0' }}>
-          <div style={{ fontSize: '13px', color: '#3a6a4a', letterSpacing: '3px' }}>IMPORT EN COURS...</div>
+          <div style={{ fontSize: '13px', color: '#6a3a3a', letterSpacing: '3px' }}>IMPORT EN COURS...</div>
           <div style={{ width: '100%', maxWidth: '400px' }}>
-            <div style={{ height: '6px', background: 'rgba(0,255,136,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg,#00aa55,#00ff88)', borderRadius: '3px', transition: 'width 0.2s ease', boxShadow: '0 0 8px rgba(0,255,136,0.4)' }} />
+            <div style={{ height: '6px', background: 'rgba(196,18,48,0.10)', borderRadius: '3px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg,#991020,#c41230)', borderRadius: '3px', transition: 'width 0.2s ease', boxShadow: '0 0 8px rgba(196,18,48,0.45)' }} />
             </div>
-            <div style={{ textAlign: 'center', marginTop: '8px', fontSize: '12px', color: '#3a6a4a' }}>{progress}%</div>
+            <div style={{ textAlign: 'center', marginTop: '8px', fontSize: '12px', color: '#6a3a3a' }}>{progress}%</div>
           </div>
         </div>
       )}
@@ -943,22 +943,22 @@ export default function CsvImport() {
       {/* ── STEP: DONE ── */}
       {step === 'done' && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '40px 0' }}>
-          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: result.errors === 0 ? 'rgba(0,255,136,0.12)' : 'rgba(240,160,32,0.12)', border: `2px solid ${result.errors === 0 ? '#00ff88' : '#f0a020'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', boxShadow: `0 0 24px ${result.errors === 0 ? 'rgba(0,255,136,0.2)' : 'rgba(240,160,32,0.2)'}` }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: result.errors === 0 ? 'rgba(196,18,48,0.14)' : 'rgba(240,160,32,0.12)', border: `2px solid ${result.errors === 0 ? '#c41230' : '#f0a020'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', boxShadow: `0 0 24px ${result.errors === 0 ? 'rgba(196,18,48,0.22)' : 'rgba(240,160,32,0.2)'}` }}>
             {result.errors === 0 ? '✓' : '⚠'}
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#e8f8e8', marginBottom: '6px' }}>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#f0e0e2', marginBottom: '6px' }}>
               {result.errors === 0 ? 'Import réussi !' : 'Import terminé avec des erreurs'}
             </div>
-            <div style={{ fontSize: '13px', color: '#4a7a5a' }}>
+            <div style={{ fontSize: '13px', color: '#7a4040' }}>
               {result.imported} importé{result.imported > 1 ? 's' : ''} · {result.skipped} ignoré{result.skipped > 1 ? 's' : ''} · {result.errors} erreur{result.errors > 1 ? 's' : ''}
             </div>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={() => { setStep('drop'); setTrades([]); setSource(null); setFileName(''); setError(''); }} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #1a3a22', background: 'transparent', color: '#5a8a6a', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>
+            <button onClick={() => { setStep('drop'); setTrades([]); setSource(null); setFileName(''); setError(''); }} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #2a1515', background: 'transparent', color: '#8a5050', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>
               Nouvel import
             </button>
-            <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 28px', borderRadius: '5px', background: 'linear-gradient(135deg,rgba(0,255,136,0.25),rgba(0,170,85,0.15))', border: '1px solid rgba(0,255,136,0.35)', color: '#00ff88', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer' }}>
+            <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 28px', borderRadius: '5px', background: 'linear-gradient(135deg,rgba(196,18,48,0.28),rgba(0,170,85,0.15))', border: '1px solid rgba(196,18,48,0.40)', color: '#c41230', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer' }}>
               VOIR LE DASHBOARD →
             </button>
           </div>

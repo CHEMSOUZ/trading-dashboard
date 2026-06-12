@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 
 // ── Default instruments ───────────────────────────────────────
 const DEFAULT_INSTRUMENTS = ['MNQ','NQ','MES','ES','MGC','GC','MCL','CL','M2K','RTY','EUR/USD','GBP/USD','USD/JPY','BTC/USD'];
@@ -38,8 +38,8 @@ function Lightbox({ src, onClose }) {
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <img src={src} alt="Screenshot" onClick={e => e.stopPropagation()}
-        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '4px', boxShadow: '0 0 40px rgba(0,255,136,0.15)' }} />
-      <button onClick={onClose} style={{ position: 'absolute', top: '20px', right: '24px', background: 'rgba(10,28,18,0.8)', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px' }}>×</button>
+        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '4px', boxShadow: '0 0 40px rgba(196,18,48,0.18)' }} />
+      <button onClick={onClose} style={{ position: 'absolute', top: '20px', right: '24px', background: 'rgba(18,6,10,0.8)', border: '1px solid rgba(196,18,48,0.35)', color: '#c41230', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px' }}>×</button>
     </div>
   );
 }
@@ -103,19 +103,19 @@ function ScreenshotZone({ screenshots, onChange }) {
         onDrop={handleDrop}
         onClick={handleClick}
         style={{
-          border: `2px dashed ${dragOver ? '#00ff88' : '#1a4a2a'}`,
+          border: `2px dashed ${dragOver ? '#c41230' : '#1a4a2a'}`,
           borderRadius: '8px', padding: '20px',
           textAlign: 'center', cursor: 'pointer',
-          background: dragOver ? 'rgba(0,255,136,0.05)' : 'rgba(10,28,18,0.3)',
+          background: dragOver ? 'rgba(196,18,48,0.06)' : 'rgba(18,6,10,0.3)',
           transition: 'all 0.2s', marginBottom: screenshots.length > 0 ? '12px' : '0',
         }}
       >
         <div style={{ fontSize: '24px', marginBottom: '6px' }}>📸</div>
-        <div style={{ fontSize: '13px', color: '#c8d8c8', marginBottom: '3px' }}>
+        <div style={{ fontSize: '13px', color: '#e0d0d0', marginBottom: '3px' }}>
           Glisse tes screenshots ici · Clique pour sélectionner
         </div>
-        <div style={{ fontSize: '12px', color: '#3a6a4a' }}>
-          ou <kbd style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)', padding: '1px 5px', borderRadius: '3px', fontSize: '11px', color: '#00ff88' }}>Ctrl+V</kbd> pour coller depuis le presse-papier
+        <div style={{ fontSize: '12px', color: '#6a3a3a' }}>
+          ou <kbd style={{ background: 'rgba(196,18,48,0.12)', border: '1px solid rgba(196,18,48,0.22)', padding: '1px 5px', borderRadius: '3px', fontSize: '11px', color: '#c41230' }}>Ctrl+V</kbd> pour coller depuis le presse-papier
         </div>
       </div>
 
@@ -123,7 +123,7 @@ function ScreenshotZone({ screenshots, onChange }) {
       {screenshots.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' }}>
           {screenshots.map(sc => (
-            <div key={sc.id} style={{ position: 'relative', borderRadius: '6px', overflow: 'hidden', background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.1)', aspectRatio: '16/10' }}>
+            <div key={sc.id} style={{ position: 'relative', borderRadius: '6px', overflow: 'hidden', background: 'rgba(18,6,10,0.5)', border: '1px solid rgba(196,18,48,0.12)', aspectRatio: '16/10' }}>
               <img
                 src={sc.dataUrl}
                 alt={sc.name}
@@ -136,7 +136,7 @@ function ScreenshotZone({ screenshots, onChange }) {
                 style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,68,85,0.4)', color: '#ff4455', width: '22px', height: '22px', borderRadius: '50%', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
               >×</button>
               {/* Name tooltip */}
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', padding: '3px 6px', fontSize: '10px', color: '#8aaa90', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', padding: '3px 6px', fontSize: '10px', color: '#887070', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {sc.name}
               </div>
             </div>
@@ -153,13 +153,13 @@ function ScreenshotZone({ screenshots, onChange }) {
 function Textarea({ label, value, onChange, placeholder, rows = 4 }) {
   return (
     <div>
-      {label && <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '1.5px', marginBottom: '6px' }}>{label}</div>}
+      {label && <div style={{ fontSize: '12px', color: '#6a3a3a', letterSpacing: '1.5px', marginBottom: '6px' }}>{label}</div>}
       <textarea
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        style={{ width: '100%', background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.12)', borderRadius: '5px', padding: '10px 12px', color: '#c8d8c8', fontSize: '13px', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box', lineHeight: '1.6', caretColor: '#00ff88' }}
+        style={{ width: '100%', background: 'rgba(18,6,10,0.6)', border: '1px solid rgba(196,18,48,0.14)', borderRadius: '5px', padding: '10px 12px', color: '#e0d0d0', fontSize: '13px', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box', lineHeight: '1.6', caretColor: '#c41230' }}
       />
     </div>
   );
@@ -168,8 +168,8 @@ function Textarea({ label, value, onChange, placeholder, rows = 4 }) {
 // ── Section card ──────────────────────────────────────────────
 function Section({ title, children }) {
   return (
-    <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '2px', fontWeight: '700' }}>{title}</div>
+    <div style={{ background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '8px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div style={{ fontSize: '12px', color: '#6a3a3a', letterSpacing: '2px', fontWeight: '700' }}>{title}</div>
       {children}
     </div>
   );
@@ -231,22 +231,22 @@ function DailyEditor({ date, instrument, onBack, onSaved }) {
     }));
   }
 
-  const inp = { background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.12)', borderRadius: '5px', padding: '8px 12px', color: '#c8d8c8', fontSize: '13px', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' };
+  const inp = { background: 'rgba(18,6,10,0.6)', border: '1px solid rgba(196,18,48,0.14)', borderRadius: '5px', padding: '8px 12px', color: '#e0d0d0', fontSize: '13px', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={onBack} style={{ background: 'none', border: '1px solid #1a3a22', color: '#4a7a5a', padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>← Retour</button>
+          <button onClick={onBack} style={{ background: 'none', border: '1px solid #2a1515', color: '#7a4040', padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>← Retour</button>
           <div>
-            <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '2px' }}>ANALYSE JOURNALIÈRE</div>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#e8f8e8' }}>
+            <div style={{ fontSize: '12px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '2px' }}>ANALYSE JOURNALIÈRE</div>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#f0e0e2' }}>
               {instrument} · {new Date(date + 'T12:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </div>
           </div>
         </div>
-        <button onClick={save} disabled={saving} style={{ background: saved ? 'rgba(0,255,136,0.2)' : 'rgba(0,255,136,0.1)', border: `1px solid rgba(0,255,136,${saved?'0.5':'0.3'})`, color: '#00ff88', padding: '10px 22px', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', letterSpacing: '1px' }}>
+        <button onClick={save} disabled={saving} style={{ background: saved ? 'rgba(196,18,48,0.22)' : 'rgba(196,18,48,0.12)', border: `1px solid rgba(196,18,48,${saved?'0.50':'0.30'})`, color: '#c41230', padding: '10px 22px', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', letterSpacing: '1px' }}>
           {saved ? '✅ SAUVEGARDÉ' : saving ? 'SAUVEGARDE...' : '💾 SAUVEGARDER'}
         </button>
       </div>
@@ -255,7 +255,7 @@ function DailyEditor({ date, instrument, onBack, onSaved }) {
       <Section title="📊 BIAIS DU JOUR">
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {BIAS_OPTIONS.map(b => (
-            <button key={b} onClick={() => setForm(p => ({ ...p, bias: p.bias === b ? '' : b }))} style={{ padding: '8px 16px', borderRadius: '5px', border: `1px solid ${form.bias===b?'rgba(0,255,136,0.4)':'rgba(0,255,136,0.1)'}`, background: form.bias===b?'rgba(0,255,136,0.12)':'rgba(10,28,18,0.5)', color: form.bias===b?'#00ff88':'#8aaa90', fontSize: '13px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s' }}>{b}</button>
+            <button key={b} onClick={() => setForm(p => ({ ...p, bias: p.bias === b ? '' : b }))} style={{ padding: '8px 16px', borderRadius: '5px', border: `1px solid ${form.bias===b?'rgba(196,18,48,0.45)':'rgba(196,18,48,0.12)'}`, background: form.bias===b?'rgba(196,18,48,0.14)':'rgba(18,6,10,0.5)', color: form.bias===b?'#c41230':'#887070', fontSize: '13px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s' }}>{b}</button>
           ))}
         </div>
       </Section>
@@ -264,7 +264,7 @@ function DailyEditor({ date, instrument, onBack, onSaved }) {
       <Section title="⏱ TIMEFRAMES ANALYSÉS">
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {TIMEFRAMES.map(tf => (
-            <button key={tf} onClick={() => toggleTF(tf)} style={{ padding: '7px 14px', borderRadius: '5px', border: `1px solid ${form.timeframes.includes(tf)?'rgba(0,255,136,0.4)':'rgba(0,255,136,0.1)'}`, background: form.timeframes.includes(tf)?'rgba(0,255,136,0.12)':'rgba(10,28,18,0.5)', color: form.timeframes.includes(tf)?'#00ff88':'#8aaa90', fontSize: '13px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s', fontWeight: form.timeframes.includes(tf)?'700':'400' }}>{tf}</button>
+            <button key={tf} onClick={() => toggleTF(tf)} style={{ padding: '7px 14px', borderRadius: '5px', border: `1px solid ${form.timeframes.includes(tf)?'rgba(196,18,48,0.45)':'rgba(196,18,48,0.12)'}`, background: form.timeframes.includes(tf)?'rgba(196,18,48,0.14)':'rgba(18,6,10,0.5)', color: form.timeframes.includes(tf)?'#c41230':'#887070', fontSize: '13px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s', fontWeight: form.timeframes.includes(tf)?'700':'400' }}>{tf}</button>
           ))}
         </div>
       </Section>
@@ -348,13 +348,13 @@ function WeeklyEditor({ weekStart, instrument, onBack, onSaved }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={onBack} style={{ background: 'none', border: '1px solid #1a3a22', color: '#4a7a5a', padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>← Retour</button>
+          <button onClick={onBack} style={{ background: 'none', border: '1px solid #2a1515', color: '#7a4040', padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>← Retour</button>
           <div>
-            <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '2px' }}>ANALYSE HEBDOMADAIRE</div>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#e8f8e8' }}>{instrument} · {getWeekLabel(weekStart)}</div>
+            <div style={{ fontSize: '12px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '2px' }}>ANALYSE HEBDOMADAIRE</div>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#f0e0e2' }}>{instrument} · {getWeekLabel(weekStart)}</div>
           </div>
         </div>
-        <button onClick={save} disabled={saving} style={{ background: saved?'rgba(0,255,136,0.2)':'rgba(0,255,136,0.1)', border:`1px solid rgba(0,255,136,${saved?'0.5':'0.3'})`, color: '#00ff88', padding: '10px 22px', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', letterSpacing: '1px' }}>
+        <button onClick={save} disabled={saving} style={{ background: saved?'rgba(196,18,48,0.22)':'rgba(196,18,48,0.12)', border:`1px solid rgba(196,18,48,${saved?'0.50':'0.30'})`, color: '#c41230', padding: '10px 22px', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', letterSpacing: '1px' }}>
           {saved ? '✅ SAUVEGARDÉ' : saving ? 'SAUVEGARDE...' : '💾 SAUVEGARDER'}
         </button>
       </div>
@@ -363,7 +363,7 @@ function WeeklyEditor({ weekStart, instrument, onBack, onSaved }) {
       <Section title="🌍 BIAIS MACRO DE LA SEMAINE">
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {BIAS_OPTIONS.map(b => (
-            <button key={b} onClick={() => setForm(p => ({ ...p, macro_bias: p.macro_bias === b ? '' : b }))} style={{ padding: '8px 16px', borderRadius: '5px', border: `1px solid ${form.macro_bias===b?'rgba(0,255,136,0.4)':'rgba(0,255,136,0.1)'}`, background: form.macro_bias===b?'rgba(0,255,136,0.12)':'rgba(10,28,18,0.5)', color: form.macro_bias===b?'#00ff88':'#8aaa90', fontSize: '13px', fontFamily: 'inherit', cursor: 'pointer' }}>{b}</button>
+            <button key={b} onClick={() => setForm(p => ({ ...p, macro_bias: p.macro_bias === b ? '' : b }))} style={{ padding: '8px 16px', borderRadius: '5px', border: `1px solid ${form.macro_bias===b?'rgba(196,18,48,0.45)':'rgba(196,18,48,0.12)'}`, background: form.macro_bias===b?'rgba(196,18,48,0.14)':'rgba(18,6,10,0.5)', color: form.macro_bias===b?'#c41230':'#887070', fontSize: '13px', fontFamily: 'inherit', cursor: 'pointer' }}>{b}</button>
           ))}
         </div>
       </Section>
@@ -402,16 +402,16 @@ function AnalysisList({ mode, analyses, instruments, onSelect, onNew, onDelete }
   const empty    = analyses.length === 0;
 
   function getBiasColor(bias) {
-    if (!bias) return '#3a6a4a';
-    if (bias.includes('Hauss')) return '#00ff88';
-    if (bias.includes('Baiss')) return '#ff4455';
+    if (!bias) return '#6a3a3a';
+    if (bias.includes('Hauss')) return '#00cc77';
+    if (bias.includes('Baiss')) return '#ff3344';
     return '#f0a020';
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       {empty ? (
-        <div style={{ padding: '48px', textAlign: 'center', border: '1px dashed #1a3a22', borderRadius: '8px', color: '#2a4a30', fontSize: '13px' }}>
+        <div style={{ padding: '48px', textAlign: 'center', border: '1px dashed #2a1515', borderRadius: '8px', color: '#3a1818', fontSize: '13px' }}>
           Aucune analyse — créez votre première analyse {isDaily ? 'journalière' : 'hebdomadaire'}
         </div>
       ) : (
@@ -424,25 +424,25 @@ function AnalysisList({ mode, analyses, instruments, onSelect, onNew, onDelete }
           return (
             <div key={a.id}
               onClick={() => onSelect(a)}
-              style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', padding: '16px 18px', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'flex-start', gap: '14px' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,136,0.04)'; e.currentTarget.style.borderColor = 'rgba(0,255,136,0.15)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(10,28,18,0.4)'; e.currentTarget.style.borderColor = 'rgba(0,255,136,0.08)'; }}
+              style={{ background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '8px', padding: '16px 18px', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'flex-start', gap: '14px' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(196,18,48,0.05)'; e.currentTarget.style.borderColor = 'rgba(196,18,48,0.18)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(18,6,10,0.4)'; e.currentTarget.style.borderColor = 'rgba(196,18,48,0.10)'; }}
             >
               {/* Thumbnail */}
               {screens.length > 0 ? (
-                <img src={screens[0].dataUrl} alt="" style={{ width: '80px', height: '50px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0, border: '1px solid rgba(0,255,136,0.1)' }} />
+                <img src={screens[0].dataUrl} alt="" style={{ width: '80px', height: '50px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0, border: '1px solid rgba(196,18,48,0.12)' }} />
               ) : (
-                <div style={{ width: '80px', height: '50px', borderRadius: '4px', background: 'rgba(10,28,18,0.6)', border: '1px dashed #1a3a22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>📊</div>
+                <div style={{ width: '80px', height: '50px', borderRadius: '4px', background: 'rgba(18,6,10,0.6)', border: '1px dashed #2a1515', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>📊</div>
               )}
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '15px', fontWeight: '700', color: '#e8f8e8' }}>{a.instrument}</span>
-                  <span style={{ fontSize: '12px', color: '#4a7a5a' }}>{label}</span>
-                  {bias && <span style={{ fontSize: '12px', color: getBiasColor(bias), background: `rgba(${getBiasColor(bias)==='#00ff88'?'0,255,136':getBiasColor(bias)==='#ff4455'?'255,68,85':'240,160,32'},0.1)`, padding: '2px 8px', borderRadius: '3px' }}>{bias}</span>}
-                  {screens.length > 0 && <span style={{ fontSize: '11px', color: '#3a6a4a' }}>📸 {screens.length}</span>}
+                  <span style={{ fontSize: '15px', fontWeight: '700', color: '#f0e0e2' }}>{a.instrument}</span>
+                  <span style={{ fontSize: '12px', color: '#7a4040' }}>{label}</span>
+                  {bias && <span style={{ fontSize: '12px', color: getBiasColor(bias), background: `rgba(${getBiasColor(bias)==='#00cc77'?'0,204,119':getBiasColor(bias)==='#ff3344'?'255,51,68':'240,160,32'},0.12)`, padding: '2px 8px', borderRadius: '3px' }}>{bias}</span>}
+                  {screens.length > 0 && <span style={{ fontSize: '11px', color: '#6a3a3a' }}>📸 {screens.length}</span>}
                 </div>
-                {a.notes && <div style={{ fontSize: '12px', color: '#4a7a5a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.notes}</div>}
+                {a.notes && <div style={{ fontSize: '12px', color: '#7a4040', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.notes}</div>}
                 {(a.positives || a.negatives) && (
                   <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
                     {a.positives && <span style={{ fontSize: '11px', color: '#00cc66' }}>✅ {a.positives.split('\n')[0]}</span>}
@@ -524,7 +524,7 @@ export default function Analysis() {
     setShowNewForm(false);
   }
 
-  const inp = { background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.12)', borderRadius: '5px', padding: '8px 12px', color: '#c8d8c8', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' };
+  const inp = { background: 'rgba(18,6,10,0.6)', border: '1px solid rgba(196,18,48,0.14)', borderRadius: '5px', padding: '8px 12px', color: '#e0d0d0', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' };
 
   // ── If editing ────────────────────────────────────────────
   if (editing) {
@@ -552,42 +552,42 @@ export default function Analysis() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '6px' }}>TRADING JOURNAL</div>
-          <h1 style={{ fontSize: '23px', fontWeight: '700', color: '#e8f8e8', margin: 0 }}>Analyse de Marché</h1>
-          <div style={{ fontSize: '13px', color: '#3a6a4a', marginTop: '3px' }}>
+          <div style={{ fontSize: '12px', color: '#6a3a3a', letterSpacing: '3px', marginBottom: '6px' }}>TRADING JOURNAL</div>
+          <h1 style={{ fontSize: '23px', fontWeight: '700', color: '#f0e0e2', margin: 0 }}>Analyse de Marché</h1>
+          <div style={{ fontSize: '13px', color: '#6a3a3a', marginTop: '3px' }}>
             {currentList.length} analyse{currentList.length > 1 ? 's' : ''} · {mode === 'daily' ? 'Vue journalière' : 'Vue hebdomadaire'}
           </div>
         </div>
-        <button onClick={() => setShowNewForm(true)} style={{ background: 'linear-gradient(135deg,rgba(0,255,136,0.2),rgba(0,170,85,0.1))', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', padding: '10px 18px', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', letterSpacing: '1px' }}>
+        <button onClick={() => setShowNewForm(true)} style={{ background: 'linear-gradient(135deg,rgba(196,18,48,0.22),rgba(0,170,85,0.1))', border: '1px solid rgba(196,18,48,0.35)', color: '#c41230', padding: '10px 18px', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', letterSpacing: '1px' }}>
           + NOUVELLE ANALYSE
         </button>
       </div>
 
       {/* Mode tabs */}
-      <div style={{ display: 'flex', gap: '0', marginBottom: '20px', background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: '8px', padding: '4px' }}>
+      <div style={{ display: 'flex', gap: '0', marginBottom: '20px', background: 'rgba(18,6,10,0.5)', border: '1px solid rgba(196,18,48,0.12)', borderRadius: '8px', padding: '4px' }}>
         {[
           { key: 'daily',  label: '📅 Journalière', desc: 'Analyse par jour' },
           { key: 'weekly', label: '📆 Hebdomadaire', desc: 'Bilan par semaine' },
         ].map(({ key, label, desc }) => (
-          <button key={key} onClick={() => setMode(key)} style={{ flex: 1, padding: '12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: mode===key?'rgba(0,255,136,0.12)':'transparent', fontFamily: 'inherit', transition: 'all 0.2s' }}>
-            <div style={{ fontSize: '14px', fontWeight: '700', color: mode===key?'#00ff88':'#5a8a6a', marginBottom: '2px' }}>{label}</div>
-            <div style={{ fontSize: '12px', color: mode===key?'#3a8a4a':'#3a5a3a' }}>{desc}</div>
-            {mode===key && <div style={{ height: '2px', background: '#00ff88', borderRadius: '2px', marginTop: '8px', boxShadow: '0 0 6px #00ff88' }} />}
+          <button key={key} onClick={() => setMode(key)} style={{ flex: 1, padding: '12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: mode===key?'rgba(196,18,48,0.14)':'transparent', fontFamily: 'inherit', transition: 'all 0.2s' }}>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: mode===key?'#c41230':'#8a5050', marginBottom: '2px' }}>{label}</div>
+            <div style={{ fontSize: '12px', color: mode===key?'#8a3a3a':'#3a5a3a' }}>{desc}</div>
+            {mode===key && <div style={{ height: '2px', background: '#c41230', borderRadius: '2px', marginTop: '8px', boxShadow: '0 0 6px #c41230' }} />}
           </button>
         ))}
       </div>
 
       {/* Instruments management */}
-      <div style={{ background: 'rgba(10,28,18,0.3)', border: '1px solid rgba(0,255,136,0.06)', borderRadius: '6px', padding: '12px 16px', marginBottom: '16px' }}>
+      <div style={{ background: 'rgba(18,6,10,0.3)', border: '1px solid rgba(196,18,48,0.08)', borderRadius: '6px', padding: '12px 16px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '1px', flexShrink: 0 }}>INSTRUMENTS :</span>
+          <span style={{ fontSize: '12px', color: '#6a3a3a', letterSpacing: '1px', flexShrink: 0 }}>INSTRUMENTS :</span>
           {instruments.map(inst => (
-            <div key={inst} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.12)', borderRadius: '4px', padding: '3px 8px' }}>
-              <span style={{ fontSize: '12px', color: '#00ff88' }}>{inst}</span>
+            <div key={inst} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(196,18,48,0.08)', border: '1px solid rgba(196,18,48,0.14)', borderRadius: '4px', padding: '3px 8px' }}>
+              <span style={{ fontSize: '12px', color: '#c41230' }}>{inst}</span>
               {!DEFAULT_INSTRUMENTS.includes(inst) && (
-                <button onClick={() => removeInstrument(inst)} style={{ background: 'none', border: 'none', color: '#3a6a4a', cursor: 'pointer', fontSize: '12px', padding: '0 0 0 2px', lineHeight: 1 }}
+                <button onClick={() => removeInstrument(inst)} style={{ background: 'none', border: 'none', color: '#6a3a3a', cursor: 'pointer', fontSize: '12px', padding: '0 0 0 2px', lineHeight: 1 }}
                   onMouseEnter={e => e.currentTarget.style.color = '#ff4455'}
-                  onMouseLeave={e => e.currentTarget.style.color = '#3a6a4a'}
+                  onMouseLeave={e => e.currentTarget.style.color = '#6a3a3a'}
                 >×</button>
               )}
             </div>
@@ -597,18 +597,18 @@ export default function Analysis() {
               <input autoFocus placeholder="Ex: EUR/GBP" value={newCustomInst} onChange={e => setNewCustomInst(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') addInstrument(); if (e.key === 'Escape') setShowAddInst(false); }}
                 style={{ ...inp, width: '120px', padding: '4px 8px', fontSize: '12px' }} />
-              <button onClick={addInstrument} style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)', color: '#00ff88', padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>+</button>
-              <button onClick={() => setShowAddInst(false)} style={{ background: 'none', border: 'none', color: '#3a6a4a', cursor: 'pointer', fontSize: '14px' }}>×</button>
+              <button onClick={addInstrument} style={{ background: 'rgba(196,18,48,0.12)', border: '1px solid rgba(196,18,48,0.22)', color: '#c41230', padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>+</button>
+              <button onClick={() => setShowAddInst(false)} style={{ background: 'none', border: 'none', color: '#6a3a3a', cursor: 'pointer', fontSize: '14px' }}>×</button>
             </div>
           ) : (
-            <button onClick={() => setShowAddInst(true)} style={{ background: 'none', border: '1px dashed #1a4a2a', color: '#3a6a4a', padding: '3px 10px', borderRadius: '4px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>+ Ajouter</button>
+            <button onClick={() => setShowAddInst(true)} style={{ background: 'none', border: '1px dashed #1a4a2a', color: '#6a3a3a', padding: '3px 10px', borderRadius: '4px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>+ Ajouter</button>
           )}
         </div>
       </div>
 
       {/* List */}
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: '#3a6a4a', fontSize: '13px', letterSpacing: '2px' }}>CHARGEMENT...</div>
+        <div style={{ padding: '40px', textAlign: 'center', color: '#6a3a3a', fontSize: '13px', letterSpacing: '2px' }}>CHARGEMENT...</div>
       ) : (
         <AnalysisList
           mode={mode}
@@ -623,32 +623,32 @@ export default function Analysis() {
       {/* New analysis modal */}
       {showNewForm && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setShowNewForm(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#070d12', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '10px', width: '100%', maxWidth: '440px', padding: '28px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#09050c', border: '1px solid rgba(196,18,48,0.22)', borderRadius: '10px', width: '100%', maxWidth: '440px', padding: '28px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <div>
-                <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>NOUVELLE</div>
-                <div style={{ fontSize: '18px', fontWeight: '700', color: '#e8f8e8' }}>Analyse {mode === 'daily' ? 'Journalière' : 'Hebdomadaire'}</div>
+                <div style={{ fontSize: '12px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '4px' }}>NOUVELLE</div>
+                <div style={{ fontSize: '18px', fontWeight: '700', color: '#f0e0e2' }}>Analyse {mode === 'daily' ? 'Journalière' : 'Hebdomadaire'}</div>
               </div>
-              <button onClick={() => setShowNewForm(false)} style={{ background: 'none', border: '1px solid #1a3a22', color: '#4a7a5a', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
+              <button onClick={() => setShowNewForm(false)} style={{ background: 'none', border: '1px solid #2a1515', color: '#7a4040', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '6px' }}>{mode === 'daily' ? 'DATE' : 'SEMAINE DU'}</div>
+                <div style={{ fontSize: '12px', color: '#6a3a3a', letterSpacing: '1px', marginBottom: '6px' }}>{mode === 'daily' ? 'DATE' : 'SEMAINE DU'}</div>
                 <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} style={{ ...inp, width: '100%', colorScheme: 'dark' }} />
-                {mode === 'weekly' && <div style={{ fontSize: '12px', color: '#3a6a4a', marginTop: '4px' }}>Semaine du {getWeekLabel(getWeekStart(newDate))}</div>}
+                {mode === 'weekly' && <div style={{ fontSize: '12px', color: '#6a3a3a', marginTop: '4px' }}>Semaine du {getWeekLabel(getWeekStart(newDate))}</div>}
               </div>
 
               <div>
-                <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '6px' }}>INSTRUMENT</div>
+                <div style={{ fontSize: '12px', color: '#6a3a3a', letterSpacing: '1px', marginBottom: '6px' }}>INSTRUMENT</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '6px' }}>
                   {instruments.map(inst => (
-                    <button key={inst} onClick={() => setNewInstrument(inst)} style={{ padding: '8px 4px', borderRadius: '5px', border: `1px solid ${newInstrument===inst?'rgba(0,255,136,0.4)':'rgba(0,255,136,0.1)'}`, background: newInstrument===inst?'rgba(0,255,136,0.12)':'rgba(10,28,18,0.5)', color: newInstrument===inst?'#00ff88':'#8aaa90', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer', fontWeight: newInstrument===inst?'700':'400' }}>{inst}</button>
+                    <button key={inst} onClick={() => setNewInstrument(inst)} style={{ padding: '8px 4px', borderRadius: '5px', border: `1px solid ${newInstrument===inst?'rgba(196,18,48,0.45)':'rgba(196,18,48,0.12)'}`, background: newInstrument===inst?'rgba(196,18,48,0.14)':'rgba(18,6,10,0.5)', color: newInstrument===inst?'#c41230':'#887070', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer', fontWeight: newInstrument===inst?'700':'400' }}>{inst}</button>
                   ))}
                 </div>
               </div>
 
-              <button onClick={startNew} style={{ padding: '12px', borderRadius: '6px', background: 'linear-gradient(135deg,rgba(0,255,136,0.2),rgba(0,170,85,0.1))', border: '1px solid rgba(0,255,136,0.3)', color: '#00ff88', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer' }}>
+              <button onClick={startNew} style={{ padding: '12px', borderRadius: '6px', background: 'linear-gradient(135deg,rgba(196,18,48,0.22),rgba(0,170,85,0.1))', border: '1px solid rgba(196,18,48,0.35)', color: '#c41230', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer' }}>
                 ✏️ CRÉER L'ANALYSE
               </button>
             </div>

@@ -13,8 +13,7 @@ import AccountSelect from './pages/AccountSelect';
 import Dashboard from './pages/Dashboard';
 import NewTrade from './pages/NewTrade';
 import Stats from './pages/Stats';
-import Topstep from './pages/Topstep';
-import Lucid from './pages/Lucid';
+import PropFirm from './pages/PropFirm';
 import EmotionalCheck from './pages/EmotionalCheck';
 import Analysis from './pages/Analysis';
 import GlobalView from './pages/GlobalView';
@@ -46,7 +45,7 @@ export default function App() {
   }, []);
 
   if (loading) return (
-    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#060c10', color: '#3a6a4a', fontSize: '13px', letterSpacing: '2px', fontFamily: 'monospace' }}>
+    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#08050a', color: '#6a3a3a', fontSize: '13px', letterSpacing: '2px', fontFamily: 'monospace' }}>
       CHARGEMENT...
     </div>
   );
@@ -97,29 +96,29 @@ export default function App() {
     <Router>
       <RouteTracker />
       {updateReady && (
-        <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999, background: '#0d1f14', border: '1px solid rgba(0,255,136,0.4)', borderRadius: '8px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 4px 24px rgba(0,0,0,0.6)' }}>
+        <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999, background: '#120508', border: '1px solid rgba(196,18,48,0.40)', borderRadius: '8px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 4px 24px rgba(0,0,0,0.7)' }}>
           <div>
-            <div style={{ fontSize: '12px', color: '#00ff88', fontWeight: '700', marginBottom: '2px' }}>Mise à jour disponible — v{updateReady.version}</div>
-            <div style={{ fontSize: '10px', color: '#3a6a4a' }}>Redémarre pour installer la nouvelle version</div>
+            <div style={{ fontSize: '12px', color: '#c41230', fontWeight: '700', marginBottom: '2px' }}>Mise à jour disponible — v{updateReady.version}</div>
+            <div style={{ fontSize: '10px', color: '#6a3a3a' }}>Redémarre pour installer la nouvelle version</div>
           </div>
           <button onClick={() => window.electron.installUpdate()}
-            style={{ padding: '7px 14px', background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.5)', borderRadius: '5px', color: '#00ff88', fontSize: '11px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '1px' }}>
+            style={{ padding: '7px 14px', background: 'rgba(196,18,48,0.15)', border: '1px solid rgba(196,18,48,0.50)', borderRadius: '5px', color: '#c41230', fontSize: '11px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '1px' }}>
             REDÉMARRER
           </button>
           <button onClick={() => setUpdateReady(null)}
-            style={{ padding: '4px 8px', background: 'none', border: 'none', color: '#3a6a4a', fontSize: '14px', cursor: 'pointer', lineHeight: 1 }}>
+            style={{ padding: '4px 8px', background: 'none', border: 'none', color: '#6a3a3a', fontSize: '14px', cursor: 'pointer', lineHeight: 1 }}>
             ✕
           </button>
         </div>
       )}
-      <div style={{ display: 'flex', height: '100vh', background: '#060c10', color: '#c8d8c8', fontFamily: "'JetBrains Mono','Fira Code',monospace", overflow: 'hidden' }}>
+      <div style={{ display: 'flex', height: '100vh', background: '#08050a', color: '#e0d0d0', fontFamily: "'JetBrains Mono','Fira Code',monospace", overflow: 'hidden' }}>
         <Sidebar
           activeAccount={activeAccount}
           onSwitchAccount={handleSwitchAccount}
           onAccountUpdated={handleAccountUpdated}
           onManageAccounts={handleManageAccounts}
         />
-        <main key={reloadKey} style={{ flex: 1, overflowY: 'auto', background: '#070d12', backgroundImage: 'radial-gradient(ellipse 60% 40% at 80% 0%,rgba(0,40,20,0.4) 0%,transparent 60%)' }}>
+        <main key={reloadKey} style={{ flex: 1, overflowY: 'auto', background: '#09050c', backgroundImage: 'radial-gradient(ellipse 60% 40% at 80% 0%,rgba(50,6,15,0.35) 0%,transparent 60%)' }}>
           <Routes>
             <Route path="/"              element={<Navigate to={localStorage.getItem('lastRoute') || '/dashboard'} replace />} />
             <Route path="/dashboard"     element={<Dashboard />} />
@@ -128,8 +127,9 @@ export default function App() {
             <Route path="/stats"         element={<Stats />} />
             <Route path="/analysis"      element={<Analysis />} />
             <Route path="/global"        element={<GlobalView />} />
-            <Route path="/topstep"       element={<Topstep />} />
-            <Route path="/lucid"         element={<Lucid />} />
+            <Route path="/propfirm"      element={<PropFirm />} />
+            <Route path="/topstep"       element={<Navigate to="/propfirm" replace />} />
+            <Route path="/lucid"         element={<Navigate to="/propfirm" replace />} />
             <Route path="/emotional"     element={<EmotionalCheck />} />
             <Route path="/calendar"       element={<EconomicCalendar />} />
             <Route path="/import"         element={<CsvImport />} />

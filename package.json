@@ -1,6 +1,6 @@
 {
   "name": "trading-dashboard",
-  "version": "1.4.80",
+  "version": "1.4.90",
   "private": true,
   "main": "electron.cjs",
   "scripts": {
@@ -27,6 +27,9 @@
   "build": {
     "appId": "com.trading.dashboard",
     "productName": "Trading Dashboard",
+    "directories": {
+      "output": "release"
+    },
     "publish": {
       "provider": "github",
       "owner": "CHEMSOUZ",
