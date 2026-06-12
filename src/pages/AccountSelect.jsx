@@ -680,7 +680,7 @@ export default function AccountSelect({ onSelect, onBack }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#060c10', backgroundImage: 'radial-gradient(ellipse 60% 50% at 50% 0%, rgba(0,40,20,0.5) 0%, transparent 70%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono','Fira Code',monospace", color: '#c8d8c8', padding: '40px 20px' }}>
+    <div style={{ height: '100vh', overflowY: 'auto', background: '#060c10', backgroundImage: 'radial-gradient(ellipse 60% 50% at 50% 0%, rgba(0,40,20,0.5) 0%, transparent 70%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', fontFamily: "'JetBrains Mono','Fira Code',monospace", color: '#c8d8c8', padding: '40px 20px' }}>
 
       {onBack && (
         <div style={{ position: 'fixed', top: '20px', left: '20px' }}>

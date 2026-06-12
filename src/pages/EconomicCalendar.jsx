@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-const FINNHUB_KEY = 'd88v60hr01qs9ff6b430d88v60hr01qs9ff6b43g';
+// ForexFactory public JSON endpoints (no API key required)
+const FF_THIS_WEEK = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
+const FF_NEXT_WEEK = 'https://nfs.faireconomy.media/ff_calendar_nextweek.json';
 
 // ── Constants ─────────────────────────────────────────────────
 const IMPACT_CONFIG = {
@@ -72,16 +74,58 @@ function getImpact(event) {
   return 'na';
 }
 
-// Finnhub returns times as "YYYY-MM-DD HH:MM:SS" UTC without timezone indicator.
-// Without explicit 'Z', browsers parse it as local time causing an offset equal to the local UTC offset.
 function parseEventDate(str) {
   if (!str) return new Date(0);
   if (typeof str === 'number') return new Date(str < 1e10 ? str * 1000 : str);
-  const s = String(str).trim();
-  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(s)) {
-    return new Date(s.replace(' ', 'T') + 'Z');
+  return new Date(str);
+}
+
+// ForexFactory date: "MM-DD-YYYY", time: "8:30am" in America/New_York (DST-aware)
+function parseFFDateTime(dateStr, timeStr) {
+  if (!dateStr) return new Date(0);
+  const [mm, dd, yyyy] = dateStr.split('-');
+  if (!yyyy) return new Date(0);
+
+  let h = 12, min = 0;
+  if (timeStr && timeStr !== 'All Day' && timeStr !== 'Tentative') {
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})(am|pm)$/i);
+    if (match) {
+      h = parseInt(match[1]);
+      min = parseInt(match[2]);
+      if (match[3].toLowerCase() === 'pm' && h !== 12) h += 12;
+      if (match[3].toLowerCase() === 'am' && h === 12) h = 0;
+    }
   }
-  return new Date(s);
+
+  // Probe UTC offset for America/New_York on this date (handles DST automatically)
+  const probe = new Date(Date.UTC(+yyyy, +mm - 1, +dd, h, min, 0));
+  const nyParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(probe);
+  const nyH   = parseInt(nyParts.find(p => p.type === 'hour')?.value   ?? '0') % 24;
+  const nyMin = parseInt(nyParts.find(p => p.type === 'minute')?.value ?? '0');
+  let diffMin = (h * 60 + min) - (nyH * 60 + nyMin);
+  if (diffMin > 720)  diffMin -= 1440;
+  if (diffMin < -720) diffMin += 1440;
+  return new Date(probe.getTime() + diffMin * 60000);
+}
+
+function normalizeFFEvent(e) {
+  if (!e?.date) return null;
+  const [mm, dd, yyyy] = e.date.split('-');
+  if (!yyyy) return null;
+  const date = parseFFDateTime(e.date, e.time);
+  return {
+    event:    e.title   ?? '',
+    country:  (e.country ?? '').toUpperCase(),
+    impact:   e.impact  ?? 'Low',
+    time:     date.toISOString(),
+    date:     `${yyyy}-${(mm ?? '').padStart(2,'0')}-${(dd ?? '').padStart(2,'0')}`,
+    prev:     e.previous ?? '',
+    estimate: e.forecast  ?? '',
+    actual:   e.actual    ?? '',
+    _time:    date.getTime(),
+  };
 }
 
 function formatTime(dateStr, tz = DEFAULT_TZ) {
@@ -364,20 +408,29 @@ export default function EconomicCalendar() {
     else setRefreshing(true);
     setError('');
     try {
-      const { from, to } = getDateRange(dateMode);
-      const url = `https://finnhub.io/api/v1/calendar/economic?from=${from}&to=${to}&token=${FINNHUB_KEY}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Erreur API: ${res.status}`);
-      const data = await res.json();
-      const raw = data.economicCalendar ?? data.economic_calendar ?? data ?? [];
-      // Normalize and sort by time
+      const urls = [FF_THIS_WEEK];
+      if (dateMode === 'next7' || dateMode === 'month') urls.push(FF_NEXT_WEEK);
+
+      const responses = await Promise.all(urls.map(u => fetch(u)));
+      for (const r of responses) {
+        if (!r.ok) throw new Error(`Erreur ForexFactory: ${r.status}`);
+      }
+      const arrays = await Promise.all(responses.map(r => r.json()));
+      const raw = arrays.flat();
+
       const normalized = raw
-        .map(e => ({ ...e, _time: parseEventDate(e.time ?? e.date ?? 0).getTime() }))
+        .map(normalizeFFEvent)
+        .filter(Boolean)
         .sort((a, b) => a._time - b._time);
-      setEvents(normalized);
+
+      // Client-side date range filter
+      const { from, to } = getDateRange(dateMode);
+      const ranged = normalized.filter(e => e.date >= from && e.date <= to);
+
+      setEvents(ranged);
       setLastUpdate(new Date());
     } catch (err) {
-      setError(err.message ?? 'Erreur de connexion à Finnhub');
+      setError(err.message ?? 'Erreur de connexion à ForexFactory');
     } finally {
       setLoading(false);
       setRefreshing(false);
