@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 // ── Persistence ───────────────────────────────────────────────
 const STORAGE_KEY = 'payout_data_v1';
@@ -41,7 +41,7 @@ function fmt(n, sign = true) {
 function pnlColor(n) {
   if (n > 0) return '#00cc77';
   if (n < 0) return '#ff3344';
-  return '#887070';
+  return '#7888a0';
 }
 
 // ── Small components ──────────────────────────────────────────
@@ -51,7 +51,7 @@ function SectionHeader({ icon, label, total, color, children }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '16px' }}>{icon}</span>
-          <span style={{ fontSize: '10px', color: color ?? '#6a3a3a', letterSpacing: '2.5px', fontWeight: '700' }}>{label}</span>
+          <span style={{ fontSize: '10px', color: color ?? '#5a6a82', letterSpacing: '2.5px', fontWeight: '700' }}>{label}</span>
         </div>
         <span style={{ fontSize: '15px', fontWeight: '700', color: pnlColor(total) }}>
           {fmt(total)} €
@@ -74,8 +74,8 @@ function EntryRow({ entry, onEdit, onDelete, accentColor }) {
         gap: '10px',
         alignItems: 'center',
         padding: '10px 14px',
-        background: hover ? 'rgba(0,255,136,0.03)' : 'rgba(18,6,10,0.4)',
-        border: `1px solid ${hover ? 'rgba(196,18,48,0.12)' : 'rgba(196,18,48,0.05)'}`,
+        background: hover ? 'rgba(0,255,136,0.03)' : 'rgba(14,15,22,0.4)',
+        border: `1px solid ${hover ? 'rgba(136,153,187,0.12)' : 'rgba(136,153,187,0.05)'}`,
         borderLeft: `2px solid ${accentColor ?? pnlColor(entry.amount)}`,
         borderRadius: '5px',
         transition: 'all 0.15s',
@@ -83,17 +83,17 @@ function EntryRow({ entry, onEdit, onDelete, accentColor }) {
       }}
     >
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: '13px', color: '#e0d0d0', fontWeight: '500', marginBottom: '2px' }}>{entry.label}</div>
-        {entry.note && <div style={{ fontSize: '10px', color: '#6a3a3a' }}>{entry.note}</div>}
-        {entry.date && <div style={{ fontSize: '10px', color: '#4a2020' }}>{entry.date}</div>}
+        <div style={{ fontSize: '13px', color: '#dde4ef', fontWeight: '500', marginBottom: '2px' }}>{entry.label}</div>
+        {entry.note && <div style={{ fontSize: '10px', color: '#5a6a82' }}>{entry.note}</div>}
+        {entry.date && <div style={{ fontSize: '10px', color: '#3c4c64' }}>{entry.date}</div>}
       </div>
       <span style={{ fontSize: '14px', fontWeight: '700', color: pnlColor(entry.amount), letterSpacing: '0.5px' }}>
         {fmt(entry.amount)} {entry.currency}
       </span>
       <button onClick={() => onEdit(entry)}
-        style={{ background: 'none', border: '1px solid #2a1515', color: '#6a3a3a', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.15s', opacity: hover ? 1 : 0 }}
-        onMouseEnter={e => { e.currentTarget.style.borderColor = '#c41230'; e.currentTarget.style.color = '#c41230'; }}
-        onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a1515'; e.currentTarget.style.color = '#6a3a3a'; }}
+        style={{ background: 'none', border: '1px solid #1e2c40', color: '#5a6a82', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', transition: 'all 0.15s', opacity: hover ? 1 : 0 }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = '#8899bb'; e.currentTarget.style.color = '#8899bb'; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e2c40'; e.currentTarget.style.color = '#5a6a82'; }}
       >✏</button>
       <button onClick={() => onDelete(entry.id)}
         style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '16px', padding: '0 2px', transition: 'color 0.15s', opacity: hover ? 1 : 0 }}
@@ -111,13 +111,13 @@ function EditModal({ entry, section, onSave, onClose }) {
   });
   const set = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
   const inp = {
-    background: 'rgba(18,6,10,0.6)',
-    border: '1px solid rgba(196,18,48,0.18)',
+    background: 'rgba(14,15,22,0.6)',
+    border: '1px solid rgba(136,153,187,0.18)',
     borderRadius: '5px', padding: '8px 12px',
-    color: '#e0d0d0', fontSize: '13px',
+    color: '#dde4ef', fontSize: '13px',
     fontFamily: 'inherit', outline: 'none',
     width: '100%', boxSizing: 'border-box',
-    caretColor: '#c41230',
+    caretColor: '#8899bb',
   };
 
   const isPayout = section === 'payouts';
@@ -132,25 +132,25 @@ function EditModal({ entry, section, onSave, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#09050c', border: '1px solid rgba(196,18,48,0.22)', borderRadius: '10px', width: '100%', maxWidth: '420px', padding: '24px', boxShadow: '0 0 60px rgba(0,0,0,0.7)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#0c0d16', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '10px', width: '100%', maxWidth: '420px', padding: '24px', boxShadow: '0 0 60px rgba(0,0,0,0.7)' }}>
         <div style={{ marginBottom: '20px' }}>
-          <div style={{ fontSize: '10px', color: '#6a3a3a', letterSpacing: '3px', marginBottom: '4px' }}>
+          <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>
             {section === 'propfirm' ? 'PROPFIRM' : section === 'fixed' ? 'FRAIS FIXES' : 'PAYOUT'}
           </div>
-          <div style={{ fontSize: '18px', fontWeight: '700', color: '#f0e0e2' }}>
+          <div style={{ fontSize: '18px', fontWeight: '700', color: '#e8edf8' }}>
             {isNew ? 'Ajouter une entrée' : 'Modifier'}
           </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div>
-            <div style={{ fontSize: '10px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '5px' }}>LIBELLÉ *</div>
+            <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '5px' }}>LIBELLÉ *</div>
             <input value={form.label} onChange={set('label')} placeholder="Ex: Challenge Topstep 50K" style={inp} autoFocus />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '10px' }}>
             <div>
-              <div style={{ fontSize: '10px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '5px' }}>
+              <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '5px' }}>
                 MONTANT {isPayout ? '(positif)' : '(négatif = dépense)'}
               </div>
               <input
@@ -158,11 +158,11 @@ function EditModal({ entry, section, onSave, onClose }) {
                 value={form.amount}
                 onChange={set('amount')}
                 placeholder={isPayout ? '1500' : '-500'}
-                style={{ ...inp, color: form.amount ? pnlColor(parseFloat(String(form.amount))) : '#e0d0d0' }}
+                style={{ ...inp, color: form.amount ? pnlColor(parseFloat(String(form.amount))) : '#dde4ef' }}
               />
             </div>
             <div>
-              <div style={{ fontSize: '10px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '5px' }}>DEVISE</div>
+              <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '5px' }}>DEVISE</div>
               <select value={form.currency} onChange={set('currency')} style={{ ...inp, appearance: 'none' }}>
                 <option>EUR</option>
                 <option>USD</option>
@@ -173,20 +173,20 @@ function EditModal({ entry, section, onSave, onClose }) {
           </div>
 
           <div>
-            <div style={{ fontSize: '10px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '5px' }}>NOTE (optionnel)</div>
+            <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '5px' }}>NOTE (optionnel)</div>
             <input value={form.note} onChange={set('note')} placeholder="Détails..." style={inp} />
           </div>
 
           {isPayout && (
             <div>
-              <div style={{ fontSize: '10px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '5px' }}>DATE (optionnel)</div>
+              <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '5px' }}>DATE (optionnel)</div>
               <input type="date" value={form.date ?? ''} onChange={set('date')} style={{ ...inp, colorScheme: 'dark' }} />
             </div>
           )}
 
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
-            <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: '5px', border: '1px solid #2a1515', background: 'transparent', color: '#8a5050', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>ANNULER</button>
-            <button onClick={handleSave} style={{ padding: '9px 22px', borderRadius: '5px', background: 'rgba(196,18,48,0.14)', border: '1px solid rgba(196,18,48,0.40)', color: '#c41230', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer' }}>
+            <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: '5px', border: '1px solid #1e2c40', background: 'transparent', color: '#6878a0', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>ANNULER</button>
+            <button onClick={handleSave} style={{ padding: '9px 22px', borderRadius: '5px', background: 'rgba(136,153,187,0.14)', border: '1px solid rgba(136,153,187,0.40)', color: '#8899bb', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer' }}>
               {isNew ? 'AJOUTER' : 'ENREGISTRER'}
             </button>
           </div>
@@ -199,9 +199,9 @@ function EditModal({ entry, section, onSave, onClose }) {
 function AddButton({ label, onClick }) {
   return (
     <button onClick={onClick}
-      style={{ width: '100%', padding: '9px', background: 'transparent', border: '1px dashed #2a1515', borderRadius: '5px', color: '#4a2020', fontSize: '11px', fontFamily: 'inherit', letterSpacing: '1.5px', cursor: 'pointer', transition: 'all 0.15s', marginTop: '4px' }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = '#c41230'; e.currentTarget.style.color = '#c41230'; e.currentTarget.style.background = 'rgba(0,255,136,0.03)'; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a1515'; e.currentTarget.style.color = '#4a2020'; e.currentTarget.style.background = 'transparent'; }}
+      style={{ width: '100%', padding: '9px', background: 'transparent', border: '1px dashed #1e2c40', borderRadius: '5px', color: '#3c4c64', fontSize: '11px', fontFamily: 'inherit', letterSpacing: '1.5px', cursor: 'pointer', transition: 'all 0.15s', marginTop: '4px' }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = '#8899bb'; e.currentTarget.style.color = '#8899bb'; e.currentTarget.style.background = 'rgba(0,255,136,0.03)'; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e2c40'; e.currentTarget.style.color = '#3c4c64'; e.currentTarget.style.background = 'transparent'; }}
     >+ {label}</button>
   );
 }
@@ -254,55 +254,55 @@ export default function Payout() {
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ fontSize: '10px', color: '#6a3a3a', letterSpacing: '3px', marginBottom: '4px' }}>FINANCES</div>
-          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#f0e0e2', margin: '0 0 4px' }}>Investissements & Payouts</h1>
-          <div style={{ fontSize: '11px', color: '#6a3a3a' }}>Toutes les dépenses et revenus depuis le début</div>
+          <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>FINANCES</div>
+          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8edf8', margin: '0 0 4px' }}>Investissements & Payouts</h1>
+          <div style={{ fontSize: '11px', color: '#5a6a82' }}>Toutes les dépenses et revenus depuis le début</div>
         </div>
         <button onClick={resetAll}
-          style={{ background: 'none', border: '1px solid #2a1515', color: '#3a1818', padding: '7px 14px', borderRadius: '5px', cursor: 'pointer', fontSize: '10px', fontFamily: 'inherit', letterSpacing: '1px', transition: 'all 0.15s' }}
+          style={{ background: 'none', border: '1px solid #1e2c40', color: '#3a1818', padding: '7px 14px', borderRadius: '5px', cursor: 'pointer', fontSize: '10px', fontFamily: 'inherit', letterSpacing: '1px', transition: 'all 0.15s' }}
           onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff4455'; e.currentTarget.style.color = '#ff4455'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a1515'; e.currentTarget.style.color = '#3a1818'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e2c40'; e.currentTarget.style.color = '#3a1818'; }}
         >↺ Reset</button>
       </div>
 
       {/* ── Summary cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '28px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '10px', marginBottom: '28px' }}>
         {[
           { label: 'TOTAL INVESTI',    value: totalInvested, sub: 'PropFirm + frais' },
           { label: 'TOTAL PAYOUTS',    value: totalPayouts,  sub: `${data.payouts.length} payout${data.payouts.length > 1 ? 's' : ''}` },
           { label: 'RÉSULTAT NET',     value: netResult,     sub: 'Après payouts' },
           { label: 'ROI',              value: null,          sub: 'Payouts / investi', special: `${roi}%`, specialColor: parseFloat(roi) >= 100 ? '#00cc77' : parseFloat(roi) >= 50 ? '#f0a020' : '#ff3344' },
         ].map(({ label, value, sub, special, specialColor }) => (
-          <div key={label} style={{ background: 'rgba(18,6,10,0.5)', border: '1px solid rgba(196,18,48,0.08)', borderRadius: '8px', padding: '14px 16px', borderTop: `2px solid ${value != null ? pnlColor(value) : (specialColor ?? '#6a3a3a')}` }}>
-            <div style={{ fontSize: '9px', color: '#4a2020', letterSpacing: '1.5px', marginBottom: '6px' }}>{label}</div>
-            <div style={{ fontSize: '18px', fontWeight: '700', color: value != null ? pnlColor(value) : (specialColor ?? '#e0d0d0'), lineHeight: 1 }}>
+          <div key={label} style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '8px', padding: '14px 16px', borderTop: `2px solid ${value != null ? pnlColor(value) : (specialColor ?? '#5a6a82')}` }}>
+            <div style={{ fontSize: '9px', color: '#3c4c64', letterSpacing: '1.5px', marginBottom: '6px' }}>{label}</div>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: value != null ? pnlColor(value) : (specialColor ?? '#dde4ef'), lineHeight: 1 }}>
               {value != null ? `${fmt(value)} €` : special}
             </div>
-            <div style={{ fontSize: '10px', color: '#4a2020', marginTop: '4px' }}>{sub}</div>
+            <div style={{ fontSize: '10px', color: '#3c4c64', marginTop: '4px' }}>{sub}</div>
           </div>
         ))}
       </div>
 
       {/* ── Progress bar ── */}
-      <div style={{ marginBottom: '28px', background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.08)', borderRadius: '8px', padding: '14px 16px' }}>
+      <div style={{ marginBottom: '28px', background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '8px', padding: '14px 16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-          <span style={{ fontSize: '9px', color: '#6a3a3a', letterSpacing: '2px' }}>RÉCUPÉRATION</span>
-          <span style={{ fontSize: '11px', color: parseFloat(roi) >= 100 ? '#c41230' : '#f0a020', fontWeight: '700' }}>{roi}% récupéré</span>
+          <span style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px' }}>RÉCUPÉRATION</span>
+          <span style={{ fontSize: '11px', color: parseFloat(roi) >= 100 ? '#8899bb' : '#f0a020', fontWeight: '700' }}>{roi}% récupéré</span>
         </div>
-        <div style={{ height: '6px', background: 'rgba(196,18,48,0.10)', borderRadius: '3px', overflow: 'hidden' }}>
+        <div style={{ height: '6px', background: 'rgba(136,153,187,0.10)', borderRadius: '3px', overflow: 'hidden' }}>
           <div style={{
             height: '100%',
             width: `${Math.min(100, Math.max(0, parseFloat(roi)))}%`,
-            background: parseFloat(roi) >= 100 ? 'linear-gradient(90deg,#991020,#c41230)' : parseFloat(roi) >= 50 ? 'linear-gradient(90deg,#f0a020,#ffcc44)' : 'linear-gradient(90deg,#ff4455,#ff7755)',
+            background: parseFloat(roi) >= 100 ? 'linear-gradient(90deg,#566880,#8899bb)' : parseFloat(roi) >= 50 ? 'linear-gradient(90deg,#f0a020,#ffcc44)' : 'linear-gradient(90deg,#ff4455,#ff7755)',
             borderRadius: '3px',
             transition: 'width 0.5s ease',
-            boxShadow: `0 0 8px ${parseFloat(roi) >= 100 ? 'rgba(196,18,48,0.45)' : 'rgba(240,160,32,0.4)'}`,
+            boxShadow: `0 0 8px ${parseFloat(roi) >= 100 ? 'rgba(136,153,187,0.45)' : 'rgba(240,160,32,0.4)'}`,
           }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '10px', color: '#4a2020' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '10px', color: '#3c4c64' }}>
           <span>0€</span>
           <span style={{ color: '#ff4455' }}>{fmt(totalInvested)} € invested</span>
-          <span style={{ color: '#c41230' }}>{fmt(totalPayouts, false)} € payouts</span>
+          <span style={{ color: '#8899bb' }}>{fmt(totalPayouts, false)} € payouts</span>
         </div>
       </div>
 
@@ -346,14 +346,14 @@ export default function Payout() {
 
         {/* ── RIGHT: Payouts ── */}
         <div>
-          <div style={{ fontSize: '10px', color: '#c41230', letterSpacing: '2.5px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#c41230', boxShadow: '0 0 6px #c41230' }} />
+          <div style={{ fontSize: '10px', color: '#8899bb', letterSpacing: '2.5px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#8899bb', boxShadow: '0 0 6px #8899bb' }} />
             REVENUS — {fmt(totalPayouts)} €
           </div>
 
-          <SectionHeader icon="💸" label="PAYOUTS" total={totalPayouts} color="#c41230">
+          <SectionHeader icon="💸" label="PAYOUTS" total={totalPayouts} color="#8899bb">
             {data.payouts.map(e => (
-              <EntryRow key={e.id} entry={e} accentColor="#c41230"
+              <EntryRow key={e.id} entry={e} accentColor="#8899bb"
                 onEdit={entry => openEdit('payouts', entry)}
                 onDelete={id => handleDelete('payouts', id)}
               />
@@ -362,24 +362,24 @@ export default function Payout() {
           </SectionHeader>
 
           {/* Total payouts */}
-          <div style={{ padding: '10px 14px', background: 'rgba(196,18,48,0.08)', border: '1px solid rgba(196,18,48,0.18)', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <span style={{ fontSize: '10px', color: '#c41230', letterSpacing: '2px' }}>TOTAL PAYOUTS</span>
-            <span style={{ fontSize: '17px', fontWeight: '700', color: '#c41230' }}>{fmt(totalPayouts)} €</span>
+          <div style={{ padding: '10px 14px', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.18)', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <span style={{ fontSize: '10px', color: '#8899bb', letterSpacing: '2px' }}>TOTAL PAYOUTS</span>
+            <span style={{ fontSize: '17px', fontWeight: '700', color: '#8899bb' }}>{fmt(totalPayouts)} €</span>
           </div>
 
           {/* Net result box */}
           <div style={{
             padding: '16px',
-            background: netResult >= 0 ? 'rgba(196,18,48,0.10)' : 'rgba(255,68,85,0.08)',
-            border: `1px solid ${netResult >= 0 ? 'rgba(196,18,48,0.28)' : 'rgba(255,68,85,0.25)'}`,
+            background: netResult >= 0 ? 'rgba(136,153,187,0.10)' : 'rgba(255,68,85,0.08)',
+            border: `1px solid ${netResult >= 0 ? 'rgba(136,153,187,0.28)' : 'rgba(255,68,85,0.25)'}`,
             borderRadius: '8px',
-            boxShadow: `0 0 20px ${netResult >= 0 ? 'rgba(196,18,48,0.10)' : 'rgba(255,68,85,0.08)'}`,
+            boxShadow: `0 0 20px ${netResult >= 0 ? 'rgba(136,153,187,0.10)' : 'rgba(255,68,85,0.08)'}`,
           }}>
-            <div style={{ fontSize: '9px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '6px' }}>RÉSULTAT NET APRÈS PAYOUTS</div>
+            <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>RÉSULTAT NET APRÈS PAYOUTS</div>
             <div style={{ fontSize: '26px', fontWeight: '700', color: pnlColor(netResult), letterSpacing: '-0.5px' }}>
               {fmt(netResult)} €
             </div>
-            <div style={{ fontSize: '10px', color: '#6a3a3a', marginTop: '6px' }}>
+            <div style={{ fontSize: '10px', color: '#5a6a82', marginTop: '6px' }}>
               {netResult >= 0 ? '✓ En bénéfice' : `Il manque ${fmt(Math.abs(netResult), false)} € pour rentabiliser`}
             </div>
           </div>

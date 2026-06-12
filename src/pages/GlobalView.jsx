@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine, Cell,
@@ -13,14 +13,14 @@ function fmt(n, sign = false) {
 function pnlColor(v) {
   if (v > 0) return '#00cc77';
   if (v < 0) return '#ff3344';
-  return '#887070';
+  return '#7888a0';
 }
 
 const DOW_LABELS = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 const HOUR_SESSIONS = [
   { label: 'Asie',        start: 0,  end: 9,  color: '#aa88ff' },
   { label: 'Londres',     start: 8,  end: 15, color: '#00aaff' },
-  { label: 'New York',    start: 13, end: 22, color: '#c41230' },
+  { label: 'New York',    start: 13, end: 22, color: '#8899bb' },
   { label: 'Hors séance', start: 22, end: 24, color: '#f0a020' },
 ];
 function getSessionLabel(h) {
@@ -37,8 +37,8 @@ function getSessionObj(label) {
 function CTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: 'rgba(10,3,6,0.97)', border: '1px solid rgba(196,18,48,0.22)', borderRadius: '4px', padding: '8px 12px', fontSize: '12px', fontFamily: 'inherit' }}>
-      <div style={{ color: '#6a3a3a', marginBottom: '4px' }}>{label}</div>
+    <div style={{ background: 'rgba(8,9,16,0.97)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', padding: '8px 12px', fontSize: '12px', fontFamily: 'inherit' }}>
+      <div style={{ color: '#5a6a82', marginBottom: '4px' }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ color: (p.value ?? 0) >= 0 ? '#00cc77' : '#ff3344', fontWeight: '700' }}>
           {p.name}: {typeof p.value === 'number' ? fmt(p.value, true) : p.value}
@@ -49,12 +49,12 @@ function CTooltip({ active, payload, label }) {
 }
 
 // ── StatCard ──────────────────────────────────────────────────
-function StatCard({ label, value, sub, color = '#e0d0d0' }) {
+function StatCard({ label, value, sub, color = '#dde4ef' }) {
   return (
-    <div style={{ background: 'rgba(18,6,10,0.5)', border: '1px solid rgba(196,18,48,0.10)', borderTop: `2px solid ${color}`, borderRadius: '6px', padding: '14px 16px' }}>
-      <div style={{ fontSize: '11px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '6px' }}>{label}</div>
+    <div style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.10)', borderTop: `2px solid ${color}`, borderRadius: '6px', padding: '14px 16px' }}>
+      <div style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>{label}</div>
       <div style={{ fontSize: '20px', fontWeight: '700', color, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '11px', color: '#7a4040', marginTop: '5px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: '11px', color: '#5868a0', marginTop: '5px' }}>{sub}</div>}
     </div>
   );
 }
@@ -62,8 +62,8 @@ function StatCard({ label, value, sub, color = '#e0d0d0' }) {
 // ── Section ───────────────────────────────────────────────────
 function Section({ title, children }) {
   return (
-    <div style={{ background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '8px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <div style={{ fontSize: '11px', color: '#6a3a3a', letterSpacing: '2px', fontWeight: '700' }}>{title}</div>
+    <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '8px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>{title}</div>
       {children}
     </div>
   );
@@ -71,7 +71,7 @@ function Section({ title, children }) {
 
 // ── Insight Card ──────────────────────────────────────────────
 function InsightCard({ icon, title, value, desc, color, onClick }) {
-  const rgb = color === '#c41230' ? '0,255,136'
+  const rgb = color === '#8899bb' ? '0,255,136'
     : color === '#ff4455' ? '255,68,85'
     : color === '#00aaff' ? '0,170,255'
     : color === '#aa88ff' ? '170,136,255'
@@ -83,9 +83,9 @@ function InsightCard({ icon, title, value, desc, color, onClick }) {
     >
       <div style={{ fontSize: '28px', flexShrink: 0 }}>{icon}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '11px', color: '#6a3a3a', letterSpacing: '1px', marginBottom: '3px' }}>{title}</div>
+        <div style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>{title}</div>
         <div style={{ fontSize: '16px', fontWeight: '700', color, marginBottom: '3px' }}>{value}</div>
-        <div style={{ fontSize: '11px', color: '#7a4040' }}>{desc}</div>
+        <div style={{ fontSize: '11px', color: '#5868a0' }}>{desc}</div>
       </div>
       {onClick && <div style={{ fontSize: '16px', color: `${color}80`, flexShrink: 0 }}>›</div>}
     </div>
@@ -168,22 +168,22 @@ function TradeTable({ trades, storageKey = 'global_trade_cols' }) {
   const templateCols = COLS.map(c => `${colWidths[c.key]}px`).join(' ');
 
   function SortIcon({ col }) {
-    if (sortCol !== col) return <span style={{ color: '#2a1515', fontSize: '9px' }}>⇅</span>;
-    return <span style={{ color: '#c41230', fontSize: '9px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
+    if (sortCol !== col) return <span style={{ color: '#1e2c40', fontSize: '9px' }}>⇅</span>;
+    return <span style={{ color: '#8899bb', fontSize: '9px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
   }
 
   return (
     <div>
       {/* Mini stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '8px', marginBottom: '12px' }}>
         {[
           { label: 'P&L NET',   value: fmt(pnl, true), color: pnlColor(pnl) },
-          { label: 'WIN / LOSS', value: `${trades.filter(t=>getNet(t)>0).length}W / ${trades.filter(t=>getNet(t)<0).length}L`, color: '#e0d0d0' },
+          { label: 'WIN / LOSS', value: `${trades.filter(t=>getNet(t)>0).length}W / ${trades.filter(t=>getNet(t)<0).length}L`, color: '#dde4ef' },
           { label: 'WINRATE',   value: `${wr}%`, color: wr >= 50 ? '#00cc77' : '#ff3344' },
-          { label: 'TRADES',    value: filtered.length, color: '#e0d0d0' },
+          { label: 'TRADES',    value: filtered.length, color: '#dde4ef' },
         ].map(({ label, value, color }) => (
-          <div key={label} style={{ background: 'rgba(18,6,10,0.5)', borderRadius: '5px', padding: '8px 12px', borderTop: `2px solid ${color}` }}>
-            <div style={{ fontSize: '10px', color: '#6a3a3a', letterSpacing: '1px', marginBottom: '3px' }}>{label}</div>
+          <div key={label} style={{ background: 'rgba(14,15,22,0.5)', borderRadius: '5px', padding: '8px 12px', borderTop: `2px solid ${color}` }}>
+            <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>{label}</div>
             <div style={{ fontSize: '14px', fontWeight: '700', color }}>{value}</div>
           </div>
         ))}
@@ -192,20 +192,20 @@ function TradeTable({ trades, storageKey = 'global_trade_cols' }) {
       {/* Filter buttons */}
       <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
         {['ALL','WIN','LOSS'].map(f => {
-          const c = f === 'WIN' ? '#c41230' : f === 'LOSS' ? '#ff4455' : '#c41230';
-          return <button key={f} onClick={() => setFilter(f)} style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${filter===f?c:'#2a1515'}`, background: filter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':'0,255,136'},0.1)`:'transparent', color: filter===f?c:'#6a3a3a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>;
+          const c = f === 'WIN' ? '#8899bb' : f === 'LOSS' ? '#ff4455' : '#8899bb';
+          return <button key={f} onClick={() => setFilter(f)} style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${filter===f?c:'#1e2c40'}`, background: filter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':'0,255,136'},0.1)`:'transparent', color: filter===f?c:'#5a6a82', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>;
         })}
       </div>
 
       {/* Scrollable table */}
       <div style={{ overflowX: 'auto' }}>
         {/* Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: templateCols, minWidth: 'max-content', padding: '5px 10px', fontSize: '10px', color: '#4a2020', letterSpacing: '1.5px', borderBottom: '1px solid rgba(196,18,48,0.08)', marginBottom: '4px', userSelect: 'none' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: templateCols, minWidth: 'max-content', padding: '5px 10px', fontSize: '10px', color: '#3c4c64', letterSpacing: '1.5px', borderBottom: '1px solid rgba(136,153,187,0.08)', marginBottom: '4px', userSelect: 'none' }}>
           {COLS.map((col, idx) => (
             <div key={col.key} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', overflow: 'hidden' }}
               onClick={() => handleSort(col.key)}
-              onMouseEnter={e => e.currentTarget.style.color = '#c41230'}
-              onMouseLeave={e => e.currentTarget.style.color = '#4a2020'}
+              onMouseEnter={e => e.currentTarget.style.color = '#8899bb'}
+              onMouseLeave={e => e.currentTarget.style.color = '#3c4c64'}
             >
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{col.label}</span>
               <SortIcon col={col.key} />
@@ -214,7 +214,7 @@ function TradeTable({ trades, storageKey = 'global_trade_cols' }) {
                   style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '6px', cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   onClick={e => e.stopPropagation()}
                 >
-                  <div style={{ width: '1px', height: '60%', background: 'rgba(196,18,48,0.22)' }} />
+                  <div style={{ width: '1px', height: '60%', background: 'rgba(136,153,187,0.22)' }} />
                 </div>
               )}
             </div>
@@ -236,21 +236,21 @@ function TradeTable({ trades, storageKey = 'global_trade_cols' }) {
             const exitDisplay = exitVal != null ? exitVal.toFixed(2) : '—';
             return (
               <div key={`${t._accountId}-${t.id}`}
-                style={{ display: 'grid', gridTemplateColumns: templateCols, alignItems: 'center', padding: '8px 10px', background: 'rgba(18,6,10,0.4)', borderLeft: `2px solid ${pnlColor(net)}`, borderRadius: '4px', fontSize: '12px', transition: 'background 0.1s' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(196,18,48,0.05)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'rgba(18,6,10,0.4)'}
+                style={{ display: 'grid', gridTemplateColumns: templateCols, alignItems: 'center', padding: '8px 10px', background: 'rgba(14,15,22,0.4)', borderLeft: `2px solid ${pnlColor(net)}`, borderRadius: '4px', fontSize: '12px', transition: 'background 0.1s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(136,153,187,0.05)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(14,15,22,0.4)'}
               >
-                <span style={{ color: '#7a4040', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.date}</span>
+                <span style={{ color: '#5868a0', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.date}</span>
                 <span style={{ color: '#6a8a7a', fontSize: '11px' }}>{hour}</span>
-                <span style={{ color: '#e0d0d0', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.pair}</span>
+                <span style={{ color: '#dde4ef', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.pair}</span>
                 <span style={{ color: t.direction==='LONG'?'#00cc77':'#ff3344', fontSize: '11px', background: `rgba(${t.direction==='LONG'?'0,204,119':'255,51,68'},0.08)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
-                <span style={{ color: '#887070', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.entry ?? '—'}</span>
-                <span style={{ color: '#887070', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exitDisplay}</span>
+                <span style={{ color: '#7888a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.entry ?? '—'}</span>
+                <span style={{ color: '#7888a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exitDisplay}</span>
                 <span style={{ color: pnlColor(net), fontWeight: '700' }}>{fmt(net, true)}</span>
-                <span style={{ color: '#7a4040', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.duration ?? '—'}</span>
+                <span style={{ color: '#5868a0', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.duration ?? '—'}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden' }}>
-                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: t._accountColor ?? '#6a3a3a', flexShrink: 0 }} />
-                  <span style={{ color: '#7a4040', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t._accountName ?? '—'}</span>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: t._accountColor ?? '#5a6a82', flexShrink: 0 }} />
+                  <span style={{ color: '#5868a0', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t._accountName ?? '—'}</span>
                 </div>
               </div>
             );
@@ -313,29 +313,29 @@ function TradingCalendar({ trades, onDayClick }) {
   }
 
   return (
-    <div style={{ background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '8px', padding: '16px' }}>
+    <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '8px', padding: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
         <div>
-          <div style={{ fontSize: '11px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '3px' }}>CALENDRIER DE TRADING</div>
+          <div style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '3px' }}>CALENDRIER DE TRADING</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: '#7a4040', cursor: 'pointer', fontSize: '16px' }}>‹</button>
-            <span style={{ fontSize: '14px', fontWeight: '700', color: '#f0e0e2' }}>{CAL_MONTHS[month]} {year}</span>
-            <button onClick={nextMonth} style={{ background: 'none', border: 'none', color: '#7a4040', cursor: 'pointer', fontSize: '16px' }}>›</button>
+            <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: '#5868a0', cursor: 'pointer', fontSize: '16px' }}>‹</button>
+            <span style={{ fontSize: '14px', fontWeight: '700', color: '#e8edf8' }}>{CAL_MONTHS[month]} {year}</span>
+            <button onClick={nextMonth} style={{ background: 'none', border: 'none', color: '#5868a0', cursor: 'pointer', fontSize: '16px' }}>›</button>
             <button onClick={() => { setYear(new Date().getFullYear()); setMonth(new Date().getMonth()); }}
-              style={{ background: 'rgba(196,18,48,0.10)', border: '1px solid rgba(196,18,48,0.18)', color: '#c41230', padding: '3px 8px', borderRadius: '4px', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>Aujourd'hui</button>
+              style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.18)', color: '#8899bb', padding: '3px 8px', borderRadius: '4px', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>Aujourd'hui</button>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '10px', color: '#6a3a3a', letterSpacing: '1px', marginBottom: '3px' }}>P&L MENSUEL</div>
+          <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>P&L MENSUEL</div>
           <div style={{ fontSize: '16px', fontWeight: '700', color: pnlColor(monthTotal) }}>{fmt(monthTotal, true)}</div>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr) 90px', gap: '2px' }}>
         {['D','L','Ma','Me','J','V','S'].map(d => (
-          <div key={d} style={{ textAlign: 'center', fontSize: '10px', color: '#6a3a3a', padding: '4px 0', letterSpacing: '1px' }}>{d}</div>
+          <div key={d} style={{ textAlign: 'center', fontSize: '10px', color: '#5a6a82', padding: '4px 0', letterSpacing: '1px' }}>{d}</div>
         ))}
-        <div style={{ textAlign: 'center', fontSize: '10px', color: '#6a3a3a', padding: '4px 0' }}>SEM.</div>
+        <div style={{ textAlign: 'center', fontSize: '10px', color: '#5a6a82', padding: '4px 0' }}>SEM.</div>
 
         {weeks.map((wk, wi) => {
           const firstNonNull = wk.find(d => d != null);
@@ -348,34 +348,34 @@ function TradingCalendar({ trades, onDayClick }) {
               const data = byDay[key];
               const isToday = key === today;
               const pnl = data?.pnl ?? null;
-              const bg = pnl == null ? 'rgba(18,6,10,0.3)'
+              const bg = pnl == null ? 'rgba(14,15,22,0.3)'
                 : pnl > 0  ? `rgba(0,255,136,${Math.min(0.05 + (pnl / 2000) * 0.2, 0.25)})`
                 : pnl < 0  ? `rgba(255,68,85,${Math.min(0.05 + (Math.abs(pnl) / 2000) * 0.2, 0.25)})`
                 : 'rgba(240,160,32,0.08)';
               return (
                 <div key={key}
                   onClick={() => data && onDayClick?.(key, data.trades)}
-                  style={{ minHeight: '54px', borderRadius: '3px', padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px', background: bg, border: isToday ? '1.5px solid rgba(0,170,255,0.6)' : '1px solid rgba(196,18,48,0.06)', cursor: data ? 'pointer' : 'default', transition: 'opacity 0.1s' }}
+                  style={{ minHeight: '54px', borderRadius: '3px', padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px', background: bg, border: isToday ? '1.5px solid rgba(0,170,255,0.6)' : '1px solid rgba(136,153,187,0.06)', cursor: data ? 'pointer' : 'default', transition: 'opacity 0.1s' }}
                   onMouseEnter={e => { if (data) e.currentTarget.style.opacity = '0.75'; }}
                   onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
                 >
-                  <div style={{ fontSize: '10px', color: isToday ? '#00aaff' : '#7a4040', fontWeight: isToday ? '700' : '400', display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '10px', color: isToday ? '#00aaff' : '#5868a0', fontWeight: isToday ? '700' : '400', display: 'flex', justifyContent: 'space-between' }}>
                     <span>{day}</span>
                     {isToday && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00aaff' }} />}
                   </div>
                   {data && (
                     <>
                       <div style={{ fontSize: '10px', fontWeight: '700', color: pnlColor(data.pnl), lineHeight: 1 }}>{fmt(data.pnl, true)}</div>
-                      <div style={{ fontSize: '8px', color: '#6a3a3a' }}>{data.count}T</div>
+                      <div style={{ fontSize: '8px', color: '#5a6a82' }}>{data.count}T</div>
                     </>
                   )}
                 </div>
               );
             }),
-            <div key={`week-${wi}`} style={{ background: 'rgba(18,6,10,0.5)', border: '1px solid rgba(196,18,48,0.08)', borderRadius: '3px', minHeight: '54px', padding: '6px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
-              <div style={{ fontSize: '8px', color: '#6a3a3a' }}>S{wi + 1}</div>
+            <div key={`week-${wi}`} style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '3px', minHeight: '54px', padding: '6px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
+              <div style={{ fontSize: '8px', color: '#5a6a82' }}>S{wi + 1}</div>
               <div style={{ fontSize: '11px', fontWeight: '700', color: pnlColor(weekData.total) }}>{weekData.total !== 0 ? fmt(weekData.total, true) : '—'}</div>
-              <div style={{ fontSize: '8px', color: '#6a3a3a' }}>{weekData.count}T</div>
+              <div style={{ fontSize: '8px', color: '#5a6a82' }}>{weekData.count}T</div>
             </div>,
           ];
         })}
@@ -388,17 +388,17 @@ function TradingCalendar({ trades, onDayClick }) {
 function TradeModal({ title, subtitle, color, trades, onClose }) {
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#09050c', border: `1px solid ${color}40`, borderRadius: '10px', width: '100%', maxWidth: '860px', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#0c0d16', border: `1px solid ${color}40`, borderRadius: '10px', width: '100%', maxWidth: '860px', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Header */}
-        <div style={{ padding: '18px 24px', borderBottom: '1px solid rgba(196,18,48,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div style={{ padding: '18px 24px', borderBottom: '1px solid rgba(136,153,187,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
               <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color }} />
-              <span style={{ fontSize: '18px', fontWeight: '700', color: '#f0e0e2' }}>{title}</span>
+              <span style={{ fontSize: '18px', fontWeight: '700', color: '#e8edf8' }}>{title}</span>
             </div>
-            <span style={{ fontSize: '12px', color: '#7a4040' }}>{subtitle}</span>
+            <span style={{ fontSize: '12px', color: '#5868a0' }}>{subtitle}</span>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: '1px solid #2a1515', color: '#7a4040', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
+          <button onClick={onClose} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
         </div>
         {/* Content */}
         <div style={{ overflowY: 'auto', flex: 1, padding: '16px 24px' }}>
@@ -568,37 +568,37 @@ export default function GlobalView() {
     return true;
   }).sort((a,b) => b.date.localeCompare(a.date));
 
-  const inp = { background: 'rgba(18,6,10,0.6)', border: '1px solid rgba(196,18,48,0.12)', borderRadius: '4px', padding: '5px 10px', color: '#e0d0d0', fontSize: '12px', fontFamily: 'inherit', outline: 'none' };
+  const inp = { background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '4px', padding: '5px 10px', color: '#dde4ef', fontSize: '12px', fontFamily: 'inherit', outline: 'none' };
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#6a3a3a', fontSize: '12px', letterSpacing: '2px' }}>CHARGEMENT DE TOUS LES COMPTES...</div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#5a6a82', fontSize: '12px', letterSpacing: '2px' }}>CHARGEMENT DE TOUS LES COMPTES...</div>
   );
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '1200px' }}>
+    <div style={{ padding: '24px 28px', maxWidth: 'none' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ fontSize: '11px', color: '#6a3a3a', letterSpacing: '3px', marginBottom: '6px' }}>ANALYSE GLOBALE</div>
-          <h1 style={{ fontSize: '23px', fontWeight: '700', color: '#f0e0e2', margin: 0 }}>Vue Globale</h1>
-          <div style={{ fontSize: '12px', color: '#6a3a3a', marginTop: '3px' }}>
+          <div style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '6px' }}>ANALYSE GLOBALE</div>
+          <h1 style={{ fontSize: '23px', fontWeight: '700', color: '#e8edf8', margin: 0 }}>Vue Globale</h1>
+          <div style={{ fontSize: '12px', color: '#5a6a82', marginTop: '3px' }}>
             {accounts.length} compte{accounts.length > 1 ? 's' : ''} · {total} trades · <span style={{ color: pnlColor(pnl), fontWeight: '700' }}>{fmt(pnl, true)}</span>
           </div>
         </div>
-        <button onClick={load} style={{ background: 'rgba(196,18,48,0.10)', border: '1px solid rgba(196,18,48,0.22)', color: '#c41230', padding: '8px 14px', borderRadius: '5px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>🔄 Actualiser</button>
+        <button onClick={load} style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.22)', color: '#8899bb', padding: '8px 14px', borderRadius: '5px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>🔄 Actualiser</button>
       </div>
 
       {/* Account filter */}
       {accounts.length > 1 && (
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: '11px', color: '#6a3a3a', letterSpacing: '1px' }}>FILTRER :</span>
-          <button onClick={() => setSelectedAccounts([])} style={{ padding: '5px 12px', borderRadius: '4px', border: `1px solid ${selectedAccounts.length===0?'#c41230':'#2a1515'}`, background: selectedAccounts.length===0?'rgba(196,18,48,0.12)':'transparent', color: selectedAccounts.length===0?'#c41230':'#6a3a3a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>Tous</button>
+          <span style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '1px' }}>FILTRER :</span>
+          <button onClick={() => setSelectedAccounts([])} style={{ padding: '5px 12px', borderRadius: '4px', border: `1px solid ${selectedAccounts.length===0?'#8899bb':'#1e2c40'}`, background: selectedAccounts.length===0?'rgba(136,153,187,0.12)':'transparent', color: selectedAccounts.length===0?'#8899bb':'#5a6a82', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>Tous</button>
           {accounts.map(acc => {
             const active = selectedAccounts.includes(acc.id);
             return (
               <button key={acc.id} onClick={() => setSelectedAccounts(p => active ? p.filter(id => id !== acc.id) : [...p, acc.id])}
-                style={{ padding: '5px 12px', borderRadius: '4px', border: `1px solid ${active?acc.color:'#2a1515'}`, background: active?`${acc.color}15`:'transparent', color: active?acc.color:'#6a3a3a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                style={{ padding: '5px 12px', borderRadius: '4px', border: `1px solid ${active?acc.color:'#1e2c40'}`, background: active?`${acc.color}15`:'transparent', color: active?acc.color:'#5a6a82', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: acc.color }} />
                 {acc.name}
               </button>
@@ -608,28 +608,28 @@ export default function GlobalView() {
       )}
 
       {total === 0 ? (
-        <div style={{ padding: '60px', textAlign: 'center', border: '1px dashed #2a1515', borderRadius: '8px', color: '#3a1818', fontSize: '13px' }}>Aucun trade trouvé</div>
+        <div style={{ padding: '60px', textAlign: 'center', border: '1px dashed #1e2c40', borderRadius: '8px', color: '#3a1818', fontSize: '13px' }}>Aucun trade trouvé</div>
       ) : (
         <>
           {/* KPI */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '10px', marginBottom: '20px' }}>
             <StatCard label="P&L NET TOTAL"  value={fmt(pnl, true)}                color={pnlColor(pnl)}                  sub={`Frais: -${fees.toFixed(2)}$`} />
-            <StatCard label="WINRATE GLOBAL" value={`${winrate.toFixed(1)}%`}       color={winrate>=50?'#c41230':'#ff4455'} sub={`${wins}W / ${losses}L`} />
-            <StatCard label="PROFIT FACTOR"  value={pf===999?'∞':pf.toFixed(2)}     color={pf>=1.5?'#c41230':'#f0a020'} />
-            <StatCard label="TOTAL TRADES"   value={total}                          color="#e0d0d0"                        sub={`${accounts.length} compte${accounts.length>1?'s':''}`} />
+            <StatCard label="WINRATE GLOBAL" value={`${winrate.toFixed(1)}%`}       color={winrate>=50?'#8899bb':'#ff4455'} sub={`${wins}W / ${losses}L`} />
+            <StatCard label="PROFIT FACTOR"  value={pf===999?'∞':pf.toFixed(2)}     color={pf>=1.5?'#8899bb':'#f0a020'} />
+            <StatCard label="TOTAL TRADES"   value={total}                          color="#dde4ef"                        sub={`${accounts.length} compte${accounts.length>1?'s':''}`} />
             <StatCard label="MOY / TRADE"    value={fmt(pnl/Math.max(total,1),true)} color={pnlColor(pnl/Math.max(total,1))} />
           </div>
 
           {/* ── POINTS FORTS ── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-            <div style={{ height: '1px', flex: 1, background: 'rgba(196,18,48,0.12)' }} />
-            <span style={{ fontSize: '11px', color: '#c41230', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>✅ POINTS FORTS</span>
-            <div style={{ height: '1px', flex: 1, background: 'rgba(196,18,48,0.12)' }} />
+            <div style={{ height: '1px', flex: 1, background: 'rgba(136,153,187,0.12)' }} />
+            <span style={{ fontSize: '11px', color: '#8899bb', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>✅ POINTS FORTS</span>
+            <div style={{ height: '1px', flex: 1, background: 'rgba(136,153,187,0.12)' }} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '20px' }}>
-            {bestDow     && <InsightCard icon="📅" title="MEILLEUR JOUR"          value={bestDow.label}     desc={`${fmt(bestDow.pnl,true)} · ${bestDow.wr}% WR`}        color="#c41230" onClick={() => openDow(bestDow)} />}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '10px', marginBottom: '20px' }}>
+            {bestDow     && <InsightCard icon="📅" title="MEILLEUR JOUR"          value={bestDow.label}     desc={`${fmt(bestDow.pnl,true)} · ${bestDow.wr}% WR`}        color="#8899bb" onClick={() => openDow(bestDow)} />}
             {bestSession && <InsightCard icon="⏰" title="MEILLEURE SESSION (P&L)" value={bestSession.label} desc={`${fmt(bestSession.pnl,true)} · ${bestSession.wr}% WR · ${bestSession.count}T`} color={bestSession.color} onClick={() => openSession(bestSession)} />}
-            {bestHour    && <InsightCard icon="🎯" title="HEURE OPTIMALE"          value={bestHour.label}    desc={`${fmt(bestHour.pnl,true)} · ${bestHour.wr}% WR`}       color="#c41230" onClick={() => openHour(bestHour)} />}
+            {bestHour    && <InsightCard icon="🎯" title="HEURE OPTIMALE"          value={bestHour.label}    desc={`${fmt(bestHour.pnl,true)} · ${bestHour.wr}% WR`}       color="#8899bb" onClick={() => openHour(bestHour)} />}
             {bestPair    && <InsightCard icon="📈" title="INSTRUMENT PHARE"        value={bestPair.pair}     desc={`${fmt(bestPair.pnl,true)} · ${bestPair.wr}% WR`}       color="#00aaff" />}
             {bestEmotion && <InsightCard icon="🧠" title="MEILLEUR ÉTAT MENTAL"    value={bestEmotion.em}    desc={`${fmt(bestEmotion.pnl,true)} · ${bestEmotion.total}T`} color="#aa88ff" />}
           </div>
@@ -640,7 +640,7 @@ export default function GlobalView() {
             <span style={{ fontSize: '11px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>❌ POINTS FAIBLES</span>
             <div style={{ height: '1px', flex: 1, background: 'rgba(255,68,85,0.1)' }} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '10px', marginBottom: '24px' }}>
             {worstDow     && <InsightCard icon="📅" title="PIRE JOUR"              value={worstDow.label}     desc={`${fmt(worstDow.pnl,true)} · ${worstDow.wr}% WR`}         color="#ff4455" onClick={() => openDow(worstDow)} />}
             {worstSession && <InsightCard icon="⏰" title="PIRE SESSION (P&L)"      value={worstSession.label} desc={`${fmt(worstSession.pnl,true)} · ${worstSession.wr}% WR · ${worstSession.count}T`} color="#ff4455" onClick={() => openSession(worstSession)} />}
             {worstHour    && <InsightCard icon="🕐" title="HEURE À ÉVITER"          value={worstHour.label}    desc={`${fmt(worstHour.pnl,true)} · ${worstHour.wr}% WR`}        color="#ff4455" onClick={() => openHour(worstHour)} />}
@@ -655,11 +655,11 @@ export default function GlobalView() {
             <Section title="📅 P&L NET PAR JOUR DE LA SEMAINE">
               <ResponsiveContainer width="100%" height={160}>
                 <BarChart data={byDow.filter(d => d.count > 0)} barSize={28} barCategoryGap="35%" margin={{ top:5, right:5, bottom:0, left:5 }}>
-                  <CartesianGrid stroke="rgba(196,18,48,0.05)" strokeDasharray="3 3" />
-                  <XAxis dataKey="label" tick={{ fill:'#6a3a3a', fontSize:11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill:'#6a3a3a', fontSize:10 }} axisLine={false} tickLine={false} tickFormatter={v=>`${v}$`} width={55} />
+                  <CartesianGrid stroke="rgba(136,153,187,0.05)" strokeDasharray="3 3" />
+                  <XAxis dataKey="label" tick={{ fill:'#5a6a82', fontSize:11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill:'#5a6a82', fontSize:10 }} axisLine={false} tickLine={false} tickFormatter={v=>`${v}$`} width={55} />
                   <Tooltip content={<CTooltip />} />
-                  <ReferenceLine y={0} stroke="rgba(196,18,48,0.18)" />
+                  <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
                   <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} maxBarSize={32} isAnimationActive
                     onClick={(data) => { const d = byDow.find(x => x.label === data.label); if (d) openDow(d); }}
                     style={{ cursor: 'pointer' }}
@@ -670,11 +670,11 @@ export default function GlobalView() {
               </ResponsiveContainer>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {byDow.filter(d => d.count > 0).map(d => (
-                  <div key={d.label} onClick={() => openDow(d)} style={{ background: 'rgba(18,6,10,0.5)', border: '1px solid rgba(196,18,48,0.08)', borderRadius: '4px', padding: '5px 8px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.15s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(196,18,48,0.08)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(18,6,10,0.5)'}
+                  <div key={d.label} onClick={() => openDow(d)} style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '4px', padding: '5px 8px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(136,153,187,0.08)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(14,15,22,0.5)'}
                   >
-                    <div style={{ fontSize: '11px', color: '#7a4040', marginBottom: '2px' }}>{d.label}</div>
+                    <div style={{ fontSize: '11px', color: '#5868a0', marginBottom: '2px' }}>{d.label}</div>
                     <div style={{ fontSize: '12px', fontWeight: '700', color: pnlColor(d.pnl) }}>{fmt(d.pnl, true)}</div>
                     <div style={{ fontSize: '10px', color: d.wr >= 50 ? '#00cc77' : '#ff3344' }}>{d.wr}% WR</div>
                   </div>
@@ -687,20 +687,20 @@ export default function GlobalView() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {bySessions.filter(s => s.count > 0).map(s => (
                   <div key={s.label} onClick={() => openSession(s)} style={{ cursor: 'pointer', padding: '8px 10px', borderRadius: '6px', transition: 'background 0.15s', border: '1px solid transparent' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(196,18,48,0.05)'; e.currentTarget.style.borderColor = 'rgba(196,18,48,0.12)'; }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(136,153,187,0.05)'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.12)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: s.color }} />
-                        <span style={{ fontSize: '13px', color: '#e0d0d0', fontWeight: '600' }}>{s.label}</span>
-                        <span style={{ fontSize: '11px', color: '#7a4040' }}>{s.start}h-{s.end}h</span>
+                        <span style={{ fontSize: '13px', color: '#dde4ef', fontWeight: '600' }}>{s.label}</span>
+                        <span style={{ fontSize: '11px', color: '#5868a0' }}>{s.start}h-{s.end}h</span>
                       </div>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <span style={{ fontSize: '12px', color: pnlColor(s.pnl), fontWeight: '700' }}>{fmt(s.pnl, true)}</span>
-                        <span style={{ fontSize: '12px', color: s.wr>=50?'#c41230':'#ff4455' }}>{s.wr}% WR</span>
-                        <span style={{ fontSize: '11px', color: '#6a3a3a' }}>{s.count}T</span>
-                        <span style={{ fontSize: '13px', color: '#6a3a3a' }}>›</span>
+                        <span style={{ fontSize: '12px', color: s.wr>=50?'#8899bb':'#ff4455' }}>{s.wr}% WR</span>
+                        <span style={{ fontSize: '11px', color: '#5a6a82' }}>{s.count}T</span>
+                        <span style={{ fontSize: '13px', color: '#5a6a82' }}>›</span>
                       </div>
                     </div>
                     <div style={{ height: '5px', background: 'rgba(0,0,0,0.3)', borderRadius: '3px', overflow: 'hidden' }}>
@@ -720,16 +720,16 @@ export default function GlobalView() {
             <Section title="🕐 P&L NET PAR HEURE D'ENTRÉE (cliquer sur une barre)">
               <ResponsiveContainer width="100%" height={170}>
                 <BarChart data={hourDataFull} barSize={14} barCategoryGap="20%" margin={{ top:5, right:5, bottom:0, left:5 }}>
-                  <CartesianGrid stroke="rgba(196,18,48,0.05)" strokeDasharray="3 3" />
-                  <XAxis dataKey="label" tick={{ fill:'#6a3a3a', fontSize:10 }} axisLine={false} tickLine={false} interval={0} />
-                  <YAxis tick={{ fill:'#6a3a3a', fontSize:10 }} axisLine={false} tickLine={false} tickFormatter={v=>`${v}$`} width={55} />
+                  <CartesianGrid stroke="rgba(136,153,187,0.05)" strokeDasharray="3 3" />
+                  <XAxis dataKey="label" tick={{ fill:'#5a6a82', fontSize:10 }} axisLine={false} tickLine={false} interval={0} />
+                  <YAxis tick={{ fill:'#5a6a82', fontSize:10 }} axisLine={false} tickLine={false} tickFormatter={v=>`${v}$`} width={55} />
                   <Tooltip content={<CTooltip />} />
-                  <ReferenceLine y={0} stroke="rgba(196,18,48,0.18)" />
+                  <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
                   <Bar dataKey="pnl" name="P&L net" radius={[2,2,0,0]} maxBarSize={16} isAnimationActive
                     onClick={(data) => { const h = byHour.find(x => x.label === data.label); if (h && h.count > 0) openHour(h); }}
                     style={{ cursor: 'pointer' }}
                   >
-                    {hourDataFull.map((h, i) => <Cell key={i} fill={h.count > 0 ? h.sessionColor : 'rgba(196,18,48,0.06)'} fillOpacity={h.count > 0 ? 1 : 0.2} />)}
+                    {hourDataFull.map((h, i) => <Cell key={i} fill={h.count > 0 ? h.sessionColor : 'rgba(136,153,187,0.06)'} fillOpacity={h.count > 0 ? 1 : 0.2} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -737,12 +737,12 @@ export default function GlobalView() {
                 {[
                   { label:'Asie',        hours:'0h-9h',   color:'#aa88ff' },
                   { label:'Londres',     hours:'8h-15h',  color:'#00aaff' },
-                  { label:'New York',    hours:'13h-22h', color:'#c41230' },
+                  { label:'New York',    hours:'13h-22h', color:'#8899bb' },
                   { label:'Hors séance', hours:'22h-0h',  color:'#f0a020' },
                 ].map(s => (
                   <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: s.color }} />
-                    <span style={{ fontSize: '11px', color: '#7a4040' }}>{s.label} ({s.hours})</span>
+                    <span style={{ fontSize: '11px', color: '#5868a0' }}>{s.label} ({s.hours})</span>
                   </div>
                 ))}
               </div>
@@ -756,15 +756,15 @@ export default function GlobalView() {
                 {pairArr.slice(0,8).map(p => (
                   <div key={p.pair}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                      <span style={{ fontSize: '13px', color: '#e0d0d0', fontWeight: '600' }}>{p.pair}</span>
+                      <span style={{ fontSize: '13px', color: '#dde4ef', fontWeight: '600' }}>{p.pair}</span>
                       <div style={{ display: 'flex', gap: '10px' }}>
                         <span style={{ fontSize: '12px', color: pnlColor(p.pnl), fontWeight: '700' }}>{fmt(p.pnl, true)}</span>
-                        <span style={{ fontSize: '12px', color: p.wr>=50?'#c41230':'#ff4455' }}>{p.wr}% WR</span>
-                        <span style={{ fontSize: '11px', color: '#6a3a3a' }}>{p.total}T</span>
+                        <span style={{ fontSize: '12px', color: p.wr>=50?'#8899bb':'#ff4455' }}>{p.wr}% WR</span>
+                        <span style={{ fontSize: '11px', color: '#5a6a82' }}>{p.total}T</span>
                       </div>
                     </div>
-                    <div style={{ height: '4px', background: 'rgba(196,18,48,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${p.wr}%`, background: p.pnl>=0?'#c41230':'#ff4455', borderRadius: '2px' }} />
+                    <div style={{ height: '4px', background: 'rgba(136,153,187,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${p.wr}%`, background: p.pnl>=0?'#8899bb':'#ff4455', borderRadius: '2px' }} />
                     </div>
                   </div>
                 ))}
@@ -777,18 +777,18 @@ export default function GlobalView() {
                 {emotionArr.length === 0 ? (
                   <div style={{ color: '#3a1818', fontSize: '12px', textAlign: 'center', padding: '20px 0' }}>Renseigne ton émotion sur chaque trade</div>
                 ) : emotionArr.map(e => (
-                  <div key={e.em} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'rgba(18,6,10,0.4)', borderRadius: '5px', border: '1px solid rgba(196,18,48,0.08)' }}>
+                  <div key={e.em} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'rgba(14,15,22,0.4)', borderRadius: '5px', border: '1px solid rgba(136,153,187,0.08)' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', color: '#e0d0d0', fontWeight: '600', marginBottom: '2px' }}>{e.em}</div>
-                      <div style={{ fontSize: '11px', color: '#7a4040' }}>{e.total} trade{e.total>1?'s':''}</div>
+                      <div style={{ fontSize: '13px', color: '#dde4ef', fontWeight: '600', marginBottom: '2px' }}>{e.em}</div>
+                      <div style={{ fontSize: '11px', color: '#5868a0' }}>{e.total} trade{e.total>1?'s':''}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: '13px', fontWeight: '700', color: pnlColor(e.pnl) }}>{fmt(e.pnl, true)}</div>
-                      <div style={{ fontSize: '12px', color: e.wr>=50?'#c41230':'#ff4455' }}>{e.wr}% WR</div>
+                      <div style={{ fontSize: '12px', color: e.wr>=50?'#8899bb':'#ff4455' }}>{e.wr}% WR</div>
                     </div>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: `conic-gradient(${e.wr>=50?'#c41230':'#ff4455'} ${e.wr*3.6}deg, rgba(18,6,10,0.8) 0deg)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#08050a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '11px', fontWeight: '700', color: e.wr>=50?'#c41230':'#ff4455' }}>{e.wr}%</span>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: `conic-gradient(${e.wr>=50?'#8899bb':'#ff4455'} ${e.wr*3.6}deg, rgba(14,15,22,0.8) 0deg)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#090a10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: e.wr>=50?'#8899bb':'#ff4455' }}>{e.wr}%</span>
                       </div>
                     </div>
                   </div>
@@ -803,14 +803,14 @@ export default function GlobalView() {
               <Section title="🏦 PERFORMANCE PAR COMPTE">
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: '10px' }}>
                   {byAccount.map(acc => (
-                    <div key={acc.name} style={{ background: acc.isBlown?'rgba(255,68,85,0.06)':'rgba(18,6,10,0.5)', border: `1px solid ${acc.isBlown?'rgba(255,68,85,0.3)':acc.color+'25'}`, borderLeft: `3px solid ${acc.isBlown?'#ff4455':acc.color}`, borderRadius: '6px', padding: '12px 14px', position: 'relative', opacity: acc.isBlown?0.75:1 }}>
+                    <div key={acc.name} style={{ background: acc.isBlown?'rgba(255,68,85,0.06)':'rgba(14,15,22,0.5)', border: `1px solid ${acc.isBlown?'rgba(255,68,85,0.3)':acc.color+'25'}`, borderLeft: `3px solid ${acc.isBlown?'#ff4455':acc.color}`, borderRadius: '6px', padding: '12px 14px', position: 'relative', opacity: acc.isBlown?0.75:1 }}>
                       {acc.isBlown && <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,68,85,0.15)', border: '1px solid rgba(255,68,85,0.4)', borderRadius: '3px', padding: '2px 6px', fontSize: '9px', color: '#ff4455', fontWeight: '700', letterSpacing: '1px' }}>💀 CRAMÉ</div>}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: acc.isBlown?'#ff4455':acc.color }} />
-                        <span style={{ fontSize: '13px', color: acc.isBlown?'#8a5a5a':'#e0d0d0', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{acc.name}</span>
+                        <span style={{ fontSize: '13px', color: acc.isBlown?'#8a5a5a':'#dde4ef', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{acc.name}</span>
                       </div>
                       <div style={{ fontSize: '18px', fontWeight: '700', color: acc.isBlown?'#ff4455':pnlColor(acc.pnl), marginBottom: '4px' }}>{fmt(acc.pnl, true)}</div>
-                      <div style={{ fontSize: '12px', color: acc.isBlown?'#6a3a3a':(acc.wr>=50?'#c41230':'#ff4455') }}>{acc.wr.toFixed(1)}% WR · {acc.total}T</div>
+                      <div style={{ fontSize: '12px', color: acc.isBlown?'#5a6a82':(acc.wr>=50?'#8899bb':'#ff4455') }}>{acc.wr.toFixed(1)}% WR · {acc.total}T</div>
                       {acc.isBlown && <div style={{ fontSize: '11px', color: '#ff4455', marginTop: '4px' }}>⚠️ Floor {acc.floor}$ franchi</div>}
                     </div>
                   ))}
@@ -842,17 +842,17 @@ export default function GlobalView() {
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <input placeholder="Rechercher paire, date, compte..." value={tradeSearch} onChange={e => setTradeSearch(e.target.value)} style={{ ...inp, width: '240px' }} />
                 {['ALL','WIN','LOSS'].map(f => {
-                  const c = f==='WIN'?'#c41230':f==='LOSS'?'#ff4455':'#c41230';
-                  return <button key={f} onClick={() => setTradeFilter(f)} style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${tradeFilter===f?c:'#2a1515'}`, background: tradeFilter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':'0,255,136'},0.1)`:'transparent', color: tradeFilter===f?c:'#6a3a3a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>;
+                  const c = f==='WIN'?'#8899bb':f==='LOSS'?'#ff4455':'#8899bb';
+                  return <button key={f} onClick={() => setTradeFilter(f)} style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${tradeFilter===f?c:'#1e2c40'}`, background: tradeFilter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':'0,255,136'},0.1)`:'transparent', color: tradeFilter===f?c:'#5a6a82', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>;
                 })}
-                <span style={{ fontSize: '11px', color: '#6a3a3a', marginLeft: 'auto' }}>
+                <span style={{ fontSize: '11px', color: '#5a6a82', marginLeft: 'auto' }}>
                   P&L: <span style={{ color: pnlColor(allTradesFiltered.reduce((s,t)=>s+getNet(t),0)), fontWeight: '700' }}>{fmt(allTradesFiltered.reduce((s,t)=>s+getNet(t),0), true)}</span>
                 </span>
               </div>
               <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                 <TradeTable trades={allTradesFiltered.slice(0, 200)} />
               </div>
-              {allTradesFiltered.length > 200 && <div style={{ textAlign: 'center', color: '#6a3a3a', fontSize: '11px', padding: '8px' }}>Limité à 200 — utilisez les filtres</div>}
+              {allTradesFiltered.length > 200 && <div style={{ textAlign: 'center', color: '#5a6a82', fontSize: '11px', padding: '8px' }}>Limité à 200 — utilisez les filtres</div>}
             </Section>
           </div>
         </>

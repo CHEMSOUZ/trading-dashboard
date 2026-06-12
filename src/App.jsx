@@ -24,6 +24,7 @@ import TradingPlan from './pages/TradingPlan';
 import StrategieDiscipline from './pages/StrategieDiscipline';
 import FitnessSante from './pages/FitnessSante';
 import Bot from './pages/Bot';
+import Journal from './pages/Journal';
 
 export default function App() {
   const [activeAccount, setActiveAccount] = useState(null);
@@ -45,7 +46,7 @@ export default function App() {
   }, []);
 
   if (loading) return (
-    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#08050a', color: '#6a3a3a', fontSize: '13px', letterSpacing: '2px', fontFamily: 'monospace' }}>
+    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#090a10', color: '#5a6a82', fontSize: '13px', letterSpacing: '2px', fontFamily: 'monospace' }}>
       CHARGEMENT...
     </div>
   );
@@ -96,35 +97,35 @@ export default function App() {
     <Router>
       <RouteTracker />
       {updateReady && (
-        <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999, background: '#120508', border: '1px solid rgba(196,18,48,0.40)', borderRadius: '8px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 4px 24px rgba(0,0,0,0.7)' }}>
+        <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999, background: '#101018', border: '1px solid rgba(136,153,187,0.40)', borderRadius: '8px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 4px 24px rgba(0,0,0,0.7)' }}>
           <div>
-            <div style={{ fontSize: '12px', color: '#c41230', fontWeight: '700', marginBottom: '2px' }}>Mise à jour disponible — v{updateReady.version}</div>
-            <div style={{ fontSize: '10px', color: '#6a3a3a' }}>Redémarre pour installer la nouvelle version</div>
+            <div style={{ fontSize: '12px', color: '#8899bb', fontWeight: '700', marginBottom: '2px' }}>Mise à jour disponible — v{updateReady.version}</div>
+            <div style={{ fontSize: '10px', color: '#5a6a82' }}>Redémarre pour installer la nouvelle version</div>
           </div>
           <button onClick={() => window.electron.installUpdate()}
-            style={{ padding: '7px 14px', background: 'rgba(196,18,48,0.15)', border: '1px solid rgba(196,18,48,0.50)', borderRadius: '5px', color: '#c41230', fontSize: '11px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '1px' }}>
+            style={{ padding: '7px 14px', background: 'rgba(136,153,187,0.15)', border: '1px solid rgba(136,153,187,0.50)', borderRadius: '5px', color: '#8899bb', fontSize: '11px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '1px' }}>
             REDÉMARRER
           </button>
           <button onClick={() => setUpdateReady(null)}
-            style={{ padding: '4px 8px', background: 'none', border: 'none', color: '#6a3a3a', fontSize: '14px', cursor: 'pointer', lineHeight: 1 }}>
+            style={{ padding: '4px 8px', background: 'none', border: 'none', color: '#5a6a82', fontSize: '14px', cursor: 'pointer', lineHeight: 1 }}>
             ✕
           </button>
         </div>
       )}
-      <div style={{ display: 'flex', height: '100vh', background: '#08050a', color: '#e0d0d0', fontFamily: "'JetBrains Mono','Fira Code',monospace", overflow: 'hidden' }}>
+      <div style={{ display: 'flex', height: '100vh', background: '#090a10', color: '#dde4ef', fontFamily: "'JetBrains Mono','Fira Code',monospace", overflow: 'hidden' }}>
         <Sidebar
           activeAccount={activeAccount}
           onSwitchAccount={handleSwitchAccount}
           onAccountUpdated={handleAccountUpdated}
           onManageAccounts={handleManageAccounts}
         />
-        <main key={reloadKey} style={{ flex: 1, overflowY: 'auto', background: '#09050c', backgroundImage: 'radial-gradient(ellipse 60% 40% at 80% 0%,rgba(50,6,15,0.35) 0%,transparent 60%)' }}>
+        <main key={reloadKey} style={{ flex: 1, overflowY: 'auto', background: '#0c0d16', backgroundImage: 'radial-gradient(ellipse 60% 40% at 80% 0%,rgba(18,20,32,0.35) 0%,transparent 60%)' }}>
           <Routes>
-            <Route path="/"              element={<Navigate to={localStorage.getItem('lastRoute') || '/dashboard'} replace />} />
-            <Route path="/dashboard"     element={<Dashboard />} />
+            <Route path="/"              element={<Navigate to={localStorage.getItem('lastRoute') || '/journal'} replace />} />
+            <Route path="/dashboard"     element={<Navigate to="/journal" replace />} />
             <Route path="/dashboard/new" element={<NewTrade />} />
             <Route path="/dashboard/:id" element={<NewTrade />} />
-            <Route path="/stats"         element={<Stats />} />
+            <Route path="/stats"         element={<Navigate to="/journal?tab=graphiques" replace />} />
             <Route path="/analysis"      element={<Analysis />} />
             <Route path="/global"        element={<GlobalView />} />
             <Route path="/propfirm"      element={<PropFirm />} />
@@ -138,6 +139,9 @@ export default function App() {
             <Route path="/strategie"      element={<StrategieDiscipline />} />
             <Route path="/fitness"        element={<FitnessSante />} />
             <Route path="/bot"            element={<Bot />} />
+            <Route path="/journal"        element={<Journal />} />
+            <Route path="/journal/new"    element={<NewTrade />} />
+            <Route path="/journal/:id"    element={<NewTrade />} />
           </Routes>
         </main>
       </div>

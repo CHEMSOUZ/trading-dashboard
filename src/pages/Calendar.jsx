@@ -380,7 +380,7 @@ export default function Calendar() {
   }
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '1100px' }}>
+    <div style={{ padding: '24px 28px', maxWidth: 'none' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
@@ -407,7 +407,7 @@ export default function Calendar() {
 
       {/* Month summary strip */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px',
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '10px',
         marginBottom: '20px',
       }}>
         {[

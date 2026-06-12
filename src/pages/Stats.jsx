@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
@@ -17,7 +17,7 @@ function fmt(n, sign = false) {
 function pnlColor(v) {
   if (v > 0) return '#00cc77';
   if (v < 0) return '#ff3344';
-  return '#887070';
+  return '#7888a0';
 }
 function fmtDur(sec) {
   if (!sec || sec <= 0) return '—';
@@ -49,8 +49,8 @@ function parseCsv(content) {
 function CTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: 'rgba(10,3,6,0.97)', border: '1px solid rgba(196,18,48,0.22)', borderRadius: '4px', padding: '8px 12px', fontSize: '11px', fontFamily: 'inherit' }}>
-      <div style={{ color: '#6a3a3a', marginBottom: '4px' }}>{label}</div>
+    <div style={{ background: 'rgba(8,9,16,0.97)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', padding: '8px 12px', fontSize: '11px', fontFamily: 'inherit' }}>
+      <div style={{ color: '#5a6a82', marginBottom: '4px' }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ color: (p.value ?? 0) >= 0 ? '#00cc77' : '#ff3344', fontWeight: '700' }}>
           {p.name}: {typeof p.value === 'number' ? fmt(p.value, true) : p.value}
@@ -61,12 +61,12 @@ function CTooltip({ active, payload, label }) {
 }
 
 // ── Stat Card ─────────────────────────────────────────────────
-function StatCard({ label, value, sub, color = '#e0d0d0' }) {
+function StatCard({ label, value, sub, color = '#dde4ef' }) {
   return (
-    <div style={{ background: 'rgba(18,6,10,0.5)', border: '1px solid rgba(196,18,48,0.10)', borderTop: `2px solid ${color}`, borderRadius: '6px', padding: '12px 14px' }}>
-      <div style={{ fontSize: '8px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '5px' }}>{label}</div>
+    <div style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.10)', borderTop: `2px solid ${color}`, borderRadius: '6px', padding: '12px 14px' }}>
+      <div style={{ fontSize: '8px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '5px' }}>{label}</div>
       <div style={{ fontSize: '18px', fontWeight: '700', color, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '9px', color: '#7a4040', marginTop: '4px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: '9px', color: '#5868a0', marginTop: '4px' }}>{sub}</div>}
     </div>
   );
 }
@@ -105,46 +105,46 @@ function ImportModal({ onClose, onImported }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#09050c', border: '1px solid rgba(196,18,48,0.22)', borderRadius: '10px', width: '100%', maxWidth: '480px', padding: '28px' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#0c0d16', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '10px', width: '100%', maxWidth: '480px', padding: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div>
-            <div style={{ fontSize: '9px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '4px' }}>TOPSTEPX</div>
-            <div style={{ fontSize: '18px', fontWeight: '700', color: '#f0e0e2' }}>Import CSV</div>
+            <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '4px' }}>TOPSTEPX</div>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: '#e8edf8' }}>Import CSV</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: '1px solid #2a1515', color: '#7a4040', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
+          <button onClick={onClose} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
         </div>
         {status === 'idle' && (
           <div onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop}
-            style={{ border: `2px dashed ${dragOver ? '#c41230' : '#1a4a2a'}`, borderRadius: '8px', padding: '32px', textAlign: 'center', background: dragOver ? 'rgba(196,18,48,0.06)' : 'rgba(18,6,10,0.4)', cursor: 'pointer', transition: 'all 0.2s' }}
+            style={{ border: `2px dashed ${dragOver ? '#8899bb' : '#1a4a2a'}`, borderRadius: '8px', padding: '32px', textAlign: 'center', background: dragOver ? 'rgba(136,153,187,0.06)' : 'rgba(14,15,22,0.4)', cursor: 'pointer', transition: 'all 0.2s' }}
             onClick={handleDialog}
           >
             <div style={{ fontSize: '32px', marginBottom: '8px' }}>📂</div>
-            <div style={{ fontSize: '12px', color: '#e0d0d0', marginBottom: '4px' }}>Glisse ton fichier CSV ici</div>
-            <div style={{ fontSize: '10px', color: '#6a3a3a' }}>ou clique pour ouvrir</div>
+            <div style={{ fontSize: '12px', color: '#dde4ef', marginBottom: '4px' }}>Glisse ton fichier CSV ici</div>
+            <div style={{ fontSize: '10px', color: '#5a6a82' }}>ou clique pour ouvrir</div>
           </div>
         )}
-        {status === 'loading' && <div style={{ padding: '40px', textAlign: 'center', color: '#6a3a3a', fontSize: '12px', letterSpacing: '2px' }}>IMPORTATION...</div>}
+        {status === 'loading' && <div style={{ padding: '40px', textAlign: 'center', color: '#5a6a82', fontSize: '12px', letterSpacing: '2px' }}>IMPORTATION...</div>}
         {status === 'done' && result && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
-            <div style={{ fontSize: '16px', fontWeight: '700', color: '#c41230', marginBottom: '16px' }}>Import réussi !</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '20px' }}>
-              {[['IMPORTÉS', result.imported, '#c41230'], ['IGNORÉS', result.skipped, '#f0a020'], ['ERREURS', result.errors, '#ff4455']].map(([l,v,c]) => (
-                <div key={l} style={{ background: 'rgba(18,6,10,0.5)', border: '1px solid rgba(196,18,48,0.08)', borderRadius: '5px', padding: '12px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '8px', color: '#6a3a3a', marginBottom: '4px' }}>{l}</div>
+            <div style={{ fontSize: '16px', fontWeight: '700', color: '#8899bb', marginBottom: '16px' }}>Import réussi !</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '10px', marginBottom: '20px' }}>
+              {[['IMPORTÉS', result.imported, '#8899bb'], ['IGNORÉS', result.skipped, '#f0a020'], ['ERREURS', result.errors, '#ff4455']].map(([l,v,c]) => (
+                <div key={l} style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '5px', padding: '12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '8px', color: '#5a6a82', marginBottom: '4px' }}>{l}</div>
                   <div style={{ fontSize: '20px', fontWeight: '700', color: c }}>{v}</div>
                 </div>
               ))}
             </div>
-            <button onClick={onClose} style={{ background: 'rgba(196,18,48,0.18)', border: '1px solid rgba(196,18,48,0.35)', color: '#c41230', padding: '10px 24px', borderRadius: '5px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>FERMER</button>
+            <button onClick={onClose} style={{ background: 'rgba(136,153,187,0.18)', border: '1px solid rgba(136,153,187,0.35)', color: '#8899bb', padding: '10px 24px', borderRadius: '5px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>FERMER</button>
           </div>
         )}
         {status === 'error' && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>❌</div>
             <div style={{ fontSize: '14px', color: '#ff4455', marginBottom: '12px' }}>Erreur d'import</div>
-            <div style={{ fontSize: '11px', color: '#887070', marginBottom: '20px' }}>{result?.error}</div>
-            <button onClick={() => setStatus('idle')} style={{ background: 'transparent', border: '1px solid #2a1515', color: '#7a4040', padding: '8px 16px', borderRadius: '5px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>RÉESSAYER</button>
+            <div style={{ fontSize: '11px', color: '#7888a0', marginBottom: '20px' }}>{result?.error}</div>
+            <button onClick={() => setStatus('idle')} style={{ background: 'transparent', border: '1px solid #1e2c40', color: '#5868a0', padding: '8px 16px', borderRadius: '5px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>RÉESSAYER</button>
           </div>
         )}
       </div>
@@ -212,32 +212,32 @@ function Calendar({ trades, onDayClick }) {
     const data = byDay[key];
     const isToday = key === today;
     const pnl = data?.pnl ?? null;
-    const bg = pnl == null ? 'rgba(18,6,10,0.3)'
+    const bg = pnl == null ? 'rgba(14,15,22,0.3)'
       : pnl > 0  ? `rgba(0,255,136,${Math.min(0.05 + (pnl / 2000) * 0.2, 0.25)})`
       : pnl < 0  ? `rgba(255,68,85,${Math.min(0.05 + (Math.abs(pnl) / 2000) * 0.2, 0.25)})`
       : 'rgba(240,160,32,0.08)';
     return {
       background: bg,
-      border: isToday ? '1.5px solid rgba(0,170,255,0.6)' : '1px solid rgba(196,18,48,0.06)',
+      border: isToday ? '1.5px solid rgba(0,170,255,0.6)' : '1px solid rgba(136,153,187,0.06)',
     };
   };
 
   return (
-    <div style={{ background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '8px', padding: '16px' }}>
+    <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '8px', padding: '16px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
         <div>
-          <div style={{ fontSize: '9px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '3px' }}>CALENDRIER</div>
+          <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '3px' }}>CALENDRIER</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: '#7a4040', cursor: 'pointer', fontSize: '14px' }}>‹</button>
-            <span style={{ fontSize: '14px', fontWeight: '700', color: '#f0e0e2' }}>{MONTHS[month]} {year}</span>
-            <button onClick={nextMonth} style={{ background: 'none', border: 'none', color: '#7a4040', cursor: 'pointer', fontSize: '14px' }}>›</button>
+            <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: '#5868a0', cursor: 'pointer', fontSize: '14px' }}>‹</button>
+            <span style={{ fontSize: '14px', fontWeight: '700', color: '#e8edf8' }}>{MONTHS[month]} {year}</span>
+            <button onClick={nextMonth} style={{ background: 'none', border: 'none', color: '#5868a0', cursor: 'pointer', fontSize: '14px' }}>›</button>
             <button onClick={() => { setYear(new Date().getFullYear()); setMonth(new Date().getMonth()); }}
-              style={{ background: 'rgba(196,18,48,0.10)', border: '1px solid rgba(196,18,48,0.18)', color: '#c41230', padding: '3px 8px', borderRadius: '4px', fontSize: '9px', fontFamily: 'inherit', cursor: 'pointer' }}>Aujourd'hui</button>
+              style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.18)', color: '#8899bb', padding: '3px 8px', borderRadius: '4px', fontSize: '9px', fontFamily: 'inherit', cursor: 'pointer' }}>Aujourd'hui</button>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '8px', color: '#6a3a3a', letterSpacing: '1px', marginBottom: '3px' }}>P&L MENSUEL</div>
+          <div style={{ fontSize: '8px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>P&L MENSUEL</div>
           <div style={{ fontSize: '16px', fontWeight: '700', color: pnlColor(monthTotal) }}>{fmt(monthTotal, true)}</div>
         </div>
       </div>
@@ -246,9 +246,9 @@ function Calendar({ trades, onDayClick }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr) 90px', gap: '2px' }}>
         {/* DOW headers */}
         {['D','L','Ma','Me','J','V','S'].map(d => (
-          <div key={d} style={{ textAlign: 'center', fontSize: '9px', color: '#6a3a3a', padding: '4px 0', letterSpacing: '1px' }}>{d}</div>
+          <div key={d} style={{ textAlign: 'center', fontSize: '9px', color: '#5a6a82', padding: '4px 0', letterSpacing: '1px' }}>{d}</div>
         ))}
-        <div style={{ textAlign: 'center', fontSize: '9px', color: '#6a3a3a', padding: '4px 0' }}>SEMAINE</div>
+        <div style={{ textAlign: 'center', fontSize: '9px', color: '#5a6a82', padding: '4px 0' }}>SEMAINE</div>
 
         {/* Weeks */}
         {weeks.map((week, wi) => {
@@ -272,7 +272,7 @@ function Calendar({ trades, onDayClick }) {
                   onMouseEnter={e => { if (data) e.currentTarget.style.opacity = '0.75'; }}
                   onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
                 >
-                  <div style={{ fontSize: '9px', color: isToday ? '#00aaff' : '#7a4040', fontWeight: isToday ? '700' : '400', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: '9px', color: isToday ? '#00aaff' : '#5868a0', fontWeight: isToday ? '700' : '400', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{day}</span>
                     {isToday && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00aaff' }} />}
                   </div>
@@ -281,17 +281,17 @@ function Calendar({ trades, onDayClick }) {
                       <div style={{ fontSize: '10px', fontWeight: '700', color: pnlColor(data.pnl), lineHeight: 1 }}>
                         {fmt(data.pnl, true)}
                       </div>
-                      <div style={{ fontSize: '8px', color: '#6a3a3a' }}>{data.count} trade{data.count > 1 ? 's' : ''}</div>
+                      <div style={{ fontSize: '8px', color: '#5a6a82' }}>{data.count} trade{data.count > 1 ? 's' : ''}</div>
                     </>
                   )}
                 </div>
               );
             }),
             // Week summary
-            <div key={`week-${wi}`} style={{ background: 'rgba(18,6,10,0.5)', border: '1px solid rgba(196,18,48,0.08)', borderRadius: '3px', minHeight: '52px', padding: '6px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
-              <div style={{ fontSize: '8px', color: '#6a3a3a', letterSpacing: '0.5px' }}>S{wi+1}</div>
+            <div key={`week-${wi}`} style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '3px', minHeight: '52px', padding: '6px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
+              <div style={{ fontSize: '8px', color: '#5a6a82', letterSpacing: '0.5px' }}>S{wi+1}</div>
               <div style={{ fontSize: '11px', fontWeight: '700', color: pnlColor(weekData.total) }}>{weekData.total !== 0 ? fmt(weekData.total, true) : '$0.00'}</div>
-              <div style={{ fontSize: '8px', color: '#6a3a3a' }}>{weekData.count} trade{weekData.count > 1 ? 's' : ''}</div>
+              <div style={{ fontSize: '8px', color: '#5a6a82' }}>{weekData.count} trade{weekData.count > 1 ? 's' : ''}</div>
             </div>
           ];
         })}
@@ -308,28 +308,28 @@ function DayTradesModal({ dateKey, trades, onClose }) {
   const sorted = [...trades].sort((a, b) => (a.entered_at || a.date).localeCompare(b.entered_at || b.date));
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#09050c', border: `1px solid ${pnlColor(dayPnl)}40`, borderRadius: '10px', width: '100%', maxWidth: '740px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 22px', borderBottom: '1px solid rgba(196,18,48,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#0c0d16', border: `1px solid ${pnlColor(dayPnl)}40`, borderRadius: '10px', width: '100%', maxWidth: '740px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ padding: '16px 22px', borderBottom: '1px solid rgba(136,153,187,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
-            <div style={{ fontSize: '16px', fontWeight: '700', color: '#f0e0e2', textTransform: 'capitalize' }}>{dateLabel}</div>
-            <div style={{ fontSize: '12px', color: '#7a4040', marginTop: '3px' }}>
+            <div style={{ fontSize: '16px', fontWeight: '700', color: '#e8edf8', textTransform: 'capitalize' }}>{dateLabel}</div>
+            <div style={{ fontSize: '12px', color: '#5868a0', marginTop: '3px' }}>
               {sorted.length} trade{sorted.length > 1 ? 's' : ''} · WR: {sorted.length > 0 ? Math.round(wins / sorted.length * 100) : 0}% · <span style={{ color: pnlColor(dayPnl), fontWeight: '700' }}>{fmt(dayPnl, true)}</span>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: '1px solid #2a1515', color: '#7a4040', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
+          <button onClick={onClose} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
         </div>
         <div style={{ overflowY: 'auto', flex: 1, padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
           {sorted.map((t, i) => {
             const net = getNet(t);
             const hour = t.entered_at ? new Date(t.entered_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—';
             return (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '58px 78px 68px 64px 78px 78px 88px', alignItems: 'center', padding: '8px 12px', background: 'rgba(18,6,10,0.4)', borderLeft: `2px solid ${pnlColor(net)}`, borderRadius: '4px', fontSize: '12px', gap: '4px' }}>
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '58px 78px 68px 64px 78px 78px 88px', alignItems: 'center', padding: '8px 12px', background: 'rgba(14,15,22,0.4)', borderLeft: `2px solid ${pnlColor(net)}`, borderRadius: '4px', fontSize: '12px', gap: '4px' }}>
                 <span style={{ color: '#6a8a7a', fontSize: '11px' }}>{hour}</span>
-                <span style={{ color: '#e0d0d0', fontWeight: '600' }}>{t.pair}</span>
+                <span style={{ color: '#dde4ef', fontWeight: '600' }}>{t.pair}</span>
                 <span style={{ color: t.direction === 'LONG' ? '#00cc77' : '#ff3344', fontSize: '11px', background: `rgba(${t.direction === 'LONG' ? '0,204,119' : '255,51,68'},0.10)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
-                <span style={{ color: '#887070', fontSize: '11px' }}>{t.entry ?? '—'}</span>
-                <span style={{ color: '#887070', fontSize: '11px' }}>{t.exit_price ?? '—'}</span>
-                <span style={{ color: '#7a4040', fontSize: '11px' }}>{t.duration ?? '—'}</span>
+                <span style={{ color: '#7888a0', fontSize: '11px' }}>{t.entry ?? '—'}</span>
+                <span style={{ color: '#7888a0', fontSize: '11px' }}>{t.exit_price ?? '—'}</span>
+                <span style={{ color: '#5868a0', fontSize: '11px' }}>{t.duration ?? '—'}</span>
                 <span style={{ color: pnlColor(net), fontWeight: '700', textAlign: 'right' }}>{fmt(net, true)}</span>
               </div>
             );
@@ -360,7 +360,7 @@ export default function Stats() {
   useEffect(() => { load(); }, [load]);
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#6a3a3a', fontSize: '11px', letterSpacing: '2px' }}>CALCUL EN COURS...</div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#5a6a82', fontSize: '11px', letterSpacing: '2px' }}>CALCUL EN COURS...</div>
   );
 
   const s = stats ?? {};
@@ -474,24 +474,24 @@ export default function Stats() {
     .map(([h, d]) => ({ label: `${h}h`, pnl: Math.round(d.pnl * 100) / 100, cnt: d.cnt, wr: Math.round(d.wins / d.cnt * 100) }));
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '1200px' }}>
+    <div style={{ padding: '24px 28px', maxWidth: 'none' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ fontSize: '10px', color: '#6a3a3a', letterSpacing: '3px', marginBottom: '6px' }}>ANALYSE</div>
-          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#f0e0e2', margin: 0 }}>Statistiques & Performance</h1>
-          <div style={{ fontSize: '11px', color: '#6a3a3a', marginTop: '4px' }}>
+          <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '6px' }}>ANALYSE</div>
+          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8edf8', margin: 0 }}>Statistiques & Performance</h1>
+          <div style={{ fontSize: '11px', color: '#5a6a82', marginTop: '4px' }}>
             {fTotal} trade{fTotal > 1 ? 's' : ''} · P&L net: <span style={{ color: pnlColor(fPnl), fontWeight: '700' }}>{fmt(fPnl, true)}</span>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <button onClick={() => setShowImport(true)} style={{ background: 'rgba(196,18,48,0.10)', border: '1px solid rgba(196,18,48,0.28)', color: '#c41230', padding: '7px 13px', borderRadius: '5px', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>
+          <button onClick={() => setShowImport(true)} style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.28)', color: '#8899bb', padding: '7px 13px', borderRadius: '5px', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>
             📥 Import CSV TopstepX
           </button>
           <div style={{ display: 'flex', gap: '4px' }}>
             {['TODAY','7D','30D','ALL'].map(p => (
-              <button key={p} onClick={() => { setPeriod(p); localStorage.setItem('stats_period', p); }} style={{ padding: '6px 10px', borderRadius: '4px', border: `1px solid ${period===p?'#c41230':'#2a1515'}`, background: period===p?'rgba(196,18,48,0.12)':'transparent', color: period===p?'#c41230':'#6a3a3a', fontSize: '9px', fontFamily: 'inherit', cursor: 'pointer' }}>{p}</button>
+              <button key={p} onClick={() => { setPeriod(p); localStorage.setItem('stats_period', p); }} style={{ padding: '6px 10px', borderRadius: '4px', border: `1px solid ${period===p?'#8899bb':'#1e2c40'}`, background: period===p?'rgba(136,153,187,0.12)':'transparent', color: period===p?'#8899bb':'#5a6a82', fontSize: '9px', fontFamily: 'inherit', cursor: 'pointer' }}>{p}</button>
             ))}
           </div>
         </div>
@@ -502,25 +502,25 @@ export default function Stats() {
         <StatCard label="P&L NET" value={fmt(fPnl, true)} color={pnlColor(fPnl)} sub={`Frais: -${fFees.toFixed(2)}$`} />
         <StatCard label="WINRATE" value={`${fWR.toFixed(1)}%`} color={fWR >= 50 ? '#00cc77' : '#ff3344'} sub={`${fWins}W / ${fLosses}L / ${fBe}BE`} />
         <StatCard label="PROFIT FACTOR" value={fPF === 999 ? '∞' : fPF.toFixed(2)} color={fPF >= 1.5 ? '#00cc77' : fPF >= 1 ? '#f0a020' : '#ff3344'} />
-        <StatCard label="AVG WIN NET" value={fmt(fAvgW, true)} color="#c41230" sub={`Gross: ${fmt(fGrossW, true)}`} />
+        <StatCard label="AVG WIN NET" value={fmt(fAvgW, true)} color="#8899bb" sub={`Gross: ${fmt(fGrossW, true)}`} />
         <StatCard label="AVG LOSS NET" value={fmt(-fAvgL)} color="#ff4455" sub={`Gross: -${fGrossL.toFixed(2)}$`} />
-        <StatCard label="RATIO W/L" value={fAvgL > 0 ? (fAvgW / fAvgL).toFixed(2) : '—'} color="#e0d0d0" sub="Avg Win / Avg Loss" />
+        <StatCard label="RATIO W/L" value={fAvgL > 0 ? (fAvgW / fAvgL).toFixed(2) : '—'} color="#dde4ef" sub="Avg Win / Avg Loss" />
       </div>
 
       {/* Best/Worst */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
         {[
-          { label: 'MEILLEUR TRADE (NET)', trade: bestTrade,  c: '#c41230' },
+          { label: 'MEILLEUR TRADE (NET)', trade: bestTrade,  c: '#8899bb' },
           { label: 'PIRE TRADE (NET)',     trade: worstTrade, c: '#ff4455' },
         ].map(({ label, trade, c }) => (
-          <div key={label} style={{ background: 'rgba(18,6,10,0.4)', border: `1px solid ${c}20`, borderLeft: `3px solid ${c}`, borderRadius: '6px', padding: '12px 16px' }}>
-            <div style={{ fontSize: '8px', color: '#6a3a3a', letterSpacing: '1.5px', marginBottom: '8px' }}>{label}</div>
+          <div key={label} style={{ background: 'rgba(14,15,22,0.4)', border: `1px solid ${c}20`, borderLeft: `3px solid ${c}`, borderRadius: '6px', padding: '12px 16px' }}>
+            <div style={{ fontSize: '8px', color: '#5a6a82', letterSpacing: '1.5px', marginBottom: '8px' }}>{label}</div>
             {trade ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                 <div>
-                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#e0d0d0' }}>{trade.pair}</span>
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#dde4ef' }}>{trade.pair}</span>
                   <span style={{ fontSize: '9px', color: trade.direction==='LONG'?'#00cc77':'#ff3344', marginLeft: '8px', background: `rgba(${trade.direction==='LONG'?'0,204,119':'255,51,68'},0.10)`, padding: '1px 5px', borderRadius: '3px' }}>{trade.direction}</span>
-                  <div style={{ fontSize: '9px', color: '#6a3a3a', marginTop: '3px' }}>{trade.date}{trade.entered_at ? ` · ${new Date(trade.entered_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : ''}</div>
+                  <div style={{ fontSize: '9px', color: '#5a6a82', marginTop: '3px' }}>{trade.date}{trade.entered_at ? ` · ${new Date(trade.entered_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : ''}</div>
                 </div>
                 <div style={{ fontSize: '18px', fontWeight: '700', color: c }}>{fmt(getNet(trade), true)}</div>
               </div>
@@ -532,8 +532,8 @@ export default function Stats() {
       {/* ── CHARTS ROW 1 ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
         {/* Equity curve */}
-        <div style={{ background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '9px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '12px' }}>P&L CUMULÉ NET</div>
+        <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '16px' }}>
+          <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>P&L CUMULÉ NET</div>
           {equityData.length > 1 ? (
             <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={equityData} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
@@ -543,11 +543,11 @@ export default function Stats() {
                     <stop offset="95%" stopColor={fPnl >= 0 ? '#00cc77' : '#ff3344'} stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid stroke="rgba(196,18,48,0.05)" strokeDasharray="3 3" />
-                <XAxis dataKey="label" tick={{ fill: '#6a3a3a', fontSize: 8 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#6a3a3a', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
+                <CartesianGrid stroke="rgba(136,153,187,0.05)" strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fill: '#5a6a82', fontSize: 8 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#5a6a82', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
                 <Tooltip content={<CTooltip />} />
-                <ReferenceLine y={0} stroke="rgba(196,18,48,0.18)" />
+                <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
                 <Area type="monotone" dataKey="pnl" name="P&L net" stroke={fPnl >= 0 ? '#00cc77' : '#ff3344'} strokeWidth={2} fill="url(#eqG)" dot={false} activeDot={{ r: 3 }} />
               </AreaChart>
             </ResponsiveContainer>
@@ -555,16 +555,16 @@ export default function Stats() {
         </div>
 
         {/* Daily bars */}
-        <div style={{ background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '9px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
+        <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '16px' }}>
+          <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
           {dailyArr.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
               <BarChart barCategoryGap="35%" data={dailyArr} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
-                <CartesianGrid stroke="rgba(196,18,48,0.05)" strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fill: '#6a3a3a', fontSize: 8 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#6a3a3a', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
+                <CartesianGrid stroke="rgba(136,153,187,0.05)" strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fill: '#5a6a82', fontSize: 8 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#5a6a82', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
                 <Tooltip content={<CTooltip />} />
-                <ReferenceLine y={0} stroke="rgba(196,18,48,0.18)" />
+                <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
                 <Bar dataKey="pnl" name="P&L net" maxBarSize={28} radius={[3,3,0,0]} isAnimationActive>
                   {dailyArr.map((d, i) => <Cell key={i} fill={pnlColor(d.pnl)} />)}
                 </Bar>
@@ -577,20 +577,20 @@ export default function Stats() {
       {/* ── CHARTS ROW 2 ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
         {/* By pair */}
-        <div style={{ background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '9px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '12px' }}>PERFORMANCE PAR INSTRUMENT (NET)</div>
+        <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '16px' }}>
+          <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>PERFORMANCE PAR INSTRUMENT (NET)</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {pairArr.slice(0, 6).map(p => (
               <div key={p.pair}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                  <span style={{ fontSize: '11px', color: '#e0d0d0', fontWeight: '600' }}>{p.pair}</span>
+                  <span style={{ fontSize: '11px', color: '#dde4ef', fontWeight: '600' }}>{p.pair}</span>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <span style={{ fontSize: '10px', color: pnlColor(p.pnl), fontWeight: '700' }}>{fmt(p.pnl, true)}</span>
                     <span style={{ fontSize: '10px', color: p.wr >= 50 ? '#00cc77' : '#ff3344' }}>{p.wr}% WR</span>
-                    <span style={{ fontSize: '9px', color: '#6a3a3a' }}>{p.total}T</span>
+                    <span style={{ fontSize: '9px', color: '#5a6a82' }}>{p.total}T</span>
                   </div>
                 </div>
-                <div style={{ height: '4px', background: 'rgba(196,18,48,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ height: '4px', background: 'rgba(136,153,187,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${p.wr}%`, background: p.pnl >= 0 ? '#00cc77' : '#ff3344', borderRadius: '2px', transition: 'width 0.6s ease' }} />
                 </div>
               </div>
@@ -602,8 +602,8 @@ export default function Stats() {
         {/* Direction + DOW */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {/* Direction */}
-          <div style={{ background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '6px', padding: '16px', flex: 1 }}>
-            <div style={{ fontSize: '9px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '10px' }}>DIRECTION</div>
+          <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '16px', flex: 1 }}>
+            <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>DIRECTION</div>
             {dirPie.length > 0 ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <PieChart width={80} height={80}>
@@ -615,9 +615,9 @@ export default function Stats() {
                   {dirPie.map(d => (
                     <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: d.color }} />
-                      <span style={{ fontSize: '11px', color: '#887070' }}>{d.name}</span>
+                      <span style={{ fontSize: '11px', color: '#7888a0' }}>{d.name}</span>
                       <span style={{ fontSize: '13px', fontWeight: '700', color: d.color }}>{d.value}</span>
-                      <span style={{ fontSize: '9px', color: '#6a3a3a' }}>{fTotal > 0 ? Math.round(d.value/fTotal*100) : 0}%</span>
+                      <span style={{ fontSize: '9px', color: '#5a6a82' }}>{fTotal > 0 ? Math.round(d.value/fTotal*100) : 0}%</span>
                     </div>
                   ))}
                 </div>
@@ -626,14 +626,14 @@ export default function Stats() {
           </div>
 
           {/* DOW */}
-          <div style={{ background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '6px', padding: '16px', flex: 1 }}>
-            <div style={{ fontSize: '9px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '10px' }}>P&L NET PAR JOUR DE LA SEMAINE</div>
+          <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '16px', flex: 1 }}>
+            <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>P&L NET PAR JOUR DE LA SEMAINE</div>
             <ResponsiveContainer width="100%" height={80}>
               <BarChart barCategoryGap="35%" data={dowArr.filter(d => d.count > 0)} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                <XAxis dataKey="label" tick={{ fill: '#6a3a3a', fontSize: 8 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#6a3a3a', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
+                <XAxis dataKey="label" tick={{ fill: '#5a6a82', fontSize: 8 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#5a6a82', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
                 <Tooltip content={<CTooltip />} />
-                <ReferenceLine y={0} stroke="rgba(196,18,48,0.18)" />
+                <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
                 <Bar dataKey="pnl" name="P&L net" maxBarSize={28} radius={[3,3,0,0]} isAnimationActive>
                   {dowArr.filter(d => d.count > 0).map((d, i) => <Cell key={i} fill={pnlColor(d.pnl)} />)}
                 </Bar>
@@ -647,26 +647,26 @@ export default function Stats() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
 
         {/* P&L par heure d'entrée */}
-        <div style={{ background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '9px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR HEURE D'ENTRÉE</div>
+        <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '16px' }}>
+          <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR HEURE D'ENTRÉE</div>
           {byHourArr.length > 0 ? (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart barCategoryGap="30%" data={byHourArr} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
-                <CartesianGrid stroke="rgba(196,18,48,0.05)" strokeDasharray="3 3" />
-                <XAxis dataKey="label" tick={{ fill: '#6a3a3a', fontSize: 8 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#6a3a3a', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
+                <CartesianGrid stroke="rgba(136,153,187,0.05)" strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fill: '#5a6a82', fontSize: 8 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#5a6a82', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
                 <Tooltip content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const d = payload[0]?.payload;
                   return (
-                    <div style={{ background: 'rgba(10,3,6,0.97)', border: '1px solid rgba(196,18,48,0.22)', borderRadius: '4px', padding: '8px 12px', fontSize: '11px', fontFamily: 'inherit' }}>
-                      <div style={{ color: '#6a3a3a', marginBottom: '4px' }}>{d?.label}</div>
+                    <div style={{ background: 'rgba(8,9,16,0.97)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', padding: '8px 12px', fontSize: '11px', fontFamily: 'inherit' }}>
+                      <div style={{ color: '#5a6a82', marginBottom: '4px' }}>{d?.label}</div>
                       <div style={{ color: (d?.pnl ?? 0) >= 0 ? '#00cc77' : '#ff3344', fontWeight: '700' }}>P&L: {fmt(d?.pnl ?? 0, true)}</div>
-                      <div style={{ color: '#887070', marginTop: '2px' }}>{d?.cnt} trade{d?.cnt > 1 ? 's' : ''} · {d?.wr}% WR</div>
+                      <div style={{ color: '#7888a0', marginTop: '2px' }}>{d?.cnt} trade{d?.cnt > 1 ? 's' : ''} · {d?.wr}% WR</div>
                     </div>
                   );
                 }} />
-                <ReferenceLine y={0} stroke="rgba(196,18,48,0.18)" />
+                <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
                 <Bar dataKey="pnl" maxBarSize={30} radius={[3,3,0,0]} isAnimationActive>
                   {byHourArr.map((entry, i) => <Cell key={i} fill={entry.pnl >= 0 ? '#00cc77' : '#ff3344'} />)}
                 </Bar>
@@ -678,16 +678,16 @@ export default function Stats() {
         {/* Durée + Taille */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {/* Durée */}
-          <div style={{ background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '6px', padding: '14px 16px', flex: 1 }}>
-            <div style={{ fontSize: '9px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '12px' }}>DURÉE DES POSITIONS</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
+          <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '14px 16px', flex: 1 }}>
+            <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>DURÉE DES POSITIONS</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '8px' }}>
               {[
-                { label: 'MOYENNE', sec: avgDurSec, color: '#e0d0d0' },
-                { label: 'WIN AVG', sec: avgDurWinSec, color: '#c41230' },
+                { label: 'MOYENNE', sec: avgDurSec, color: '#dde4ef' },
+                { label: 'WIN AVG', sec: avgDurWinSec, color: '#8899bb' },
                 { label: 'LOSS AVG', sec: avgDurLossSec, color: '#ff4455' },
               ].map(({ label, sec, color }) => (
                 <div key={label} style={{ textAlign: 'center', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
-                  <div style={{ fontSize: '8px', color: '#6a3a3a', letterSpacing: '1px', marginBottom: '6px' }}>{label}</div>
+                  <div style={{ fontSize: '8px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '6px' }}>{label}</div>
                   <div style={{ fontSize: '16px', fontWeight: '700', color }}>{fmtDur(sec)}</div>
                 </div>
               ))}
@@ -698,16 +698,16 @@ export default function Stats() {
           </div>
 
           {/* Taille */}
-          <div style={{ background: 'rgba(18,6,10,0.4)', border: '1px solid rgba(196,18,48,0.10)', borderRadius: '6px', padding: '14px 16px', flex: 1 }}>
-            <div style={{ fontSize: '9px', color: '#6a3a3a', letterSpacing: '2px', marginBottom: '12px' }}>TAILLE DES POSITIONS</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
+          <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '14px 16px', flex: 1 }}>
+            <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>TAILLE DES POSITIONS</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '8px' }}>
               {[
-                { label: 'MOYENNE', val: avgSize, color: '#e0d0d0' },
-                { label: 'WIN AVG', val: avgSizeWin, color: '#c41230' },
+                { label: 'MOYENNE', val: avgSize, color: '#dde4ef' },
+                { label: 'WIN AVG', val: avgSizeWin, color: '#8899bb' },
                 { label: 'LOSS AVG', val: avgSizeLoss, color: '#ff4455' },
               ].map(({ label, val, color }) => (
                 <div key={label} style={{ textAlign: 'center', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
-                  <div style={{ fontSize: '8px', color: '#6a3a3a', letterSpacing: '1px', marginBottom: '6px' }}>{label}</div>
+                  <div style={{ fontSize: '8px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '6px' }}>{label}</div>
                   <div style={{ fontSize: '16px', fontWeight: '700', color }}>{val > 0 ? val.toFixed(2) : '—'}</div>
                 </div>
               ))}

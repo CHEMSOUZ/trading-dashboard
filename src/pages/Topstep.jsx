@@ -267,7 +267,7 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
             : <div style={{ background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.25)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', color: '#f0a020', letterSpacing: '1px' }}>↑ EN SUIVI — se verrouille à {ACCOUNT_SIZE.toLocaleString()}$ dès +{MAX_LOSS.toLocaleString()}$ de profit</div>
           }
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', marginBottom: '14px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '10px', marginBottom: '14px' }}>
           <MetricCard label="BALANCE" value={`${currentBalance.toFixed(2)}$`} color={currentBalance >= LOCK_LEVEL ? '#00ff88' : '#c8d8c8'} sub={manualBalance > 0 ? 'Manuelle' : 'Estimée'} />
           <MetricCard label="HIGH WATER MARK" value={`${hwm.toFixed(2)}$`} color="#f0a020" sub="Plus haut net" />
           <MetricCard label="FLOOR" value={`${floor.toFixed(2)}$`} color="#ff4455" alert={distanceToFloor < 500} sub="Ne pas descendre sous" />
@@ -513,7 +513,7 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
               <div style={{ fontSize: '13px', color: '#4a7a5a', marginBottom: '8px' }}>
                 {isConsistencyBreached ? '⚡ Dépassée — objectif ajusté automatiquement (pas de fail)' : `✓ Respectée — meilleur jour: ${fmt(bestDayNet)} / limite: ${fmt(dynamicLimit)}`}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '6px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '6px' }}>
                 {[
                   { label: 'MEILLEUR JOUR NET', value: fmt(bestDayNet, true), color: isConsistencyBreached ? '#f0a020' : '#00ff88' },
                   { label: 'LIMITE (50%)', value: fmt(dynamicLimit), color: '#c8d8c8' },
@@ -531,7 +531,7 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
       </div>
 
       {/* Metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '10px' }}>
         <MetricCard label="BALANCE NETTE" value={`${currentBalance.toFixed(2)}$`} color={rule2 ? '#00ff88' : '#c8d8c8'} sub={manualBalance > 0 ? 'Manuelle' : 'Estimée'} />
         <MetricCard label="PROFIT NET" value={fmt(netProfit, true)} color={pnlColor(netProfit)} sub={`Objectif: +${dynamicProfitTarget}$${targetAdjusted ? ' ⚡' : ''}`} />
         <MetricCard label="FLOOR" value={`${floor.toFixed(2)}$`} color="#ff4455" alert={distanceToFloor < 500} sub={`Marge: ${distanceToFloor.toFixed(2)}$`} />
@@ -624,7 +624,7 @@ export default function Topstep() {
   );
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '1100px' }}>
+    <div style={{ padding: '24px 28px', maxWidth: 'none' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <div style={{ fontSize: '13px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '6px' }}>TOPSTEP</div>

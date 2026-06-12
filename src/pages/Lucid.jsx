@@ -263,7 +263,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
       {/* Info */}
       <div style={{ background: 'rgba(0,170,255,0.04)', border: '1px solid rgba(0,170,255,0.15)', borderRadius: '6px', padding: '12px 16px', fontSize: '13px', color: '#4a7a5a' }}>
         <div style={{ fontWeight: '700', color: '#00aaff', marginBottom: '6px', fontSize: '12px', letterSpacing: '1px' }}>RÈGLES LUCIDFLEX EVALUATION — COMPTE 50K</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginTop: '8px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '8px', marginTop: '8px' }}>
           {[
             { label: 'Profit Target', value: `+${PROFIT_TARGET.toLocaleString()}$ (6%)`, color: '#00ff88' },
             { label: 'Max Loss Limit (Trailing DD)', value: `-${MAX_TRAILING_DD.toLocaleString()}$ (4%)`, color: '#f0a020' },
@@ -299,7 +299,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
             : <div style={{ background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.25)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', color: '#f0a020', letterSpacing: '1px' }}>↑ EN SUIVI — se verrouille à {ACCOUNT_SIZE.toLocaleString()}$ dès +{MAX_TRAILING_DD.toLocaleString()}$ de profit</div>
           }
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', marginBottom: '14px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '10px', marginBottom: '14px' }}>
           <MetricCard label="BALANCE" value={`${currentBalance.toFixed(2)}$`} color="#c8d8c8" sub={manualBalance > 0 ? 'Manuelle' : 'Estimée'} />
           <MetricCard label="HIGH WATER MARK" value={`${hwm.toFixed(2)}$`} color="#f0a020" sub="Plus haut atteint" />
           <MetricCard label="FLOOR" value={`${floor.toFixed(2)}$`} color="#ff4455" alert={distanceToFloor < 500} sub="Ne pas descendre sous" />
@@ -371,7 +371,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
               );
             })}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginTop: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '8px', marginTop: '12px' }}>
             {[
               { label: 'MOY. GAGNANTS', value: winningDays > 0 ? `+${(Object.values(byDay).filter(p=>p>0).reduce((s,v)=>s+v,0)/winningDays).toFixed(2)}$` : '—', color: '#00ff88' },
               { label: 'MOY. PERDANTS', value: (tradingDays - winningDays) > 0 ? `-${(Math.abs(Object.values(byDay).filter(p=>p<0).reduce((s,v)=>s+v,0))/(tradingDays-winningDays)).toFixed(2)}$` : '—', color: '#ff4455' },
@@ -387,7 +387,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
       )}
 
       {/* Metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '10px' }}>
         <MetricCard label="BALANCE NETTE" value={`${currentBalance.toFixed(2)}$`} color={rule2 ? '#00ff88' : '#c8d8c8'} sub={manualBalance > 0 ? 'Manuelle' : 'Estimée'} />
         <MetricCard label="PROFIT NET" value={fmt(netProfit, true)} color={pnlColor(netProfit)} sub={`Objectif: +${PROFIT_TARGET}$`} />
         <MetricCard label="MAX LOSS FLOOR" value={`${floor.toFixed(2)}$`} color="#ff4455" alert={distanceToFloor < 300} sub={`Marge: ${distanceToFloor.toFixed(2)}$`} />
@@ -487,7 +487,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
       {/* Info */}
       <div style={{ background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.15)', borderRadius: '6px', padding: '12px 16px', fontSize: '13px', color: '#4a7a5a' }}>
         <div style={{ fontWeight: '700', color: '#00ff88', marginBottom: '6px', fontSize: '12px', letterSpacing: '1px' }}>CONDITIONS PAYOUT LUCID FUNDED — COMPTE 50K</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginTop: '8px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '8px', marginTop: '8px' }}>
           {[
             { label: 'Pas de Profit Target', value: 'Aucun objectif requis', color: '#00ff88' },
             { label: 'Perte journalière max', value: `-${MAX_DAILY_LOSS.toLocaleString()}$ (4%)`, color: '#ff4455' },
@@ -523,7 +523,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
             : <div style={{ background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.25)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', color: '#f0a020', letterSpacing: '1px' }}>↑ EN SUIVI — se verrouille à {ACCOUNT_SIZE.toLocaleString()}$ dès +{MAX_TRAILING_DD.toLocaleString()}$ de profit</div>
           }
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', marginBottom: '14px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '10px', marginBottom: '14px' }}>
           <MetricCard label="BALANCE" value={`${currentBalance.toFixed(2)}$`} color="#c8d8c8" sub={manualBalance > 0 ? 'Manuelle' : 'Estimée'} />
           <MetricCard label="HIGH WATER MARK" value={`${hwm.toFixed(2)}$`} color="#f0a020" sub="Plus haut net" />
           <MetricCard label="FLOOR" value={`${floor.toFixed(2)}$`} color="#ff4455" alert={distanceToFloor < 500} sub="Ne pas descendre sous" />
@@ -594,7 +594,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
               );
             })}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginTop: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '8px', marginTop: '12px' }}>
             {[
               { label: 'JOURS QUALIFIÉS', value: `${qualifiedDays}/${MIN_PAYOUT_DAYS}`, color: qualifiedDays >= MIN_PAYOUT_DAYS ? '#00ff88' : '#f0a020' },
               { label: 'MOY. P&L/JOUR', value: tradingDays > 0 ? `${totalNet >= 0 ? '+' : ''}${(totalNet / tradingDays).toFixed(2)}$` : '—', color: pnlColor(totalNet / Math.max(tradingDays, 1)) },
@@ -611,7 +611,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
       )}
 
       {/* Metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '10px' }}>
         <MetricCard label="BALANCE NETTE" value={`${currentBalance.toFixed(2)}$`} color={pnlColor(totalNet)} sub={manualBalance > 0 ? 'Manuelle' : 'Estimée'} />
         <MetricCard label="P&L NET" value={fmt(totalNet, true)} color={pnlColor(totalNet)} sub={`Ta part: ${fmt(payoutAmount, true)}`} />
         <MetricCard label="FLOOR DRAWDOWN" value={`${floor.toFixed(2)}$`} color="#ff4455" alert={distanceToFloor < 500} sub={`Marge: ${distanceToFloor.toFixed(2)}$`} />
@@ -695,7 +695,7 @@ export default function Lucid() {
     : '50K';
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '1100px' }}>
+    <div style={{ padding: '24px 28px', maxWidth: 'none' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <div style={{ fontSize: '13px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '6px' }}>LUCID TRADING</div>

@@ -101,7 +101,7 @@ export default function Charts() {
   const totalPnl = filtered.reduce((s, t) => s + (t.result ?? 0), 0);
 
   return (
-    <div style={{ padding: '28px 32px', maxWidth: '1100px' }}>
+    <div style={{ padding: '28px 32px', maxWidth: 'none' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '24px' }}>

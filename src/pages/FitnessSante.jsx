@@ -1,7 +1,7 @@
-﻿import { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 
 const C = {
-  accent:    '#c41230',
+  accent:    '#8899bb',
   strength:  '#f97316',
   cardio:    '#38bdf8',
   nutrition: '#4ade80',
@@ -15,7 +15,7 @@ const IMG = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exe
 // ── Helpers ────────────────────────────────────────────────────
 function getImcLabel(imc) {
   if (imc < 18.5) return { text: 'Insuffisance pondérale', color: '#38bdf8' };
-  if (imc < 25)   return { text: 'Poids normal',           color: '#c41230' };
+  if (imc < 25)   return { text: 'Poids normal',           color: '#8899bb' };
   if (imc < 30)   return { text: 'Surpoids',               color: '#f0a020' };
   if (imc < 35)   return { text: 'Obésité modérée',        color: '#f97316' };
   if (imc < 40)   return { text: 'Obésité sévère',         color: '#ff4455' };
@@ -64,7 +64,7 @@ function computeProgram(taille, poids, objectif) {
 }
 
 // ── UI atoms ───────────────────────────────────────────────────
-function ProgressBar({ value, max, color = '#c41230', height = 6 }) {
+function ProgressBar({ value, max, color = '#8899bb', height = 6 }) {
   const pct = Math.min(100, max > 0 ? Math.round((value / max) * 100) : 0);
   return (
     <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 99, overflow: 'hidden', height }}>
@@ -73,7 +73,7 @@ function ProgressBar({ value, max, color = '#c41230', height = 6 }) {
   );
 }
 
-function SectionTitle({ icon, title, color = '#c41230' }) {
+function SectionTitle({ icon, title, color = '#8899bb' }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
       <span style={{ fontSize: 18 }}>{icon}</span>
@@ -112,8 +112,8 @@ function ExerciseCard({ ex, sessionColor, isDone, onToggle }) {
         <div style={{ fontSize: 11, fontWeight: 700, color: isDone ? '#5a8a5a' : '#c8d8c8', marginBottom: 2, lineHeight: 1.3 }}>{ex.name}</div>
         <div style={{ fontSize: 10, color: sessionColor, marginBottom: 5, opacity: isDone ? 0.6 : 1 }}>{ex.muscle}</div>
         <div style={{ fontSize: 10, color: '#2a5a3a', lineHeight: 1.4, flex: 1 }}>💡 {ex.tip}</div>
-        <button onClick={onToggle} style={{ marginTop: 8, width: '100%', padding: '6px 0', background: isDone ? 'rgba(0,255,136,0.1)' : 'rgba(255,255,255,0.03)', border: `1px solid ${isDone ? 'rgba(0,255,136,0.25)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 4, color: isDone ? '#c41230' : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
-          onMouseEnter={e => { if (!isDone) { e.currentTarget.style.background = 'rgba(0,255,136,0.06)'; e.currentTarget.style.color = '#991020'; }}}
+        <button onClick={onToggle} style={{ marginTop: 8, width: '100%', padding: '6px 0', background: isDone ? 'rgba(0,255,136,0.1)' : 'rgba(255,255,255,0.03)', border: `1px solid ${isDone ? 'rgba(0,255,136,0.25)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 4, color: isDone ? '#8899bb' : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
+          onMouseEnter={e => { if (!isDone) { e.currentTarget.style.background = 'rgba(0,255,136,0.06)'; e.currentTarget.style.color = '#566880'; }}}
           onMouseLeave={e => { if (!isDone) { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = '#3a6a4a'; }}}
         >
           {isDone ? '✓ Fait' : '○ Marquer comme fait'}
@@ -263,8 +263,8 @@ export default function FitnessSante() {
 
       {/* ── Form ── */}
       <div style={{ ...card, marginBottom: 20, borderColor: 'rgba(0,255,136,0.15)', background: 'rgba(10,28,18,0.55)' }}>
-        <div style={{ fontSize: 10, color: '#c41230', letterSpacing: '2px', marginBottom: 12, fontWeight: 700 }}>📊 VOS DONNÉES PERSONNELLES</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: prog ? 14 : 0 }}>
+        <div style={{ fontSize: 10, color: '#8899bb', letterSpacing: '2px', marginBottom: 12, fontWeight: 700 }}>📊 VOS DONNÉES PERSONNELLES</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 14, marginBottom: prog ? 14 : 0 }}>
           {[
             { label: 'Taille (cm)',       val: taille,   set: setTaille,   ph: 'ex: 180' },
             { label: 'Poids actuel (kg)', val: poids,    set: setPoids,    ph: 'ex: 120' },
@@ -280,7 +280,7 @@ export default function FitnessSante() {
           ))}
         </div>
         {prog ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 10 }}>
             {[
               { label: 'IMC',         val: prog.imc,              sub: prog.imcLabel.text,                color: prog.imcLabel.color },
               { label: 'À perdre',    val: `${prog.totalLoss} kg`,sub: `~${prog.weeks1+prog.weeks2} sem`, color: C.warn   },
@@ -335,7 +335,7 @@ export default function FitnessSante() {
       {/* ── Projections ── */}
       <div style={{ ...card, marginBottom: 20 }}>
         <SectionTitle icon="🎯" title="Résultats Attendus" color={C.warn} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 14 }}>
           {(prog?.projections ?? [
             { months: 3,  weight: '106.5', imc: '32.9', loss: '13.5' },
             { months: 6,  weight: '93.5',  imc: '29.0', loss: '26.5' },
@@ -402,7 +402,7 @@ export default function FitnessSante() {
                 <span>{s.title}</span>
                 <span style={{ fontSize: 9, color: '#3a6a4a' }}>({s.day})</span>
                 {doneCount > 0 && (
-                  <span style={{ fontSize: 9, background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.25)', color: '#c41230', padding: '1px 5px', borderRadius: 99, fontWeight: 700 }}>{doneCount}/{s.exercises.length}</span>
+                  <span style={{ fontSize: 9, background: 'rgba(0,255,136,0.15)', border: '1px solid rgba(0,255,136,0.25)', color: '#8899bb', padding: '1px 5px', borderRadius: 99, fontWeight: 700 }}>{doneCount}/{s.exercises.length}</span>
                 )}
               </button>
             );
@@ -446,7 +446,7 @@ export default function FitnessSante() {
             )}
 
             {/* Exercise grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 10 }}>
               {s.exercises.map((ex, i) => (
                 <ExerciseCard
                   key={i}
@@ -486,7 +486,7 @@ export default function FitnessSante() {
             <div style={{ fontSize: 12, fontWeight: 700, color: C.cardio }}>Phase Débutant</div>
             <div style={{ fontSize: 10, background: `${C.cardio}18`, border: `1px solid ${C.cardio}25`, color: C.cardio, padding: '2px 7px', borderRadius: 99, fontWeight: 700 }}>3 à 5 fois / semaine</div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 10, marginBottom: 12 }}>
             {[
               { act: 'Marche rapide',       emoji: '🚶', detail: 'Terrain plat ou légère pente' },
               { act: 'Vélo stationnaire',   emoji: '🚴', detail: 'Faible impact articulaire' },
@@ -606,7 +606,7 @@ export default function FitnessSante() {
       {/* ── Suppléments ── */}
       <div style={{ ...card, marginBottom: 20 }}>
         <SectionTitle icon="💊" title="Suppléments Recommandés" color={C.suppl} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 10, marginBottom: 12 }}>
           {SUPPLEMENTS.map(s => (
             <div key={s.name} style={{ background: 'rgba(6,12,16,0.5)', border: `1px solid ${s.color}12`, borderRadius: 8, padding: '12px 14px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
               <div style={{ width: 36, height: 36, borderRadius: 8, background: `${s.color}12`, border: `1px solid ${s.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{s.emoji}</div>
@@ -628,7 +628,7 @@ export default function FitnessSante() {
 
       {/* ── Règle d'or ── */}
       <div style={{ background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: 8, padding: '14px 18px', fontSize: 11, color: '#3a7a4a', lineHeight: 1.7 }}>
-        <span style={{ color: '#c41230', fontWeight: 700 }}>💡 RÈGLE D'OR : </span>
+        <span style={{ color: '#8899bb', fontWeight: 700 }}>💡 RÈGLE D'OR : </span>
         La constance prime sur l'intensité. 3 séances/sem pendant 12 mois valent bien plus que 6 séances pendant 2 semaines. Pèse-toi chaque matin à jeun, ajuste les calories toutes les 4 semaines si la perte stagne, et vise 7-8h de sommeil — le meilleur anabolisant naturel.
       </div>
     </div>

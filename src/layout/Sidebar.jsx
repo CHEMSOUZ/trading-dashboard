@@ -2,10 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 
 const NAV = [
-  { to: '/dashboard', label: 'Dashboard',    sub: 'Stats & Journal',
+  { to: '/journal',   label: 'Journal',      sub: 'Synthèse · Trades · Graphiques',
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
-  { to: '/stats',     label: 'Statistiques', sub: 'Graphiques & Calendrier',
-    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg> },
   { to: '/analysis',  label: 'Analyse',      sub: 'Notes & Screenshots',
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> },
   { to: '/global',    label: 'Vue Globale',  sub: 'Tous les comptes',
@@ -224,24 +222,24 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
   function cancelRename() { setRenamingId(null); setRenameValue(''); }
 
   return (
-    <aside style={{ width: `${width}px`, flexShrink: 0, background: '#08050a', borderRight: '1px solid rgba(196,18,48,0.10)', display: 'flex', flexDirection: 'column', position: 'relative', userSelect: isDragging ? 'none' : 'auto' }}>
+    <aside style={{ width: `${width}px`, flexShrink: 0, background: '#090a10', borderRight: '1px solid rgba(136,153,187,0.10)', display: 'flex', flexDirection: 'column', position: 'relative', userSelect: isDragging ? 'none' : 'auto' }}>
 
       {/* Account selector */}
-      <div style={{ padding: '10px', borderBottom: '1px solid rgba(196,18,48,0.08)' }}>
+      <div style={{ padding: '10px', borderBottom: '1px solid rgba(136,153,187,0.08)' }}>
         <div onClick={() => setShowSwitcher(s => !s)}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 11px', borderRadius: '6px', cursor: 'pointer', background: showSwitcher ? 'rgba(196,18,48,0.08)' : 'transparent', border: `1px solid ${showSwitcher ? 'rgba(196,18,48,0.25)' : 'rgba(196,18,48,0.08)'}`, transition: 'all 0.15s' }}
-          onMouseEnter={e => { if (!showSwitcher) { e.currentTarget.style.background = 'rgba(196,18,48,0.05)'; e.currentTarget.style.borderColor = 'rgba(196,18,48,0.18)'; }}}
-          onMouseLeave={e => { if (!showSwitcher) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(196,18,48,0.08)'; }}}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 11px', borderRadius: '6px', cursor: 'pointer', background: showSwitcher ? 'rgba(136,153,187,0.08)' : 'transparent', border: `1px solid ${showSwitcher ? 'rgba(136,153,187,0.25)' : 'rgba(136,153,187,0.08)'}`, transition: 'all 0.15s' }}
+          onMouseEnter={e => { if (!showSwitcher) { e.currentTarget.style.background = 'rgba(136,153,187,0.05)'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.18)'; }}}
+          onMouseLeave={e => { if (!showSwitcher) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.08)'; }}}
         >
           {(() => {
             const st = accountStatuses[activeAccount?.id];
             const isVal = st?.isValidated;
-            const dc = st?.isBlown ? '#ff4455' : st?.isExpressFunded ? '#f0c020' : LIVE_TYPES.has(activeAccount?.type) ? '#00ddff' : isVal ? '#00cc77' : '#c41230';
+            const dc = st?.isBlown ? '#ff4455' : st?.isExpressFunded ? '#f0c020' : LIVE_TYPES.has(activeAccount?.type) ? '#00ddff' : isVal ? '#00cc77' : '#8899bb';
             return <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: dc, boxShadow: `0 0 6px ${dc}88`, flexShrink: 0 }} />;
           })()}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '14px', fontWeight: '700', color: '#f0e0e2', wordBreak: 'break-word', lineHeight: '1.3' }}>{activeAccount?.name ?? 'Aucun compte'}</div>
-            <div style={{ fontSize: '11px', color: '#6a3a3a', marginTop: '2px' }}>{activeAccount?.typeInfo?.label ?? '—'}</div>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: '#e8edf8', wordBreak: 'break-word', lineHeight: '1.3' }}>{activeAccount?.name ?? 'Aucun compte'}</div>
+            <div style={{ fontSize: '11px', color: '#5a6a82', marginTop: '2px' }}>{activeAccount?.typeInfo?.label ?? '—'}</div>
           </div>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5a3535" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
             <polyline points={showSwitcher ? "18 15 12 9 6 15" : "6 9 12 15 18 9"}/>
@@ -250,7 +248,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
 
         {/* Dropdown */}
         {showSwitcher && (
-          <div style={{ position: 'absolute', top: '90px', left: '8px', right: '8px', zIndex: 50, background: '#0d060a', border: '1px solid rgba(196,18,48,0.22)', borderRadius: '8px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.7)', maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
+          <div style={{ position: 'absolute', top: '90px', left: '8px', right: '8px', zIndex: 50, background: '#0d060a', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '8px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.7)', maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
 
             {(() => {
               const liveAccts      = accounts.filter(a => !accountStatuses[a.id]?.isBlown && LIVE_TYPES.has(a.type));
@@ -266,47 +264,47 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                 const isEF = st?.isExpressFunded ?? false;
                 const isVal = st?.isValidated ?? false;
                 const isLive = LIVE_TYPES.has(a.type);
-                const dotColor = isBlown ? '#ff4455' : isEF ? '#f0c020' : isLive ? '#00ddff' : isVal ? '#00cc77' : '#c41230';
-                const bgNormal = isBlown ? 'rgba(255,68,85,0.06)' : isEF ? 'rgba(240,192,32,0.06)' : isLive ? 'rgba(0,221,255,0.06)' : isVal ? 'rgba(0,200,119,0.06)' : 'rgba(196,18,48,0.06)';
+                const dotColor = isBlown ? '#ff4455' : isEF ? '#f0c020' : isLive ? '#00ddff' : isVal ? '#00cc77' : '#8899bb';
+                const bgNormal = isBlown ? 'rgba(255,68,85,0.06)' : isEF ? 'rgba(240,192,32,0.06)' : isLive ? 'rgba(0,221,255,0.06)' : isVal ? 'rgba(0,200,119,0.06)' : 'rgba(136,153,187,0.06)';
                 const borderAccent = isBlown ? 'rgba(255,68,85,0.4)' : isEF ? 'rgba(240,192,32,0.4)' : isLive ? 'rgba(0,221,255,0.4)' : isVal ? 'rgba(0,200,119,0.4)' : 'transparent';
                 return (
                   <div key={a.id} style={{ borderRadius: '5px', marginBottom: '2px', overflow: 'hidden' }}>
                     {renamingId === a.id ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', background: 'rgba(196,18,48,0.08)', border: '1px solid rgba(196,18,48,0.25)', borderRadius: '5px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.25)', borderRadius: '5px' }}>
                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: a.color, flexShrink: 0 }} />
                         <input
                           ref={renameInputRef}
                           value={renameValue}
                           onChange={e => setRenameValue(e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') confirmRename(a.id); if (e.key === 'Escape') cancelRename(); }}
-                          style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#f0e0e2', fontSize: '13px', fontFamily: 'inherit', caretColor: '#c41230' }}
+                          style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#e8edf8', fontSize: '13px', fontFamily: 'inherit', caretColor: '#8899bb' }}
                         />
-                        <button onClick={() => confirmRename(a.id)} style={{ background: 'rgba(196,18,48,0.15)', border: 'none', color: '#c41230', padding: '2px 7px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit' }}>✓</button>
+                        <button onClick={() => confirmRename(a.id)} style={{ background: 'rgba(136,153,187,0.15)', border: 'none', color: '#8899bb', padding: '2px 7px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit' }}>✓</button>
                         <button onClick={cancelRename} style={{ background: 'none', border: 'none', color: '#7a4a4a', padding: '2px 4px', cursor: 'pointer', fontSize: '13px' }}>✕</button>
                       </div>
                     ) : (
                       <div onClick={() => switchTo(a.id)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', cursor: 'pointer', background: isActive ? bgNormal : 'transparent', transition: 'background 0.12s', borderRadius: '5px', borderLeft: `2px solid ${isBlown || isEF || isLive || isVal ? borderAccent : isActive ? 'rgba(196,18,48,0.4)' : 'transparent'}` }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', cursor: 'pointer', background: isActive ? bgNormal : 'transparent', transition: 'background 0.12s', borderRadius: '5px', borderLeft: `2px solid ${isBlown || isEF || isLive || isVal ? borderAccent : isActive ? 'rgba(136,153,187,0.4)' : 'transparent'}` }}
                         onMouseEnter={e => e.currentTarget.style.background = bgNormal}
                         onMouseLeave={e => e.currentTarget.style.background = isActive ? bgNormal : 'transparent'}
                       >
                         <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: dotColor, boxShadow: `0 0 5px ${dotColor}88`, flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <span style={{ fontSize: '13px', color: isBlown ? '#ff7777' : isEF ? '#f0c020' : isLive ? '#00ddff' : isActive ? a.color : '#e0d0d0', fontWeight: isActive ? '700' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
+                            <span style={{ fontSize: '13px', color: isBlown ? '#ff7777' : isEF ? '#f0c020' : isLive ? '#00ddff' : isActive ? a.color : '#dde4ef', fontWeight: isActive ? '700' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
                             {isBlown && <span title={st?.dailyLossBreached ? 'Perte journalière dépassée' : 'Drawdown maximum atteint'} style={{ fontSize: '8px', background: 'rgba(255,68,85,0.2)', border: '1px solid rgba(255,68,85,0.4)', color: '#ff4455', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0, cursor: 'help' }}>{st?.dailyLossBreached ? 'DAILY 🔴' : 'CRAMÉ'}</span>}
                             {!isBlown && isLive && <span style={{ fontSize: '8px', background: 'rgba(0,221,255,0.15)', border: '1px solid rgba(0,221,255,0.4)', color: '#00ddff', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>LIVE</span>}
                             {!isBlown && !isLive && isEF && <span style={{ fontSize: '8px', background: 'rgba(240,192,32,0.2)', border: '1px solid rgba(240,192,32,0.4)', color: '#f0c020', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>FUNDED</span>}
                             {!isBlown && !isLive && isVal && <span title="Challenge validé — objectif atteint" style={{ fontSize: '8px', background: 'rgba(0,200,119,0.15)', border: '1px solid rgba(0,200,119,0.3)', color: '#00cc77', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0, cursor: 'help' }}>VALIDÉ ✅</span>}
                           </div>
-                          <div style={{ fontSize: '11px', color: isBlown ? '#6a3535' : '#6a3a3a', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <div style={{ fontSize: '11px', color: isBlown ? '#6a3535' : '#5a6a82', display: 'flex', alignItems: 'center', gap: '5px' }}>
                             <span>{a.typeInfo?.label}</span>
                             {st?.pnl != null && <span style={{ color: st.pnl >= 0 ? '#00aa55' : '#ff4455' }}>{st.pnl >= 0 ? '+' : ''}{st.pnl.toFixed(0)}$</span>}
                           </div>
                         </div>
                         <button onClick={e => startRename(a, e)} title="Renommer"
                           style={{ background: 'none', border: 'none', color: '#4a2a2a', cursor: 'pointer', fontSize: '13px', padding: '2px 4px', flexShrink: 0, opacity: 0.6, transition: 'all 0.15s' }}
-                          onMouseEnter={e => { e.stopPropagation(); e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#c41230'; }}
+                          onMouseEnter={e => { e.stopPropagation(); e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#8899bb'; }}
                           onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.color = '#4a2a2a'; }}
                         >✏️</button>
                       </div>
@@ -326,7 +324,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         LIVE
                       </div>
                       {liveAccts.map(renderAccItem)}
-                      {hasMore(liveAccts, fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(196,18,48,0.08)', margin: '4px 0 6px' }} />}
+                      {hasMore(liveAccts, fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '4px 0 6px' }} />}
                     </>
                   )}
 
@@ -337,18 +335,18 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         FUNDED
                       </div>
                       {fundedAccts.map(renderAccItem)}
-                      {hasMore(fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(196,18,48,0.08)', margin: '4px 0 6px' }} />}
+                      {hasMore(fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '4px 0 6px' }} />}
                     </>
                   )}
 
                   {challengeAccts.length > 0 && (
                     <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#c41230', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
-                        <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#c41230', boxShadow: '0 0 4px #c41230' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#8899bb', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
+                        <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#8899bb', boxShadow: '0 0 4px #8899bb' }} />
                         CHALLENGE
                       </div>
                       {challengeAccts.map(renderAccItem)}
-                      {hasMore(challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(196,18,48,0.08)', margin: '4px 0 6px' }} />}
+                      {hasMore(challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '4px 0 6px' }} />}
                     </>
                   )}
 
@@ -359,7 +357,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         VALIDÉ
                       </div>
                       {validatedAccts.map(renderAccItem)}
-                      {blownAccts.length > 0 && <div style={{ borderTop: '1px solid rgba(196,18,48,0.08)', margin: '4px 0 6px' }} />}
+                      {blownAccts.length > 0 && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '4px 0 6px' }} />}
                     </>
                   )}
 
@@ -373,12 +371,12 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
               );
             })()}
 
-            <div style={{ borderTop: '1px solid rgba(196,18,48,0.08)', margin: '6px 0' }} />
+            <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '6px 0' }} />
 
             <div onClick={() => { setShowSwitcher(false); onManageAccounts?.(); }}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', borderRadius: '5px', cursor: 'pointer', color: '#6a3a3a', fontSize: '12px', transition: 'all 0.12s' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(196,18,48,0.05)'; e.currentTarget.style.color = '#c41230'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6a3a3a'; }}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', borderRadius: '5px', cursor: 'pointer', color: '#5a6a82', fontSize: '12px', transition: 'all 0.12s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(136,153,187,0.05)'; e.currentTarget.style.color = '#8899bb'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#5a6a82'; }}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Gérer les comptes
@@ -388,14 +386,14 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
       </div>
 
       {/* Logo */}
-      <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid rgba(196,18,48,0.06)' }}>
+      <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid rgba(136,153,187,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-          <div style={{ width: '28px', height: '28px', background: 'linear-gradient(135deg,#c41230,#8a0c20)', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 12px rgba(196,18,48,0.30)', flexShrink: 0 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f0e0e2" strokeWidth="2.5" strokeLinecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+          <div style={{ width: '28px', height: '28px', background: 'linear-gradient(135deg,#8899bb,#4a6080)', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 12px rgba(136,153,187,0.30)', flexShrink: 0 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e8edf8" strokeWidth="2.5" strokeLinecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
           </div>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: '700', color: '#f0e0e2', letterSpacing: '1.5px' }}>TRADE</div>
-            <div style={{ fontSize: '10px', color: '#6a3a3a', letterSpacing: '2.5px' }}>DASHBOARD</div>
+            <div style={{ fontSize: '13px', fontWeight: '700', color: '#e8edf8', letterSpacing: '1.5px' }}>TRADE</div>
+            <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2.5px' }}>DASHBOARD</div>
           </div>
         </div>
       </div>
@@ -406,8 +404,8 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
           const active = location.pathname === to || location.pathname.startsWith(to + '/');
           return (
             <NavLink key={to} to={to} onClick={() => setShowSwitcher(false)}
-              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', margin: '1px 6px', borderRadius: '6px', textDecoration: 'none', color: active ? '#c41230' : '#6a4545', background: active ? 'rgba(196,18,48,0.10)' : 'transparent', borderLeft: `2px solid ${active ? '#c41230' : 'transparent'}`, transition: 'all 0.15s' }}
-              onMouseEnter={e => { if (!active) { e.currentTarget.style.color = '#9a6060'; e.currentTarget.style.background = 'rgba(196,18,48,0.05)'; }}}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', margin: '1px 6px', borderRadius: '6px', textDecoration: 'none', color: active ? '#8899bb' : '#6a4545', background: active ? 'rgba(136,153,187,0.10)' : 'transparent', borderLeft: `2px solid ${active ? '#8899bb' : 'transparent'}`, transition: 'all 0.15s' }}
+              onMouseEnter={e => { if (!active) { e.currentTarget.style.color = '#9a6060'; e.currentTarget.style.background = 'rgba(136,153,187,0.05)'; }}}
               onMouseLeave={e => { if (!active) { e.currentTarget.style.color = '#6a4545'; e.currentTarget.style.background = 'transparent'; }}}
             >
               <span style={{ flexShrink: 0 }}>{icon}</span>
@@ -416,9 +414,9 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                 <div style={{ fontSize: '11px', color: active ? '#8a3535' : '#4a2a2a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>
               </div>
               {badge && (() => {
-                const bc = badge === 'BOT' ? '#00aaff' : '#c41230';
-                const bg = badge === 'BOT' ? 'rgba(0,170,255,0.12)' : 'rgba(196,18,48,0.12)';
-                const br = badge === 'BOT' ? 'rgba(0,170,255,0.3)' : 'rgba(196,18,48,0.30)';
+                const bc = badge === 'BOT' ? '#00aaff' : '#8899bb';
+                const bg = badge === 'BOT' ? 'rgba(0,170,255,0.12)' : 'rgba(136,153,187,0.12)';
+                const br = badge === 'BOT' ? 'rgba(0,170,255,0.3)' : 'rgba(136,153,187,0.30)';
                 return <span style={{ fontSize: '10px', letterSpacing: '1px', background: bg, border: `1px solid ${br}`, color: bc, padding: '2px 5px', borderRadius: '3px', flexShrink: 0, fontWeight: '700' }}>{badge}</span>;
               })()}
             </NavLink>
@@ -427,12 +425,12 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
       </nav>
 
       {/* New trade */}
-      <div style={{ padding: '10px', borderTop: '1px solid rgba(196,18,48,0.08)' }}>
+      <div style={{ padding: '10px', borderTop: '1px solid rgba(136,153,187,0.08)' }}>
         <NavLink to="/dashboard/new" style={{ textDecoration: 'none' }} onClick={() => setShowSwitcher(false)}>
           <button
-            style={{ width: '100%', padding: '11px 0', background: 'linear-gradient(135deg,rgba(196,18,48,0.18),rgba(130,10,30,0.10))', border: '1px solid rgba(196,18,48,0.30)', borderRadius: '6px', color: '#c41230', fontSize: '12px', fontFamily: 'inherit', letterSpacing: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', transition: 'all 0.2s', fontWeight: '700', whiteSpace: 'nowrap' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg,rgba(196,18,48,0.26),rgba(130,10,30,0.18))'; e.currentTarget.style.boxShadow = '0 0 16px rgba(196,18,48,0.18)'; e.currentTarget.style.borderColor = 'rgba(196,18,48,0.50)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg,rgba(196,18,48,0.18),rgba(130,10,30,0.10))'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'rgba(196,18,48,0.30)'; }}
+            style={{ width: '100%', padding: '11px 0', background: 'linear-gradient(135deg,rgba(136,153,187,0.18),rgba(74,96,128,0.10))', border: '1px solid rgba(136,153,187,0.30)', borderRadius: '6px', color: '#8899bb', fontSize: '12px', fontFamily: 'inherit', letterSpacing: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', transition: 'all 0.2s', fontWeight: '700', whiteSpace: 'nowrap' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg,rgba(136,153,187,0.26),rgba(74,96,128,0.18))'; e.currentTarget.style.boxShadow = '0 0 16px rgba(136,153,187,0.18)'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.50)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg,rgba(136,153,187,0.18),rgba(74,96,128,0.10))'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.30)'; }}
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             NOUVEAU TRADE
@@ -447,10 +445,10 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
       {/* Resize handle */}
       <div onMouseDown={onMouseDown}
         style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '6px', cursor: 'col-resize', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        onMouseEnter={e => e.currentTarget.querySelector('.hb').style.background = '#c41230'}
-        onMouseLeave={e => { if (!isDragging) e.currentTarget.querySelector('.hb').style.background = 'rgba(196,18,48,0.18)'; }}
+        onMouseEnter={e => e.currentTarget.querySelector('.hb').style.background = '#8899bb'}
+        onMouseLeave={e => { if (!isDragging) e.currentTarget.querySelector('.hb').style.background = 'rgba(136,153,187,0.18)'; }}
       >
-        <div className="hb" style={{ width: '2px', height: '40px', borderRadius: '2px', background: isDragging ? '#c41230' : 'rgba(196,18,48,0.18)', transition: 'background 0.15s' }} />
+        <div className="hb" style={{ width: '2px', height: '40px', borderRadius: '2px', background: isDragging ? '#8899bb' : 'rgba(136,153,187,0.18)', transition: 'background 0.15s' }} />
       </div>
     </aside>
   );
