@@ -27,9 +27,6 @@
   "build": {
     "appId": "com.trading.dashboard",
     "productName": "Trading Dashboard",
-    "directories": {
-      "output": "release"
-    },
     "publish": {
       "provider": "github",
       "owner": "CHEMSOUZ",
