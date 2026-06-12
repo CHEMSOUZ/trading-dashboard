@@ -255,7 +255,8 @@ function importCsvTrades(db, dbPath, rows) {
   }
   function normPair(name) {
     if (!name) return 'Autre';
-    const clean = name.replace(/[A-Z]\d+$/, '').replace(/\d+$/, '');
+    const token = String(name).trim().split(/\s+/)[0].toUpperCase();
+    const clean = token.replace(/[A-Z]{1,2}\d{1,4}$/, '').replace(/\d+$/, '') || token;
     const MAP = { MNQ:'MNQ', NQ:'NQ', MES:'MES', ES:'ES', MGC:'MGC', GC:'GC', M2K:'M2K', RTY:'RTY', MCL:'MCL', CL:'CL' };
     return MAP[clean] ?? clean;
   }

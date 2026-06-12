@@ -88,11 +88,10 @@ function computeChallengePoints(trades, accountSize, maxLoss) {
   return points;
 }
 
-// Funded: floor starts at accountSize-maxLoss, locks at accountSize once lockLevel exceeded
+// Funded: trailing daily drawdown — floor = highWater - maxLoss, locks at accountSize once balance reaches lockLevel
 function computeFundedPoints(trades, accountSize, maxLoss) {
-  const lockLevel    = accountSize + maxLoss;
-  const floorInitial = accountSize - maxLoss;
-  const floorLocked  = accountSize;
+  const lockLevel   = accountSize + maxLoss; // e.g. 52 000 for 50k
+  const floorLocked = accountSize;           // e.g. 50 000 — permanent lock
   const sorted = [...trades].sort((a, b) =>
     (a.entered_at || a.date || '').localeCompare(b.entered_at || b.date || ''));
   const byDayArr = sorted.reduce((acc, t) => {
@@ -102,14 +101,17 @@ function computeFundedPoints(trades, accountSize, maxLoss) {
     else acc.push({ date: d, pnl: getNet(t) });
     return acc;
   }, []);
-  let bal = accountSize, locked = false;
-  const points = [{ date: 'Start', balance: bal, floor: floorInitial }];
+  let bal = accountSize, highBal = accountSize, locked = false;
+  const floorStart = accountSize - maxLoss;
+  const points = [{ date: 'Start', balance: bal, floor: floorStart }];
   byDayArr.forEach(({ date, pnl }) => {
     bal += pnl;
-    if (bal >= lockLevel) locked = true;
-    points.push({ date: date.slice(5), balance: Math.round(bal * 100) / 100, floor: locked ? floorLocked : floorInitial });
+    highBal = Math.max(highBal, bal);
+    if (highBal >= lockLevel) locked = true;
+    const floor = locked ? floorLocked : Math.max(floorStart, highBal - maxLoss);
+    points.push({ date: date.slice(5), balance: Math.round(bal * 100) / 100, floor: Math.round(floor * 100) / 100 });
   });
-  return { points, isLocked: locked || bal >= lockLevel };
+  return { points, isLocked: locked };
 }
 
 // ── Sub-components ────────────────────────────────────────────
@@ -470,7 +472,7 @@ function ChallengeTab({ trades, manualBalance, setManualBalance, balanceInput, s
                 <Tooltip content={<CTooltip />} />
                 <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
                 <ReferenceLine y={dynamicLimit} stroke={targetAdjusted ? '#f0a020' : '#5a6a82'} strokeDasharray="4 4" strokeOpacity={0.6} label={{ value: `50% ${dynamicLimit.toFixed(0)}$`, fill: targetAdjusted ? '#f0a020' : '#5a6a82', fontSize: 11, position: 'right' }} />
-                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#8899bb" isAnimationActive maxBarSize={28} />
+                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#8899bb" isAnimationActive maxBarSize={6} />
               </BarChart>
             </ResponsiveContainer>
           ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a1818', fontSize: '13px' }}>Aucun trade</div>}
@@ -642,7 +644,7 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
                 <YAxis tick={{ fill: '#5a6a82', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
                 <Tooltip content={<CTooltip />} />
                 <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
-                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#8899bb" isAnimationActive maxBarSize={28} />
+                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#8899bb" isAnimationActive maxBarSize={6} />
               </BarChart>
             </ResponsiveContainer>
           ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a1818', fontSize: '13px' }}>Aucun trade</div>}

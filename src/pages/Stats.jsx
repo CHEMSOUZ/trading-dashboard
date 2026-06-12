@@ -565,7 +565,7 @@ export default function Stats() {
                 <YAxis tick={{ fill: '#5a6a82', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
                 <Tooltip content={<CTooltip />} />
                 <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
-                <Bar dataKey="pnl" name="P&L net" maxBarSize={28} radius={[3,3,0,0]} isAnimationActive>
+                <Bar dataKey="pnl" name="P&L net" maxBarSize={6} radius={[3,3,0,0]} isAnimationActive>
                   {dailyArr.map((d, i) => <Cell key={i} fill={pnlColor(d.pnl)} />)}
                 </Bar>
               </BarChart>
@@ -634,7 +634,7 @@ export default function Stats() {
                 <YAxis tick={{ fill: '#5a6a82', fontSize: 8 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
                 <Tooltip content={<CTooltip />} />
                 <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
-                <Bar dataKey="pnl" name="P&L net" maxBarSize={28} radius={[3,3,0,0]} isAnimationActive>
+                <Bar dataKey="pnl" name="P&L net" maxBarSize={6} radius={[3,3,0,0]} isAnimationActive>
                   {dowArr.filter(d => d.count > 0).map((d, i) => <Cell key={i} fill={pnlColor(d.pnl)} />)}
                 </Bar>
               </BarChart>
@@ -667,7 +667,7 @@ export default function Stats() {
                   );
                 }} />
                 <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
-                <Bar dataKey="pnl" maxBarSize={30} radius={[3,3,0,0]} isAnimationActive>
+                <Bar dataKey="pnl" maxBarSize={6} radius={[3,3,0,0]} isAnimationActive>
                   {byHourArr.map((entry, i) => <Cell key={i} fill={entry.pnl >= 0 ? '#00cc77' : '#ff3344'} />)}
                 </Bar>
               </BarChart>

@@ -366,7 +366,7 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
                 <YAxis tick={{ fill: '#3a6a4a', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
                 <Tooltip content={<CTooltip />} />
                 <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
-                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#00ff88" isAnimationActive maxBarSize={28} />
+                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#00ff88" isAnimationActive maxBarSize={6} />
               </BarChart>
             </ResponsiveContainer>
           ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '13px' }}>Aucun trade</div>}
@@ -569,7 +569,7 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
                 <Tooltip content={<CTooltip />} />
                 <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
                 <ReferenceLine y={dynamicLimit} stroke={targetAdjusted?'#f0a020':'#3a6a4a'} strokeDasharray="4 4" strokeOpacity={0.6} label={{ value: `Limite ${dynamicLimit.toFixed(0)}$`, fill: targetAdjusted?'#f0a020':'#3a6a4a', fontSize: 11, position: 'right' }} />
-                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#00ff88" isAnimationActive maxBarSize={28} />
+                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#00ff88" isAnimationActive maxBarSize={6} />
               </BarChart>
             </ResponsiveContainer>
           ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '13px' }}>Aucun trade</div>}

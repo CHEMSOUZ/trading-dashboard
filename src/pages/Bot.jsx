@@ -2027,7 +2027,7 @@ function BotStats({ signals }) {
                 <YAxis tick={{ fill: '#5a6a82', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} width={60} />
                 <Tooltip content={<BSTooltip />} />
                 <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
-                <Bar dataKey="pnl" radius={[3, 3, 0, 0]} maxBarSize={40}>
+                <Bar dataKey="pnl" radius={[3, 3, 0, 0]} maxBarSize={6}>
                   {byBot.map((d, i) => <Cell key={i} fill={pnlColor(d.pnl)} />)}
                 </Bar>
               </BarChart>
@@ -2054,7 +2054,7 @@ function BotStats({ signals }) {
               <YAxis tick={{ fill: '#5a6a82', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} width={60} />
               <Tooltip content={<BSTooltip />} />
               <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
-              <Bar dataKey="pnl" radius={[3, 3, 0, 0]} maxBarSize={60}>
+              <Bar dataKey="pnl" radius={[3, 3, 0, 0]} maxBarSize={6}>
                 {byDir.filter(d => d.total > 0).map((d, i) => <Cell key={i} fill={d.label === 'LONG' ? '#00cc77' : '#ff3344'} />)}
               </Bar>
             </BarChart>
@@ -2081,7 +2081,7 @@ function BotStats({ signals }) {
               <YAxis tick={{ fill: '#5a6a82', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} width={60} />
               <Tooltip content={<BSTooltip />} />
               <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
-              <Bar dataKey="pnl" radius={[3, 3, 0, 0]} maxBarSize={36}>
+              <Bar dataKey="pnl" radius={[3, 3, 0, 0]} maxBarSize={6}>
                 {byKZ.map((k, i) => <Cell key={i} fill={pnlColor(k.pnl)} />)}
               </Bar>
             </BarChart>
@@ -2125,7 +2125,7 @@ function BotStats({ signals }) {
                 <YAxis tick={{ fill: '#5a6a82', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} width={55} />
                 <Tooltip content={<BSTooltip />} />
                 <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
-                <Bar dataKey="pnl" radius={[3, 3, 0, 0]} maxBarSize={40}>
+                <Bar dataKey="pnl" radius={[3, 3, 0, 0]} maxBarSize={6}>
                   {byDay.map((d, i) => <Cell key={i} fill={pnlColor(d.pnl)} />)}
                 </Bar>
               </BarChart>

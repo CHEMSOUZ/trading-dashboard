@@ -424,7 +424,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
                 <YAxis tick={{ fill: '#3a6a4a', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
                 <Tooltip content={<CTooltip />} />
                 <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
-                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#00ff88" isAnimationActive maxBarSize={28} />
+                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#00ff88" isAnimationActive maxBarSize={6} />
               </BarChart>
             </ResponsiveContainer>
           ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '13px' }}>Aucun trade</div>}
@@ -647,7 +647,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
                 <Tooltip content={<CTooltip />} />
                 <ReferenceLine y={0} stroke="rgba(0,255,136,0.15)" />
                 <ReferenceLine y={-MAX_DAILY_LOSS} stroke="#ff4455" strokeDasharray="4 4" strokeOpacity={0.5} label={{ value: `Limite -${MAX_DAILY_LOSS}$`, fill: '#ff4455', fontSize: 10, position: 'right' }} />
-                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#00ff88" isAnimationActive maxBarSize={28} />
+                <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} fill="#00ff88" isAnimationActive maxBarSize={6} />
               </BarChart>
             </ResponsiveContainer>
           ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '13px' }}>Aucun trade</div>}

@@ -106,8 +106,10 @@ function parseTradovateDate(str) {
  */
 function normalizePair(contractName) {
   if (!contractName) return 'Autre';
-  // Strip expiry suffix (last letter + digit(s) at end)
-  const clean = contractName.replace(/[A-Z]\d+$/, '').replace(/\d+$/, '');
+  // Take only the first token (before any space), uppercase, strip expiry suffix
+  const token = contractName.trim().split(/\s+/)[0].toUpperCase();
+  // Strip trailing expiry: letter(s) + digits, e.g. MNQM6 → MNQ, MNQM26 → MNQ, ESU24 → ES
+  const clean = token.replace(/[A-Z]{1,2}\d{1,4}$/, '').replace(/\d+$/, '') || token;
   const MAP = {
     MNQ: 'MNQ', NQ: 'NQ', MES: 'MES', ES: 'ES',
     MGC: 'MGC', GC: 'GC', M2K: 'M2K', RTY: 'RTY',

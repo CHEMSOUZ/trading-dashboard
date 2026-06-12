@@ -225,6 +225,13 @@ function getDateRange(mode) {
     const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
     return { from: fmt(mon), to: fmt(sun) };
   }
+  if (mode === 'nextweek') {
+    const dayOfWeek = now.getDay();
+    const daysToNextMon = dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
+    const mon = new Date(now); mon.setDate(now.getDate() + daysToNextMon);
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    return { from: fmt(mon), to: fmt(sun) };
+  }
   if (mode === 'next7') {
     const end = new Date(now); end.setDate(now.getDate() + 7);
     return { from: fmt(now), to: fmt(end) };
@@ -237,7 +244,6 @@ function getDateRange(mode) {
 // Short "9-15 juin" label for date buttons
 function getDateRangeLabel(mode) {
   const now = new Date();
-  const pad = n => String(n).padStart(2, '0');
   const fmtShort = d => {
     const day = d.getDate();
     const mon = d.toLocaleDateString('fr-FR', { month: 'short' });
@@ -246,6 +252,13 @@ function getDateRangeLabel(mode) {
   if (mode === 'today') return fmtShort(now);
   if (mode === 'week') {
     const mon = new Date(now); mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    return `${mon.getDate()}–${sun.getDate()} ${sun.toLocaleDateString('fr-FR', { month: 'short' })}`;
+  }
+  if (mode === 'nextweek') {
+    const dayOfWeek = now.getDay();
+    const daysToNextMon = dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
+    const mon = new Date(now); mon.setDate(now.getDate() + daysToNextMon);
     const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
     return `${mon.getDate()}–${sun.getDate()} ${sun.toLocaleDateString('fr-FR', { month: 'short' })}`;
   }
@@ -498,7 +511,7 @@ export default function EconomicCalendar() {
     setError('');
     try {
       const urls = [FF_THIS_WEEK];
-      if (dateMode === 'next7' || dateMode === 'month') urls.push(FF_NEXT_WEEK);
+      if (dateMode === 'next7' || dateMode === 'nextweek' || dateMode === 'month') urls.push(FF_NEXT_WEEK);
 
       const fetchOne = async (url) => {
         const cacheKey = url.includes('nextweek') ? 'next' : 'this';
@@ -530,6 +543,8 @@ export default function EconomicCalendar() {
       if (dateMode !== 'week') {
         const { from, to } = getDateRange(dateMode);
         ranged = normalized.filter(e => e.date >= from && e.date <= to);
+      } else {
+        ranged = normalized; // thisweek API already returns current week
       }
 
       setEvents(ranged);
@@ -670,12 +685,13 @@ export default function EconomicCalendar() {
         {/* Row 2 : Période + recherche + à venir */}
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '9px', color: '#3c4c64', letterSpacing: '1.5px', marginRight: '4px', flexShrink: 0 }}>PÉRIODE</span>
-          <div style={{ display: 'flex', gap: '4px' }}>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
             {[
-              { key: 'today', label: "Aujourd'hui" },
-              { key: 'week',  label: 'Cette semaine' },
-              { key: 'next7', label: '7 prochains jours' },
-              { key: 'month', label: 'Ce mois' },
+              { key: 'today',    label: "Aujourd'hui" },
+              { key: 'week',     label: 'Cette semaine' },
+              { key: 'nextweek', label: 'Semaine prochaine' },
+              { key: 'next7',    label: '7 prochains jours' },
+              { key: 'month',    label: 'Ce mois' },
             ].map(({ key, label }) => (
               <button key={key} onClick={() => setDateModePersist(key)}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 10px', borderRadius: '4px', border: `1px solid ${dateMode === key ? '#8899bb' : '#1e2c40'}`, background: dateMode === key ? 'rgba(136,153,187,0.14)' : 'transparent', color: dateMode === key ? '#8899bb' : '#5a6a82', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s', lineHeight: '1.3' }}

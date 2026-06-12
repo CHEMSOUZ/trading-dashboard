@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell, ReferenceLine,
@@ -180,30 +180,31 @@ function CalendarHeatmap({ trades }) {
           <span style={{ display:'flex', alignItems:'center', gap:'3px' }}><span style={{ width:'8px', height:'8px', borderRadius:'2px', background:'rgba(255,51,68,0.4)', display:'inline-block' }} /> Perte</span>
         </div>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'2px', marginBottom:'2px' }}>
-        {['L','M','M','J','V','S','D'].map((d,i) => <div key={i} style={{ textAlign:'center', fontSize:'8px', color:T.text4, fontWeight:'700', paddingBottom:'3px' }}>{d}</div>)}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'4px', marginBottom:'4px' }}>
+        {['LUN','MAR','MER','JEU','VEN','SAM','DIM'].map((d,i) => <div key={i} style={{ textAlign:'center', fontSize:'9px', color:T.text3, fontWeight:'700', paddingBottom:'4px' }}>{d}</div>)}
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'2px' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'4px' }}>
         {cells.map((day, i) => {
           if (!day) return <div key={`e${i}`} />;
           const ds   = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
           const data = dayMap[ds];
           const isToday = ds === todayStr;
-          let bg = `${T.bg}0.35)`, textColor = T.text4, pnlText = null;
+          let bg = `${T.bg}0.35)`, textColor = T.text3, pnlText = null;
           if (data) {
             const int = Math.min(Math.abs(data.pnl)/maxPnl, 1);
             if (data.pnl > 0)      { bg=`rgba(0,204,119,${0.09+int*0.42})`; textColor='#00cc77'; }
             else if (data.pnl < 0) { bg=`rgba(255,51,68,${0.09+int*0.42})`;  textColor='#ff4455'; }
             else                   { bg='rgba(96,104,120,0.15)'; textColor='#606878'; }
-            pnlText = `${data.pnl>=0?'+':''}${Math.round(data.pnl)}`;
+            pnlText = `${data.pnl>=0?'+':''}${Math.round(data.pnl)}$`;
           }
           return (
             <div key={ds} title={data ? `${fmt(data.pnl,true)} · ${data.count}t` : ds}
-              style={{ aspectRatio:'1', borderRadius:'3px', background:bg, border:`1px solid ${isToday?`${T.border}0.55)`:'transparent'}`, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'1px', cursor:data?'pointer':'default', transition:'opacity 0.15s' }}
+              style={{ minHeight:'52px', borderRadius:'5px', background:bg, border:`1px solid ${isToday?`${T.border}0.60)`:'transparent'}`, outline:isToday?`1px solid ${T.border}0.30)`:'none', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'3px', cursor:data?'pointer':'default', transition:'opacity 0.15s', padding:'4px 2px' }}
               onMouseEnter={e => { if(data) e.currentTarget.style.opacity='0.75'; }}
               onMouseLeave={e => e.currentTarget.style.opacity='1'}>
-              <span style={{ fontSize:'9px', color:textColor, fontWeight:data?'700':'400', lineHeight:1 }}>{day}</span>
-              {data && <span style={{ fontSize:'7px', color:textColor, opacity:0.85, lineHeight:1 }}>{pnlText}</span>}
+              <span style={{ fontSize:'12px', color:textColor, fontWeight:data?'700':'400', lineHeight:1 }}>{day}</span>
+              {data && <span style={{ fontSize:'9px', color:textColor, opacity:0.90, lineHeight:1, fontWeight:'600' }}>{pnlText}</span>}
+              {data && <span style={{ fontSize:'8px', color:textColor, opacity:0.55, lineHeight:1 }}>{data.count}t</span>}
             </div>
           );
         })}
@@ -311,41 +312,37 @@ function SyntheseTab({ trades, loading }) {
         </div>
       </div>
 
-      {/* Equity + Calendar */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 300px', gap:'14px' }}>
-
-        {/* Mini equity curve */}
-        <div>
-          <SectionTitle>COURBE D'ÉQUITÉ</SectionTitle>
-          <div style={{ background:`${T.bg}0.60)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'16px', height:'200px' }}>
-            {equityData.length > 1 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={equityData} margin={{ top:5, right:10, left:0, bottom:0 }}>
-                  <defs>
-                    <linearGradient id="eq" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={total>=0?'#00cc77':'#ff3344'} stopOpacity={0.25} />
-                      <stop offset="95%" stopColor={total>=0?'#00cc77':'#ff3344'} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={`${T.border}0.08)`} vertical={false} />
-                  <XAxis dataKey="i" tick={false} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize:9, fill:T.text3 }} axisLine={false} tickLine={false} tickFormatter={v => `${v>0?'+':''}${v}$`} width={55} />
-                  <Tooltip content={<CTooltip />} />
-                  <ReferenceLine y={0} stroke={`${T.border}0.20)`} strokeDasharray="4 2" />
-                  <Area type="monotone" dataKey="cum" name="Équité" stroke={total>=0?'#00cc77':'#ff3344'} strokeWidth={2} fill="url(#eq)" dot={false} />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:T.text3, fontSize:'11px' }}>Pas assez de données</div>
-            )}
-          </div>
+      {/* Equity curve */}
+      <div>
+        <SectionTitle>COURBE D'ÉQUITÉ</SectionTitle>
+        <div style={{ background:`${T.bg}0.60)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'16px', height:'200px' }}>
+          {equityData.length > 1 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={equityData} margin={{ top:5, right:10, left:0, bottom:0 }}>
+                <defs>
+                  <linearGradient id="eq" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={total>=0?'#00cc77':'#ff3344'} stopOpacity={0.25} />
+                    <stop offset="95%" stopColor={total>=0?'#00cc77':'#ff3344'} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={`${T.border}0.08)`} vertical={false} />
+                <XAxis dataKey="i" tick={false} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize:9, fill:T.text3 }} axisLine={false} tickLine={false} tickFormatter={v => `${v>0?'+':''}${v}$`} width={55} />
+                <Tooltip content={<CTooltip />} />
+                <ReferenceLine y={0} stroke={`${T.border}0.20)`} strokeDasharray="4 2" />
+                <Area type="monotone" dataKey="cum" name="Équité" stroke={total>=0?'#00cc77':'#ff3344'} strokeWidth={2} fill="url(#eq)" dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:T.text3, fontSize:'11px' }}>Pas assez de données</div>
+          )}
         </div>
+      </div>
 
-        {/* Calendar */}
-        <div>
-          <SectionTitle>CALENDRIER</SectionTitle>
-          <CalendarHeatmap trades={trades} />
-        </div>
+      {/* Calendar */}
+      <div>
+        <SectionTitle>CALENDRIER</SectionTitle>
+        <CalendarHeatmap trades={trades} />
       </div>
 
       {/* Pairs + DOW side by side */}
@@ -385,7 +382,7 @@ function SyntheseTab({ trades, loading }) {
                 <YAxis tick={{ fontSize:9, fill:T.text3 }} axisLine={false} tickLine={false} tickFormatter={v=>`${v>0?'+':''}${v}$`} width={50} />
                 <Tooltip content={<CTooltip />} />
                 <ReferenceLine y={0} stroke={`${T.border}0.18)`} />
-                <Bar dataKey="pnl" name="P&L" radius={[3,3,0,0]}>
+                <Bar dataKey="pnl" name="P&L" radius={[3,3,0,0]} maxBarSize={6}>
                   {dowData.map((d,i) => <Cell key={i} fill={pnlColor(d.pnl)} fillOpacity={0.85} />)}
                 </Bar>
               </BarChart>
@@ -633,7 +630,7 @@ function GraphiquesTab({ trades, loading }) {
                   <YAxis tick={{ fontSize:9, fill:T.text3 }} axisLine={false} tickLine={false} tickFormatter={v=>`${v>0?'+':''}${v}$`} width={55} />
                   <Tooltip content={<CTooltip />} />
                   <ReferenceLine y={0} stroke={`${T.border}0.15)`} />
-                  <Bar dataKey="pnl" name="P&L" radius={[3,3,0,0]}>
+                  <Bar dataKey="pnl" name="P&L" radius={[3,3,0,0]} maxBarSize={6}>
                     {monthData.map((d,i) => <Cell key={i} fill={pnlColor(d.pnl)} fillOpacity={0.85} />)}
                   </Bar>
                 </BarChart>
@@ -652,7 +649,7 @@ function GraphiquesTab({ trades, loading }) {
                 <YAxis tick={{ fontSize:9, fill:T.text3 }} axisLine={false} tickLine={false} tickFormatter={v=>`${v>0?'+':''}${v}$`} width={50} />
                 <Tooltip content={<CTooltip />} />
                 <ReferenceLine y={0} stroke={`${T.border}0.15)`} />
-                <Bar dataKey="pnl" name="P&L" radius={[3,3,0,0]}>
+                <Bar dataKey="pnl" name="P&L" radius={[3,3,0,0]} maxBarSize={6}>
                   {dowData.map((d,i) => <Cell key={i} fill={pnlColor(d.pnl)} fillOpacity={0.85} />)}
                 </Bar>
               </BarChart>
@@ -673,7 +670,7 @@ function GraphiquesTab({ trades, loading }) {
                 <YAxis type="category" dataKey="pair" tick={{ fontSize:10, fill:T.text2 }} axisLine={false} tickLine={false} width={50} />
                 <Tooltip content={<CTooltip />} />
                 <ReferenceLine x={0} stroke={`${T.border}0.18)`} />
-                <Bar dataKey="pnl" name="P&L" radius={[0,3,3,0]}>
+                <Bar dataKey="pnl" name="P&L" radius={[0,3,3,0]} maxBarSize={6}>
                   {pairData.map((d,i) => <Cell key={i} fill={pnlColor(d.pnl)} fillOpacity={0.85} />)}
                 </Bar>
               </BarChart>
@@ -689,14 +686,7 @@ function GraphiquesTab({ trades, loading }) {
 export default function Journal() {
   const [trades,  setTrades]  = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tab,     setTab]     = useState('SYNTHESE');
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const t = searchParams.get('tab');
-    if (t) setTab(t.toUpperCase());
-  }, []);
 
   useEffect(() => { loadTrades(); }, []);
 
@@ -718,17 +708,11 @@ export default function Journal() {
     setTrades(prev => prev.map(t => t.id===id ? {...t,...patch} : t));
   }
 
-  const TABS = [
-    { id:'SYNTHESE',    label:'SYNTHÈSE' },
-    { id:'TRADES',      label:'TRADES' },
-    { id:'GRAPHIQUES',  label:'GRAPHIQUES' },
-  ];
-
   return (
     <div style={{ padding:'24px 28px', width:'100%', boxSizing:'border-box', maxWidth:'none' }}>
 
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:'16px' }}>
+      <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:'20px' }}>
         <div>
           <div style={{ fontSize:'9px', color:T.text3, letterSpacing:'3px', marginBottom:'5px' }}>HUB TRADING</div>
           <h1 style={{ fontSize:'22px', fontWeight:'700', color:T.text1, margin:0, letterSpacing:'-0.5px' }}>Journal</h1>
@@ -741,19 +725,24 @@ export default function Journal() {
         >+ NOUVEAU TRADE</button>
       </div>
 
-      {/* Tab bar */}
-      <div style={{ display:'flex', gap:'2px', borderBottom:`1px solid ${T.border}0.10)`, marginBottom:'20px' }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{ padding:'10px 24px', background:'transparent', border:'none', borderBottom:`2px solid ${tab===t.id?T.accent:'transparent'}`, color:tab===t.id?T.text1:T.text3, fontSize:'10px', fontFamily:'inherit', letterSpacing:'2px', cursor:'pointer', fontWeight:tab===t.id?'700':'400', transition:'all 0.15s', marginBottom:'-1px' }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Synthèse — stats + equity + calendar */}
+      <SyntheseTab trades={trades} loading={loading} />
 
-      {/* Tab content */}
-      {tab === 'SYNTHESE'   && <SyntheseTab   trades={trades} loading={loading} />}
-      {tab === 'TRADES'     && <TradesTab trades={trades} loading={loading} navigate={navigate} onDelete={handleDelete} onFeeUpdate={handleFeeUpdate} />}
-      {tab === 'GRAPHIQUES' && <GraphiquesTab trades={trades} loading={loading} />}
+      {/* Séparateur Trades */}
+      <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'28px 0 16px' }}>
+        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+        <span style={{ fontSize:'9px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>HISTORIQUE DES TRADES</span>
+        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+      </div>
+      <TradesTab trades={trades} loading={loading} navigate={navigate} onDelete={handleDelete} onFeeUpdate={handleFeeUpdate} />
+
+      {/* Séparateur Graphiques */}
+      <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'28px 0 16px' }}>
+        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+        <span style={{ fontSize:'9px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>GRAPHIQUES & ANALYSES</span>
+        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+      </div>
+      <GraphiquesTab trades={trades} loading={loading} />
     </div>
   );
 }

@@ -192,7 +192,7 @@ export default function Charts() {
                   <YAxis tick={{ fill: '#3a6a4a', fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}$`} />
                   <Tooltip content={<CustomTooltip />} />
                   <ReferenceLine y={0} stroke="rgba(0,255,136,0.2)" />
-                  <Bar dataKey="pnl" name="P&L" radius={[3,3,0,0]}
+                  <Bar dataKey="pnl" name="P&L" radius={[3,3,0,0]} maxBarSize={6}
                     fill="#00ff88"
                     isAnimationActive
                   />
@@ -258,7 +258,7 @@ export default function Charts() {
                   <YAxis type="category" dataKey="pair" tick={{ fill: '#8aaa90', fontSize: 10 }} axisLine={false} tickLine={false} width={60} />
                   <Tooltip content={<CustomTooltip />} />
                   <ReferenceLine x={0} stroke="rgba(0,255,136,0.2)" />
-                  <Bar dataKey="pnl" name="P&L" radius={[0,3,3,0]} fill="#00ff88" isAnimationActive />
+                  <Bar dataKey="pnl" name="P&L" radius={[0,3,3,0]} maxBarSize={6} fill="#00ff88" isAnimationActive />
                 </BarChart>
               </ResponsiveContainer>
             ) : (

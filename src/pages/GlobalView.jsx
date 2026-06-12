@@ -621,24 +621,28 @@ export default function GlobalView() {
           </div>
 
           {/* ── POINTS FORTS ── */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-            <div style={{ height: '1px', flex: 1, background: 'rgba(136,153,187,0.12)' }} />
-            <span style={{ fontSize: '11px', color: '#8899bb', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>✅ POINTS FORTS</span>
-            <div style={{ height: '1px', flex: 1, background: 'rgba(136,153,187,0.12)' }} />
+          <div style={{ background: 'linear-gradient(90deg,rgba(0,204,119,0.10) 0%,rgba(0,204,119,0.04) 100%)', border: '1px solid rgba(0,204,119,0.25)', borderLeft: '3px solid #00cc77', borderRadius: '6px', padding: '10px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '18px' }}>✅</span>
+            <div>
+              <div style={{ fontSize: '12px', color: '#00cc77', letterSpacing: '2px', fontWeight: '700' }}>POINTS FORTS</div>
+              <div style={{ fontSize: '10px', color: 'rgba(0,204,119,0.6)', marginTop: '1px' }}>Tes atouts — à exploiter davantage</div>
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '10px', marginBottom: '20px' }}>
-            {bestDow     && <InsightCard icon="📅" title="MEILLEUR JOUR"          value={bestDow.label}     desc={`${fmt(bestDow.pnl,true)} · ${bestDow.wr}% WR`}        color="#8899bb" onClick={() => openDow(bestDow)} />}
+            {bestDow     && <InsightCard icon="📅" title="MEILLEUR JOUR"          value={bestDow.label}     desc={`${fmt(bestDow.pnl,true)} · ${bestDow.wr}% WR`}        color="#00cc77" onClick={() => openDow(bestDow)} />}
             {bestSession && <InsightCard icon="⏰" title="MEILLEURE SESSION (P&L)" value={bestSession.label} desc={`${fmt(bestSession.pnl,true)} · ${bestSession.wr}% WR · ${bestSession.count}T`} color={bestSession.color} onClick={() => openSession(bestSession)} />}
-            {bestHour    && <InsightCard icon="🎯" title="HEURE OPTIMALE"          value={bestHour.label}    desc={`${fmt(bestHour.pnl,true)} · ${bestHour.wr}% WR`}       color="#8899bb" onClick={() => openHour(bestHour)} />}
+            {bestHour    && <InsightCard icon="🎯" title="HEURE OPTIMALE"          value={bestHour.label}    desc={`${fmt(bestHour.pnl,true)} · ${bestHour.wr}% WR`}       color="#00cc77" onClick={() => openHour(bestHour)} />}
             {bestPair    && <InsightCard icon="📈" title="INSTRUMENT PHARE"        value={bestPair.pair}     desc={`${fmt(bestPair.pnl,true)} · ${bestPair.wr}% WR`}       color="#00aaff" />}
             {bestEmotion && <InsightCard icon="🧠" title="MEILLEUR ÉTAT MENTAL"    value={bestEmotion.em}    desc={`${fmt(bestEmotion.pnl,true)} · ${bestEmotion.total}T`} color="#aa88ff" />}
           </div>
 
           {/* ── POINTS FAIBLES ── */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-            <div style={{ height: '1px', flex: 1, background: 'rgba(255,68,85,0.1)' }} />
-            <span style={{ fontSize: '11px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>❌ POINTS FAIBLES</span>
-            <div style={{ height: '1px', flex: 1, background: 'rgba(255,68,85,0.1)' }} />
+          <div style={{ background: 'linear-gradient(90deg,rgba(255,68,85,0.10) 0%,rgba(255,68,85,0.04) 100%)', border: '1px solid rgba(255,68,85,0.25)', borderLeft: '3px solid #ff4455', borderRadius: '6px', padding: '10px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '18px' }}>❌</span>
+            <div>
+              <div style={{ fontSize: '12px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700' }}>POINTS FAIBLES</div>
+              <div style={{ fontSize: '10px', color: 'rgba(255,68,85,0.6)', marginTop: '1px' }}>À corriger — pièges récurrents à éviter</div>
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '10px', marginBottom: '24px' }}>
             {worstDow     && <InsightCard icon="📅" title="PIRE JOUR"              value={worstDow.label}     desc={`${fmt(worstDow.pnl,true)} · ${worstDow.wr}% WR`}         color="#ff4455" onClick={() => openDow(worstDow)} />}
@@ -660,7 +664,7 @@ export default function GlobalView() {
                   <YAxis tick={{ fill:'#5a6a82', fontSize:10 }} axisLine={false} tickLine={false} tickFormatter={v=>`${v}$`} width={55} />
                   <Tooltip content={<CTooltip />} />
                   <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
-                  <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} maxBarSize={32} isAnimationActive
+                  <Bar dataKey="pnl" name="P&L net" radius={[3,3,0,0]} maxBarSize={6} isAnimationActive
                     onClick={(data) => { const d = byDow.find(x => x.label === data.label); if (d) openDow(d); }}
                     style={{ cursor: 'pointer' }}
                   >
@@ -725,7 +729,7 @@ export default function GlobalView() {
                   <YAxis tick={{ fill:'#5a6a82', fontSize:10 }} axisLine={false} tickLine={false} tickFormatter={v=>`${v}$`} width={55} />
                   <Tooltip content={<CTooltip />} />
                   <ReferenceLine y={0} stroke="rgba(136,153,187,0.18)" />
-                  <Bar dataKey="pnl" name="P&L net" radius={[2,2,0,0]} maxBarSize={16} isAnimationActive
+                  <Bar dataKey="pnl" name="P&L net" radius={[2,2,0,0]} maxBarSize={6} isAnimationActive
                     onClick={(data) => { const h = byHour.find(x => x.label === data.label); if (h && h.count > 0) openHour(h); }}
                     style={{ cursor: 'pointer' }}
                   >
