@@ -34,7 +34,7 @@ export default function TradeReplay({ trade, onClose }) {
     if (!date) { setError('Date de trade invalide'); setLoading(false); return; }
     const res = await window.market.getOHLCV(trade.pair, date, tf);
     if (!res.ok) { setError(res.error || 'Données indisponibles'); setLoading(false); return; }
-    if (!res.data.length) { setError('Aucune bougie disponible pour ce symbole/date'); setLoading(false); return; }
+    if (!res.data.length) { setError(`Aucune bougie disponible pour ${trade.pair} le ${date} — weekend ou jour férié ?`); setLoading(false); return; }
     const data = res.data;
     setCandles(data);
     const entryTs = trade.entered_at ? Math.floor(new Date(trade.entered_at).getTime() / 1000) : null;

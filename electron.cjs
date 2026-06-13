@@ -433,12 +433,26 @@ function registerHandlers() {
   ipcMain.handle('market:getOHLCV', async (_, pair, date, interval) => {
     try {
       const SYMBOL_MAP = {
-        MNQ:'NQ=F', NQ:'NQ=F', MES:'ES=F', ES:'ES=F',
-        MGC:'GC=F', GC:'GC=F', MCL:'CL=F', CL:'CL=F',
-        M2K:'RTY=F', RTY:'RTY=F', YM:'YM=F', MYM:'YM=F',
-        NASDAQ:'NQ=F', SP500:'ES=F', SI:'SI=F', DAX:'%5EGDAXI',
+        // Micro Nasdaq
+        MN:'NQ=F', MNQ:'NQ=F', NQ:'NQ=F', NASDAQ:'NQ=F',
+        // Micro S&P 500
+        ME:'ES=F', MES:'ES=F', ES:'ES=F', SP500:'ES=F',
+        // Micro Dow Jones
+        MY:'YM=F', MYM:'YM=F', YM:'YM=F', DOW:'YM=F',
+        // Micro Russell 2000
+        M2K:'RTY=F', RTY:'RTY=F', RUT:'RTY=F',
+        // Micro Gold / Silver
+        MGC:'GC=F', GC:'GC=F', MSG:'SI=F', SI:'SI=F',
+        // Micro Crude Oil
+        MCL:'CL=F', CL:'CL=F',
+        // Indices
+        DAX:'%5EGDAXI', CAC:'%5EFCHI', FTSE:'%5EFTSE',
       };
-      const symbol  = SYMBOL_MAP[(pair||'').toUpperCase()] ?? pair;
+      // Strip trailing contract month+year codes (e.g. MNQ1!, MNQZ24, ESH25 → MNQ / MNQ / ES)
+      const normalized = (pair || '').toUpperCase()
+        .replace(/\d+!$/, '')              // remove "1!" suffix
+        .replace(/[FGHJKMNQUVXZ]\d{2}$/, ''); // remove month+2-digit year (e.g. Z24)
+      const symbol = SYMBOL_MAP[normalized] ?? SYMBOL_MAP[(pair||'').toUpperCase()] ?? pair;
       const dayStart = Math.floor(new Date(date + 'T06:00:00Z').getTime() / 1000);
       const dayEnd   = Math.floor(new Date(date + 'T23:59:59Z').getTime() / 1000);
       const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&period1=${dayStart}&period2=${dayEnd}&events=`;
