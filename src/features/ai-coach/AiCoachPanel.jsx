@@ -200,18 +200,27 @@ function ApiKeySetup({ onSaved }) {
 // ── ChatBubble ───────────────────────────────────────────────
 function ChatBubble({ msg }) {
   const isUser = msg.role === 'user';
+  const text   = msg.textContent ?? (typeof msg.content === 'string' ? msg.content : '');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', marginBottom: '10px' }}>
       <div style={{ fontSize: '10px', color: C.text3, marginBottom: '3px', letterSpacing: '0.5px' }}>
         {isUser ? 'VOUS' : 'AI COACH'}
       </div>
       <div style={{
-        maxWidth: '90%', padding: '10px 13px', borderRadius: isUser ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+        maxWidth: '90%', borderRadius: isUser ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
         background: isUser ? C.user : C.ai,
         border: `1px solid ${isUser ? C.userBdr : C.aiBdr}`,
-        fontSize: '13px', color: C.text1, lineHeight: '1.6', whiteSpace: 'pre-wrap',
+        overflow: 'hidden',
       }}>
-        {msg.content}
+        {msg.imagePreview && (
+          <img src={msg.imagePreview} alt="screenshot joint"
+            style={{ display: 'block', width: '100%', maxHeight: '200px', objectFit: 'contain', background: '#000', borderBottom: `1px solid ${isUser ? C.userBdr : C.aiBdr}` }} />
+        )}
+        {text && (
+          <div style={{ padding: '10px 13px', fontSize: '13px', color: C.text1, lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+            {text}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -228,8 +237,24 @@ export default function AiCoachPanel({ open, onClose, activeAccount }) {
   const [stats,       setStats]       = useState(null);
   const [tab,         setTab]         = useState('chat'); // 'chat' | 'insights'
   const [initialised, setInitialised] = useState(false);
+  const [attachedImg, setAttachedImg] = useState(null); // { base64, mediaType, preview }
   const scrollRef  = useRef(null);
   const inputRef   = useRef(null);
+  const fileRef    = useRef(null);
+
+  function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result; // data:image/png;base64,...
+      const [meta, base64] = dataUrl.split(',');
+      const mediaType = meta.match(/:(.*?);/)?.[1] ?? 'image/png';
+      setAttachedImg({ base64, mediaType, preview: dataUrl });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
 
   // Load on open
   useEffect(() => {
@@ -264,17 +289,35 @@ export default function AiCoachPanel({ open, onClose, activeAccount }) {
 
   const sendMessage = useCallback(async (text) => {
     const userText = (text || input).trim();
-    if (!userText || loading) return;
+    if ((!userText && !attachedImg) || loading) return;
     setInput('');
+    const img = attachedImg;
+    setAttachedImg(null);
     setLoading(true);
 
-    const userMsg = { role: 'user', content: userText };
+    // Contenu pour l'API (multimodal si image)
+    let apiContent;
+    if (img) {
+      apiContent = [
+        { type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.base64 } },
+        ...(userText ? [{ type: 'text', text: userText }] : []),
+      ];
+    } else {
+      apiContent = userText;
+    }
+
+    // Message affiché en UI (avec preview locale)
+    const userMsg = { role: 'user', content: apiContent, textContent: userText, imagePreview: img?.preview ?? null };
     const newMsgs = [...messages, userMsg];
     setMessages(newMsgs);
-    await window.ai.addMessage(userMsg);
+
+    // DB : on stocke seulement le texte (pas le base64 volumineux)
+    await window.ai.addMessage({ role: 'user', content: userText || '[image]' });
 
     const systemPrompt = buildSystemPrompt(trades, stats, activeAccount);
-    const res = await window.ai.chat(newMsgs, systemPrompt);
+    // Pour l'API, on envoie les messages en nettoyant les champs UI (imagePreview, textContent)
+    const apiMsgs = newMsgs.map(m => ({ role: m.role, content: m.content }));
+    const res = await window.ai.chat(apiMsgs, systemPrompt);
 
     if (res.ok) {
       const aiMsg = { role: 'assistant', content: res.data };
@@ -287,7 +330,7 @@ export default function AiCoachPanel({ open, onClose, activeAccount }) {
       setMessages(m => [...m, errMsg]);
     }
     setLoading(false);
-  }, [input, loading, messages, trades, stats, activeAccount]);
+  }, [input, attachedImg, loading, messages, trades, stats, activeAccount]);
 
   const clearHistory = useCallback(async () => {
     await window.ai.clearHistory();
@@ -295,8 +338,8 @@ export default function AiCoachPanel({ open, onClose, activeAccount }) {
   }, []);
 
   const handleKey = useCallback((e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-  }, [sendMessage]);
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (input.trim() || attachedImg) sendMessage(); }
+  }, [sendMessage, input, attachedImg]);
 
   return (
     <>
@@ -439,30 +482,62 @@ export default function AiCoachPanel({ open, onClose, activeAccount }) {
 
             {/* Input */}
             <div style={{ padding: '10px 14px 14px', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+
+              {/* Image preview */}
+              {attachedImg && (
+                <div style={{ position: 'relative', marginBottom: '8px', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(124,58,237,0.35)', display: 'inline-block', maxWidth: '100%' }}>
+                  <img src={attachedImg.preview} alt="screenshot" style={{ display: 'block', maxHeight: '140px', maxWidth: '100%', objectFit: 'contain', background: '#000' }} />
+                  <button onClick={() => setAttachedImg(null)}
+                    style={{ position: 'absolute', top: '5px', right: '5px', width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end' }}>
+                {/* Clip button */}
+                <button onClick={() => fileRef.current?.click()} title="Joindre un screenshot"
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '7px', flexShrink: 0,
+                    background: attachedImg ? 'rgba(124,58,237,0.18)' : 'rgba(136,153,187,0.07)',
+                    border: `1px solid ${attachedImg ? 'rgba(124,58,237,0.45)' : 'rgba(136,153,187,0.20)'}`,
+                    color: attachedImg ? '#a78bfa' : C.text3,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(124,58,237,0.45)'; e.currentTarget.style.color = '#a78bfa'; }}
+                  onMouseLeave={e => { if (!attachedImg) { e.currentTarget.style.borderColor = 'rgba(136,153,187,0.20)'; e.currentTarget.style.color = C.text3; } }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                </button>
+
                 <textarea
                   ref={inputRef}
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={handleKey}
                   disabled={loading}
-                  placeholder="Pose ta question... (Entrée pour envoyer)"
+                  placeholder={attachedImg ? 'Ajoute un commentaire (optionnel)...' : 'Pose ta question... (Entrée pour envoyer)'}
                   rows={2}
                   style={{
-                    flex: 1, background: 'rgba(14,15,22,0.8)', border: `1px solid ${input ? 'rgba(124,58,237,0.40)' : 'rgba(136,153,187,0.18)'}`, borderRadius: '8px',
-                    padding: '10px 12px', color: C.text1, fontSize: '13px', fontFamily: 'inherit', outline: 'none',
-                    resize: 'none', lineHeight: '1.5', transition: 'border-color 0.15s',
+                    flex: 1, background: 'rgba(14,15,22,0.8)',
+                    border: `1px solid ${(input || attachedImg) ? 'rgba(124,58,237,0.40)' : 'rgba(136,153,187,0.18)'}`,
+                    borderRadius: '8px', padding: '10px 12px', color: C.text1, fontSize: '13px', fontFamily: 'inherit',
+                    outline: 'none', resize: 'none', lineHeight: '1.5', transition: 'border-color 0.15s',
                   }}
                 />
-                <button onClick={() => sendMessage()} disabled={loading || !input.trim()}
+                <button onClick={() => sendMessage()} disabled={loading || (!input.trim() && !attachedImg)}
                   style={{
                     width: '40px', height: '40px', borderRadius: '8px', flexShrink: 0,
-                    background: input.trim() && !loading ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : 'rgba(136,153,187,0.10)',
-                    border: `1px solid ${input.trim() && !loading ? 'rgba(124,58,237,0.5)' : 'rgba(136,153,187,0.2)'}`,
-                    color: input.trim() && !loading ? 'white' : C.text3,
-                    cursor: input.trim() && !loading ? 'pointer' : 'not-allowed',
+                    background: (input.trim() || attachedImg) && !loading ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : 'rgba(136,153,187,0.10)',
+                    border: `1px solid ${(input.trim() || attachedImg) && !loading ? 'rgba(124,58,237,0.5)' : 'rgba(136,153,187,0.2)'}`,
+                    color: (input.trim() || attachedImg) && !loading ? 'white' : C.text3,
+                    cursor: (input.trim() || attachedImg) && !loading ? 'pointer' : 'not-allowed',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.2s', boxShadow: input.trim() && !loading ? '0 0 16px rgba(124,58,237,0.35)' : 'none',
+                    transition: 'all 0.2s', boxShadow: (input.trim() || attachedImg) && !loading ? '0 0 16px rgba(124,58,237,0.35)' : 'none',
                   }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -470,7 +545,7 @@ export default function AiCoachPanel({ open, onClose, activeAccount }) {
                 </button>
               </div>
               <div style={{ fontSize: '10px', color: C.text3, marginTop: '5px', textAlign: 'center' }}>
-                Shift+Entrée pour saut de ligne
+                Shift+Entrée pour saut de ligne · 🖼 image pour analyse visuelle
               </div>
             </div>
           </>
