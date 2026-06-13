@@ -43,6 +43,7 @@ contextBridge.exposeInMainWorld('shell', {
 
 contextBridge.exposeInMainWorld('ai', {
   hasKey:       ()           => ipcRenderer.invoke('ai:hasKey'),
+  setKey:       (key)        => ipcRenderer.invoke('ai:setKey', key),
   chat:         (msgs, sys)  => ipcRenderer.invoke('ai:chat', msgs, sys),
   getMessages:  ()           => ipcRenderer.invoke('ai:getMessages'),
   addMessage:   (msg)        => ipcRenderer.invoke('ai:addMessage', msg),

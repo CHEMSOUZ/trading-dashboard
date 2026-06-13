@@ -396,6 +396,25 @@ function registerHandlers() {
   // ── AI Coach handlers ─────────────────────────────────────────
   ipcMain.handle('ai:hasKey', () => ({ ok: true, data: !!process.env.ANTHROPIC_API_KEY }));
 
+  ipcMain.handle('ai:setKey', async (_, key) => {
+    try {
+      const k = (key || '').trim();
+      if (!k.startsWith('sk-ant-')) return { ok: false, error: 'Clé invalide (doit commencer par sk-ant-)' };
+      const dir = path.join(process.env.APPDATA || process.env.HOME || '', 'trading-dashboard');
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const envPath = path.join(dir, '.env');
+      let lines = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf-8').split('\n') : [];
+      const idx = lines.findIndex(l => l.startsWith('ANTHROPIC_API_KEY='));
+      const newLine = `ANTHROPIC_API_KEY="${k}"`;
+      if (idx >= 0) lines[idx] = newLine; else lines.push(newLine);
+      fs.writeFileSync(envPath, lines.filter(Boolean).join('\n') + '\n', 'utf-8');
+      process.env.ANTHROPIC_API_KEY = k;
+      return { ok: true };
+    } catch(e) {
+      return { ok: false, error: e.message };
+    }
+  });
+
   ipcMain.handle('ai:chat', async (_, messages, systemPrompt) => {
     try {
       const text = await callAnthropicApi(messages, systemPrompt);

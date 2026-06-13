@@ -476,7 +476,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
       </div>
 
       <div style={{ padding: '5px 0 7px', textAlign: 'center', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px' }}>
-        <span style={{ fontSize: '10px', color: '#3a4a5a', letterSpacing: '1px' }}>v1.5.4</span>
+        <span style={{ fontSize: '10px', color: '#3a4a5a', letterSpacing: '1px' }}>v1.5.5</span>
         <span style={{ fontSize: '10px', color: '#2e3d52', letterSpacing: '0.5px' }}>·</span>
         <span title="Afficher les raccourcis clavier (touche ?)" style={{ fontSize: '10px', color: '#2e3d52', letterSpacing: '0.5px', cursor: 'default' }}>? raccourcis</span>
       </div>
