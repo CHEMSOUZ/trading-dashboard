@@ -421,7 +421,8 @@ function TradeRow({ trade, onDelete, onFeeUpdate, onClick }) {
   let checklistScore = null;
   if (trade.notes) { const m=trade.notes.match(/\[(\d+)\/(\d+)\]/); if(m) checklistScore=`${m[1]}/${m[2]}`; }
   const notesClean = trade.notes ? trade.notes.replace(/\nChecklist:.*$/s,'').trim() : '';
-  const entryTime  = trade.entered_at ? new Date(trade.entered_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : null;
+  const entryTime = trade.entered_at ? new Date(trade.entered_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : null;
+  const exitTime  = trade.exited_at  ? new Date(trade.exited_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})  : null;
 
   return (
     <div onClick={onClick}
@@ -429,18 +430,24 @@ function TradeRow({ trade, onDelete, onFeeUpdate, onClick }) {
       onMouseEnter={e => e.currentTarget.style.background=`${T.bgHov}0.65)`}
       onMouseLeave={e => e.currentTarget.style.background=`${T.bg}0.55)`}>
       <div style={{ background:color, opacity:0.75 }} />
-      <div style={{ padding:'10px 14px', display:'grid', gridTemplateColumns:'110px 68px 95px 70px 1fr 115px 85px 56px', gap:'8px', alignItems:'center' }}>
+      <div style={{ padding:'10px 14px', display:'grid', gridTemplateColumns:'110px 68px 90px 90px 60px 1fr 115px 85px 56px', gap:'8px', alignItems:'center' }}>
         <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
           <span style={{ fontSize:'13px', fontWeight:'700', color:T.text1 }}>{trade.pair}</span>
           {trade.size != null && <span style={{ fontSize:'12px', color:T.text3 }}>{trade.size} contrat{trade.size>1?'s':''}</span>}
         </div>
         <span style={{ fontSize:'12px', fontWeight:'700', letterSpacing:'0.5px', color:trade.direction==='LONG'?'#00cc77':'#ff3344', background:`rgba(${trade.direction==='LONG'?'0,204,119':'255,51,68'},0.10)`, border:`1px solid rgba(${trade.direction==='LONG'?'0,204,119':'255,51,68'},0.22)`, padding:'3px 7px', borderRadius:'3px', textAlign:'center', width:'fit-content' }}>{trade.direction}</span>
+        {/* ENTRÉE */}
         <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
-          <span style={{ fontSize:'12px', color:T.text3 }}>E <span style={{ color:T.text2 }}>{trade.entry??'—'}</span></span>
-          <span style={{ fontSize:'12px', color:T.text3 }}>S <span style={{ color:T.text2 }}>{trade.exit_price??trade.tp??'—'}</span></span>
+          <span style={{ fontSize:'13px', color:T.text2, fontWeight:'600' }}>{trade.entry??'—'}</span>
+          {entryTime && <span style={{ fontSize:'12px', color:T.text3 }}>{entryTime}</span>}
         </div>
+        {/* SORTIE */}
         <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
-          {entryTime  && <span style={{ fontSize:'12px', color:T.text2 }}>{entryTime}</span>}
+          <span style={{ fontSize:'13px', color:T.text2, fontWeight:'600' }}>{trade.exit_price??trade.tp??'—'}</span>
+          {exitTime && <span style={{ fontSize:'12px', color:T.text3 }}>{exitTime}</span>}
+        </div>
+        {/* DURÉE / R */}
+        <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
           {trade.duration && <span style={{ fontSize:'12px', color:T.text3 }}>{trade.duration}</span>}
           {trade.rr && <span style={{ fontSize:'12px', color:T.text3 }}>R {trade.rr}</span>}
         </div>
@@ -527,8 +534,8 @@ function TradesTab({ trades, loading, navigate, onDelete, onFeeUpdate }) {
       {filtered.length > 0 && (
         <div style={{ display:'grid', gridTemplateColumns:'3px 1fr auto', marginBottom:'4px' }}>
           <div />
-          <div style={{ padding:'0 14px', display:'grid', gridTemplateColumns:'110px 68px 95px 70px 1fr 115px 85px 56px', gap:'8px', fontSize:'11px', color:T.text3, letterSpacing:'1.5px' }}>
-            <span>PAIRE</span><span>DIR.</span><span>PRIX</span><span>TEMPS</span><span>NOTES</span><span>P&L NET</span><span>FRAIS</span><span>TAGS</span>
+          <div style={{ padding:'0 14px', display:'grid', gridTemplateColumns:'110px 68px 90px 90px 60px 1fr 115px 85px 56px', gap:'8px', fontSize:'11px', color:T.text3, letterSpacing:'1.5px' }}>
+            <span>PAIRE</span><span>DIR.</span><span>ENTRÉE</span><span>SORTIE</span><span>DURÉE</span><span>NOTES</span><span>P&L NET</span><span>FRAIS</span><span>TAGS</span>
           </div>
           <div style={{ width:'40px' }} />
         </div>
