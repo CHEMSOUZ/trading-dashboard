@@ -261,125 +261,264 @@ function TradeTable({ trades, storageKey = 'global_trade_cols' }) {
   );
 }
 
-// ── Trading Calendar ─────────────────────────────────────────
+// ── Trading Calendar with Heat Map ───────────────────────────
 const CAL_MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const CAL_METRICS = [['pnl','PnL','#00cc77'],['winrate','Winrate','#7c3aed'],['count','Trades','#f59e0b']];
 
 function TradingCalendar({ trades, onDayClick }) {
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [month, setMonth] = useState(new Date().getMonth());
+  const [year,    setYear]    = useState(new Date().getFullYear());
+  const [month,   setMonth]   = useState(new Date().getMonth());
+  const [metric,  setMetric]  = useState('pnl');   // 'pnl' | 'winrate' | 'count'
+  const [hovered, setHovered] = useState(null);    // date key
 
+  // ── Build per-day data ──
   const byDay = trades.reduce((acc, t) => {
-    if (!acc[t.date]) acc[t.date] = { pnl: 0, count: 0, trades: [] };
-    acc[t.date].pnl += getNet(t);
-    acc[t.date].count += 1;
-    acc[t.date].trades.push(t);
+    const d = t.date; if (!d) return acc;
+    if (!acc[d]) acc[d] = { pnl: 0, count: 0, wins: 0, losses: 0, trades: [] };
+    const net = getNet(t);
+    acc[d].pnl    += net;
+    acc[d].count  += 1;
+    if (net > 0) acc[d].wins++;
+    else if (net < 0) acc[d].losses++;
+    acc[d].trades.push(t);
     return acc;
   }, {});
 
-  const firstDay    = new Date(year, month, 1).getDay();
+  // ── Monthly stats ──
+  const monthPfx = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const monthEntries = Object.entries(byDay).filter(([d]) => d.startsWith(monthPfx));
+  const monthTotal   = monthEntries.reduce((s, [, v]) => s + v.pnl, 0);
+  const monthTrades  = monthEntries.reduce((s, [, v]) => s + v.count, 0);
+  const monthWins    = monthEntries.reduce((s, [, v]) => s + v.wins, 0);
+  const monthWR      = monthTrades > 0 ? Math.round(monthWins / monthTrades * 100) : 0;
+  const monthDays    = monthEntries.length;
+  const greenDays    = monthEntries.filter(([, v]) => v.pnl > 0).length;
+  const bestDayPnl   = monthDays > 0 ? Math.max(...monthEntries.map(([, v]) => v.pnl)) : 0;
+  const worstDayPnl  = monthDays > 0 ? Math.min(...monthEntries.map(([, v]) => v.pnl)) : 0;
+  const avgDayPnl    = monthDays > 0 ? monthTotal / monthDays : 0;
+
+  // ── Colour scale ──
+  const maxAbsPnl  = Math.max(...Object.values(byDay).map(d => Math.abs(d.pnl)), 1);
+  const maxCount   = Math.max(...Object.values(byDay).map(d => d.count), 1);
+
+  function cellBg(data) {
+    if (!data) return 'rgba(14,15,22,0.28)';
+    if (metric === 'pnl') {
+      const t = Math.min(0.10 + (Math.abs(data.pnl) / maxAbsPnl) * 0.48, 0.60);
+      return data.pnl > 0 ? `rgba(0,204,119,${t.toFixed(2)})` : data.pnl < 0 ? `rgba(255,51,68,${t.toFixed(2)})` : 'rgba(240,160,32,0.08)';
+    }
+    if (metric === 'winrate') {
+      const wr = data.count > 0 ? data.wins / data.count : 0;
+      return wr >= 0.5
+        ? `rgba(0,204,119,${(0.08 + wr * 0.52).toFixed(2)})`
+        : `rgba(255,51,68,${(0.08 + (1 - wr) * 0.52).toFixed(2)})`;
+    }
+    return `rgba(124,58,237,${(0.08 + (data.count / maxCount) * 0.55).toFixed(2)})`;
+  }
+
+  function cellMainVal(data) {
+    if (!data) return null;
+    if (metric === 'pnl')     return fmt(data.pnl, true);
+    if (metric === 'winrate') return `${Math.round(data.wins / data.count * 100)}%`;
+    return `${data.count}T`;
+  }
+  function cellMainColor(data) {
+    if (!data) return '#5a6a82';
+    if (metric === 'pnl')     return pnlColor(data.pnl);
+    if (metric === 'winrate') return (data.wins / data.count) >= 0.5 ? '#00cc77' : '#ff3344';
+    return '#aa88ff';
+  }
+  function cellSub(data) {
+    if (!data) return null;
+    if (metric === 'pnl')     return `${data.count}T · ${Math.round(data.wins / data.count * 100)}%WR`;
+    if (metric === 'winrate') return `${fmt(data.pnl, true)} · ${data.count}T`;
+    return fmt(data.pnl, true);
+  }
+
+  // ── Calendar grid ──
+  // Monday-first
+  const rawFirst   = new Date(year, month, 1).getDay();
+  const firstDay   = rawFirst === 0 ? 6 : rawFirst - 1;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const today       = new Date().toISOString().slice(0, 10);
-
-  const monthTotal = Object.entries(byDay)
-    .filter(([d]) => d.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`))
-    .reduce((s, [, v]) => s + v.pnl, 0);
-
-  function prevMonth() { if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1); }
-  function nextMonth() { if (month === 11) { setYear(y => y + 1); setMonth(0); } else setMonth(m => m + 1); }
+  const today      = new Date().toISOString().slice(0, 10);
 
   const cells = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-
   const weeks = [];
-  let week = [];
+  let wk = [];
   cells.forEach((day, i) => {
-    week.push(day);
-    if (week.length === 7 || i === cells.length - 1) {
-      while (week.length < 7) week.push(null);
-      weeks.push([...week]);
-      week = [];
+    wk.push(day);
+    if (wk.length === 7 || i === cells.length - 1) {
+      while (wk.length < 7) wk.push(null);
+      weeks.push([...wk]);
+      wk = [];
     }
   });
 
-  function getWeekPnl(weekStart) {
-    let total = 0, count = 0;
+  function weekStats(wkArr) {
+    // index 0 = Monday in our layout
+    const firstIdx  = wkArr.findIndex(d => d != null);
+    if (firstIdx < 0) return { total: 0, count: 0, wins: 0 };
+    // date of the Monday of this week
+    const mondayDate = new Date(year, month, wkArr[firstIdx] - firstIdx);
+    let total = 0, count = 0, wins = 0;
     for (let i = 0; i < 7; i++) {
-      const d = new Date(weekStart); d.setDate(d.getDate() + i);
+      const d = new Date(mondayDate); d.setDate(d.getDate() + i);
       const key = d.toISOString().slice(0, 10);
-      if (byDay[key]) { total += byDay[key].pnl; count += byDay[key].count; }
+      if (byDay[key]) { total += byDay[key].pnl; count += byDay[key].count; wins += byDay[key].wins; }
     }
-    return { total, count };
+    return { total, count, wins, wr: count > 0 ? Math.round(wins / count * 100) : 0 };
   }
 
+  function prevMonth() { if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1); }
+  function nextMonth() { if (month === 11) { setYear(y => y + 1); setMonth(0); } else setMonth(m => m + 1); }
+
   return (
-    <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '8px', padding: '16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+    <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '8px', padding: '16px 18px', position: 'relative' }}>
+
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
         <div>
-          <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '3px' }}>CALENDRIER DE TRADING</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: '#5868a0', cursor: 'pointer', fontSize: '16px' }}>‹</button>
-            <span style={{ fontSize: '14px', fontWeight: '700', color: '#e8edf8' }}>{CAL_MONTHS[month]} {year}</span>
-            <button onClick={nextMonth} style={{ background: 'none', border: 'none', color: '#5868a0', cursor: 'pointer', fontSize: '16px' }}>›</button>
+          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '5px' }}>CALENDRIER — HEAT MAP</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: '#5868a0', cursor: 'pointer', fontSize: '17px', lineHeight:1 }}>‹</button>
+            <span style={{ fontSize: '15px', fontWeight: '700', color: '#e8edf8', minWidth: '160px', textAlign: 'center' }}>{CAL_MONTHS[month]} {year}</span>
+            <button onClick={nextMonth} style={{ background: 'none', border: 'none', color: '#5868a0', cursor: 'pointer', fontSize: '17px', lineHeight:1 }}>›</button>
             <button onClick={() => { setYear(new Date().getFullYear()); setMonth(new Date().getMonth()); }}
-              style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.18)', color: '#8899bb', padding: '3px 8px', borderRadius: '4px', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer' }}>Aujourd'hui</button>
+              style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.18)', color: '#8899bb', padding: '3px 9px', borderRadius: '4px', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer' }}>Aujourd'hui</button>
           </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>P&L MENSUEL</div>
-          <div style={{ fontSize: '16px', fontWeight: '700', color: pnlColor(monthTotal) }}>{fmt(monthTotal, true)}</div>
+        {/* Metric toggle */}
+        <div style={{ display: 'flex', gap: '5px' }}>
+          {CAL_METRICS.map(([k, l, c]) => (
+            <button key={k} onClick={() => setMetric(k)} style={{
+              padding: '4px 11px', borderRadius: '4px', fontFamily: 'inherit', fontSize: '11px',
+              fontWeight: metric === k ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s',
+              background: metric === k ? `${c}15` : 'transparent',
+              border: `1px solid ${metric === k ? c + '55' : 'rgba(136,153,187,0.15)'}`,
+              color: metric === k ? c : '#5a6a82',
+            }}>{l}</button>
+          ))}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr) 90px', gap: '2px' }}>
-        {['D','L','Ma','Me','J','V','S'].map(d => (
-          <div key={d} style={{ textAlign: 'center', fontSize:'12px', color: '#5a6a82', padding: '4px 0', letterSpacing: '1px' }}>{d}</div>
-        ))}
-        <div style={{ textAlign: 'center', fontSize:'12px', color: '#5a6a82', padding: '4px 0' }}>SEM.</div>
+      {/* ── Monthly stats ── */}
+      {monthDays > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(110px,1fr))', gap: '6px', marginBottom: '14px' }}>
+          {[
+            { label:'P&L MENSUEL',   value: fmt(monthTotal, true),                        color: pnlColor(monthTotal) },
+            { label:'WINRATE',        value: `${monthWR}%`,                               color: monthWR >= 50 ? '#00cc77' : '#ff3344' },
+            { label:'JOURS TRADÉS',   value: `${greenDays}✓ / ${monthDays - greenDays}✗`, color: '#8899bb' },
+            { label:'MEILLEUR JOUR',  value: fmt(bestDayPnl, true),                       color: '#00cc77' },
+            { label:'PIRE JOUR',      value: fmt(worstDayPnl, true),                      color: '#ff3344' },
+            { label:'MOY / JOUR',     value: fmt(avgDayPnl, true),                        color: pnlColor(avgDayPnl) },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ background: 'rgba(14,15,22,0.60)', borderRadius: '5px', padding: '7px 10px', borderTop: `2px solid ${color}45` }}>
+              <div style={{ fontSize:'9px', color: '#3a4a60', letterSpacing: '1.5px', marginBottom: '3px' }}>{label}</div>
+              <div style={{ fontSize:'13px', fontWeight: '700', color }}>{value}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
-        {weeks.map((wk, wi) => {
-          const firstNonNull = wk.find(d => d != null);
-          const weekStartDate = firstNonNull ? new Date(year, month, firstNonNull - wk.indexOf(firstNonNull)) : null;
-          const weekData = weekStartDate ? getWeekPnl(weekStartDate) : { total: 0, count: 0 };
+      {/* ── Grid ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr) 96px', gap: '3px' }}>
+        {['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map(d => (
+          <div key={d} style={{ textAlign: 'center', fontSize:'11px', color: '#5a6a82', padding: '4px 0', letterSpacing: '1px' }}>{d}</div>
+        ))}
+        <div style={{ textAlign: 'center', fontSize:'11px', color: '#5a6a82', padding: '4px 0' }}>SEM.</div>
+
+        {weeks.map((wkArr, wi) => {
+          const ws = weekStats(wkArr);
           return [
-            ...wk.map((day, di) => {
-              if (!day) return <div key={`e-${wi}-${di}`} style={{ minHeight: '54px', borderRadius: '3px', background: 'transparent', border: '1px solid rgba(0,255,136,0.03)' }} />;
+            ...wkArr.map((day, di) => {
+              if (!day) return <div key={`e-${wi}-${di}`} style={{ minHeight: '66px', borderRadius: '4px', background: 'rgba(14,15,22,0.15)', border: '1px solid rgba(136,153,187,0.03)' }} />;
               const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              const data = byDay[key];
-              const isToday = key === today;
-              const pnl = data?.pnl ?? null;
-              const bg = pnl == null ? 'rgba(14,15,22,0.3)'
-                : pnl > 0  ? `rgba(0,255,136,${Math.min(0.05 + (pnl / 2000) * 0.2, 0.25)})`
-                : pnl < 0  ? `rgba(255,68,85,${Math.min(0.05 + (Math.abs(pnl) / 2000) * 0.2, 0.25)})`
-                : 'rgba(240,160,32,0.08)';
+              const data  = byDay[key];
+              const isTod = key === today;
+              const isHov = hovered === key;
               return (
                 <div key={key}
                   onClick={() => data && onDayClick?.(key, data.trades)}
-                  style={{ minHeight: '54px', borderRadius: '3px', padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px', background: bg, border: isToday ? '1.5px solid rgba(0,170,255,0.6)' : '1px solid rgba(136,153,187,0.06)', cursor: data ? 'pointer' : 'default', transition: 'opacity 0.1s' }}
-                  onMouseEnter={e => { if (data) e.currentTarget.style.opacity = '0.75'; }}
-                  onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+                  onMouseEnter={() => setHovered(key)}
+                  onMouseLeave={() => setHovered(null)}
+                  style={{
+                    minHeight: '66px', borderRadius: '4px', padding: '5px 6px',
+                    display: 'flex', flexDirection: 'column', gap: '2px',
+                    background: isHov && data ? 'rgba(136,153,187,0.10)' : cellBg(data),
+                    border: isTod ? '1.5px solid rgba(0,170,255,0.60)' : isHov && data ? '1px solid rgba(136,153,187,0.30)' : '1px solid rgba(136,153,187,0.07)',
+                    cursor: data ? 'pointer' : 'default', transition: 'all 0.12s',
+                    transform: isHov && data ? 'scale(1.03)' : 'scale(1)',
+                    position: 'relative', zIndex: isHov ? 3 : 1,
+                    boxShadow: isHov && data ? '0 4px 16px rgba(0,0,0,0.4)' : 'none',
+                  }}
                 >
-                  <div style={{ fontSize:'12px', color: isToday ? '#00aaff' : '#5868a0', fontWeight: isToday ? '700' : '400', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>{day}</span>
-                    {isToday && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00aaff' }} />}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <span style={{ fontSize:'11px', color: isTod ? '#00aaff' : '#5868a0', fontWeight: isTod ? '700' : '400' }}>{day}</span>
+                    {isTod && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00aaff', flexShrink: 0 }} />}
+                    {data && metric === 'pnl' && (
+                      <span style={{ fontSize:'9px', color: (data.wins / data.count) >= 0.5 ? '#00cc77' : '#ff3344', fontWeight:'700' }}>
+                        {Math.round(data.wins / data.count * 100)}%
+                      </span>
+                    )}
                   </div>
                   {data && (
                     <>
-                      <div style={{ fontSize:'12px', fontWeight: '700', color: pnlColor(data.pnl), lineHeight: 1 }}>{fmt(data.pnl, true)}</div>
-                      <div style={{ fontSize:'11px', color: '#5a6a82' }}>{data.count}T</div>
+                      <div style={{ fontSize:'13px', fontWeight:'700', color: cellMainColor(data), lineHeight:1, marginTop:'2px' }}>
+                        {cellMainVal(data)}
+                      </div>
+                      <div style={{ fontSize:'10px', color:'#5a6a82', marginTop:'2px' }}>
+                        {cellSub(data)}
+                      </div>
                     </>
                   )}
                 </div>
               );
             }),
-            <div key={`week-${wi}`} style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '3px', minHeight: '54px', padding: '6px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
-              <div style={{ fontSize:'11px', color: '#5a6a82' }}>S{wi + 1}</div>
-              <div style={{ fontSize:'13px', fontWeight: '700', color: pnlColor(weekData.total) }}>{weekData.total !== 0 ? fmt(weekData.total, true) : '—'}</div>
-              <div style={{ fontSize:'11px', color: '#5a6a82' }}>{weekData.count}T</div>
+
+            /* Week summary */
+            <div key={`w-${wi}`} style={{ background: 'rgba(14,15,22,0.55)', border: '1px solid rgba(136,153,187,0.09)', borderRadius: '4px', minHeight: '66px', padding: '6px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px' }}>
+              {ws.count > 0 ? (
+                <>
+                  <div style={{ fontSize:'10px', color:'#3a4a60' }}>S{wi + 1}</div>
+                  <div style={{ fontSize:'13px', fontWeight:'700', color: pnlColor(ws.total) }}>{fmt(ws.total, true)}</div>
+                  <div style={{ fontSize:'10px', color: ws.wr >= 50 ? '#00cc77' : '#ff3344' }}>{ws.wr}% WR</div>
+                  <div style={{ fontSize:'10px', color:'#5a6a82' }}>{ws.count}T</div>
+                </>
+              ) : (
+                <div style={{ fontSize:'10px', color:'#2e3d52' }}>S{wi + 1}</div>
+              )}
             </div>,
           ];
         })}
       </div>
+
+      {/* ── Hover tooltip ── */}
+      {hovered && byDay[hovered] && (() => {
+        const d = byDay[hovered];
+        const wr = d.count > 0 ? Math.round(d.wins / d.count * 100) : 0;
+        return (
+          <div style={{ position: 'fixed', bottom: '22px', right: '22px', background: 'rgba(8,9,16,0.97)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '8px', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.65)', zIndex: 9999, minWidth: '200px', pointerEvents: 'none' }}>
+            <div style={{ fontSize:'13px', fontWeight:'700', color:'#e8edf8', marginBottom:'8px' }}>{hovered}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+              {[
+                ['Trades',     d.count,                          '#dde4ef'],
+                ['Winrate',    `${wr}%`,                         wr >= 50 ? '#00cc77' : '#ff3344'],
+                ['P&L net',    fmt(d.pnl, true),                 pnlColor(d.pnl)],
+                ['Moy./trade', fmt(d.pnl / d.count, true),       pnlColor(d.pnl / d.count)],
+                ['Gagnants',   d.wins,                           '#00cc77'],
+                ['Perdants',   d.losses,                         '#ff3344'],
+              ].map(([l, v, c]) => (
+                <div key={l}>
+                  <div style={{ fontSize:'9px', color:'#5a6a82', letterSpacing:'1px', marginBottom:'1px' }}>{l}</div>
+                  <div style={{ fontSize:'12px', fontWeight:'700', color: c }}>{v}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
