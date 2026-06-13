@@ -514,13 +514,19 @@ export default function EconomicCalendar() {
       if (dateMode === 'next7' || dateMode === 'nextweek' || dateMode === 'month') urls.push(FF_NEXT_WEEK);
 
       const fetchOne = async (url) => {
-        const cacheKey = url.includes('nextweek') ? 'next' : 'this';
+        const isNext  = url.includes('nextweek');
+        const cacheKey = isNext ? 'next' : 'this';
         const cached = ffCacheGet(cacheKey);
         try {
           const r = await fetch(url, { cache: 'no-store' });
           if (r.status === 429) {
             if (cached) return cached;
             throw new Error('ForexFactory: limite de requêtes atteinte, réessaie dans quelques minutes');
+          }
+          if (r.status === 404) {
+            // Semaine prochaine pas encore publiée par ForexFactory — pas une erreur
+            if (cached) return cached;
+            return [];
           }
           if (!r.ok) {
             if (cached) return cached;
@@ -531,6 +537,7 @@ export default function EconomicCalendar() {
           return data;
         } catch (err) {
           if (cached) return cached;
+          if (isNext) return []; // nextweek inaccessible → liste vide silencieuse
           throw err;
         }
       };
@@ -793,9 +800,15 @@ export default function EconomicCalendar() {
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ padding: '40px', textAlign: 'center', border: '1px dashed #1e2c40', borderRadius: '8px' }}>
-          <div style={{ fontSize:'13px', color: '#3a1818', letterSpacing: '2px', marginBottom: '16px' }}>
-            Aucune annonce pour cette période / ces filtres
+          <div style={{ fontSize: '22px', marginBottom: '10px' }}>📅</div>
+          <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '8px' }}>
+            Aucune annonce pour cette période
           </div>
+          {(dateMode === 'nextweek' || dateMode === 'next7' || dateMode === 'month') && !hasActiveFilters && (
+            <div style={{ fontSize:'12px', color: '#3c4c64', marginBottom: '16px' }}>
+              ForexFactory publie les données de la semaine suivante généralement en fin de semaine courante.
+            </div>
+          )}
           {hasActiveFilters && (
             <button onClick={resetAll} style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.35)', color: '#8899bb', padding: '8px 20px', borderRadius: '5px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>
               Réinitialiser tous les filtres
