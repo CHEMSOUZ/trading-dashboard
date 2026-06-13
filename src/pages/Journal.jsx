@@ -1261,7 +1261,7 @@ function AnalyticsSection({ trades, loading }) {
   if (loading || !trades.length) return null;
 
   const { grid, maxAbs, best, worst, totalPnl } = hmData;
-  const CELL_W = 34, CELL_H = 27, LABEL_W = 36;
+  const CELL_W = 48, CELL_H = 38, LABEL_W = 46;
   const maxCount = Math.max(...HM_HOURS.map(h => Math.max(...HM_DAYS.map((_, d) => grid[d][h].trades))), 1);
 
   function cellBg(cell) {
@@ -1372,15 +1372,15 @@ function AnalyticsSection({ trades, loading }) {
                 {HM_HOURS.map(h => {
                   const s = hmSess(h);
                   return (
-                    <div key={h} style={{ width: `${CELL_W}px`, marginRight: '2px', textAlign: 'center', fontSize: '7px', color: s ? s.color : T.text4, fontWeight: s ? '700' : '400' }}>
-                      {h % 4 === 0 ? `${String(h).padStart(2,'0')}h` : ''}
+                    <div key={h} style={{ width: `${CELL_W}px`, marginRight: '2px', textAlign: 'center', fontSize: '9px', color: s ? s.color : T.text4, fontWeight: s ? '700' : '400' }}>
+                      {h % 2 === 0 ? `${String(h).padStart(2,'0')}h` : ''}
                     </div>
                   );
                 })}
               </div>
               {HM_DAYS.map((day, dow) => (
                 <div key={day} style={{ display: 'flex', marginBottom: '2px', alignItems: 'center' }}>
-                  <div style={{ width: `${LABEL_W}px`, fontSize: '9px', color: dow < 5 ? T.text2 : T.text4, flexShrink: 0, textAlign: 'right', paddingRight: '5px', fontWeight: dow < 5 ? '600' : '400' }}>{day}</div>
+                  <div style={{ width: `${LABEL_W}px`, fontSize: '12px', color: dow < 5 ? T.text2 : T.text4, flexShrink: 0, textAlign: 'right', paddingRight: '6px', fontWeight: dow < 5 ? '600' : '400' }}>{day}</div>
                   {HM_HOURS.map(hour => {
                     const cell = grid[dow][hour];
                     const isHov = hmHover?.dow === dow && hmHover?.hour === hour;
@@ -1411,7 +1411,7 @@ function AnalyticsSection({ trades, loading }) {
                           boxShadow: s && !cell.trades ? `inset 0 0 0 1px ${s.color}18` : 'none',
                         }}>
                         {cell.trades > 0 && (
-                          <span style={{ fontSize: '7px', color: cellTxtColor(cell), fontWeight: '700', textShadow: '0 1px 3px rgba(0,0,0,0.9)', lineHeight: 1 }}>
+                          <span style={{ fontSize: '9px', color: cellTxtColor(cell), fontWeight: '700', textShadow: '0 1px 3px rgba(0,0,0,0.9)', lineHeight: 1 }}>
                             {cellTxt(cell)}
                           </span>
                         )}
