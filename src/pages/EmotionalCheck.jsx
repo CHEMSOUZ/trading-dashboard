@@ -1,385 +1,606 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-// ── Default questions ─────────────────────────────────────────
+// ── Palette ───────────────────────────────────────────────────
+const P = {
+  bg:      'rgba(14,15,22,',
+  border:  'rgba(136,153,187,',
+  text1:   '#dde4ef',
+  text2:   '#8898aa',
+  text3:   '#4a5a72',
+  text4:   '#2c3c54',
+  accent:  '#7c3aed',
+  accentL: '#a78bfa',
+  green:   '#00cc77',
+  amber:   '#f59e0b',
+  red:     '#ff3344',
+};
+
+// ── Questions ─────────────────────────────────────────────────
 const DEFAULT_QUESTIONS = [
-  { id: 'q1', text: 'J\'ai bien dormi cette nuit (7h+)',             type: 'yn',    positive: true  },
-  { id: 'q2', text: 'Je me sens concentré et reposé',               type: 'yn',    positive: true  },
-  { id: 'q3', text: 'J\'ai respecté mon plan de trading hier',      type: 'yn',    positive: true  },
-  { id: 'q4', text: 'Je ressens de la peur ou du stress',           type: 'yn',    positive: false },
-  { id: 'q5', text: 'Je veux trader pour récupérer des pertes',     type: 'yn',    positive: false },
-  { id: 'q6', text: 'Mon niveau de confiance aujourd\'hui',         type: 'scale', positive: true  },
-  { id: 'q7', text: 'Mon niveau de stress',                         type: 'scale', positive: false },
-  { id: 'q8', text: 'J\'ai fait de l\'exercice ou une activité physique ce matin', type: 'yn', positive: true },
+  { id:'q1', text:"J'ai bien dormi cette nuit (7h+)",          type:'yn',    positive:true  },
+  { id:'q2', text:'Je me sens concentré et reposé',            type:'yn',    positive:true  },
+  { id:'q3', text:"J'ai respecté mon plan de trading hier",    type:'yn',    positive:true  },
+  { id:'q4', text:'Je ressens de la peur ou du stress',        type:'yn',    positive:false },
+  { id:'q5', text:'Je veux trader pour récupérer des pertes',  type:'yn',    positive:false },
+  { id:'q6', text:'Mon niveau de confiance aujourd\'hui',      type:'scale', positive:true  },
+  { id:'q7', text:'Mon niveau de stress',                      type:'scale', positive:false },
+  { id:'q8', text:"J'ai fait de l'exercice ce matin",          type:'yn',    positive:true  },
 ];
 
-const STORAGE_KEY_QUESTIONS = 'emotional_custom_questions';
-const STORAGE_KEY_HISTORY   = 'emotional_history';
+// ── Storage ───────────────────────────────────────────────────
+const SK_Q   = 'emotional_custom_questions';
+const SK_H   = 'emotional_history';
+const SK_AI  = 'mental_ai_reports';   // [{ date, text, emotion, generatedAt }]
+
+function loadQ()  { try { return JSON.parse(localStorage.getItem(SK_Q)  ?? 'null') ?? DEFAULT_QUESTIONS; } catch { return DEFAULT_QUESTIONS; } }
+function loadH()  { try { return JSON.parse(localStorage.getItem(SK_H)  ?? '[]'); }  catch { return []; } }
+function loadAI() { try { return JSON.parse(localStorage.getItem(SK_AI) ?? '[]'); }  catch { return []; } }
+function saveQ(v) { localStorage.setItem(SK_Q,  JSON.stringify(v)); }
+function saveH(v) { localStorage.setItem(SK_H,  JSON.stringify(v.slice(0,60))); }
+function saveAI(v){ localStorage.setItem(SK_AI, JSON.stringify(v.slice(0,60))); }
 
 // ── Helpers ───────────────────────────────────────────────────
-function loadCustomQuestions() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY_QUESTIONS) ?? 'null') ?? DEFAULT_QUESTIONS; } catch { return DEFAULT_QUESTIONS; }
-}
-function saveCustomQuestions(qs) {
-  localStorage.setItem(STORAGE_KEY_QUESTIONS, JSON.stringify(qs));
-}
-function loadHistory() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY) ?? '[]'); } catch { return []; }
-}
-function saveHistory(h) {
-  localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(h.slice(0, 30))); // keep last 30
-}
-
 function computeScore(questions, answers) {
-  let score = 0;
-  let max   = 0;
+  let s=0, max=0;
   questions.forEach(q => {
-    if (q.type === 'yn') {
-      max += 10;
-      const val = answers[q.id];
-      if (val === 'yes') score += q.positive ? 10 : 0;
-      else if (val === 'no') score += q.positive ? 0 : 10;
-    } else if (q.type === 'scale') {
-      max += 10;
-      const val = parseInt(answers[q.id] ?? 5);
-      score += q.positive ? val : (10 - val);
-    }
+    if (q.type==='yn')    { max+=10; const v=answers[q.id]; s+=v==='yes'?(q.positive?10:0):v==='no'?(q.positive?0:10):0; }
+    if (q.type==='scale') { max+=10; const v=parseInt(answers[q.id]??5); s+=q.positive?v:10-v; }
   });
-  return max > 0 ? Math.round((score / max) * 100) : 0;
+  return max>0 ? Math.round((s/max)*100) : 0;
 }
 
 function getAdvice(score) {
-  if (score >= 85) return { emoji: '🔥', label: 'État optimal', color: '#00cc77', text: 'Tu es dans les meilleures conditions. Fais confiance à ton plan et trade avec discipline.' };
-  if (score >= 70) return { emoji: '✅', label: 'Bon état',     color: '#00cc66', text: 'Conditions favorables. Reste vigilant et respecte tes niveaux de risque.' };
-  if (score >= 50) return { emoji: '⚡', label: 'État moyen',   color: '#f0a020', text: 'Quelques signaux d\'alerte. Réduis ta taille de position et sois plus sélectif dans tes setups.' };
-  if (score >= 30) return { emoji: '⚠️', label: 'État fragile', color: '#ff8800', text: 'Plusieurs facteurs négatifs. Envisage de trader en simulation uniquement ou de prendre une pause.' };
-  return { emoji: '🛑', label: 'Ne pas trader', color: '#ff4455', text: 'Ton état mental n\'est pas propice au trading aujourd\'hui. Prends une pause, protège ton capital.' };
+  if (score>=85) return { emoji:'🔥', label:'État optimal',   color:P.green,  text:'Tu es dans les meilleures conditions. Fais confiance à ton plan.' };
+  if (score>=70) return { emoji:'✅', label:'Bon état',       color:'#00aa66', text:'Conditions favorables. Reste vigilant et respecte tes niveaux.' };
+  if (score>=50) return { emoji:'⚡', label:'État moyen',     color:P.amber,   text:'Quelques signaux d\'alerte. Réduis ta taille de position.' };
+  if (score>=30) return { emoji:'⚠️', label:'État fragile',  color:'#e07010', text:'Plusieurs facteurs négatifs. Envisage la simulation.' };
+  return            { emoji:'🛑', label:'Ne pas trader',      color:P.red,     text:'Ton état n\'est pas propice au trading. Prends une pause.' };
 }
 
-// ── Question component ────────────────────────────────────────
-function QuestionCard({ q, answer, onChange }) {
-  const inp = { background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.14)', borderRadius: '4px', padding: '8px 10px', color: '#dde4ef', fontSize: '17px', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: '60px' };
-
-  return (
-    <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '14px 16px' }}>
-      <div style={{ fontSize: '17px', color: '#dde4ef', marginBottom: '10px', lineHeight: '1.4' }}>{q.text}</div>
-      {q.type === 'yn' && (
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {['yes','no','autre'].map(v => {
-            const colors = { yes: '#8899bb', no: '#ff4455', autre: '#f0a020' };
-            const labels = { yes: 'Oui', no: 'Non', autre: 'Autre' };
-            const c = colors[v];
-            return (
-              <button key={v} onClick={() => onChange(q.id, answer === v ? null : v)} style={{ padding: '6px 14px', borderRadius: '4px', border: `1px solid ${answer===v?c:'rgba(136,153,187,0.14)'}`, background: answer===v?`rgba(${c==='#8899bb'?'0,255,136':c==='#ff4455'?'255,68,85':'240,160,32'},0.12)`:'rgba(14,15,22,0.6)', color: answer===v?c:'#6878a0', fontSize: '15px', fontFamily: 'inherit', fontWeight: answer===v?'700':'400', cursor: 'pointer', transition: 'all 0.15s' }}>{labels[v]}</button>
-            );
-          })}
-        </div>
-      )}
-      {q.type === 'scale' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '17px', color: '#5a6a82' }}>
-            <span>{q.positive ? 'Faible' : 'Faible'}</span>
-            <span style={{ color: '#dde4ef', fontSize: '17px', fontWeight: '700' }}>{answer ?? 5}/10</span>
-            <span>{q.positive ? 'Élevé' : 'Élevé'}</span>
-          </div>
-          <input type="range" min="1" max="10" value={answer ?? 5} onChange={e => onChange(q.id, e.target.value)}
-            style={{ width: '100%', accentColor: '#8899bb', cursor: 'pointer' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            {[1,2,3,4,5,6,7,8,9,10].map(n => (
-              <span key={n} style={{ fontSize: '17px', color: parseInt(answer??5)===n?'#8899bb':'#3a1818', fontWeight: parseInt(answer??5)===n?'700':'400' }}>{n}</span>
-            ))}
-          </div>
-        </div>
-      )}
-      {q.type === 'text' && (
-        <textarea placeholder="Réponse libre..." value={answer ?? ''} onChange={e => onChange(q.id, e.target.value)} style={inp} />
-      )}
-      {/* Champ "autre" si sélectionné */}
-      {q.type === 'yn' && answer === 'autre' && (
-        <textarea placeholder="Précise ta réponse..." value={answers?.[q.id + '_autre'] ?? ''}
-          onChange={e => onChange(q.id + '_autre', e.target.value)}
-          style={{ ...inp, marginTop: '8px', minHeight: '50px' }} />
-      )}
-    </div>
-  );
+function getPreviousTradingDay() {
+  const d = new Date();
+  do { d.setDate(d.getDate()-1); } while ([0,6].includes(d.getDay())); // skip weekend
+  return d.toISOString().slice(0,10);
 }
 
-// ── History entry ─────────────────────────────────────────────
-function HistoryCard({ entry, questions }) {
-  const [open, setOpen] = useState(false);
-  const advice = getAdvice(entry.score);
+function isWeekday() { const d = new Date().getDay(); return d>=1 && d<=5; }
+
+function fmtDate(dateStr) {
+  return new Date(dateStr+'T12:00:00').toLocaleDateString('fr-FR',{ weekday:'long', day:'numeric', month:'long' });
+}
+
+function buildEmotionPrompt(trades, date) {
+  const pnl     = trades.reduce((s,t)=>(s+(t.result_net??t.result??0)),0);
+  const wins    = trades.filter(t=>(t.result_net??t.result??0)>0);
+  const losses  = trades.filter(t=>(t.result_net??t.result??0)<0);
+  const wr      = trades.length>0 ? Math.round(wins.length/trades.length*100) : 0;
+  const maxWin  = wins.length>0  ? Math.max(...wins.map(t=>t.result_net??t.result??0))  : 0;
+  const maxLoss = losses.length>0 ? Math.min(...losses.map(t=>t.result_net??t.result??0)) : 0;
+  const pairs   = [...new Set(trades.map(t=>t.pair).filter(Boolean))];
+
+  // Detect patterns
+  let sorted = [...trades].sort((a,b)=>(a.entered_at??a.date??'').localeCompare(b.entered_at??b.date??''));
+  let consBefore=0; for (const t of sorted) { if((t.result_net??t.result??0)<0) consBefore++; else consBefore=0; }
+
+  const tradeSummary = sorted.map(t=>{
+    const p=t.result_net??t.result??0;
+    return `${t.pair} ${t.direction} ${p>=0?'+':''}${p.toFixed(2)}$`;
+  }).join(' | ');
+
+  return `Tu es un expert en psychologie du trading. Analyse la journée de trading du ${fmtDate(date)} et génère un portrait émotionnel et psychologique du trader.
+
+DONNÉES DE LA JOURNÉE:
+- Date: ${date} (${fmtDate(date)})
+- Total trades: ${trades.length}
+- PnL net: ${pnl>=0?'+':''}${pnl.toFixed(2)}$
+- Winrate: ${wr}% (${wins.length}W / ${losses.length}L)
+- Plus gros gain: +${maxWin.toFixed(2)}$
+- Plus grosse perte: ${maxLoss.toFixed(2)}$
+- Instruments: ${pairs.join(', ')||'—'}
+- Séquence des trades: ${tradeSummary||'—'}
+- Pertes consécutives fin de séance: ${consBefore}
+
+INSTRUCTIONS:
+Génère une analyse psychologique courte en 3 parties:
+1. ÉTAT ÉMOTIONNEL probable pendant la séance (2 phrases — describe the emotional journey based on the trade sequence)
+2. PATTERNS PSYCHOLOGIQUES identifiés (2 phrases — fear, greed, discipline, revenge trading, overconfidence, etc.)
+3. FOCUS POUR AUJOURD'HUI (1 phrase actionnable concrète)
+
+Format de réponse — JSON pur, pas de markdown:
+{"emotion":"[UN MOT: Discipliné|Stressé|Surconfiant|Impulsif|Focalisé|Fragile|Serein|Vengeur]","description":"[texte 5-6 phrases]"}
+
+La description doit être empathique, précise et en français.`;
+}
+
+// ── AI Report Card ────────────────────────────────────────────
+const EMOTION_COLORS = {
+  'Discipliné': P.green,  'Serein':     P.green,
+  'Focalisé':  '#00aaff', 'Stressé':    P.amber,
+  'Fragile':   P.amber,   'Surconfiant':'#e05010',
+  'Impulsif':  P.red,     'Vengeur':    P.red,
+};
+const EMOTION_EMOJI = {
+  'Discipliné':'🧘', 'Serein':'😌', 'Focalisé':'🎯',
+  'Stressé':'😰',   'Fragile':'⚠️', 'Surconfiant':'😤',
+  'Impulsif':'⚡',  'Vengeur':'😡',
+};
+
+function AiReportCard({ report, onRegenerate, generating }) {
+  const color = EMOTION_COLORS[report.emotion] ?? P.text2;
+  const emoji = EMOTION_EMOJI[report.emotion] ?? '🧠';
+  const rgb   = color==='#00cc77'?'0,204,119':color==='#f59e0b'?'245,158,11':color==='#ff3344'?'255,51,68':'136,153,187';
+
   return (
-    <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '6px', overflow: 'hidden' }}>
-      <div onClick={() => setOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', cursor: 'pointer' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '19px' }}>{advice.emoji}</span>
-          <div>
-            <div style={{ fontSize: '17px', color: '#dde4ef', fontWeight: '600' }}>{new Date(entry.date + 'T12:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
-            <div style={{ fontSize: '17px', color: advice.color }}>{advice.label}</div>
+    <div style={{ borderRadius:'12px', overflow:'hidden', border:`1px solid ${color}28`, background:`rgba(${rgb},0.04)` }}>
+      {/* Top band */}
+      <div style={{ height:'3px', background:`linear-gradient(90deg,transparent,${color},transparent)` }} />
+
+      <div style={{ padding:'20px 22px' }}>
+        {/* Header */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+            <div style={{ width:'42px', height:'42px', borderRadius:'10px', background:`rgba(${rgb},0.12)`, border:`1px solid ${color}35`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px' }}>{emoji}</div>
+            <div>
+              <div style={{ fontSize:'11px', color:P.text3, letterSpacing:'2px', marginBottom:'2px' }}>PORTRAIT PSYCHOLOGIQUE — {fmtDate(report.date).toUpperCase()}</div>
+              <div style={{ fontSize:'17px', fontWeight:'700', color }}>
+                {report.emotion ?? 'Analyse IA'}
+              </div>
+            </div>
           </div>
+          <button onClick={onRegenerate} disabled={generating}
+            style={{ padding:'5px 12px', borderRadius:'5px', background:'transparent', border:`1px solid ${P.border}0.15)`, color:P.text3, fontSize:'11px', fontFamily:'inherit', cursor:generating?'wait':'pointer', transition:'all 0.15s', opacity:generating?0.5:1 }}
+            onMouseEnter={e=>{ e.currentTarget.style.borderColor=`${P.border}0.40)`; e.currentTarget.style.color=P.text1; }}
+            onMouseLeave={e=>{ e.currentTarget.style.borderColor=`${P.border}0.15)`; e.currentTarget.style.color=P.text3; }}>
+            {generating ? '...' : '↺ Régénérer'}
+          </button>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ fontSize: '19px', fontWeight: '700', color: advice.color }}>{entry.score}%</div>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#5a6a82" strokeWidth="2" strokeLinecap="round">
-            <polyline points={open ? "18 15 12 9 6 15" : "6 9 12 15 18 9"}/>
-          </svg>
+
+        {/* Description */}
+        <div style={{ fontSize:'14px', color:P.text1, lineHeight:'1.8', whiteSpace:'pre-line' }}>
+          {report.text}
+        </div>
+
+        {/* Footer */}
+        <div style={{ marginTop:'14px', paddingTop:'12px', borderTop:`1px solid ${P.border}0.08)`, display:'flex', alignItems:'center', gap:'8px' }}>
+          <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:color, boxShadow:`0 0 6px ${color}` }} />
+          <span style={{ fontSize:'11px', color:P.text3 }}>Généré par Claude · {new Date(report.generatedAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span>
         </div>
       </div>
-      {open && (
-        <div style={{ padding: '0 16px 14px', borderTop: '1px solid rgba(136,153,187,0.08)' }}>
-          <div style={{ fontSize: '15px', color: '#5868a0', margin: '10px 0' }}>{advice.text}</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {questions.map(q => {
-              const ans = entry.answers?.[q.id];
-              if (!ans) return null;
-              return (
-                <div key={q.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', padding: '4px 8px', background: 'rgba(14,15,22,0.4)', borderRadius: '4px' }}>
-                  <span style={{ color: '#7888a0' }}>{q.text}</span>
-                  <span style={{ color: '#dde4ef', fontWeight: '700', marginLeft: '12px' }}>{q.type==='scale'?`${ans}/10`:ans==='yes'?'Oui':ans==='no'?'Non':ans}</span>
-                </div>
-              );
-            })}
-            {entry.notes && (
-              <div style={{ marginTop: '6px', padding: '8px', background: 'rgba(14,15,22,0.4)', borderRadius: '4px', fontSize: '15px', color: '#7888a0' }}>
-                📝 {entry.notes}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-// ── MAIN ──────────────────────────────────────────────────────
+function AiReportSkeleton() {
+  return (
+    <div style={{ borderRadius:'12px', border:`1px solid ${P.border}0.12)`, background:`${P.bg}0.40)`, padding:'20px 22px' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'16px' }}>
+        <div style={{ width:'42px', height:'42px', borderRadius:'10px', background:`${P.border}0.08)`, animation:'pulse 1.5s ease infinite' }} />
+        <div>
+          <div style={{ height:'10px', width:'200px', background:`${P.border}0.08)`, borderRadius:'4px', marginBottom:'8px', animation:'pulse 1.5s ease infinite' }} />
+          <div style={{ height:'16px', width:'120px', background:`${P.border}0.08)`, borderRadius:'4px', animation:'pulse 1.5s ease 0.2s infinite' }} />
+        </div>
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+        {[100,85,95,60].map((w,i) => (
+          <div key={i} style={{ height:'12px', width:`${w}%`, background:`${P.border}0.06)`, borderRadius:'4px', animation:`pulse 1.5s ease ${i*0.15}s infinite` }} />
+        ))}
+      </div>
+      <div style={{ marginTop:'16px', fontSize:'12px', color:P.text3, display:'flex', alignItems:'center', gap:'8px' }}>
+        <span style={{ display:'inline-block', animation:'pulse 1.5s ease infinite' }}>●</span>
+        Génération en cours...
+      </div>
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────
 export default function EmotionalCheck() {
-  const [tab, setTab]           = useState('check');
-  const [questions, setQuestions] = useState(loadCustomQuestions);
-  const [answers, setAnswers]   = useState({});
-  const [notes, setNotes]       = useState('');
-  const [history, setHistory]   = useState(loadHistory);
-  const [saved, setSaved]       = useState(false);
+  const [tab,       setTab]       = useState('today');
+  const [questions, setQuestions] = useState(loadQ);
+  const [answers,   setAnswers]   = useState({});
+  const [notes,     setNotes]     = useState('');
+  const [history,   setHistory]   = useState(loadH);
+  const [aiReports, setAiReports] = useState(loadAI);
+  const [saved,     setSaved]     = useState(false);
+  const [generating,setGenerating]= useState(false);
+  const [hasKey,    setHasKey]    = useState(true);
+  const [newQ,      setNewQ]      = useState({ text:'', type:'yn', positive:true });
 
-  // Edit mode
-  const [editMode, setEditMode] = useState(false);
-  const [newQ, setNewQ]         = useState({ text: '', type: 'yn', positive: true });
+  const today     = new Date().toISOString().slice(0,10);
+  const prevDay   = getPreviousTradingDay();
+  const todayEntry= history.find(h=>h.date===today);
+  const prevReport= aiReports.find(r=>r.date===prevDay);
+  const score     = computeScore(questions, answers);
+  const advice    = getAdvice(score);
 
-  const today = new Date().toISOString().slice(0, 10);
-  const todayEntry = history.find(h => h.date === today);
-  const score = computeScore(questions, answers);
-  const advice = getAdvice(score);
-  const answered = questions.filter(q => answers[q.id] != null).length;
+  // ── Auto-generate AI report on mount ──────────────────────
+  useEffect(() => {
+    if (!isWeekday()) return;
+    if (prevReport) return; // already exists
 
-  function setAnswer(id, val) { setAnswers(prev => ({ ...prev, [id]: val })); }
+    async function generate() {
+      const keyRes = await window.ai.hasKey();
+      if (!keyRes.data) { setHasKey(false); return; }
+      const tradesRes = await window.db.getAllTrades();
+      if (!tradesRes.ok) return;
+      const prevTrades = (tradesRes.data ?? []).filter(t => (t.date||'').startsWith(prevDay));
+      if (prevTrades.length === 0) return; // no trades yesterday, skip
+      await generateReport(prevTrades, prevDay);
+    }
+
+    generate();
+  }, []);
+
+  async function generateReport(trades, date) {
+    setGenerating(true);
+    try {
+      const prompt = buildEmotionPrompt(trades, date);
+      const res = await window.ai.chat(
+        [{ role:'user', content: prompt }],
+        'Tu es un expert en psychologie du trading. Réponds uniquement en JSON valide, sans markdown.'
+      );
+      if (!res.ok) throw new Error(res.error);
+      let parsed;
+      try {
+        const txt = res.data.trim().replace(/^```json\n?/,'').replace(/\n?```$/,'');
+        parsed = JSON.parse(txt);
+      } catch {
+        // fallback: extract JSON from response
+        const match = res.data.match(/\{[\s\S]*\}/);
+        parsed = match ? JSON.parse(match[0]) : { emotion:'Analysé', description: res.data };
+      }
+      const report = {
+        date,
+        emotion: parsed.emotion ?? 'Analysé',
+        text:    parsed.description ?? parsed.text ?? res.data,
+        generatedAt: new Date().toISOString(),
+      };
+      setAiReports(prev => {
+        const updated = [report, ...prev.filter(r=>r.date!==date)];
+        saveAI(updated);
+        return updated;
+      });
+    } catch (e) {
+      console.error('AI report error:', e);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function handleRegenerate() {
+    const tradesRes = await window.db.getAllTrades();
+    if (!tradesRes.ok) return;
+    const prevTrades = (tradesRes.data ?? []).filter(t => (t.date||'').startsWith(prevDay));
+    await generateReport(prevTrades, prevDay);
+  }
+
+  function setAnswer(id, val) { setAnswers(p => ({ ...p, [id]: val })); }
 
   function handleSave() {
-    const entry = { date: today, score, answers: { ...answers }, notes, savedAt: new Date().toISOString() };
-    const newHistory = [entry, ...history.filter(h => h.date !== today)];
-    saveHistory(newHistory);
-    setHistory(newHistory);
-    setSaved(true);
+    const entry = { date:today, score, answers:{...answers}, notes, savedAt:new Date().toISOString() };
+    const h = [entry, ...history.filter(h=>h.date!==today)];
+    saveH(h); setHistory(h); setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   }
 
   function addQuestion() {
     if (!newQ.text.trim()) return;
-    const q = { id: `custom_${Date.now()}`, ...newQ };
-    const updated = [...questions, q];
-    setQuestions(updated);
-    saveCustomQuestions(updated);
-    setNewQ({ text: '', type: 'yn', positive: true });
+    const q = { id:`custom_${Date.now()}`, ...newQ };
+    const u = [...questions, q]; setQuestions(u); saveQ(u);
+    setNewQ({ text:'', type:'yn', positive:true });
   }
 
-  function removeQuestion(id) {
-    const updated = questions.filter(q => q.id !== id);
-    setQuestions(updated);
-    saveCustomQuestions(updated);
-  }
+  function removeQuestion(id) { const u=questions.filter(q=>q.id!==id); setQuestions(u); saveQ(u); }
+  function resetQuestions()   { setQuestions(DEFAULT_QUESTIONS); saveQ(DEFAULT_QUESTIONS); }
 
-  function resetQuestions() {
-    setQuestions(DEFAULT_QUESTIONS);
-    saveCustomQuestions(DEFAULT_QUESTIONS);
-  }
-
-  const inp = { background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.14)', borderRadius: '4px', padding: '8px 10px', color: '#dde4ef', fontSize: '17px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' };
+  const inp = { background:`${P.bg}0.60)`, border:`1px solid ${P.border}0.14)`, borderRadius:'5px', padding:'8px 10px', color:P.text1, fontSize:'13px', fontFamily:'inherit', outline:'none', boxSizing:'border-box', transition:'border-color 0.15s' };
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 'none' }}>
+    <div style={{ padding:'24px 28px', maxWidth:'none' }}>
+      <style>{`
+        @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+      `}</style>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+      {/* ── Header ── */}
+      <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:'24px', flexWrap:'wrap', gap:'12px' }}>
         <div>
-          <div style={{ fontSize: '15px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '6px' }}>TRADING PSYCHOLOGY</div>
-          <h1 style={{ fontSize: '23px', fontWeight: '700', color: '#e8edf8', margin: 0 }}>État Mental</h1>
-          <div style={{ fontSize: '15px', color: '#5a6a82', marginTop: '3px' }}>Bilan pré-séance · {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+          <div style={{ fontSize:'11px', color:P.text3, letterSpacing:'3px', marginBottom:'5px' }}>TRADING PSYCHOLOGY</div>
+          <h1 style={{ fontSize:'22px', fontWeight:'700', color:P.text1, margin:0, letterSpacing:'-0.5px' }}>État Mental</h1>
+          <div style={{ fontSize:'13px', color:P.text3, marginTop:'3px' }}>
+            {new Date().toLocaleDateString('fr-FR',{ weekday:'long', day:'numeric', month:'long' })}
+            {todayEntry && <span style={{ color:P.green, marginLeft:'10px' }}>✓ Bilan complété — {todayEntry.score}%</span>}
+          </div>
         </div>
-        {todayEntry && (
-          <div style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '6px', padding: '8px 14px', fontSize: '15px', color: '#8899bb' }}>
-            ✓ Bilan complété aujourd'hui — Score: {todayEntry.score}%
+        {!hasKey && (
+          <div style={{ padding:'8px 14px', background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.25)', borderRadius:'6px', fontSize:'12px', color:'#f59e0b' }}>
+            ⚠ Clé API requise pour l'analyse IA
           </div>
         )}
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0', marginBottom: '20px', background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '8px', padding: '4px' }}>
+      {/* ── AI Report section (always visible on weekdays) ── */}
+      {isWeekday() && (
+        <div style={{ marginBottom:'24px' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
+            <div style={{ height:'1px', flex:1, background:`${P.border}0.10)` }} />
+            <span style={{ fontSize:'10px', color:P.text3, letterSpacing:'2.5px', fontWeight:'700' }}>ANALYSE IA — VEILLE</span>
+            <div style={{ height:'1px', flex:1, background:`${P.border}0.10)` }} />
+          </div>
+
+          {generating && !prevReport && <AiReportSkeleton />}
+
+          {prevReport && (
+            <AiReportCard report={prevReport} onRegenerate={handleRegenerate} generating={generating} />
+          )}
+
+          {!generating && !prevReport && !hasKey && (
+            <div style={{ padding:'16px 20px', background:`${P.bg}0.40)`, border:`1px solid ${P.border}0.10)`, borderRadius:'10px', fontSize:'13px', color:P.text3, textAlign:'center' }}>
+              Configure ta clé API Anthropic dans le chat IA pour activer l'analyse psychologique automatique.
+            </div>
+          )}
+
+          {!generating && !prevReport && hasKey && (
+            <div style={{ padding:'16px 20px', background:`${P.bg}0.40)`, border:`1px solid ${P.border}0.10)`, borderRadius:'10px', fontSize:'13px', color:P.text3, textAlign:'center' }}>
+              Aucun trade enregistré hier ({fmtDate(prevDay)}) — pas d'analyse disponible.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tabs ── */}
+      <div style={{ display:'flex', gap:'4px', marginBottom:'20px', background:`${P.bg}0.50)`, border:`1px solid ${P.border}0.12)`, borderRadius:'8px', padding:'4px' }}>
         {[
-          { key: 'check',   label: '🧠 Bilan du jour' },
-          { key: 'history', label: '📅 Historique' },
-          { key: 'edit',    label: '⚙️ Personnaliser' },
+          { key:'today',   label:'🧠 Bilan du jour' },
+          { key:'history', label:'📅 Historique' },
+          { key:'edit',    label:'⚙ Personnaliser' },
         ].map(({ key, label }) => (
-          <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: tab===key?'rgba(136,153,187,0.14)':'transparent', color: tab===key?'#8899bb':'#6878a0', fontSize: '17px', fontFamily: 'inherit', fontWeight: tab===key?'700':'400', transition: 'all 0.2s' }}>
+          <button key={key} onClick={() => setTab(key)} style={{ flex:1, padding:'9px', borderRadius:'5px', border:'none', cursor:'pointer', background:tab===key?`${P.border}0.12)`:'transparent', color:tab===key?P.text1:P.text3, fontSize:'13px', fontFamily:'inherit', fontWeight:tab===key?'700':'400', transition:'all 0.15s', letterSpacing:'0.3px' }}>
             {label}
           </button>
         ))}
       </div>
 
-      {/* ── BILAN TAB ── */}
-      {tab === 'check' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* ── BILAN DU JOUR ── */}
+      {tab==='today' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
 
           {/* Score banner */}
-          <div style={{ background: `rgba(${advice.color==='#8899bb'?'0,255,136':advice.color==='#ff4455'?'255,68,85':advice.color==='#f0a020'?'240,160,32':'255,136,0'},0.08)`, border: `1px solid ${advice.color}30`, borderRadius: '8px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ fontSize: '36px', flexShrink: 0 }}>{advice.emoji}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
-                <span style={{ fontSize: '17px', fontWeight: '700', color: advice.color }}>{advice.label}</span>
-                <span style={{ fontSize: '21px', fontWeight: '700', color: advice.color }}>{score}%</span>
+          <div style={{ background:`rgba(${score>=70?'0,204,119':score>=50?'245,158,11':'255,51,68'},0.06)`, border:`1px solid rgba(${score>=70?'0,204,119':score>=50?'245,158,11':'255,51,68'},0.20)`, borderRadius:'10px', padding:'16px 20px', display:'flex', alignItems:'center', gap:'16px' }}>
+            <div style={{ fontSize:'32px', flexShrink:0 }}>{advice.emoji}</div>
+            <div style={{ flex:1 }}>
+              <div style={{ display:'flex', alignItems:'baseline', gap:'10px', marginBottom:'5px' }}>
+                <span style={{ fontSize:'15px', fontWeight:'700', color:advice.color }}>{advice.label}</span>
+                <span style={{ fontSize:'22px', fontWeight:'700', color:advice.color }}>{score}%</span>
               </div>
-              <div style={{ fontSize: '15px', color: '#7888a0', lineHeight: '1.5' }}>{advice.text}</div>
-              <div style={{ marginTop: '8px', height: '6px', background: 'rgba(0,0,0,0.3)', borderRadius: '3px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${score}%`, background: `linear-gradient(90deg,${advice.color}80,${advice.color})`, borderRadius: '3px', transition: 'width 0.5s ease' }} />
+              <div style={{ fontSize:'13px', color:P.text2, lineHeight:'1.5', marginBottom:'8px' }}>{advice.text}</div>
+              <div style={{ height:'4px', background:`${P.border}0.08)`, borderRadius:'2px', overflow:'hidden' }}>
+                <div style={{ height:'100%', width:`${score}%`, background:advice.color, borderRadius:'2px', transition:'width 0.6s ease', boxShadow:`0 0 8px ${advice.color}50` }} />
               </div>
             </div>
-            <div style={{ textAlign: 'center', flexShrink: 0 }}>
-              <div style={{ fontSize: '15px', color: '#5a6a82', marginBottom: '2px' }}>{answered}/{questions.length}</div>
-              <div style={{ fontSize: '17px', color: '#5a6a82' }}>réponses</div>
+            <div style={{ textAlign:'right', flexShrink:0 }}>
+              <div style={{ fontSize:'20px', fontWeight:'700', color:P.text3 }}>{questions.filter(q=>answers[q.id]!=null).length}/{questions.length}</div>
+              <div style={{ fontSize:'11px', color:P.text4, letterSpacing:'1px' }}>RÉPONSES</div>
             </div>
           </div>
 
           {/* Questions */}
           {questions.map(q => (
-            <QuestionCard key={q.id} q={q} answer={answers[q.id]} onChange={setAnswer} answers={answers} />
+            <QuestionCard key={q.id} q={q} answer={answers[q.id]} onChange={setAnswer} answers={answers} inp={inp} />
           ))}
 
-          {/* Notes libres */}
-          <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '14px 16px' }}>
-            <div style={{ fontSize: '17px', color: '#dde4ef', marginBottom: '8px' }}>📝 Notes libres (optionnel)</div>
-            <textarea
-              placeholder="Comment tu te sens aujourd'hui ? Des événements particuliers à noter ?"
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              style={{ ...inp, width: '100%', resize: 'vertical', minHeight: '80px' }}
-            />
+          {/* Notes */}
+          <div style={{ background:`${P.bg}0.40)`, border:`1px solid ${P.border}0.10)`, borderRadius:'8px', padding:'14px 16px' }}>
+            <div style={{ fontSize:'13px', color:P.text2, marginBottom:'8px', fontWeight:'600' }}>📝 Notes libres</div>
+            <textarea placeholder="Comment tu te sens ? Événements particuliers ?"
+              value={notes} onChange={e=>setNotes(e.target.value)}
+              style={{ ...inp, width:'100%', resize:'vertical', minHeight:'72px' }} />
           </div>
 
-          {/* Save button */}
-          <button onClick={handleSave} style={{
-            padding: '13px', borderRadius: '6px',
-            background: saved ? 'rgba(136,153,187,0.22)' : 'linear-gradient(135deg,rgba(136,153,187,0.22),rgba(0,170,85,0.1))',
-            border: `1px solid rgba(0,255,136,${saved?'0.5':'0.3'})`,
-            color: '#8899bb', fontSize: '17px', fontFamily: 'inherit', fontWeight: '700',
-            letterSpacing: '1.5px', cursor: 'pointer', transition: 'all 0.2s',
-          }}>
-            {saved ? '✅ BILAN ENREGISTRÉ !' : '💾 ENREGISTRER MON BILAN'}
+          <button onClick={handleSave} style={{ padding:'12px', borderRadius:'6px', background:saved?'rgba(0,204,119,0.12)':'rgba(136,153,187,0.10)', border:`1px solid rgba(${saved?'0,204,119':'136,153,187'},0.30)`, color:saved?P.green:P.text2, fontSize:'13px', fontFamily:'inherit', fontWeight:'700', letterSpacing:'1.5px', cursor:'pointer', transition:'all 0.2s' }}>
+            {saved ? '✓ BILAN ENREGISTRÉ' : '💾 ENREGISTRER MON BILAN'}
           </button>
         </div>
       )}
 
-      {/* ── HISTORY TAB ── */}
-      {tab === 'history' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {history.length === 0 ? (
-            <div style={{ padding: '48px', textAlign: 'center', border: '1px dashed #1e2c40', borderRadius: '6px', color: '#3a1818', fontSize: '17px' }}>
-              Aucun bilan enregistré — complétez votre premier bilan
+      {/* ── HISTORIQUE ── */}
+      {tab==='history' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+          {history.length===0 && aiReports.length===0 ? (
+            <div style={{ padding:'48px', textAlign:'center', border:`1px dashed ${P.border}0.15)`, borderRadius:'8px', color:P.text4, fontSize:'13px', letterSpacing:'2px' }}>
+              Aucun bilan enregistré
             </div>
           ) : (
             <>
               {/* Stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '10px', marginBottom: '8px' }}>
-                {[
-                  { label: 'BILANS TOTAL', value: history.length, color: '#dde4ef' },
-                  { label: 'SCORE MOYEN', value: `${Math.round(history.reduce((s,h) => s + h.score, 0) / history.length)}%`, color: '#8899bb' },
-                  { label: 'SCORE MAX', value: `${Math.max(...history.map(h => h.score))}%`, color: '#8899bb' },
-                ].map(({ label, value, color }) => (
-                  <div key={label} style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '5px', padding: '10px 14px' }}>
-                    <div style={{ fontSize: '17px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '4px' }}>{label}</div>
-                    <div style={{ fontSize: '19px', fontWeight: '700', color }}>{value}</div>
-                  </div>
-                ))}
-              </div>
-              {history.map(entry => (
-                <HistoryCard key={entry.date} entry={entry} questions={questions} />
-              ))}
+              {history.length>0 && (
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:'8px', marginBottom:'6px' }}>
+                  {[
+                    { l:'BILANS TOTAL', v:history.length, c:P.text1 },
+                    { l:'SCORE MOYEN',  v:`${Math.round(history.reduce((s,h)=>s+h.score,0)/history.length)}%`, c:P.text2 },
+                    { l:'SCORE MAX',    v:`${Math.max(...history.map(h=>h.score))}%`, c:P.green },
+                    { l:'ANALYSES IA',  v:aiReports.length, c:P.accentL },
+                  ].map(({l,v,c}) => (
+                    <div key={l} style={{ background:`${P.bg}0.50)`, border:`1px solid ${P.border}0.10)`, borderRadius:'6px', padding:'10px 14px' }}>
+                      <div style={{ fontSize:'10px', color:P.text3, letterSpacing:'1.5px', marginBottom:'3px' }}>{l}</div>
+                      <div style={{ fontSize:'18px', fontWeight:'700', color:c }}>{v}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Merged history list */}
+              {(() => {
+                const allDates = [...new Set([
+                  ...history.map(h=>h.date),
+                  ...aiReports.map(r=>r.date),
+                ])].sort((a,b)=>b.localeCompare(a));
+
+                return allDates.map(date => {
+                  const hEntry  = history.find(h=>h.date===date);
+                  const aiEntry = aiReports.find(r=>r.date===date);
+                  return <HistoryCard key={date} date={date} hEntry={hEntry} aiEntry={aiEntry} questions={questions} />;
+                });
+              })()}
             </>
           )}
         </div>
       )}
 
-      {/* ── EDIT TAB ── */}
-      {tab === 'edit' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ fontSize: '15px', color: '#5868a0', background: 'rgba(136,153,187,0.05)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '6px', padding: '10px 14px' }}>
-            ℹ️ Personnalisez vos questions. Les modifications sont sauvegardées automatiquement.
+      {/* ── PERSONNALISER ── */}
+      {tab==='edit' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+          <div style={{ padding:'10px 14px', background:`rgba(124,58,237,0.06)`, border:`1px solid rgba(124,58,237,0.18)`, borderRadius:'6px', fontSize:'12px', color:P.accentL }}>
+            ℹ Personnalisez vos questions. Les modifications sont sauvegardées automatiquement.
           </div>
-
-          {/* Question list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {questions.map((q, i) => (
-              <div key={q.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '5px', padding: '10px 14px' }}>
-                <span style={{ fontSize: '15px', color: '#5a6a82', width: '20px', flexShrink: 0 }}>#{i+1}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '17px', color: '#dde4ef' }}>{q.text}</div>
-                  <div style={{ fontSize: '17px', color: '#5a6a82', marginTop: '2px' }}>
-                    {q.type === 'yn' ? 'Oui/Non' : q.type === 'scale' ? 'Échelle 1-10' : 'Texte libre'} ·
-                    {q.positive ? ' Positif ↑' : ' Négatif ↓'}
+          <div style={{ display:'flex', flexDirection:'column', gap:'5px' }}>
+            {questions.map((q,i) => (
+              <div key={q.id} style={{ display:'flex', alignItems:'center', gap:'10px', background:`${P.bg}0.40)`, border:`1px solid ${P.border}0.08)`, borderRadius:'5px', padding:'10px 14px' }}>
+                <span style={{ fontSize:'11px', color:P.text4, width:'20px', flexShrink:0 }}>#{i+1}</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:'13px', color:P.text1 }}>{q.text}</div>
+                  <div style={{ fontSize:'11px', color:P.text3, marginTop:'2px' }}>
+                    {q.type==='yn'?'Oui/Non':q.type==='scale'?'Échelle 1-10':'Texte'} · {q.positive?'Positif ↑':'Négatif ↓'}
                   </div>
                 </div>
-                <button onClick={() => removeQuestion(q.id)} style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '17px', padding: '0', transition: 'color 0.15s', flexShrink: 0 }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#ff4455'}
-                  onMouseLeave={e => e.currentTarget.style.color = '#1a3a20'}
-                >×</button>
+                <button onClick={() => removeQuestion(q.id)} style={{ background:'none', border:'none', color:P.text4, cursor:'pointer', fontSize:'18px', padding:'0', transition:'color 0.15s' }}
+                  onMouseEnter={e=>e.currentTarget.style.color=P.red}
+                  onMouseLeave={e=>e.currentTarget.style.color=P.text4}>×</button>
               </div>
             ))}
           </div>
-
-          {/* Add question */}
-          <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '8px', padding: '16px' }}>
-            <div style={{ fontSize: '17px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>+ AJOUTER UNE QUESTION</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <input
-                placeholder="Texte de la question..."
-                value={newQ.text}
-                onChange={e => setNewQ(p => ({ ...p, text: e.target.value }))}
-                style={{ ...inp, width: '100%' }}
-              />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <div style={{ background:`${P.bg}0.40)`, border:`1px solid ${P.border}0.12)`, borderRadius:'8px', padding:'14px' }}>
+            <div style={{ fontSize:'10px', color:P.text3, letterSpacing:'2px', marginBottom:'10px' }}>+ AJOUTER UNE QUESTION</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+              <input placeholder="Texte de la question..." value={newQ.text} onChange={e=>setNewQ(p=>({...p,text:e.target.value}))} style={{ ...inp, width:'100%' }} />
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
                 <div>
-                  <div style={{ fontSize: '17px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '4px' }}>TYPE DE RÉPONSE</div>
-                  <div style={{ display: 'flex', gap: '5px' }}>
+                  <div style={{ fontSize:'10px', color:P.text3, marginBottom:'5px', letterSpacing:'1px' }}>TYPE</div>
+                  <div style={{ display:'flex', gap:'4px' }}>
                     {[['yn','Oui/Non'],['scale','Échelle'],['text','Texte']].map(([v,l]) => (
-                      <button key={v} onClick={() => setNewQ(p => ({ ...p, type: v }))} style={{ flex: 1, padding: '6px 4px', borderRadius: '4px', border: `1px solid ${newQ.type===v?'#8899bb':'rgba(136,153,187,0.14)'}`, background: newQ.type===v?'rgba(136,153,187,0.14)':'rgba(14,15,22,0.6)', color: newQ.type===v?'#8899bb':'#6878a0', fontSize: '17px', fontFamily: 'inherit', cursor: 'pointer' }}>{l}</button>
+                      <button key={v} onClick={() => setNewQ(p=>({...p,type:v}))} style={{ flex:1, padding:'5px 4px', borderRadius:'4px', border:`1px solid ${newQ.type===v?P.border+'0.45)':P.border+'0.12)'}`, background:newQ.type===v?`${P.border}0.12)`:'transparent', color:newQ.type===v?P.text1:P.text3, fontSize:'11px', fontFamily:'inherit', cursor:'pointer' }}>{l}</button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '17px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '4px' }}>IMPACT</div>
-                  <div style={{ display: 'flex', gap: '5px' }}>
-                    {[[true,'✅ Positif'],[false,'⚠️ Négatif']].map(([v,l]) => (
-                      <button key={String(v)} onClick={() => setNewQ(p => ({ ...p, positive: v }))} style={{ flex: 1, padding: '6px 4px', borderRadius: '4px', border: `1px solid ${newQ.positive===v?(v?'#8899bb':'#ff4455'):'rgba(136,153,187,0.14)'}`, background: newQ.positive===v?`rgba(${v?'0,255,136':'255,68,85'},0.12)`:'rgba(14,15,22,0.6)', color: newQ.positive===v?(v?'#8899bb':'#ff4455'):'#6878a0', fontSize: '17px', fontFamily: 'inherit', cursor: 'pointer' }}>{l}</button>
+                  <div style={{ fontSize:'10px', color:P.text3, marginBottom:'5px', letterSpacing:'1px' }}>IMPACT</div>
+                  <div style={{ display:'flex', gap:'4px' }}>
+                    {[[true,'✅ Positif'],[false,'⚠ Négatif']].map(([v,l]) => (
+                      <button key={String(v)} onClick={() => setNewQ(p=>({...p,positive:v}))} style={{ flex:1, padding:'5px 4px', borderRadius:'4px', border:`1px solid ${newQ.positive===v?(v?'rgba(0,204,119,0.40)':'rgba(255,51,68,0.40)'):P.border+'0.12)'}`, background:newQ.positive===v?`rgba(${v?'0,204,119':'255,51,68'},0.10)`:'transparent', color:newQ.positive===v?(v?P.green:P.red):P.text3, fontSize:'11px', fontFamily:'inherit', cursor:'pointer' }}>{l}</button>
                     ))}
                   </div>
                 </div>
               </div>
-              <button onClick={addQuestion} disabled={!newQ.text.trim()} style={{ padding: '10px', borderRadius: '5px', background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.28)', color: '#8899bb', fontSize: '17px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer' }}>
-                + AJOUTER LA QUESTION
+              <button onClick={addQuestion} disabled={!newQ.text.trim()} style={{ padding:'8px', borderRadius:'5px', background:`${P.border}0.10)`, border:`1px solid ${P.border}0.22)`, color:P.text2, fontSize:'12px', fontFamily:'inherit', fontWeight:'700', cursor:'pointer' }}>
+                + AJOUTER
               </button>
             </div>
           </div>
-
-          {/* Reset */}
-          <button onClick={() => { if (window.confirm('Remettre les questions par défaut ?')) resetQuestions(); }}
-            style={{ padding: '9px', borderRadius: '5px', background: 'transparent', border: '1px solid #1e2c40', color: '#5a6a82', fontSize: '15px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px' }}>
+          <button onClick={() => { if(window.confirm('Remettre les questions par défaut ?')) resetQuestions(); }}
+            style={{ padding:'8px', borderRadius:'5px', background:'transparent', border:`1px solid ${P.border}0.12)`, color:P.text3, fontSize:'12px', fontFamily:'inherit', cursor:'pointer' }}>
             Remettre les questions par défaut
           </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Sub-components ────────────────────────────────────────────
+function QuestionCard({ q, answer, onChange, answers, inp }) {
+  return (
+    <div style={{ background:`rgba(14,15,22,0.40)`, border:`1px solid rgba(136,153,187,0.10)`, borderRadius:'8px', padding:'14px 16px' }}>
+      <div style={{ fontSize:'13px', color:'#dde4ef', marginBottom:'10px', lineHeight:'1.5' }}>{q.text}</div>
+      {q.type==='yn' && (
+        <div style={{ display:'flex', gap:'6px' }}>
+          {['yes','no','autre'].map(v => {
+            const c = v==='yes'?'#8899bb':v==='no'?'#ff3344':'#f59e0b';
+            const l = { yes:'Oui', no:'Non', autre:'Autre' }[v];
+            return (
+              <button key={v} onClick={() => onChange(q.id, answer===v?null:v)}
+                style={{ padding:'6px 14px', borderRadius:'4px', border:`1px solid ${answer===v?c:'rgba(136,153,187,0.14)'}`, background:answer===v?`rgba(${v==='yes'?'136,153,187':v==='no'?'255,51,68':'245,158,11'},0.12)`:'transparent', color:answer===v?c:'#6878a0', fontSize:'12px', fontFamily:'inherit', fontWeight:answer===v?'700':'400', cursor:'pointer', transition:'all 0.15s' }}>
+                {l}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {q.type==='scale' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', fontSize:'12px', color:'#5a6a82' }}>
+            <span>Faible</span>
+            <span style={{ color:'#dde4ef', fontWeight:'700' }}>{answer??5}/10</span>
+            <span>Élevé</span>
+          </div>
+          <input type="range" min="1" max="10" value={answer??5} onChange={e=>onChange(q.id,e.target.value)}
+            style={{ width:'100%', accentColor:'#7c3aed', cursor:'pointer' }} />
+        </div>
+      )}
+      {q.type==='text' && (
+        <textarea placeholder="Réponse libre..." value={answer??''} onChange={e=>onChange(q.id,e.target.value)}
+          style={{ ...inp, width:'100%', resize:'vertical', minHeight:'60px' }} />
+      )}
+      {q.type==='yn' && answer==='autre' && (
+        <textarea placeholder="Précise ta réponse..." value={answers?.[q.id+'_autre']??''} onChange={e=>onChange(q.id+'_autre',e.target.value)}
+          style={{ ...inp, marginTop:'8px', width:'100%', resize:'vertical', minHeight:'50px' }} />
+      )}
+    </div>
+  );
+}
+
+function HistoryCard({ date, hEntry, aiEntry, questions }) {
+  const [open, setOpen] = useState(false);
+  const advice  = hEntry ? getAdvice(hEntry.score) : null;
+  const aiColor = aiEntry ? (EMOTION_COLORS[aiEntry.emotion] ?? '#8899bb') : null;
+  const aiEmoji = aiEntry ? (EMOTION_EMOJI[aiEntry.emotion] ?? '🧠') : null;
+
+  return (
+    <div style={{ background:`rgba(14,15,22,0.40)`, border:`1px solid rgba(136,153,187,0.08)`, borderRadius:'8px', overflow:'hidden' }}>
+      <div onClick={() => setOpen(o=>!o)} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', cursor:'pointer' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+          <span style={{ fontSize:'16px' }}>{aiEmoji ?? advice?.emoji ?? '📅'}</span>
+          <div>
+            <div style={{ fontSize:'13px', color:'#dde4ef', fontWeight:'600' }}>{fmtDate(date)}</div>
+            <div style={{ display:'flex', gap:'8px', marginTop:'2px' }}>
+              {aiEntry  && <span style={{ fontSize:'11px', color:aiColor, fontWeight:'600' }}>{aiEntry.emotion}</span>}
+              {hEntry   && <span style={{ fontSize:'11px', color:advice?.color }}>{advice?.label} · {hEntry.score}%</span>}
+              {!hEntry  && aiEntry && <span style={{ fontSize:'11px', color:'#3a4a5a' }}>questionnaire non complété</span>}
+            </div>
+          </div>
+        </div>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4a5a72" strokeWidth="2">
+          <polyline points={open?'18 15 12 9 6 15':'6 9 12 15 18 9'}/>
+        </svg>
+      </div>
+
+      {open && (
+        <div style={{ padding:'0 16px 14px', borderTop:'1px solid rgba(136,153,187,0.08)' }}>
+          {aiEntry && (
+            <div style={{ margin:'10px 0 12px', padding:'12px 14px', background:`rgba(${aiColor==='#00cc77'?'0,204,119':aiColor==='#f59e0b'?'245,158,11':'136,153,187'},0.05)`, border:`1px solid ${aiColor}22`, borderRadius:'6px' }}>
+              <div style={{ fontSize:'10px', color:'#4a5a72', letterSpacing:'2px', marginBottom:'6px' }}>PORTRAIT IA</div>
+              <div style={{ fontSize:'12px', color:'#dde4ef', lineHeight:'1.7', whiteSpace:'pre-line' }}>{aiEntry.text}</div>
+            </div>
+          )}
+          {hEntry && (
+            <div style={{ display:'flex', flexDirection:'column', gap:'4px' }}>
+              {questions.map(q => {
+                const ans = hEntry.answers?.[q.id];
+                if (!ans) return null;
+                return (
+                  <div key={q.id} style={{ display:'flex', justifyContent:'space-between', fontSize:'12px', padding:'4px 8px', background:'rgba(14,15,22,0.4)', borderRadius:'4px' }}>
+                    <span style={{ color:'#4a5a72' }}>{q.text}</span>
+                    <span style={{ color:'#dde4ef', fontWeight:'700', marginLeft:'8px' }}>
+                      {q.type==='scale'?`${ans}/10`:ans==='yes'?'Oui':ans==='no'?'Non':ans}
+                    </span>
+                  </div>
+                );
+              })}
+              {hEntry.notes && (
+                <div style={{ marginTop:'6px', padding:'8px', background:'rgba(14,15,22,0.4)', borderRadius:'4px', fontSize:'12px', color:'#5a6a82' }}>
+                  📝 {hEntry.notes}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
