@@ -770,6 +770,7 @@ export default function CsvImport() {
       } catch { errors++; }
     }
     setResult({ imported, skipped, errors });
+    if (imported > 0) window.dispatchEvent(new CustomEvent('trades-changed'));
     setStep('done');
   }
 

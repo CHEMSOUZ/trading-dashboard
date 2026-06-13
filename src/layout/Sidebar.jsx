@@ -52,10 +52,16 @@ const ACCOUNT_RULES = {
   lucid_funded_50k:    { size: 50000,  maxLoss: 2500, dailyLoss: 2000 },
   lucid_funded_100k:   { size: 100000, maxLoss: 3000, dailyLoss: 3000 },
   lucid_funded_150k:   { size: 150000, maxLoss: 4500, dailyLoss: 4500 },
+  topstep_cons_50k:    { size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
+  topstep_cons_100k:   { size: 100000, maxLoss: 3000, dailyLoss: 2000 },
+  topstep_cons_150k:   { size: 150000, maxLoss: 4500, dailyLoss: 3000 },
+  topstep_live_50k:    { size: null,   maxLoss: null,  dailyLoss: 1000 },
+  topstep_live_100k:   { size: null,   maxLoss: null,  dailyLoss: 2000 },
+  topstep_live_150k:   { size: null,   maxLoss: null,  dailyLoss: 3000 },
   lucid_live_50k:      { size: null,   maxLoss: null,  dailyLoss: null },
   lucid_live_100k:     { size: null,   maxLoss: null,  dailyLoss: null },
   lucid_live_150k:     { size: null,   maxLoss: null,  dailyLoss: null },
-  tradovate_live:      { size: 50000,  maxLoss: 2000, dailyLoss: null, profitTarget: 3000, minDays: 0, consistencyPct: 0.50 },
+  tradovate_live:      { size: null,   maxLoss: null,  dailyLoss: null },
   tradovate_demo:      { size: null,   maxLoss: null,  dailyLoss: null },
   perso:               { size: null,   maxLoss: null,  dailyLoss: null },
   autre:               { size: null,   maxLoss: null,  dailyLoss: null },
@@ -64,13 +70,17 @@ const ACCOUNT_RULES = {
 const CHALLENGE_TYPES = new Set([
   'topstep_50k','topstep_100k','topstep_150k',
   'lucid_eval_25k','lucid_eval_50k','lucid_eval_100k','lucid_eval_150k',
-  'tradovate_live',
 ]);
 const EXPRESS_FUNDED_TYPES = new Set([
   'topstep_ef_50k','topstep_ef_100k','topstep_ef_150k',
+  'topstep_cons_50k','topstep_cons_100k','topstep_cons_150k',
   'lucid_funded_25k','lucid_funded_50k','lucid_funded_100k','lucid_funded_150k',
 ]);
-const LIVE_TYPES = new Set(['lucid_live_50k','lucid_live_100k','lucid_live_150k']);
+const LIVE_TYPES = new Set([
+  'lucid_live_50k','lucid_live_100k','lucid_live_150k',
+  'tradovate_live',
+  'topstep_live_50k','topstep_live_100k','topstep_live_150k',
+]);
 
 async function computeBlownStatus(acc, currentActiveId) {
   const rules = ACCOUNT_RULES[acc.type];
@@ -182,7 +192,11 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
 
   useEffect(() => {
     window.addEventListener('account-updated', loadAccounts);
-    return () => window.removeEventListener('account-updated', loadAccounts);
+    window.addEventListener('trades-changed',  loadAccounts);
+    return () => {
+      window.removeEventListener('account-updated', loadAccounts);
+      window.removeEventListener('trades-changed',  loadAccounts);
+    };
   }, []);
 
   const onMouseDown = useCallback((e) => {
@@ -236,7 +250,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
 
       {/* Account selector */}
       <div style={{ padding: '10px', borderBottom: '1px solid rgba(136,153,187,0.08)' }}>
-        <div onClick={() => setShowSwitcher(s => !s)}
+        <div onClick={() => { setShowSwitcher(s => { if (!s) loadAccounts(); return !s; }); }}
           style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 11px', borderRadius: '6px', cursor: 'pointer', background: showSwitcher ? 'rgba(136,153,187,0.08)' : 'transparent', border: `1px solid ${showSwitcher ? 'rgba(136,153,187,0.25)' : 'rgba(136,153,187,0.08)'}`, transition: 'all 0.15s' }}
           onMouseEnter={e => { if (!showSwitcher) { e.currentTarget.style.background = 'rgba(136,153,187,0.05)'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.18)'; }}}
           onMouseLeave={e => { if (!showSwitcher) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.08)'; }}}

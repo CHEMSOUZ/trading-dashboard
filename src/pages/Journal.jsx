@@ -1463,6 +1463,7 @@ export default function Journal() {
     if (!window.confirm('Supprimer ce trade ?')) return;
     await window.db.deleteTrade(id);
     setTrades(prev => prev.filter(t => t.id !== id));
+    window.dispatchEvent(new CustomEvent('trades-changed'));
   }
 
   function handleFeeUpdate(id, patch) {
