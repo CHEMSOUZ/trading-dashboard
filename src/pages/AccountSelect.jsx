@@ -59,6 +59,7 @@ const ACCOUNT_RULES = {
 const CHALLENGE_TYPES = new Set(['topstep_50k','topstep_100k','topstep_150k','lucid_eval_50k','lucid_eval_100k','lucid_eval_150k']);
 const EXPRESS_FUNDED_TYPES = new Set(['topstep_ef_50k','topstep_ef_100k','topstep_ef_150k','topstep_cons_50k','topstep_cons_100k','topstep_cons_150k','lucid_funded_25k','lucid_funded_50k','lucid_funded_100k','lucid_funded_150k']);
 const LIVE_TYPES = new Set(['lucid_live_50k','lucid_live_100k','lucid_live_150k','tradovate_live','topstep_live_50k','topstep_live_100k','topstep_live_150k']);
+const DEMO_TYPES = new Set(['tradovate_demo', 'perso', 'autre']);
 
 const PLATFORMS = {
   topstep: {
@@ -658,11 +659,12 @@ export default function AccountSelect({ onSelect, onBack }) {
   // 2. FUNDED   : Express Funded Topstep + Lucid Funded
   // 3. CHALLENGE: Topstep Combine + Lucid Eval non validés
   // 4. VALIDÉ   : challenges réussis
-  // 5. CRAMÉS   : blown (manuellement ou auto)
+  // 5. CRAMÉS   : blown (hors comptes démo)
+  // 6. AUTRES   : comptes démo / perso uniquement
   const activeAcc = data.accounts.find(a => a.id === data.activeId && !statuses[a.id]?.isBlown);
   const isNotActive = a => a.id !== data.activeId;
 
-  const blownAccounts     = data.accounts.filter(a => statuses[a.id]?.isBlown);
+  const blownAccounts     = data.accounts.filter(a => statuses[a.id]?.isBlown && !DEMO_TYPES.has(a.type));
   const liveAccounts      = data.accounts.filter(a =>
     !statuses[a.id]?.isBlown && isNotActive(a) && LIVE_TYPES.has(a.type)
   );
@@ -680,13 +682,7 @@ export default function AccountSelect({ onSelect, onBack }) {
     !LIVE_TYPES.has(a.type) && !EXPRESS_FUNDED_TYPES.has(a.type) &&
     statuses[a.id]?.isValidated
   );
-  const classifiedIds = new Set([
-    ...(activeAcc ? [activeAcc.id] : []),
-    ...blownAccounts.map(a=>a.id), ...liveAccounts.map(a=>a.id),
-    ...fundedAccounts.map(a=>a.id), ...challengeAccounts.map(a=>a.id),
-    ...validatedAccounts.map(a=>a.id),
-  ]);
-  const otherAccounts = data.accounts.filter(a => !classifiedIds.has(a.id));
+  const otherAccounts = data.accounts.filter(a => isNotActive(a) && DEMO_TYPES.has(a.type));
 
   function renderSection(accounts, header) {
     return (
@@ -789,20 +785,21 @@ export default function AccountSelect({ onSelect, onBack }) {
               </div>
             ))}
 
-            {/* ── 5. AUTRES (perso, demo, générique) ── */}
-            {otherAccounts.length > 0 && renderSection(otherAccounts, (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#5a6a82' }} />
-                <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>AUTRES — {otherAccounts.length}</span>
-              </div>
-            ))}
-
-            {/* ── 6. CRAMÉS ── */}
+            {/* ── 5. CRAMÉS ── */}
             {blownAccounts.length > 0 && renderSection(blownAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#ff4455', boxShadow: '0 0 8px #ff4455' }} />
                 <span style={{ fontSize:'12px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', opacity: 0.8 }}>CRAMÉS — {blownAccounts.length}</span>
                 <span style={{ fontSize:'12px', color: '#4a5a72', letterSpacing: '1px' }}>↺ = restaurer</span>
+              </div>
+            ))}
+
+            {/* ── 6. AUTRES (démo, perso uniquement) ── */}
+            {otherAccounts.length > 0 && renderSection(otherAccounts, (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#5a6a82' }} />
+                <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>AUTRES — {otherAccounts.length}</span>
+                <span style={{ fontSize:'12px', color: '#4a5a72', letterSpacing: '1px' }}>Démo · Perso</span>
               </div>
             ))}
           </>
