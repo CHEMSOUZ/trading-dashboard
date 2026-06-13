@@ -24,6 +24,14 @@ const NAV = [
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><rect x="2" y="9" width="4" height="6" rx="1"/><rect x="18" y="9" width="4" height="6" rx="1"/></svg> },
   { to: '/bot',       label: 'Bot Trading',   sub: 'Signaux MNQ live', badge: 'BOT',
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/><circle cx="9" cy="14" r="1" fill="currentColor"/><circle cx="15" cy="14" r="1" fill="currentColor"/><line x1="9" y1="17" x2="15" y2="17"/></svg> },
+  { to: '/heatmap',   label: 'Heat Map',      sub: 'Performance 24h × 7j',
+    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="4" height="4" rx="1"/><rect x="10" y="3" width="4" height="4" rx="1"/><rect x="17" y="3" width="4" height="4" rx="1"/><rect x="3" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/><rect x="17" y="10" width="4" height="4" rx="1"/><rect x="3" y="17" width="4" height="4" rx="1"/><rect x="10" y="17" width="4" height="4" rx="1"/><rect x="17" y="17" width="4" height="4" rx="1"/></svg> },
+  { to: '/risk',      label: 'Risk Manager',  sub: 'Taille position · Règles',
+    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
+  { to: '/patterns',  label: 'Patterns',      sub: 'Setups gagnants · Perdants',
+    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="11" y1="8" x2="11" y2="14"/></svg> },
+  { to: '/goals',     label: 'Objectifs',     sub: 'Goals · Streak · Badges',
+    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg> },
 ];
 
 // -- Status detection ----------------------------------------
@@ -137,7 +145,7 @@ const MIN_WIDTH = 180;
 const MAX_WIDTH = 400;
 const DEFAULT_WIDTH = 220;
 
-export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdated, onManageAccounts }) {
+export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdated, onManageAccounts, onToggleAiCoach, aiCoachOpen }) {
   const location = useLocation();
   const [accounts, setAccounts]         = useState([]);
   const [accountStatuses, setAccountStatuses] = useState({});
@@ -241,7 +249,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
             <div style={{ fontSize: '14px', fontWeight: '700', color: '#e8edf8', wordBreak: 'break-word', lineHeight: '1.3' }}>{activeAccount?.name ?? 'Aucun compte'}</div>
             <div style={{ fontSize: '11px', color: '#5a6a82', marginTop: '2px' }}>{activeAccount?.typeInfo?.label ?? '—'}</div>
           </div>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5a3535" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5a6a82" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
             <polyline points={showSwitcher ? "18 15 12 9 6 15" : "6 9 12 15 18 9"}/>
           </svg>
         </div>
@@ -303,9 +311,9 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                           </div>
                         </div>
                         <button onClick={e => startRename(a, e)} title="Renommer"
-                          style={{ background: 'none', border: 'none', color: '#4a2a2a', cursor: 'pointer', fontSize: '13px', padding: '2px 4px', flexShrink: 0, opacity: 0.6, transition: 'all 0.15s' }}
+                          style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', fontSize: '13px', padding: '2px 4px', flexShrink: 0, opacity: 0.6, transition: 'all 0.15s' }}
                           onMouseEnter={e => { e.stopPropagation(); e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#8899bb'; }}
-                          onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.color = '#4a2a2a'; }}
+                          onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.color = '#3a4a5a'; }}
                         >✏️</button>
                       </div>
                     )}
@@ -404,14 +412,14 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
           const active = location.pathname === to || location.pathname.startsWith(to + '/');
           return (
             <NavLink key={to} to={to} onClick={() => setShowSwitcher(false)}
-              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', margin: '1px 6px', borderRadius: '6px', textDecoration: 'none', color: active ? '#8899bb' : '#6a4545', background: active ? 'rgba(136,153,187,0.10)' : 'transparent', borderLeft: `2px solid ${active ? '#8899bb' : 'transparent'}`, transition: 'all 0.15s' }}
-              onMouseEnter={e => { if (!active) { e.currentTarget.style.color = '#9a6060'; e.currentTarget.style.background = 'rgba(136,153,187,0.05)'; }}}
-              onMouseLeave={e => { if (!active) { e.currentTarget.style.color = '#6a4545'; e.currentTarget.style.background = 'transparent'; }}}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', margin: '1px 6px', borderRadius: '6px', textDecoration: 'none', color: active ? '#8899bb' : '#5a6a82', background: active ? 'rgba(136,153,187,0.10)' : 'transparent', borderLeft: `2px solid ${active ? '#8899bb' : 'transparent'}`, transition: 'all 0.15s' }}
+              onMouseEnter={e => { if (!active) { e.currentTarget.style.color = '#8899bb'; e.currentTarget.style.background = 'rgba(136,153,187,0.05)'; }}}
+              onMouseLeave={e => { if (!active) { e.currentTarget.style.color = '#5a6a82'; e.currentTarget.style.background = 'transparent'; }}}
             >
               <span style={{ flexShrink: 0 }}>{icon}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '14px', fontWeight: active ? '700' : '400', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
-                <div style={{ fontSize: '11px', color: active ? '#8a3535' : '#4a2a2a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>
+                <div style={{ fontSize: '11px', color: active ? '#5a6a82' : '#3a4a5a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>
               </div>
               {badge && (() => {
                 const bc = badge === 'BOT' ? '#00aaff' : '#8899bb';
@@ -423,6 +431,33 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
           );
         })}
       </nav>
+
+      {/* AI Coach toggle */}
+      <div style={{ padding: '6px 10px 0' }}>
+        <button
+          onClick={() => { setShowSwitcher(false); onToggleAiCoach?.(); }}
+          style={{
+            width: '100%', padding: '9px 0',
+            background: aiCoachOpen
+              ? 'linear-gradient(135deg,rgba(124,58,237,0.25),rgba(79,70,229,0.15))'
+              : 'rgba(124,58,237,0.08)',
+            border: `1px solid ${aiCoachOpen ? 'rgba(124,58,237,0.50)' : 'rgba(124,58,237,0.22)'}`,
+            borderRadius: '6px', color: aiCoachOpen ? '#a78bfa' : '#7c3aed',
+            fontSize: '11px', fontFamily: 'inherit', letterSpacing: '1.5px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+            fontWeight: '700', transition: 'all 0.2s',
+            boxShadow: aiCoachOpen ? '0 0 16px rgba(124,58,237,0.25)' : 'none',
+          }}
+          onMouseEnter={e => { if (!aiCoachOpen) { e.currentTarget.style.background = 'rgba(124,58,237,0.15)'; e.currentTarget.style.borderColor = 'rgba(124,58,237,0.40)'; }}}
+          onMouseLeave={e => { if (!aiCoachOpen) { e.currentTarget.style.background = 'rgba(124,58,237,0.08)'; e.currentTarget.style.borderColor = 'rgba(124,58,237,0.22)'; }}}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2a8 8 0 0 1 8 8v4a8 8 0 0 1-16 0v-4a8 8 0 0 1 8-8z"/>
+            <path d="M9 10h.01M15 10h.01M12 16a3 3 0 0 1-3-3h6a3 3 0 0 1-3 3z"/>
+          </svg>
+          {aiCoachOpen ? 'FERMER COACH' : 'AI COACH'}
+        </button>
+      </div>
 
       {/* New trade */}
       <div style={{ padding: '10px', borderTop: '1px solid rgba(136,153,187,0.08)' }}>
@@ -438,8 +473,10 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
         </NavLink>
       </div>
 
-      <div style={{ padding: '5px 0 7px', textAlign: 'center' }}>
-        <span style={{ fontSize: '10px', color: '#3a1a1a', letterSpacing: '1px' }}>v1.4.90</span>
+      <div style={{ padding: '5px 0 7px', textAlign: 'center', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px' }}>
+        <span style={{ fontSize: '10px', color: '#3a4a5a', letterSpacing: '1px' }}>v1.5.3</span>
+        <span style={{ fontSize: '10px', color: '#2e3d52', letterSpacing: '0.5px' }}>·</span>
+        <span title="Afficher les raccourcis clavier (touche ?)" style={{ fontSize: '10px', color: '#2e3d52', letterSpacing: '0.5px', cursor: 'default' }}>? raccourcis</span>
       </div>
 
       {/* Resize handle */}

@@ -37,7 +37,7 @@ function StatCard({ label, value, sub, color = '#dde4ef', glow = false }) {
     >
       <div style={{ fontSize:'11px', color: '#4a5a72', letterSpacing: '2px', marginBottom: '7px' }}>{label}</div>
       <div style={{ fontSize: '23px', fontWeight: '700', color, lineHeight: 1, letterSpacing: '-0.5px' }}>{value}</div>
-      {sub && <div style={{ fontSize:'12px', color: '#4a2525', marginTop: '6px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize:'12px', color: '#5a6a82', marginTop: '6px' }}>{sub}</div>}
     </div>
   );
 }
@@ -160,7 +160,7 @@ function TradeTable({ trades, onNavigate, onDelete }) {
   const templateCols = COLS.map(c => `${colWidths[c.key]}px`).join(' ') + ' 36px';
 
   function SortIcon({ col }) {
-    if (sortCol !== col) return <span style={{ color: '#2a1010', fontSize:'12px' }}>⇅</span>;
+    if (sortCol !== col) return <span style={{ color: '#3a4a5a', fontSize:'12px' }}>⇅</span>;
     return <span style={{ color: '#8899bb', fontSize:'12px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
   }
 
@@ -213,8 +213,8 @@ function TradeTable({ trades, onNavigate, onDelete }) {
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(136,153,187,0.05)'}
               onMouseLeave={e => e.currentTarget.style.background = 'rgba(14,15,22,0.45)'}
             >
-              <span style={{ color: '#5a3030', fontSize:'12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.date}</span>
-              <span style={{ color: '#7a5050', fontSize:'12px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+              <span style={{ color: '#5a6a82', fontSize:'12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.date}</span>
+              <span style={{ color: '#7888a0', fontSize:'12px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
                 <span>{entryTime ?? '—'}</span>
                 {exitTime && <span style={{ color: '#5a3535' }}>↓{exitTime}</span>}
               </span>
@@ -224,12 +224,12 @@ function TradeTable({ trades, onNavigate, onDelete }) {
               <span style={{ color: '#7888a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exitDisplay}</span>
               <span style={{ color: '#7888a0' }}>{t.size ?? '—'}</span>
               <div onClick={e => e.stopPropagation()}><PnlCell trade={t} /></div>
-              <span style={{ color: '#5a3030', fontSize:'12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.duration ?? '—'}</span>
-              <span style={{ color: '#5a3030', fontSize:'12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.notes ?? '—'}</span>
+              <span style={{ color: '#5a6a82', fontSize:'12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.duration ?? '—'}</span>
+              <span style={{ color: '#5a6a82', fontSize:'12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.notes ?? '—'}</span>
               <button onClick={e => onDelete(t.id, e)}
-                style={{ background: 'none', border: 'none', color: '#2a1010', cursor: 'pointer', fontSize: '15px', padding: '0', transition: 'color 0.15s' }}
+                style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', fontSize: '15px', padding: '0', transition: 'color 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.color = '#ff3344'}
-                onMouseLeave={e => e.currentTarget.style.color = '#2a1010'}
+                onMouseLeave={e => e.currentTarget.style.color = '#3a4a5a'}
               >×</button>
             </div>
           );
@@ -303,7 +303,7 @@ export default function Dashboard() {
             {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}
           </div>
           <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8edf8', margin: 0, letterSpacing: '-0.3px' }}>Tableau de bord</h1>
-          <div style={{ fontSize:'12px', color: '#5a3030', marginTop: '4px' }}>
+          <div style={{ fontSize:'12px', color: '#5a6a82', marginTop: '4px' }}>
             {trades.length} trade{trades.length > 1 ? 's' : ''} · P&L net: <span style={{ color: pnlColor(s.totalPnl ?? 0), fontWeight: '700' }}>{fmt(s.totalPnl, true)}</span>
           </div>
         </div>
@@ -335,6 +335,32 @@ export default function Dashboard() {
         <StatCard label="STREAK" value={streakLabel} color={streakColor} />
       </div>
 
+      {/* ── TODAY STRIP ── */}
+      {(() => {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const todayTrades = trades.filter(t => t.date === todayStr);
+        if (!todayTrades.length) return null;
+        const todayNet = todayTrades.reduce((a, t) => a + getNet(t), 0);
+        const todayWins = todayTrades.filter(t => getNet(t) > 0).length;
+        const todayLosses = todayTrades.filter(t => getNet(t) < 0).length;
+        const todayWR = Math.round((todayWins / todayTrades.length) * 100);
+        const isPos = todayNet >= 0;
+        return (
+          <div style={{ display:'flex', alignItems:'center', gap:'20px', padding:'12px 18px', marginBottom:'16px', borderRadius:'8px', background:isPos?'rgba(0,204,119,0.06)':'rgba(255,51,68,0.06)', border:`1px solid ${isPos?'rgba(0,204,119,0.18)':'rgba(255,51,68,0.18)'}`, flexWrap:'wrap' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+              <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:isPos?'#00cc77':'#ff3344', boxShadow:`0 0 6px ${isPos?'#00cc77':'#ff3344'}` }} />
+              <span style={{ fontSize:'11px', color:'#5a6a82', letterSpacing:'2px' }}>SESSION AUJOURD'HUI</span>
+            </div>
+            <div>
+              <span style={{ fontSize:'15px', fontWeight:'700', color:isPos?'#00cc77':'#ff3344' }}>{isPos?'+':''}{todayNet.toFixed(2)}$</span>
+            </div>
+            <div style={{ fontSize:'12px', color:'#5a6a82' }}>{todayTrades.length} trade{todayTrades.length>1?'s':''}</div>
+            <div style={{ fontSize:'12px', color:todayWR>=50?'#00cc77':'#ff3344', fontWeight:'600' }}>{todayWR}% WR</div>
+            <div style={{ fontSize:'12px', color:'#5a6a82' }}>{todayWins}W / {todayLosses}L</div>
+          </div>
+        );
+      })()}
+
       {/* ── JOURNAL SECTION ── */}
       <div style={{ background: 'rgba(11,12,20,0.45)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '8px', padding: '16px 18px' }}>
 
@@ -363,9 +389,9 @@ export default function Dashboard() {
               return (
                 <button key={f}
                   onClick={() => { setFilter(f); localStorage.setItem('dash_filter', f); }}
-                  style={{ padding: '4px 10px', borderRadius: '4px', border: `1px solid ${isActive ? c : 'rgba(136,153,187,0.15)'}`, background: isActive ? bg : 'transparent', color: isActive ? c : '#5a3030', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s', fontWeight: isActive ? '700' : '400' }}
+                  style={{ padding: '4px 10px', borderRadius: '4px', border: `1px solid ${isActive ? c : 'rgba(136,153,187,0.15)'}`, background: isActive ? bg : 'transparent', color: isActive ? c : '#5a6a82', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s', fontWeight: isActive ? '700' : '400' }}
                   onMouseEnter={e => { if (!isActive) { e.currentTarget.style.color = c; e.currentTarget.style.borderColor = c + '44'; }}}
-                  onMouseLeave={e => { if (!isActive) { e.currentTarget.style.color = '#5a3030'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.15)'; }}}
+                  onMouseLeave={e => { if (!isActive) { e.currentTarget.style.color = '#5a6a82'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.15)'; }}}
                 >{f}</button>
               );
             })}

@@ -409,6 +409,35 @@ function TradeModal({ title, subtitle, color, trades, onClose }) {
   );
 }
 
+// ── Account Sparkline ─────────────────────────────────────────
+function AccountSparkline({ pts }) {
+  const W = 160, H = 38;
+  if (pts.length < 2) return <div style={{ height:`${H}px`, display:'flex', alignItems:'center', justifyContent:'center', color:'#2e3d52', fontSize:'10px' }}>—</div>;
+  const minV = Math.min(...pts, 0);
+  const maxV = Math.max(...pts, 0);
+  const rng  = maxV - minV || 1;
+  const toX  = i => (i / (pts.length - 1)) * (W - 2) + 1;
+  const toY  = v => (H - 2) - ((v - minV) / rng) * (H - 2) + 1;
+  const path = pts.map((v, i) => `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(' ');
+  const last = pts[pts.length - 1];
+  const col  = last >= 0 ? '#00cc77' : '#ff3344';
+  const zY   = toY(0);
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display:'block' }}>
+      {minV < 0 && maxV > 0 && <line x1={1} y1={zY} x2={W-1} y2={zY} stroke="rgba(136,153,187,0.15)" strokeDasharray="3 2" />}
+      <polyline points={path} fill="none" stroke={col} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={toX(pts.length-1)} cy={toY(last)} r={2.5} fill={col} />
+    </svg>
+  );
+}
+
+function profitTarget(type) {
+  if (!type) return 3000;
+  if (type.includes('150k')) return 9000;
+  if (type.includes('100k')) return 6000;
+  return 3000;
+}
+
 // ── MAIN ──────────────────────────────────────────────────────
 export default function GlobalView() {
   const [allTrades, setAllTrades]   = useState([]);
@@ -475,7 +504,7 @@ export default function GlobalView() {
       const trailingFloor = hwm - maxLoss;
       if (floor != null && (cum <= trailingFloor || cum <= floor)) { everBlown = true; break; }
     }
-    return { name: acc.name, color: acc.color, type: acc.type, total: at.length, pnl: ap, wr: at.length > 0 ? (aw/at.length)*100 : 0, isBlown: everBlown, balance: startBalance + ap, floor };
+    return { id: acc.id, name: acc.name, color: acc.color, type: acc.type, total: at.length, pnl: ap, wr: at.length > 0 ? (aw/at.length)*100 : 0, isBlown: everBlown, balance: startBalance + ap, floor };
   }).filter(a => a.total > 0);
 
   // ── By DOW ────────────────────────────────────────────────
@@ -619,6 +648,48 @@ export default function GlobalView() {
             <StatCard label="TOTAL TRADES"   value={total}                          color="#dde4ef"                        sub={`${accounts.length} compte${accounts.length>1?'s':''}`} />
             <StatCard label="MOY / TRADE"    value={fmt(pnl/Math.max(total,1),true)} color={pnlColor(pnl/Math.max(total,1))} />
           </div>
+
+          {/* ── ACCOUNT CARDS ── */}
+          {byAccount.length > 0 && (
+            <div style={{ marginBottom:'20px' }}>
+              <div style={{ fontSize:'12px', color:'#3a4a5a', letterSpacing:'2.5px', marginBottom:'8px', fontWeight:'700' }}>SYNTHÈSE PAR COMPTE</div>
+              <div style={{ display:'grid', gridTemplateColumns:`repeat(${Math.min(byAccount.length, 4)},1fr)`, gap:'10px' }}>
+                {byAccount.map(a => {
+                  const at  = allTrades.filter(t => t._accountId === a.id).sort((x,y)=>(x.entered_at||x.date||'').localeCompare(y.entered_at||y.date||''));
+                  let cum = 0;
+                  const pts = at.map(t => { cum += getNet(t); return cum; });
+                  const tgt = profitTarget(a.type);
+                  const pct = tgt > 0 ? Math.min(100, Math.max(0, (a.pnl / tgt) * 100)) : 0;
+                  const pc  = a.pnl >= 0 ? '#00cc77' : '#ff3344';
+                  return (
+                    <div key={a.id} style={{ background:a.isBlown?'rgba(255,51,68,0.04)':'rgba(14,15,22,0.55)', border:`1px solid ${a.isBlown?'rgba(255,51,68,0.22)':'rgba(136,153,187,0.10)'}`, borderTop:`2px solid ${a.color}`, borderRadius:'8px', padding:'12px 14px' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'6px' }}>
+                        <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:a.color, flexShrink:0 }} />
+                        <span style={{ fontSize:'12px', fontWeight:'700', color:'#dde4ef', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{a.name}</span>
+                        {a.isBlown && <span style={{ fontSize:'9px', color:'#ff3344', border:'1px solid rgba(255,51,68,0.35)', borderRadius:'3px', padding:'1px 4px', whiteSpace:'nowrap' }}>BLOWN</span>}
+                      </div>
+                      <AccountSparkline pts={pts} />
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'4px', marginTop:'6px' }}>
+                        <div><div style={{ fontSize:'9px', color:'#3a4a5a', marginBottom:'2px' }}>P&L</div><div style={{ fontSize:'12px', fontWeight:'700', color:pc }}>{a.pnl>=0?'+':''}{a.pnl.toFixed(0)}$</div></div>
+                        <div><div style={{ fontSize:'9px', color:'#3a4a5a', marginBottom:'2px' }}>WR</div><div style={{ fontSize:'12px', fontWeight:'700', color:a.wr>=50?'#00cc77':'#ff3344' }}>{a.wr.toFixed(0)}%</div></div>
+                        <div><div style={{ fontSize:'9px', color:'#3a4a5a', marginBottom:'2px' }}>TRADES</div><div style={{ fontSize:'12px', fontWeight:'700', color:'#8899bb' }}>{a.total}</div></div>
+                      </div>
+                      {a.floor != null && !a.isBlown && (
+                        <div style={{ marginTop:'8px' }}>
+                          <div style={{ display:'flex', justifyContent:'space-between', fontSize:'9px', color:'#3a4a5a', marginBottom:'3px' }}>
+                            <span>OBJECTIF</span><span style={{ color:pc }}>{a.pnl.toFixed(0)}$ / {tgt}$</span>
+                          </div>
+                          <div style={{ height:'3px', background:'rgba(136,153,187,0.10)', borderRadius:'2px', overflow:'hidden' }}>
+                            <div style={{ height:'100%', width:`${pct}%`, background:pc, borderRadius:'2px', transition:'width 0.8s ease' }} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ── POINTS FORTS ── */}
           <div style={{ background: 'linear-gradient(90deg,rgba(0,204,119,0.10) 0%,rgba(0,204,119,0.04) 100%)', border: '1px solid rgba(0,204,119,0.25)', borderLeft: '3px solid #00cc77', borderRadius: '6px', padding: '10px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>

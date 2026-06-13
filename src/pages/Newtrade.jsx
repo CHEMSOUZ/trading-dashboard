@@ -16,6 +16,12 @@ const DEFAULT_CHECKLIST = [
 ];
 
 const CHECKLIST_KEY = 'trade_checklist_items';
+const DRAFT_KEY = 'trade_draft_v2';
+
+const POINT_VALUES = {
+  MNQ:2, NQ:20, MES:5, ES:50, MGC:10, GC:100,
+  M2K:5, RTY:50, MCL:10, CL:100, MYM:0.5, YM:5,
+};
 
 function loadChecklistItems() {
   try { const raw = localStorage.getItem(CHECKLIST_KEY); if (raw) return JSON.parse(raw); } catch {}
@@ -23,6 +29,16 @@ function loadChecklistItems() {
 }
 function saveChecklistItems(items) {
   try { localStorage.setItem(CHECKLIST_KEY, JSON.stringify(items)); } catch {}
+}
+function saveDraft(form) {
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(form)); } catch {}
+}
+function loadDraft() {
+  try { const raw = localStorage.getItem(DRAFT_KEY); return raw ? JSON.parse(raw) : null; } catch {}
+  return null;
+}
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch {}
 }
 
 const inputStyle = {
@@ -225,16 +241,16 @@ function Checklist({ checked, onChange, items, onItemsChange }) {
                 onMouseLeave={e => e.currentTarget.style.opacity = '0.35'}
               >
                 <svg width="8" height="12" viewBox="0 0 8 12" fill="none">
-                  {[1.5, 5.5, 9.5].map(y => <g key={y}><circle cx="2" cy={y} r="1" fill="#3a1a1a"/><circle cx="6" cy={y} r="1" fill="#3a1a1a"/></g>)}
+                  {[1.5, 5.5, 9.5].map(y => <g key={y}><circle cx="2" cy={y} r="1" fill="#3a4a5a"/><circle cx="6" cy={y} r="1" fill="#3a4a5a"/></g>)}
                 </svg>
               </div>
-              <div onClick={() => toggle(item.id)} style={{ width: '15px', height: '15px', flexShrink: 0, border: `1.5px solid ${isChecked ? '#8899bb' : '#3a1a1a'}`, borderRadius: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isChecked ? 'rgba(136,153,187,0.14)' : 'transparent', transition: 'all 0.15s', boxShadow: isChecked ? '0 0 6px #8899bb30' : 'none' }}>
+              <div onClick={() => toggle(item.id)} style={{ width: '15px', height: '15px', flexShrink: 0, border: `1.5px solid ${isChecked ? '#8899bb' : '#3a4a5a'}`, borderRadius: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isChecked ? 'rgba(136,153,187,0.14)' : 'transparent', transition: 'all 0.15s', boxShadow: isChecked ? '0 0 6px #8899bb30' : 'none' }}>
                 {isChecked && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><polyline points="1,3.5 3,6 8,1" stroke="#8899bb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
               </div>
-              <span onClick={() => toggle(item.id)} style={{ flex: 1, fontSize:'13px', cursor: 'pointer', color: isChecked ? '#8a3a3a' : '#7888a0', textDecoration: isChecked ? 'line-through' : 'none', textDecorationColor: '#2a6a3a', transition: 'color 0.15s', lineHeight: '1.3' }}>{item.label}</span>
-              <button onClick={() => removeItem(item.id)} style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '14px', padding: '0 2px', flexShrink: 0, transition: 'color 0.15s', lineHeight: 1 }}
+              <span onClick={() => toggle(item.id)} style={{ flex: 1, fontSize:'13px', cursor: 'pointer', color: isChecked ? '#5a6a82' : '#7888a0', textDecoration: isChecked ? 'line-through' : 'none', textDecorationColor: '#5a6a82', transition: 'color 0.15s', lineHeight: '1.3' }}>{item.label}</span>
+              <button onClick={() => removeItem(item.id)} style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', fontSize: '14px', padding: '0 2px', flexShrink: 0, transition: 'color 0.15s', lineHeight: 1 }}
                 onMouseEnter={e => e.currentTarget.style.color = '#ff4455'}
-                onMouseLeave={e => e.currentTarget.style.color = '#1a3a20'}
+                onMouseLeave={e => e.currentTarget.style.color = '#3a4a5a'}
               >×</button>
             </div>
           );
@@ -271,18 +287,36 @@ export default function NewTrade() {
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
     pair: 'MNQ', direction: 'LONG',
-    entry: '', stop: '', tp: '', rr: '',
+    entry: '', stop: '', tp: '', exit_price: '', rr: '',
     result: '', fees: '', commissions: '', outcome: '', emotion: 'Calme', notes: '',
     entered_time: '', exited_time: '', size: '', duration: '',
+    rating: 0, tags: '',
   });
 
   const [screenshots, setScreenshots]       = useState([]);
   const [checklistItems, setChecklistItems] = useState(loadChecklistItems);
   const [checklistChecked, setChecklistChecked] = useState({});
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState('');
+  const [saving, setSaving]         = useState(false);
+  const [error, setError]           = useState('');
+  const [draftBanner, setDraftBanner] = useState(false);
 
   useEffect(() => { saveChecklistItems(checklistItems); }, [checklistItems]);
+
+  // Restore draft on new trade mount
+  useEffect(() => {
+    if (isEdit) return;
+    const draft = loadDraft();
+    if (draft && (draft.entry || draft.notes || draft.pair !== 'MNQ')) {
+      setForm(prev => ({ ...prev, ...draft }));
+      setDraftBanner(true);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-save draft on form change (new trade only)
+  useEffect(() => {
+    if (isEdit) return;
+    saveDraft(form);
+  }, [form, isEdit]);
 
   // Auto RR
   useEffect(() => {
@@ -294,6 +328,18 @@ export default function NewTrade() {
       setForm(prev => ({ ...prev, rr: String(rr) }));
     }
   }, [form.entry, form.stop, form.tp]);
+
+  // Auto exit_price from result + entry + size + pair + direction
+  useEffect(() => {
+    const entry  = parseFloat(form.entry);
+    const result = parseFloat(form.result);
+    const size   = parseFloat(form.size);
+    const pv     = POINT_VALUES[form.pair];
+    if (!entry || !result || !size || !pv || form.exit_price) return;
+    const sign = form.direction === 'LONG' ? 1 : -1;
+    const exit = Math.round((entry + sign * result / (size * pv)) * 100) / 100;
+    if (isFinite(exit)) setForm(prev => ({ ...prev, exit_price: String(exit) }));
+  }, [form.result, form.entry, form.size, form.pair, form.direction]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load trade for edit
   useEffect(() => {
@@ -311,13 +357,15 @@ export default function NewTrade() {
           date: t.date ?? '', pair: t.pair ?? 'MNQ',
           direction: t.direction ?? 'LONG',
           entry: String(t.entry ?? ''), stop: String(t.stop ?? ''),
-          tp: String(t.tp ?? ''), rr: String(t.rr ?? ''),
+          tp: String(t.tp ?? ''), exit_price: String(t.exit_price ?? ''), rr: String(t.rr ?? ''),
           result: String(t.result ?? ''), fees: String(t.fees ?? ''), commissions: String(t.commissions ?? ''),
           outcome: t.outcome ?? '', emotion: t.emotion ?? 'Calme', notes: t.notes ?? '',
           entered_time: toTime(t.entered_at),
           exited_time:  toTime(t.exited_at),
           size:     String(t.size ?? ''),
           duration: t.duration ?? '',
+          rating: t.rating ?? 0,
+          tags:   t.tags   ?? '',
         });
         // Load screenshots from screenshot field (stored as JSON)
         if (t.screenshot) {
@@ -348,10 +396,11 @@ export default function NewTrade() {
 
     const payload = {
       date: form.date, pair: form.pair, direction: form.direction,
-      entry:  parseFloat(form.entry)  || 0,
-      stop:   parseFloat(form.stop)   || 0,
-      tp:     parseFloat(form.tp)     || 0,
-      rr:     parseFloat(form.rr)     || null,
+      entry:      parseFloat(form.entry)      || 0,
+      stop:       parseFloat(form.stop)       || 0,
+      tp:         parseFloat(form.tp)         || 0,
+      exit_price: parseFloat(form.exit_price) || null,
+      rr:         parseFloat(form.rr)         || null,
       fees:       parseFloat(form.fees)        || 0,
       commissions: parseFloat(form.commissions) || 0,
       result: form.result !== '' ? parseFloat(form.result) : null,
@@ -366,6 +415,8 @@ export default function NewTrade() {
       exited_at:  form.exited_time  ? `${form.date}T${form.exited_time}:00`  : null,
       size:       form.size !== '' ? parseFloat(form.size) : null,
       duration:   form.duration || null,
+      rating:     form.rating  > 0 ? form.rating : null,
+      tags:       form.tags.trim() || null,
     };
 
     const res = isEdit
@@ -373,7 +424,11 @@ export default function NewTrade() {
       : await window.db.insertTrade(payload);
 
     setSaving(false);
-    if (res.ok) navigate('/journal?tab=trades');
+    if (res.ok) {
+      clearDraft();
+      window.dispatchEvent(new CustomEvent('toast', { detail: { msg: isEdit ? 'Trade mis à jour' : 'Trade enregistré', icon: '✓' } }));
+      navigate('/journal?tab=trades');
+    }
     else setError(res.error ?? 'Erreur inconnue');
   }
 
@@ -392,6 +447,22 @@ export default function NewTrade() {
         </h1>
         {isEdit && <span style={{ fontSize:'12px', color: '#5a6a82', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.15)', padding: '3px 8px', borderRadius: '4px', letterSpacing: '1.5px' }}>ÉDITION</span>}
       </div>
+
+      {/* Draft restored banner */}
+      {draftBanner && !isEdit && (
+        <div style={{ display:'flex', alignItems:'center', gap:'10px', background:'rgba(124,58,237,0.08)', border:'1px solid rgba(124,58,237,0.22)', borderRadius:'6px', padding:'8px 14px', marginBottom:'16px', fontSize:'12px', color:'#a78bfa' }}>
+          <span>💾</span>
+          <span>Brouillon restauré depuis ta dernière session</span>
+          <button onClick={() => {
+            clearDraft();
+            setDraftBanner(false);
+            setForm({ date: new Date().toISOString().slice(0,10), pair:'MNQ', direction:'LONG', entry:'', stop:'', tp:'', exit_price:'', rr:'', result:'', fees:'', commissions:'', outcome:'', emotion:'Calme', notes:'', entered_time:'', exited_time:'', size:'', duration:'', rating:0, tags:'' });
+          }} style={{ marginLeft:'auto', background:'transparent', border:'1px solid rgba(124,58,237,0.25)', color:'#7c5abb', borderRadius:'4px', padding:'3px 10px', fontSize:'12px', cursor:'pointer', fontFamily:'inherit' }}>
+            Effacer
+          </button>
+          <button onClick={() => setDraftBanner(false)} style={{ background:'transparent', border:'none', color:'#5a6a82', cursor:'pointer', fontSize:'16px', padding:'0 2px', lineHeight:1 }}>×</button>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr clamp(280px,28%,380px)', gap: '20px', alignItems: 'start' }}>
 
@@ -417,8 +488,8 @@ export default function NewTrade() {
             </Field>
           </div>
 
-          {/* Entry, Stop, TP, RR */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '14px' }}>
+          {/* Entry, Stop, TP, Exit, RR */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: '14px' }}>
             <Field label="ENTRÉE *">
               <input type="number" placeholder="21450" value={form.entry} onChange={set('entry')} style={inputStyle}
                 onFocus={e => e.target.style.borderColor = '#8899bb'}
@@ -431,7 +502,12 @@ export default function NewTrade() {
             </Field>
             <Field label="TP">
               <input type="number" placeholder="21500" value={form.tp} onChange={set('tp')} style={inputStyle}
-                onFocus={e => e.target.style.borderColor = '#8899bb'}
+                onFocus={e => e.target.style.borderColor = '#00cc77'}
+                onBlur={e => e.target.style.borderColor = 'rgba(136,153,187,0.14)'} />
+            </Field>
+            <Field label="PRIX SORTIE">
+              <input type="number" placeholder="21490" value={form.exit_price} onChange={set('exit_price')} style={{ ...inputStyle, color: form.exit_price ? '#f59e0b' : '#dde4ef' }}
+                onFocus={e => e.target.style.borderColor = '#f59e0b'}
                 onBlur={e => e.target.style.borderColor = 'rgba(136,153,187,0.14)'} />
             </Field>
             <Field label="RR (AUTO)">
@@ -531,6 +607,40 @@ export default function NewTrade() {
               onFocus={e => e.target.style.borderColor = '#8899bb'}
               onBlur={e => e.target.style.borderColor = 'rgba(136,153,187,0.14)'} />
           </Field>
+
+          {/* Quality rating + tags */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+            <Field label="QUALITÉ D'EXÉCUTION">
+              <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                {[1,2,3,4,5].map(star => (
+                  <span key={star} onClick={() => setForm(p => ({ ...p, rating: p.rating === star ? 0 : star }))}
+                    style={{ fontSize: '22px', cursor: 'pointer', transition: 'transform 0.1s', filter: form.rating >= star ? 'none' : 'grayscale(1) opacity(0.3)' }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.25)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                    ⭐
+                  </span>
+                ))}
+                {form.rating > 0 && (
+                  <span style={{ fontSize: '11px', color: '#5a6a82', marginLeft: '4px' }}>
+                    {['','Très mauvais','Mauvais','Moyen','Bon','Excellent'][form.rating]}
+                  </span>
+                )}
+              </div>
+            </Field>
+            <Field label="TAGS (séparés par virgule)">
+              <input type="text" placeholder="FVG, OB, London, news..." value={form.tags}
+                onChange={set('tags')} style={inputStyle}
+                onFocus={e => e.target.style.borderColor = '#7c3aed'}
+                onBlur={e => e.target.style.borderColor = 'rgba(136,153,187,0.14)'} />
+              {form.tags.trim() && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '5px' }}>
+                  {form.tags.split(',').map(tag => tag.trim()).filter(Boolean).map(tag => (
+                    <span key={tag} style={{ padding: '2px 8px', background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)', borderRadius: '20px', fontSize: '11px', color: '#a78bfa' }}>{tag}</span>
+                  ))}
+                </div>
+              )}
+            </Field>
+          </div>
 
           {/* ── SCREENSHOTS ── */}
           <div>

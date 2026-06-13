@@ -1,8 +1,63 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
-const path = require('path');
-const fs   = require('fs');
-const http = require('http');
+const path  = require('path');
+const fs    = require('fs');
+const http  = require('http');
+const https = require('https');
 const { autoUpdater } = require('electron-updater');
+
+// ── Load .env ─────────────────────────────────────────────────
+(function loadEnv() {
+  const candidates = [
+    path.join(__dirname, '.env'),
+    path.join(process.env.APPDATA || process.env.HOME || '', 'trading-dashboard', '.env'),
+  ];
+  for (const p of candidates) {
+    if (!fs.existsSync(p)) continue;
+    try {
+      for (const line of fs.readFileSync(p, 'utf-8').split('\n')) {
+        const m = line.trim().match(/^([A-Z_][A-Z0-9_]*)=["']?(.+?)["']?\s*$/);
+        if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+      }
+    } catch(_) {}
+    break;
+  }
+})();
+
+// ── Anthropic API ─────────────────────────────────────────────
+function callAnthropicApi(messages, systemPrompt) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return Promise.reject(new Error('NO_API_KEY'));
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: messages.map(m => ({ role: m.role, content: m.content })),
+    });
+    const req = https.request({
+      hostname: 'api.anthropic.com', port: 443, path: '/v1/messages', method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, (res) => {
+      let data = '';
+      res.on('data', c => { data += c; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.error) return reject(new Error(parsed.error.message));
+          resolve(parsed.content?.[0]?.text ?? '');
+        } catch(e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
 
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
@@ -337,6 +392,58 @@ function registerHandlers() {
   globalDbHandle('db:getWeeklyAnalyses',   (db) => dbModule.getWeeklyAnalyses(db));
   globalDbHandle('db:upsertWeeklyAnalysis',(db, dbp, a) => dbModule.upsertWeeklyAnalysis(db, dbp, a));
   globalDbHandle('db:deleteWeeklyAnalysis',(db, dbp, id) => dbModule.deleteWeeklyAnalysis(db, dbp, id));
+
+  // ── AI Coach handlers ─────────────────────────────────────────
+  ipcMain.handle('ai:hasKey', () => ({ ok: true, data: !!process.env.ANTHROPIC_API_KEY }));
+
+  ipcMain.handle('ai:chat', async (_, messages, systemPrompt) => {
+    try {
+      const text = await callAnthropicApi(messages, systemPrompt);
+      return { ok: true, data: text };
+    } catch(e) {
+      if (e.message === 'NO_API_KEY') return { ok: false, error: 'no_api_key' };
+      return { ok: false, error: e.message };
+    }
+  });
+
+  dbHandle('ai:getMessages',  (db) => dbModule.getAiMessages(db));
+  dbHandle('ai:addMessage',   (db, dbp, msg) => dbModule.insertAiMessage(db, dbp, msg));
+  dbHandle('ai:clearHistory', (db, dbp) => dbModule.clearAiConversations(db, dbp));
+
+  // ── Market Data ───────────────────────────────────────────
+  ipcMain.handle('market:getOHLCV', async (_, pair, date, interval) => {
+    try {
+      const SYMBOL_MAP = {
+        MNQ:'NQ=F', NQ:'NQ=F', MES:'ES=F', ES:'ES=F',
+        MGC:'GC=F', GC:'GC=F', MCL:'CL=F', CL:'CL=F',
+        M2K:'RTY=F', RTY:'RTY=F', YM:'YM=F', MYM:'YM=F',
+        NASDAQ:'NQ=F', SP500:'ES=F', SI:'SI=F', DAX:'%5EGDAXI',
+      };
+      const symbol  = SYMBOL_MAP[(pair||'').toUpperCase()] ?? pair;
+      const dayStart = Math.floor(new Date(date + 'T06:00:00Z').getTime() / 1000);
+      const dayEnd   = Math.floor(new Date(date + 'T23:59:59Z').getTime() / 1000);
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&period1=${dayStart}&period2=${dayEnd}&events=`;
+      const raw = await new Promise((resolve, reject) => {
+        const req = https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } }, res => {
+          let body = '';
+          res.on('data', c => body += c);
+          res.on('end', () => { try { resolve(JSON.parse(body)); } catch(e) { reject(e); } });
+        });
+        req.on('error', reject);
+        req.setTimeout(10000, () => { req.destroy(); reject(new Error('Timeout')); });
+      });
+      const result = raw?.chart?.result?.[0];
+      if (!result) return { ok: false, error: 'Symbole introuvable sur Yahoo Finance' };
+      const ts = result.timestamp ?? [];
+      const q  = result.indicators?.quote?.[0] ?? {};
+      const candles = ts
+        .map((t, i) => ({ ts: t, open: q.open?.[i], high: q.high?.[i], low: q.low?.[i], close: q.close?.[i] }))
+        .filter(c => c.open != null && c.high != null && c.low != null && c.close != null);
+      return { ok: true, data: candles };
+    } catch(e) {
+      return { ok: false, error: e.message };
+    }
+  });
 
   // ── File dialogs ──────────────────────────────────────────
   ipcMain.handle('dialog:openCsv', async () => {

@@ -41,6 +41,18 @@ contextBridge.exposeInMainWorld('shell', {
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
 });
 
+contextBridge.exposeInMainWorld('ai', {
+  hasKey:       ()           => ipcRenderer.invoke('ai:hasKey'),
+  chat:         (msgs, sys)  => ipcRenderer.invoke('ai:chat', msgs, sys),
+  getMessages:  ()           => ipcRenderer.invoke('ai:getMessages'),
+  addMessage:   (msg)        => ipcRenderer.invoke('ai:addMessage', msg),
+  clearHistory: ()           => ipcRenderer.invoke('ai:clearHistory'),
+});
+
+contextBridge.exposeInMainWorld('market', {
+  getOHLCV: (pair, date, tf) => ipcRenderer.invoke('market:getOHLCV', pair, date, tf),
+});
+
 contextBridge.exposeInMainWorld('bot', {
   getSignals:   ()       => ipcRenderer.invoke('bot:getSignals'),
   clearSignals: ()       => ipcRenderer.invoke('bot:clearSignals'),

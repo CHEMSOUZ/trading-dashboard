@@ -294,7 +294,7 @@ function CreateAccountModal({ onClose, onCreate }) {
                           </div>
                           <div style={{ fontSize:'13px', color: '#5a6a82' }}>{info.desc}</div>
                         </div>
-                        <div style={{ width: '15px', height: '15px', borderRadius: '50%', border: `2px solid ${form.type === key ? typeColor : '#3a1a1a'}`, background: form.type === key ? typeColor : 'transparent', flexShrink: 0 }} />
+                        <div style={{ width: '15px', height: '15px', borderRadius: '50%', border: `2px solid ${form.type === key ? typeColor : '#3a4a5a'}`, background: form.type === key ? typeColor : 'transparent', flexShrink: 0 }} />
                       </div>
                     </div>
                   );

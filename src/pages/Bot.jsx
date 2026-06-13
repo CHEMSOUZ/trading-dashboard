@@ -1676,11 +1676,11 @@ function SignalCard({ signal, onSave, isLatest }) {
         {/* TP unique */}
         {tp > 0 && (
           <div style={{ background: 'rgba(136,153,187,0.05)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '6px', padding: '10px 14px' }}>
-            <div style={{ fontSize:'12px', color: '#3a1a1a', letterSpacing: '2px', marginBottom: '4px' }}>🎯 TP  <span style={{ color: '#3a9a5a', fontSize:'11px', marginLeft: '4px' }}>R:R 1:2</span></div>
+            <div style={{ fontSize:'12px', color: '#3a4a5a', letterSpacing: '2px', marginBottom: '4px' }}>🎯 TP  <span style={{ color: '#3a9a5a', fontSize:'11px', marginLeft: '4px' }}>R:R 1:2</span></div>
             <div style={{ fontSize: '18px', fontWeight: '700', color: '#8899bb' }}>{tp.toFixed(2)}</div>
-            <div style={{ fontSize:'12px', color: '#3a1a1a', marginTop: '2px' }}>
+            <div style={{ fontSize:'12px', color: '#3a4a5a', marginTop: '2px' }}>
               {tpPts.toFixed(2)} pts · <span style={{ color: '#8899bb' }}>+${calcUsd(tpPts)}</span>
-              <span style={{ color: '#3a1a1a', marginLeft: '4px' }}>(5 MNQ)</span>
+              <span style={{ color: '#3a4a5a', marginLeft: '4px' }}>(5 MNQ)</span>
             </div>
           </div>
         )}
@@ -2603,7 +2603,7 @@ export default function Bot() {
                               <div style={{ fontSize: '13px', fontWeight: '700', color: '#ff7788' }}>{sl ? sl.toFixed(2) : '—'}</div>
                             </div>
                             <div style={{ background: `rgba(${dirRgb},0.05)`, borderRadius: '5px', padding: '7px 10px' }}>
-                              <div style={{ fontSize:'12px', color: '#3a1a1a', letterSpacing: '1px', marginBottom: '2px' }}>🎯 TP {tpPts && <span style={{ color: '#3a1a1a' }}>+{tpPts}pts</span>}</div>
+                              <div style={{ fontSize:'12px', color: '#3a4a5a', letterSpacing: '1px', marginBottom: '2px' }}>🎯 TP {tpPts && <span style={{ color: '#3a4a5a' }}>+{tpPts}pts</span>}</div>
                               <div style={{ fontSize: '13px', fontWeight: '700', color: '#8899bb' }}>{tp ? tp.toFixed(2) : '—'}</div>
                             </div>
                           </div>
@@ -2856,7 +2856,7 @@ export default function Bot() {
               <div style={{ fontSize:'12px', color: '#8899bb', letterSpacing: '2px', fontWeight: '700' }}>📡 LOG WEBHOOK — TEMPS RÉEL</div>
               <span style={{ fontSize:'12px', color: '#5a6a82' }}>{webhookLogs.length} requête{webhookLogs.length > 1 ? 's' : ''}</span>
               {webhookLogs.length > 0 && (
-                <button onClick={() => setWebhookLogs([])} style={{ marginLeft: 'auto', fontSize:'12px', padding: '1px 7px', background: 'transparent', border: '1px solid rgba(255,68,85,0.2)', borderRadius: '3px', color: '#4a2a2a', cursor: 'pointer', fontFamily: 'inherit' }}>EFFACER</button>
+                <button onClick={() => setWebhookLogs([])} style={{ marginLeft: 'auto', fontSize:'12px', padding: '1px 7px', background: 'transparent', border: '1px solid rgba(255,68,85,0.2)', borderRadius: '3px', color: '#3a4a5a', cursor: 'pointer', fontFamily: 'inherit' }}>EFFACER</button>
               )}
             </div>
             {webhookLogs.length === 0 ? (
@@ -2880,7 +2880,7 @@ export default function Bot() {
                 })}
               </div>
             )}
-            <div style={{ marginTop: '10px', fontSize:'12px', color: '#3a1a1a', lineHeight: '1.6' }}>
+            <div style={{ marginTop: '10px', fontSize:'12px', color: '#3a4a5a', lineHeight: '1.6' }}>
               Si les alertes TradingView <strong style={{ color: '#dde4ef' }}>n'apparaissent pas ici</strong> mais que le test local fonctionne → <strong style={{ color: '#f0c020' }}>ngrok n'est plus actif ou l'URL a changé.</strong> Relance ngrok et mets à jour l'URL dans TradingView.
             </div>
           </div>
@@ -2921,7 +2921,7 @@ export default function Bot() {
                     <div>• Message : <code style={{ color: '#8899bb', background: 'rgba(136,153,187,0.12)', padding: '1px 5px', borderRadius: '3px', fontSize:'12px' }}>laisser VIDE</code> — le script envoie son propre JSON</div>
                     <div>• Webhook URL : <code style={{ color: '#f0c020', background: 'rgba(240,192,32,0.1)', padding: '1px 5px', borderRadius: '3px', fontSize:'12px' }}>https://TON_URL_NGROK/webhook</code></div>
                   </div>
-                  <div style={{ color: '#3a1a1a', fontSize:'12px' }}>→ Si "Alert() function calls only" n'est pas sélectionné, TradingView envoie le champ Message (vide ou texte) au lieu du JSON du script → 400 Bad Request</div>
+                  <div style={{ color: '#3a4a5a', fontSize:'12px' }}>→ Si "Alert() function calls only" n'est pas sélectionné, TradingView envoie le champ Message (vide ou texte) au lieu du JSON du script → 400 Bad Request</div>
                 </div>
               )
             },

@@ -34,6 +34,13 @@ function save(db, dbPath) {
 
 function initSchema(db) {
   db.exec(`
+    CREATE TABLE IF NOT EXISTS ai_conversations (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      role       TEXT NOT NULL,
+      content    TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS trades (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       external_id   TEXT UNIQUE,
@@ -117,6 +124,8 @@ function initSchema(db) {
     "ALTER TABLE trades ADD COLUMN exited_at TEXT",
     "ALTER TABLE trades ADD COLUMN duration TEXT",
     "ALTER TABLE trades ADD COLUMN source TEXT DEFAULT 'manual'",
+    "ALTER TABLE trades ADD COLUMN rating INTEGER",
+    "ALTER TABLE trades ADD COLUMN tags TEXT",
   ];
   for (const sql of migrations) { try { db.exec(sql); } catch (_) {} }
 }
@@ -183,11 +192,11 @@ function insertTrade(db, dbPath, trade) {
     INSERT INTO trades (
       external_id,date,pair,direction,entry,exit_price,stop,tp,rr,
       result,result_net,fees,commissions,size,outcome,emotion,
-      screenshot,notes,entered_at,exited_at,duration,source
+      screenshot,notes,entered_at,exited_at,duration,source,rating,tags
     ) VALUES (
       :external_id,:date,:pair,:direction,:entry,:exit_price,:stop,:tp,:rr,
       :result,:result_net,:fees,:commissions,:size,:outcome,:emotion,
-      :screenshot,:notes,:entered_at,:exited_at,:duration,:source
+      :screenshot,:notes,:entered_at,:exited_at,:duration,:source,:rating,:tags
     )
   `, {
     ':external_id': trade.external_id ?? null, ':date': trade.date,
@@ -201,6 +210,7 @@ function insertTrade(db, dbPath, trade) {
     ':notes': trade.notes ?? null, ':entered_at': trade.entered_at ?? null,
     ':exited_at': trade.exited_at ?? null, ':duration': trade.duration ?? null,
     ':source': trade.source ?? 'manual',
+    ':rating': trade.rating ?? null, ':tags': trade.tags ?? null,
   });
   return { id: lastId(db), ...trade };
 }
@@ -212,7 +222,8 @@ function updateTrade(db, dbPath, id, trade) {
       result=:result,result_net=:result_net,fees=:fees,commissions=:commissions,
       size=:size,outcome=:outcome,emotion=:emotion,
       screenshot=:screenshot,notes=:notes,
-      entered_at=:entered_at,exited_at=:exited_at,duration=:duration
+      entered_at=:entered_at,exited_at=:exited_at,duration=:duration,
+      rating=:rating,tags=:tags
     WHERE id=:id
   `, {
     ':date': trade.date, ':pair': trade.pair, ':direction': trade.direction,
@@ -224,6 +235,7 @@ function updateTrade(db, dbPath, id, trade) {
     ':emotion': trade.emotion ?? null, ':screenshot': trade.screenshot ?? null,
     ':notes': trade.notes ?? null, ':entered_at': trade.entered_at ?? null,
     ':exited_at': trade.exited_at ?? null, ':duration': trade.duration ?? null,
+    ':rating': trade.rating ?? null, ':tags': trade.tags ?? null,
     ':id': id,
   });
   return getTradeById(db, id);
@@ -460,6 +472,20 @@ function deleteWeeklyAnalysis(db, dbPath, id) {
   runQ(db, dbPath, 'DELETE FROM weekly_analysis WHERE id=?', [id]);
 }
 
+// ── AI CONVERSATIONS ──────────────────────────────────────────
+function getAiMessages(db) {
+  return getAll(db, 'SELECT * FROM ai_conversations ORDER BY created_at ASC');
+}
+function insertAiMessage(db, dbPath, msg) {
+  runQ(db, dbPath, 'INSERT INTO ai_conversations (role, content) VALUES (:role, :content)', {
+    ':role': msg.role, ':content': msg.content,
+  });
+  return { id: lastId(db), ...msg };
+}
+function clearAiConversations(db, dbPath) {
+  runQ(db, dbPath, 'DELETE FROM ai_conversations');
+}
+
 module.exports = {
   getDb,
   getAllTrades, getTradeById, insertTrade, updateTrade, deleteTrade,
@@ -467,4 +493,5 @@ module.exports = {
   insertEmotionalCheck, getTodayEmotionalCheck,
   getDailyAnalyses, getDailyAnalysis, upsertDailyAnalysis, deleteDailyAnalysis,
   getWeeklyAnalyses, getWeeklyAnalysis, upsertWeeklyAnalysis, deleteWeeklyAnalysis,
+  getAiMessages, insertAiMessage, clearAiConversations,
 };
