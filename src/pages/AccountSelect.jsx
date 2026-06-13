@@ -7,9 +7,15 @@ const TYPE_LABELS = {
   topstep_50k:       { label: 'Topstep 50K',     color: '#8899bb', platform: 'topstep' },
   topstep_100k:      { label: 'Topstep 100K',    color: '#00aaff', platform: 'topstep' },
   topstep_150k:      { label: 'Topstep 150K',    color: '#aa88ff', platform: 'topstep' },
-  topstep_ef_50k:    { label: 'Funded 50K',      color: '#f0c020', platform: 'topstep' },
-  topstep_ef_100k:   { label: 'Funded 100K',     color: '#f0c020', platform: 'topstep' },
-  topstep_ef_150k:   { label: 'Funded 150K',     color: '#f0c020', platform: 'topstep' },
+  topstep_ef_50k:    { label: 'Funded 50K',            color: '#f0c020', platform: 'topstep' },
+  topstep_ef_100k:   { label: 'Funded 100K',           color: '#f0c020', platform: 'topstep' },
+  topstep_ef_150k:   { label: 'Funded 150K',           color: '#f0c020', platform: 'topstep' },
+  topstep_cons_50k:  { label: 'Funded Consistency 50K',  color: '#aa88ff', platform: 'topstep' },
+  topstep_cons_100k: { label: 'Funded Consistency 100K', color: '#aa88ff', platform: 'topstep' },
+  topstep_cons_150k: { label: 'Funded Consistency 150K', color: '#aa88ff', platform: 'topstep' },
+  topstep_live_50k:  { label: 'Live Funded 50K',         color: '#00cc77', platform: 'topstep' },
+  topstep_live_100k: { label: 'Live Funded 100K',        color: '#00cc77', platform: 'topstep' },
+  topstep_live_150k: { label: 'Live Funded 150K',        color: '#00cc77', platform: 'topstep' },
   lucid_eval_50k:    { label: 'LucidFlex 50K',   color: '#00aaff', platform: 'tradovate' },
   lucid_eval_100k:   { label: 'LucidFlex 100K',  color: '#00aaff', platform: 'tradovate' },
   lucid_eval_150k:   { label: 'LucidFlex 150K',  color: '#00aaff', platform: 'tradovate' },
@@ -32,6 +38,9 @@ const ACCOUNT_RULES = {
   topstep_ef_50k:    { size: 50000,  maxLoss: 2000 },
   topstep_ef_100k:   { size: 100000, maxLoss: 3000 },
   topstep_ef_150k:   { size: 150000, maxLoss: 4500 },
+  topstep_cons_50k:  { size: 50000,  maxLoss: 2000 },
+  topstep_cons_100k: { size: 100000, maxLoss: 3000 },
+  topstep_cons_150k: { size: 150000, maxLoss: 4500 },
   lucid_eval_50k:    { size: 50000,  maxLoss: 2000,  profitTarget: 3000 },
   lucid_eval_100k:   { size: 100000, maxLoss: 3000,  profitTarget: 6000 },
   lucid_eval_150k:   { size: 150000, maxLoss: 4500,  profitTarget: 9000 },
@@ -48,8 +57,8 @@ const ACCOUNT_RULES = {
 };
 
 const CHALLENGE_TYPES = new Set(['topstep_50k','topstep_100k','topstep_150k','lucid_eval_50k','lucid_eval_100k','lucid_eval_150k']);
-const EXPRESS_FUNDED_TYPES = new Set(['topstep_ef_50k','topstep_ef_100k','topstep_ef_150k','lucid_funded_50k','lucid_funded_100k','lucid_funded_150k']);
-const LIVE_TYPES = new Set(['lucid_live_50k','lucid_live_100k','lucid_live_150k','tradovate_live']);
+const EXPRESS_FUNDED_TYPES = new Set(['topstep_ef_50k','topstep_ef_100k','topstep_ef_150k','topstep_cons_50k','topstep_cons_100k','topstep_cons_150k','lucid_funded_25k','lucid_funded_50k','lucid_funded_100k','lucid_funded_150k']);
+const LIVE_TYPES = new Set(['lucid_live_50k','lucid_live_100k','lucid_live_150k','tradovate_live','topstep_live_50k','topstep_live_100k','topstep_live_150k']);
 
 const PLATFORMS = {
   topstep: {
@@ -59,9 +68,15 @@ const PLATFORMS = {
       topstep_50k:     { label: 'Combine 50K',  desc: 'Trading Combine · Trailing DD -2 000$' },
       topstep_100k:    { label: 'Combine 100K', desc: 'Trading Combine · Trailing DD -3 000$' },
       topstep_150k:    { label: 'Combine 150K', desc: 'Trading Combine · Trailing DD -4 500$' },
-      topstep_ef_50k:  { label: 'Funded 50K',   desc: 'Express Funded · Trailing DD -2 000$', funded: true },
-      topstep_ef_100k: { label: 'Funded 100K',  desc: 'Express Funded · Trailing DD -3 000$', funded: true },
-      topstep_ef_150k: { label: 'Funded 150K',  desc: 'Express Funded · Trailing DD -4 500$', funded: true },
+      topstep_ef_50k:    { label: 'Funded Standard 50K',     desc: 'Express Funded Standard · Trailing DD -2 000$', funded: true },
+      topstep_ef_100k:   { label: 'Funded Standard 100K',    desc: 'Express Funded Standard · Trailing DD -3 000$', funded: true },
+      topstep_ef_150k:   { label: 'Funded Standard 150K',    desc: 'Express Funded Standard · Trailing DD -4 500$', funded: true },
+      topstep_cons_50k:  { label: 'Funded Consistency 50K',  desc: 'Express Funded Consistency · 3 jours · ≤40%', funded: true },
+      topstep_cons_100k: { label: 'Funded Consistency 100K', desc: 'Express Funded Consistency · 3 jours · ≤40%', funded: true },
+      topstep_cons_150k: { label: 'Funded Consistency 150K', desc: 'Express Funded Consistency · 3 jours · ≤40%', funded: true },
+      topstep_live_50k:  { label: 'Live Funded 50K',         desc: 'Compte Live Réel · Floor 0$', live: true },
+      topstep_live_100k: { label: 'Live Funded 100K',        desc: 'Compte Live Réel · Floor 0$', live: true },
+      topstep_live_150k: { label: 'Live Funded 150K',        desc: 'Compte Live Réel · Floor 0$', live: true },
     },
   },
   tradovate: {
@@ -653,18 +668,25 @@ export default function AccountSelect({ onSelect, onBack }) {
   );
   const fundedAccounts    = data.accounts.filter(a =>
     !statuses[a.id]?.isBlown && isNotActive(a) &&
-    statuses[a.id]?.isExpressFunded && !LIVE_TYPES.has(a.type)
+    (statuses[a.id]?.isExpressFunded || EXPRESS_FUNDED_TYPES.has(a.type)) && !LIVE_TYPES.has(a.type)
   );
   const challengeAccounts = data.accounts.filter(a =>
     !statuses[a.id]?.isBlown && isNotActive(a) &&
-    !statuses[a.id]?.isExpressFunded && !LIVE_TYPES.has(a.type) &&
+    !LIVE_TYPES.has(a.type) && !EXPRESS_FUNDED_TYPES.has(a.type) &&
     !statuses[a.id]?.isValidated && CHALLENGE_TYPES.has(a.type)
   );
   const validatedAccounts = data.accounts.filter(a =>
     !statuses[a.id]?.isBlown && isNotActive(a) &&
-    !statuses[a.id]?.isExpressFunded && !LIVE_TYPES.has(a.type) &&
+    !LIVE_TYPES.has(a.type) && !EXPRESS_FUNDED_TYPES.has(a.type) &&
     statuses[a.id]?.isValidated
   );
+  const classifiedIds = new Set([
+    ...(activeAcc ? [activeAcc.id] : []),
+    ...blownAccounts.map(a=>a.id), ...liveAccounts.map(a=>a.id),
+    ...fundedAccounts.map(a=>a.id), ...challengeAccounts.map(a=>a.id),
+    ...validatedAccounts.map(a=>a.id),
+  ]);
+  const otherAccounts = data.accounts.filter(a => !classifiedIds.has(a.id));
 
   function renderSection(accounts, header) {
     return (
@@ -767,7 +789,15 @@ export default function AccountSelect({ onSelect, onBack }) {
               </div>
             ))}
 
-            {/* ── 5. CRAMÉS ── */}
+            {/* ── 5. AUTRES (perso, demo, générique) ── */}
+            {otherAccounts.length > 0 && renderSection(otherAccounts, (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#5a6a82' }} />
+                <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>AUTRES — {otherAccounts.length}</span>
+              </div>
+            ))}
+
+            {/* ── 6. CRAMÉS ── */}
             {blownAccounts.length > 0 && renderSection(blownAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#ff4455', boxShadow: '0 0 8px #ff4455' }} />

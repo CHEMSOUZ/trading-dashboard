@@ -23,6 +23,14 @@ const ACCOUNT_TYPES = {
   'lucid_funded_50k':  { label: 'LucidFlex Funded 50K',  size: 50000,  maxLoss: 2500, dailyLoss: 2000, profitTarget: null, consistencyPct: null },
   'lucid_funded_100k': { label: 'LucidFlex Funded 100K', size: 100000, maxLoss: 3000, dailyLoss: 3000, profitTarget: null, consistencyPct: null },
   'lucid_funded_150k': { label: 'LucidFlex Funded 150K', size: 150000, maxLoss: 4500, dailyLoss: 4500, profitTarget: null, consistencyPct: null },
+  // ── Topstep Express Funded Consistency ───────────────────────
+  'topstep_cons_50k':  { label: 'Topstep Funded Consistency 50K',  size: 50000,  maxLoss: 2000, dailyLoss: 1000 },
+  'topstep_cons_100k': { label: 'Topstep Funded Consistency 100K', size: 100000, maxLoss: 3000, dailyLoss: 2000 },
+  'topstep_cons_150k': { label: 'Topstep Funded Consistency 150K', size: 150000, maxLoss: 4500, dailyLoss: 3000 },
+  // ── Topstep Live Funded ───────────────────────────────────────
+  'topstep_live_50k':  { label: 'Topstep Live Funded 50K',  size: 50000,  maxLoss: null, dailyLoss: 1000 },
+  'topstep_live_100k': { label: 'Topstep Live Funded 100K', size: 100000, maxLoss: null, dailyLoss: 2000 },
+  'topstep_live_150k': { label: 'Topstep Live Funded 150K', size: 150000, maxLoss: null, dailyLoss: 3000 },
   // ── Génériques ───────────────────────────────────────────────
   'tradovate_live': { label: 'Tradovate Live', size: null,   maxLoss: null, dailyLoss: null },
   'tradovate_demo': { label: 'Tradovate Demo', size: null,   maxLoss: null, dailyLoss: null },
@@ -53,7 +61,18 @@ function getDbPath(accountId) {
 
 // ── CRUD ──────────────────────────────────────────────────────
 function getAllAccounts() {
-  return loadAccounts();
+  const data = loadAccounts();
+  // Auto-repair: fix stale typeInfo for accounts whose type is now known
+  let changed = false;
+  for (const acc of data.accounts) {
+    const correct = ACCOUNT_TYPES[acc.type];
+    if (correct && (!acc.typeInfo?.label || acc.typeInfo.label === 'Autre compte') && correct.label !== 'Autre compte') {
+      acc.typeInfo = correct;
+      changed = true;
+    }
+  }
+  if (changed) saveAccounts(data);
+  return data;
 }
 
 function createAccount({ name, type, color, brokerAccountId, tradovateConfig }) {
