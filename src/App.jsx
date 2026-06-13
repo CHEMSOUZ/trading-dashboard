@@ -23,7 +23,6 @@ const PropFirm          = lazy(() => import('./pages/PropFirm'));
 const EmotionalCheck    = lazy(() => import('./pages/EmotionalCheck'));
 const Analysis          = lazy(() => import('./pages/Analysis'));
 const GlobalView        = lazy(() => import('./pages/GlobalView'));
-const CsvImport         = lazy(() => import('./pages/CsvImport'));
 const EconomicCalendar  = lazy(() => import('./pages/EconomicCalendar'));
 const Payout            = lazy(() => import('./pages/Payout'));
 const TradingPlan       = lazy(() => import('./pages/TradingPlan'));
@@ -31,9 +30,6 @@ const StrategieDiscipline = lazy(() => import('./pages/StrategieDiscipline'));
 const FitnessSante      = lazy(() => import('./pages/FitnessSante'));
 const Bot               = lazy(() => import('./pages/Bot'));
 const AiCoachPanel      = lazy(() => import('./features/ai-coach/AiCoachPanel'));
-const HeatMap           = lazy(() => import('./features/heatmap/HeatMap'));
-const RiskManager       = lazy(() => import('./features/risk-manager/RiskManager'));
-const PatternRecognition = lazy(() => import('./features/patterns/PatternRecognition'));
 const Goals             = lazy(() => import('./features/goals/Goals'));
 
 const SHORTCUTS = [
@@ -42,7 +38,6 @@ const SHORTCUTS = [
     { key: 'G', desc: 'Vue globale (comptes)' },
     { key: 'N', desc: 'Nouveau trade' },
     { key: 'E', desc: 'Bilan émotionnel' },
-    { key: 'H', desc: 'HeatMap sessions' },
   ]},
   { section: 'Journal', items: [
     { key: '▶', desc: 'Replay du trade (bouton ligne)' },
@@ -96,7 +91,6 @@ export default function App() {
       if (e.key === 'g' || e.key === 'G') { window.location.hash = '#/global'; }
       if (e.key === 'n' || e.key === 'N') { window.location.hash = '#/journal/new'; }
       if (e.key === 'e' || e.key === 'E') { window.location.hash = '#/emotional'; }
-      if (e.key === 'h' || e.key === 'H') { window.location.hash = '#/heatmap'; }
     }
     window.addEventListener('keydown', onGlobalKey);
     return () => {
@@ -196,7 +190,6 @@ export default function App() {
               <Route path="/lucid"         element={<Navigate to="/propfirm" replace />} />
               <Route path="/emotional"     element={<EmotionalCheck />} />
               <Route path="/calendar"      element={<EconomicCalendar />} />
-              <Route path="/import"        element={<CsvImport />} />
               <Route path="/payout"        element={<Payout />} />
               <Route path="/plan"          element={<TradingPlan />} />
               <Route path="/strategie"     element={<StrategieDiscipline />} />
@@ -205,9 +198,6 @@ export default function App() {
               <Route path="/journal"       element={<Journal />} />
               <Route path="/journal/new"   element={<NewTrade />} />
               <Route path="/journal/:id"   element={<NewTrade />} />
-              <Route path="/heatmap"       element={<HeatMap />} />
-              <Route path="/risk"          element={<RiskManager />} />
-              <Route path="/patterns"      element={<PatternRecognition />} />
               <Route path="/goals"         element={<Goals />} />
             </Routes>
           </Suspense>
