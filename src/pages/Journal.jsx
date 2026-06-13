@@ -1632,183 +1632,428 @@ function AnalyticsSection({ trades, loading }) {
 }
 
 // ── RISK MANAGER ──────────────────────────────────────────────
+// ── Risk Manager — contract specs ────────────────────────────
+const RM_CONTRACTS = {
+  MNQ:  { label:'Micro NQ',    tickSize:0.25, tickValue:0.50,  pointValue:2    },
+  NQ:   { label:'NQ E-mini',   tickSize:0.25, tickValue:5.00,  pointValue:20   },
+  MES:  { label:'Micro ES',    tickSize:0.25, tickValue:1.25,  pointValue:5    },
+  ES:   { label:'ES E-mini',   tickSize:0.25, tickValue:12.50, pointValue:50   },
+  MGC:  { label:'Micro Gold',  tickSize:0.10, tickValue:1.00,  pointValue:10   },
+  GC:   { label:'Gold',        tickSize:0.10, tickValue:10.00, pointValue:100  },
+  MCL:  { label:'Micro CL',    tickSize:0.01, tickValue:1.00,  pointValue:100  },
+  M2K:  { label:'Micro R2K',   tickSize:0.10, tickValue:0.50,  pointValue:5    },
+  MYM:  { label:'Micro YM',    tickSize:1,    tickValue:0.50,  pointValue:0.5  },
+  AUTRE:{ label:'Autre/Forex', tickSize:1,    tickValue:1,     pointValue:1    },
+};
+
+function RmGauge({ label, value, max, color, warning = 0.7 }) {
+  if (!max) return null;
+  const pct = Math.min(1, Math.max(0, value / max));
+  const barC = pct >= 0.9 ? '#ff3344' : pct >= warning ? '#f59e0b' : color;
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'4px' }}>
+        <span style={{ fontSize:'11px', color:T.text3 }}>{label}</span>
+        <span style={{ fontSize:'11px', fontWeight:'700', color:barC }}>{value.toFixed(0)}$ / {max.toFixed(0)}$</span>
+      </div>
+      <div style={{ height:'5px', background:`${T.border}0.10)`, borderRadius:'3px', overflow:'hidden', marginBottom:'2px' }}>
+        <div style={{ height:'100%', width:`${pct*100}%`, background:barC, borderRadius:'3px', transition:'width 0.5s', boxShadow:`0 0 6px ${barC}55` }} />
+      </div>
+      <div style={{ fontSize:'10px', color:pct>=0.9?'#ff3344':T.text4, textAlign:'right' }}>
+        {(max-value).toFixed(0)}$ restants · {((1-pct)*100).toFixed(0)}%
+      </div>
+    </div>
+  );
+}
+
+function RmTradeBar({ label, value, max }) {
+  if (!max) return null;
+  const pct = Math.min(1, value / max);
+  const barC = pct >= 0.9 ? '#ff3344' : pct >= 0.7 ? '#f59e0b' : '#00cc77';
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'4px' }}>
+        <span style={{ fontSize:'11px', color:T.text3 }}>{label}</span>
+        <span style={{ fontSize:'11px', fontWeight:'700', color:barC }}>{value} / {max}</span>
+      </div>
+      <div style={{ height:'5px', background:`${T.border}0.10)`, borderRadius:'3px', overflow:'hidden', marginBottom:'2px' }}>
+        <div style={{ height:'100%', width:`${pct*100}%`, background:barC, borderRadius:'3px', transition:'width 0.5s' }} />
+      </div>
+      <div style={{ fontSize:'10px', color:T.text4, textAlign:'right' }}>{max-value} trades restants</div>
+    </div>
+  );
+}
+
 function RiskManager({ trades, account, loading }) {
+  const DEFAULT_SETTINGS = { dailyLimit:500, maxDD:2000, maxTrades:0, riskPct:1, riskMode:'pct', riskUsd:'', targetRR:2 };
   const [settings, setSettings] = useState(() => {
-    try { const s = localStorage.getItem('rm_settings'); return s ? JSON.parse(s) : { dailyLimit: 500, riskPct: 1, targetRR: 2 }; }
-    catch { return { dailyLimit: 500, riskPct: 1, targetRR: 2 }; }
+    try { const s = localStorage.getItem('rm_settings_v2'); return s ? { ...DEFAULT_SETTINGS, ...JSON.parse(s) } : DEFAULT_SETTINGS; }
+    catch { return DEFAULT_SETTINGS; }
   });
-  const [editing, setEditing] = useState(false);
-  const [draft,   setDraft]   = useState(settings);
+  const [editing,    setEditing]    = useState(false);
+  const [draft,      setDraft]      = useState(settings);
+  const [instrument, setInstrument] = useState('MNQ');
+  const [direction,  setDirection]  = useState('LONG');
+  const [entry,      setEntry]      = useState('');
+  const [stopLoss,   setStopLoss]   = useState('');
+  const [accountSz,  setAccountSz]  = useState('');
+
+  // Initialise accountSz depuis le type de compte
+  useEffect(() => {
+    const sizes = { topstep_50k:50000, topstep_100k:100000, topstep_150k:150000, lucid_eval_25k:25000, lucid_eval_50k:50000, lucid_eval_100k:100000, lucid_eval_150k:150000, topstep_ef_50k:50000, topstep_ef_100k:100000, topstep_ef_150k:150000 };
+    if (account?.type && sizes[account.type]) setAccountSz(String(sizes[account.type]));
+  }, [account?.type]);
 
   function saveSettings() {
     setSettings(draft);
-    localStorage.setItem('rm_settings', JSON.stringify(draft));
+    localStorage.setItem('rm_settings_v2', JSON.stringify(draft));
     setEditing(false);
   }
 
   if (loading) return null;
 
-  const todayStr    = new Date().toISOString().slice(0, 10);
-  const todayTrades = trades.filter(t => t.date === todayStr);
-  const todayPnl    = todayTrades.reduce((s, t) => s + (getNet(t) ?? 0), 0);
+  // ── Stats temps réel ──
+  const todayStr    = new Date().toISOString().slice(0,10);
+  const todayTrades = trades.filter(t => (t.date||'').startsWith(todayStr));
+  const todayPnl    = todayTrades.reduce((s,t) => s+(getNet(t)??0), 0);
 
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - (weekStart.getDay() || 7) + 1);
-  weekStart.setHours(0, 0, 0, 0);
-  const weekStr    = weekStart.toISOString().slice(0, 10);
-  const weekTrades = trades.filter(t => t.date >= weekStr);
-  const weekPnl    = weekTrades.reduce((s, t) => s + (getNet(t) ?? 0), 0);
-  const weekWR     = weekTrades.length > 0 ? Math.round(weekTrades.filter(t => (getNet(t) ?? 0) > 0).length / weekTrades.length * 100) : 0;
+  const weekStart = new Date(); weekStart.setDate(weekStart.getDate()-(weekStart.getDay()||7)+1); weekStart.setHours(0,0,0,0);
+  const weekStr    = weekStart.toISOString().slice(0,10);
+  const weekTrades = trades.filter(t => (t.date||'')>=weekStr);
+  const weekPnl    = weekTrades.reduce((s,t) => s+(getNet(t)??0), 0);
+  const weekWins   = weekTrades.filter(t => (getNet(t)??0)>0).length;
+  const weekWR     = weekTrades.length>0 ? Math.round(weekWins/weekTrades.length*100) : 0;
 
-  // Consecutive losses (most recent trades first)
-  const sorted = [...trades].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || b.id - a.id);
-  let consLosses = 0;
-  for (const t of sorted) { if ((getNet(t) ?? 0) < 0) consLosses++; else break; }
+  const sorted = [...trades].sort((a,b) => (b.date??'').localeCompare(a.date??'')||b.id-a.id);
+  let consLosses=0; for (const t of sorted) { if ((getNet(t)??0)<0) consLosses++; else break; }
 
-  // Daily risk status
-  const dailyLossUsed = Math.max(0, -todayPnl);
-  const dailyLossPct  = Math.min(100, (dailyLossUsed / settings.dailyLimit) * 100);
-  const shouldStop     = todayPnl <= -settings.dailyLimit;
-  const ddCol          = dailyLossPct >= 80 ? '#ff3344' : dailyLossPct >= 50 ? '#f59e0b' : '#00cc77';
+  const wins    = trades.filter(t => (getNet(t)??0)>0);
+  const losses  = trades.filter(t => (getNet(t)??0)<0);
+  const totalPnl= trades.reduce((s,t)=>s+(getNet(t)??0),0);
+  const wr      = trades.length>0 ? Math.round(wins.length/trades.length*100) : 0;
+  const grossW  = wins.reduce((s,t)=>s+(getNet(t)??0),0);
+  const grossL  = Math.abs(losses.reduce((s,t)=>s+(getNet(t)??0),0));
+  const pf      = grossL>0 ? grossW/grossL : wins.length>0 ? 99 : 0;
+  const avgWin  = wins.length>0   ? grossW/wins.length   : 0;
+  const avgLoss = losses.length>0 ? grossL/losses.length : 0;
+  const rrs     = trades.filter(t=>t.rr&&!isNaN(parseFloat(t.rr))).map(t=>parseFloat(t.rr));
+  const avgRR   = rrs.length>0 ? rrs.reduce((s,v)=>s+v,0)/rrs.length : null;
 
-  // Sizing
-  const accountSize  = account?.typeInfo?.size ?? 50000;
-  const riskPerTrade = accountSize * (settings.riskPct / 100);
+  // Max drawdown (peak-to-trough on running P&L)
+  let cum=0, peak=0, maxDD=0;
+  for (const t of [...trades].sort((a,b)=>(a.date??'').localeCompare(b.date??'')||a.id-b.id)) {
+    cum += getNet(t)??0; if(cum>peak) peak=cum; maxDD=Math.max(maxDD,peak-cum);
+  }
 
-  // Global stats
-  const wins   = trades.filter(t => (getNet(t) ?? 0) > 0);
-  const losses = trades.filter(t => (getNet(t) ?? 0) < 0);
-  const wr     = trades.length > 0 ? Math.round(wins.length / trades.length * 100) : 0;
-  const rrs    = trades.filter(t => t.rr && !isNaN(parseFloat(t.rr))).map(t => parseFloat(t.rr));
-  const avgRR  = rrs.length > 0 ? rrs.reduce((s, v) => s + v, 0) / rrs.length : null;
+  // Kelly
+  const kellyPct = avgLoss>0 && wins.length>0
+    ? Math.max(0, Math.round(((wins.length/trades.length)-(losses.length/trades.length)/(avgWin/avgLoss))*100)) : 0;
 
-  // Kelly criterion
-  const avgWin  = wins.length  > 0 ? wins.reduce((s, t)  => s + (getNet(t) ?? 0), 0) / wins.length   : 0;
-  const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + (getNet(t) ?? 0), 0)) / losses.length : 0;
-  const kellyPct = avgLoss > 0 && wins.length > 0
-    ? Math.max(0, Math.round(((wins.length / trades.length) - (losses.length / trades.length) / (avgWin / avgLoss)) * 100))
-    : 0;
+  // Health score
+  let health=100;
+  if (settings.maxDD  && maxDD/settings.maxDD>0.8)          health-=30;
+  else if (settings.maxDD && maxDD/settings.maxDD>0.5)       health-=15;
+  if (settings.dailyLimit && Math.abs(todayPnl)/settings.dailyLimit>0.7 && todayPnl<0) health-=20;
+  if (consLosses>=3)  health-=20;
+  if (wr<35)          health-=15;
+  if (settings.maxTrades>0 && todayTrades.length>settings.maxTrades*0.8) health-=10;
+  health = Math.max(0, Math.min(100, health));
+  const healthC = health>=70?'#00cc77':health>=40?'#f59e0b':'#ff3344';
+  const healthL = health>=70?'BON':health>=40?'ATTENTION':'DANGER';
+
+  // Limites journalières
+  const dailyLossUsed = Math.max(0,-todayPnl);
+  const shouldStop    = todayPnl<=-settings.dailyLimit;
+
+  // ── Calculateur ──
+  const calc = useMemo(() => {
+    const spec   = RM_CONTRACTS[instrument] ?? RM_CONTRACTS.MNQ;
+    const ent    = parseFloat(entry)||0;
+    const sl     = parseFloat(stopLoss)||0;
+    const accSz  = parseFloat(accountSz)||50000;
+    const rPct   = parseFloat(settings.riskPct)/100||0.01;
+    if (!ent||!sl) return null;
+    const dist = Math.abs(ent-sl); if(!dist) return null;
+    const dolPerContract = dist*spec.pointValue; if(!dolPerContract) return null;
+    const riskDollar = settings.riskMode==='pct' ? accSz*rPct : (parseFloat(settings.riskUsd)||0);
+    const contracts  = riskDollar/dolPerContract;
+    const contractsF = Math.floor(contracts);
+    const actualRisk = contractsF*dolPerContract;
+    const ticks      = dist/spec.tickSize;
+    const rrTargets  = [1,1.5,2,3].map(rr => {
+      const tpDist = dist*rr;
+      const tpPrice= direction==='LONG' ? ent+tpDist : ent-tpDist;
+      return { rr, tpPrice, profit:contractsF*tpDist*spec.pointValue };
+    });
+    return { spec, dist, dolPerContract, riskDollar, contracts, contractsF, actualRisk, ticks, rrTargets, accSz };
+  }, [instrument, entry, stopLoss, accountSz, settings.riskPct, settings.riskMode, settings.riskUsd, direction]);
+
+  const inp = { width:'100%', background:`${T.bg}0.80)`, border:`1px solid ${T.border}0.20)`, borderRadius:'5px', padding:'7px 10px', color:T.text1, fontSize:'12px', fontFamily:'inherit', outline:'none', boxSizing:'border-box' };
+  const lbl = { fontSize:'10px', color:T.text3, letterSpacing:'1px', display:'block', marginBottom:'4px' };
 
   return (
-    <div style={{ background: `${T.bg}0.55)`, border: `1px solid ${T.border}0.10)`, borderRadius: '10px', overflow: 'hidden' }}>
-      {/* Header */}
-      <div style={{ padding: '11px 18px', borderBottom: `1px solid ${T.border}0.08)`, display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span style={{ fontSize: '11px', color: T.text3, letterSpacing: '2.5px', fontWeight: '700' }}>RISK MANAGER</span>
-        <span style={{ fontSize: '11px', color: T.text4 }}>· gestion du risque & sizing</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <div style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', letterSpacing: '1px', background: shouldStop ? 'rgba(255,51,68,0.12)' : 'rgba(0,204,119,0.10)', border: `1px solid ${shouldStop ? 'rgba(255,51,68,0.35)' : 'rgba(0,204,119,0.30)'}`, color: shouldStop ? '#ff3344' : '#00cc77' }}>
-            {shouldStop ? '⛔ STOP TRADING' : '✓ CONTINUER'}
+    <div style={{ background:`${T.bg}0.55)`, border:`1px solid ${T.border}0.10)`, borderRadius:'10px', overflow:'hidden' }}>
+
+      {/* ── Header ── */}
+      <div style={{ padding:'11px 18px', borderBottom:`1px solid ${T.border}0.08)`, display:'flex', alignItems:'center', gap:'10px' }}>
+        <span style={{ fontSize:'11px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>RISK MANAGER</span>
+        <div style={{ marginLeft:'auto', display:'flex', gap:'8px', alignItems:'center' }}>
+          <div style={{ padding:'3px 12px', borderRadius:'20px', fontSize:'11px', fontWeight:'700', letterSpacing:'1px',
+            background:shouldStop?'rgba(255,51,68,0.12)':'rgba(0,204,119,0.08)',
+            border:`1px solid ${shouldStop?'rgba(255,51,68,0.35)':'rgba(0,204,119,0.28)'}`,
+            color:shouldStop?'#ff3344':'#00cc77' }}>
+            {shouldStop?'⛔ STOP TRADING':'✓ CONTINUER'}
           </div>
           <button onClick={() => { setDraft(settings); setEditing(e => !e); }}
-            style={{ background: 'transparent', border: `1px solid ${T.border}0.18)`, color: T.text3, padding: '4px 9px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.color = T.text1; e.currentTarget.style.borderColor = `${T.border}0.35)`; }}
-            onMouseLeave={e => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = `${T.border}0.18)`; }}>
+            style={{ background:'transparent', border:`1px solid ${T.border}0.18)`, color:T.text3, padding:'4px 9px', borderRadius:'4px', fontSize:'11px', cursor:'pointer', fontFamily:'inherit' }}>
             ⚙ Réglages
           </button>
         </div>
       </div>
 
-      {/* Settings panel */}
+      {/* ── Settings panel ── */}
       {editing && (
-        <div style={{ padding: '12px 18px', background: `rgba(136,153,187,0.04)`, borderBottom: `1px solid ${T.border}0.08)`, display: 'flex', gap: '18px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div style={{ padding:'12px 18px', background:`rgba(136,153,187,0.04)`, borderBottom:`1px solid ${T.border}0.08)`, display:'flex', gap:'12px', flexWrap:'wrap', alignItems:'flex-end' }}>
           {[
-            { key: 'dailyLimit', label: 'Limite perte/jour ($)', min: 50,  max: 10000, step: 50 },
-            { key: 'riskPct',    label: 'Risque/trade (%)',       min: 0.1, max: 5,     step: 0.1 },
-            { key: 'targetRR',   label: 'R:R cible',              min: 0.5, max: 5,     step: 0.5 },
+            { key:'dailyLimit', label:'Perte max/jour ($)', min:50,  max:10000, step:50   },
+            { key:'maxDD',      label:'Max Drawdown ($)',   min:100, max:50000, step:100  },
+            { key:'maxTrades',  label:'Max trades/jour',    min:0,   max:50,    step:1    },
+            { key:'riskPct',    label:'Risque/trade (%)',   min:0.1, max:5,     step:0.1  },
+            { key:'targetRR',   label:'R:R cible',          min:0.5, max:5,     step:0.5  },
           ].map(({ key, label, min, max, step }) => (
-            <div key={key}>
-              <div style={{ fontSize: '10px', color: T.text3, letterSpacing: '1px', marginBottom: '4px' }}>{label}</div>
+            <div key={key} style={{ flex:'0 0 auto' }}>
+              <div style={lbl}>{label}</div>
               <input type="number" min={min} max={max} step={step} value={draft[key]}
-                onChange={e => setDraft(prev => ({ ...prev, [key]: parseFloat(e.target.value) || prev[key] }))}
-                style={{ width: '95px', background: 'rgba(14,15,22,0.8)', border: '1px solid rgba(136,153,187,0.25)', borderRadius: '4px', padding: '5px 8px', color: T.text1, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}
-              />
+                onChange={e => setDraft(prev => ({ ...prev, [key]:parseFloat(e.target.value)||prev[key] }))}
+                style={{ ...inp, width:'100px' }} />
             </div>
           ))}
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <button onClick={saveSettings} style={{ padding: '6px 14px', background: 'rgba(0,204,119,0.12)', border: '1px solid rgba(0,204,119,0.30)', color: '#00cc77', borderRadius: '4px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer', fontWeight: '700' }}>✓ Sauvegarder</button>
-            <button onClick={() => setEditing(false)} style={{ padding: '6px 10px', background: 'transparent', border: `1px solid ${T.border}0.18)`, color: T.text3, borderRadius: '4px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>✕</button>
+          <div style={{ display:'flex', gap:'6px' }}>
+            <button onClick={saveSettings} style={{ padding:'6px 14px', background:'rgba(0,204,119,0.12)', border:'1px solid rgba(0,204,119,0.30)', color:'#00cc77', borderRadius:'4px', fontSize:'12px', fontFamily:'inherit', cursor:'pointer', fontWeight:'700' }}>✓ Sauvegarder</button>
+            <button onClick={() => setEditing(false)} style={{ padding:'6px 10px', background:'transparent', border:`1px solid ${T.border}0.18)`, color:T.text3, borderRadius:'4px', fontSize:'12px', fontFamily:'inherit', cursor:'pointer' }}>✕</button>
           </div>
         </div>
       )}
 
-      {/* Cards grid */}
-      <div style={{ padding: '16px 18px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(195px, 1fr))', gap: '12px' }}>
+      <div style={{ padding:'16px 18px', display:'flex', flexDirection:'column', gap:'16px' }}>
 
-        {/* Daily risk card */}
-        <div style={{ background: `rgba(${shouldStop ? '255,51,68' : '136,153,187'},0.05)`, border: `1px solid rgba(${shouldStop ? '255,51,68' : '136,153,187'},0.13)`, borderRadius: '8px', padding: '14px' }}>
-          <div style={{ fontSize: '10px', color: T.text3, letterSpacing: '1.8px', marginBottom: '8px' }}>RISQUE JOURNALIER</div>
-          <div style={{ fontSize: '22px', fontWeight: '700', color: pnlColor(todayPnl), lineHeight: 1, marginBottom: '6px', letterSpacing: '-0.5px' }}>
-            {todayPnl >= 0 ? '+' : ''}{todayPnl.toFixed(2)}<span style={{ fontSize: '13px' }}>$</span>
-          </div>
-          <div style={{ fontSize: '11px', color: T.text3, marginBottom: '7px' }}>
-            Limite : <span style={{ color: '#8899bb' }}>-{settings.dailyLimit}$</span>
-            {dailyLossUsed > 0 && <span style={{ color: ddCol, marginLeft: '6px', fontWeight: '600' }}>{dailyLossPct.toFixed(0)}% utilisé</span>}
-          </div>
-          <div style={{ height: '4px', background: 'rgba(136,153,187,0.10)', borderRadius: '2px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${dailyLossPct}%`, background: ddCol, borderRadius: '2px', transition: 'width 0.6s ease', boxShadow: `0 0 5px ${ddCol}50` }} />
-          </div>
-          <div style={{ fontSize: '11px', color: T.text4, marginTop: '6px' }}>
-            {todayTrades.length} trade{todayTrades.length !== 1 ? 's' : ''} aujourd'hui
-          </div>
-        </div>
+        {/* ── Row 1 : Health + Today + Week + Sizing ── */}
+        <div style={{ display:'grid', gridTemplateColumns:'130px 1fr 1fr 1fr', gap:'12px', alignItems:'stretch' }}>
 
-        {/* Position sizing */}
-        <div style={{ background: `${T.bg}0.40)`, border: `1px solid ${T.border}0.10)`, borderRadius: '8px', padding: '14px' }}>
-          <div style={{ fontSize: '10px', color: T.text3, letterSpacing: '1.8px', marginBottom: '8px' }}>POSITION SIZING</div>
-          <div style={{ fontSize: '22px', fontWeight: '700', color: '#8899bb', lineHeight: 1, marginBottom: '4px', letterSpacing: '-0.5px' }}>
-            {riskPerTrade.toFixed(0)}<span style={{ fontSize: '13px' }}>$</span>
-          </div>
-          <div style={{ fontSize: '11px', color: T.text3, marginBottom: '10px' }}>
-            risque max/trade · {settings.riskPct}% du compte
-          </div>
-          {kellyPct > 0 && (
-            <div style={{ fontSize: '11px', color: T.text3, padding: '5px 8px', background: 'rgba(136,153,187,0.06)', borderRadius: '4px', border: `1px solid ${T.border}0.08)` }}>
-              Kelly : <span style={{ color: T.accentL, fontWeight: '600' }}>{Math.min(kellyPct, 25)}%</span>
-              <span style={{ color: T.text4, fontSize: '10px' }}> (plafonné 25%)</span>
-            </div>
-          )}
-        </div>
-
-        {/* Performance globale */}
-        <div style={{ background: `${T.bg}0.40)`, border: `1px solid ${T.border}0.10)`, borderRadius: '8px', padding: '14px' }}>
-          <div style={{ fontSize: '10px', color: T.text3, letterSpacing: '1.8px', marginBottom: '8px' }}>PERFORMANCE GLOBALE</div>
-          <div style={{ display: 'flex', gap: '14px', marginBottom: '10px' }}>
-            <div>
-              <div style={{ fontSize: '10px', color: T.text4, marginBottom: '2px' }}>WIN RATE</div>
-              <div style={{ fontSize: '18px', fontWeight: '700', color: wr >= 50 ? '#00cc77' : '#ff3344', lineHeight: 1 }}>{wr}%</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '10px', color: T.text4, marginBottom: '2px' }}>R:R MOY.</div>
-              <div style={{ fontSize: '18px', fontWeight: '700', color: avgRR != null ? (avgRR >= settings.targetRR ? '#00cc77' : '#f59e0b') : T.text3, lineHeight: 1 }}>
-                {avgRR != null ? avgRR.toFixed(2) : '—'}
+          {/* Health Score */}
+          <div style={{ background:`rgba(${health>=70?'0,204,119':health>=40?'240,160,32':'255,51,68'},0.05)`, border:`1px solid ${healthC}28`, borderRadius:'8px', padding:'12px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'6px' }}>
+            <div style={{ fontSize:'9px', color:T.text3, letterSpacing:'2px' }}>SANTÉ</div>
+            <div style={{ position:'relative', width:'72px', height:'72px' }}>
+              <svg width="72" height="72" viewBox="0 0 72 72">
+                <circle cx="36" cy="36" r="28" fill="none" stroke={`${T.border}0.10)`} strokeWidth="7"/>
+                <circle cx="36" cy="36" r="28" fill="none" stroke={healthC}
+                  strokeWidth="7" strokeLinecap="round"
+                  strokeDasharray={`${2*Math.PI*28}`}
+                  strokeDashoffset={`${2*Math.PI*28*(1-health/100)}`}
+                  transform="rotate(-90 36 36)"
+                  style={{ filter:`drop-shadow(0 0 4px ${healthC})`, transition:'stroke-dashoffset 0.8s ease' }}
+                />
+              </svg>
+              <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ fontSize:'18px', fontWeight:'700', color:healthC, lineHeight:1 }}>{health}</div>
+                <div style={{ fontSize:'8px', color:healthC, letterSpacing:'1px' }}>{healthL}</div>
               </div>
             </div>
-            <div>
-              <div style={{ fontSize: '10px', color: T.text4, marginBottom: '2px' }}>CIBLE</div>
-              <div style={{ fontSize: '18px', fontWeight: '700', color: T.text3, lineHeight: 1 }}>{settings.targetRR}</div>
-            </div>
           </div>
-          {consLosses >= 2 && (
-            <div style={{ padding: '5px 8px', background: 'rgba(255,51,68,0.07)', border: '1px solid rgba(255,51,68,0.18)', borderRadius: '4px', fontSize: '11px', color: '#ff7788' }}>
-              ⚠ {consLosses} pertes consécutives
+
+          {/* Today */}
+          <div style={{ background:`${T.bg}0.40)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'12px' }}>
+            <div style={{ fontSize:'9px', color:T.text3, letterSpacing:'2px', marginBottom:'6px' }}>AUJOURD'HUI</div>
+            <div style={{ fontSize:'20px', fontWeight:'700', color:pnlColor(todayPnl), lineHeight:1, marginBottom:'6px' }}>
+              {todayPnl>=0?'+':''}{todayPnl.toFixed(2)}<span style={{ fontSize:'12px' }}>$</span>
             </div>
-          )}
+            <div style={{ fontSize:'11px', color:T.text3, marginBottom:'6px' }}>
+              {todayTrades.length}T aujourd'hui
+              {settings.maxTrades>0 && <span style={{ color:T.text4 }}> / {settings.maxTrades} max</span>}
+            </div>
+            {settings.dailyLimit>0 && (
+              <div style={{ height:'3px', background:`${T.border}0.08)`, borderRadius:'2px', overflow:'hidden' }}>
+                <div style={{ height:'100%', width:`${Math.min(100,(dailyLossUsed/settings.dailyLimit)*100)}%`, background:dailyLossUsed/settings.dailyLimit>=0.8?'#ff3344':dailyLossUsed/settings.dailyLimit>=0.5?'#f59e0b':'#00cc77', borderRadius:'2px', transition:'width 0.5s' }} />
+              </div>
+            )}
+          </div>
+
+          {/* Week */}
+          <div style={{ background:`${T.bg}0.40)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'12px' }}>
+            <div style={{ fontSize:'9px', color:T.text3, letterSpacing:'2px', marginBottom:'6px' }}>SEMAINE</div>
+            <div style={{ fontSize:'20px', fontWeight:'700', color:pnlColor(weekPnl), lineHeight:1, marginBottom:'4px' }}>
+              {weekPnl>=0?'+':''}{weekPnl.toFixed(2)}<span style={{ fontSize:'12px' }}>$</span>
+            </div>
+            <div style={{ fontSize:'11px', color:T.text3 }}>{weekTrades.length} trades</div>
+            {weekTrades.length>0 && (
+              <div style={{ fontSize:'11px', color:weekWR>=50?'#00cc77':'#ff3344', fontWeight:'600', marginTop:'3px' }}>{weekWR}% WR</div>
+            )}
+          </div>
+
+          {/* Sizing */}
+          <div style={{ background:`${T.bg}0.40)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'12px' }}>
+            <div style={{ fontSize:'9px', color:T.text3, letterSpacing:'2px', marginBottom:'6px' }}>SIZING</div>
+            <div style={{ fontSize:'20px', fontWeight:'700', color:T.accent, lineHeight:1, marginBottom:'4px' }}>
+              {((parseFloat(accountSz)||50000)*(settings.riskPct/100)).toFixed(0)}<span style={{ fontSize:'12px' }}>$</span>
+            </div>
+            <div style={{ fontSize:'11px', color:T.text3 }}>{settings.riskPct}% / trade</div>
+            {kellyPct>0 && (
+              <div style={{ fontSize:'11px', color:T.text3, marginTop:'3px' }}>
+                Kelly : <span style={{ color:T.accentL, fontWeight:'600' }}>{Math.min(kellyPct,25)}%</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Semaine */}
-        <div style={{ background: `${T.bg}0.40)`, border: `1px solid ${T.border}0.10)`, borderRadius: '8px', padding: '14px' }}>
-          <div style={{ fontSize: '10px', color: T.text3, letterSpacing: '1.8px', marginBottom: '8px' }}>SEMAINE EN COURS</div>
-          <div style={{ fontSize: '22px', fontWeight: '700', color: pnlColor(weekPnl), lineHeight: 1, marginBottom: '4px', letterSpacing: '-0.5px' }}>
-            {weekPnl >= 0 ? '+' : ''}{weekPnl.toFixed(2)}<span style={{ fontSize: '13px' }}>$</span>
+        {/* ── Row 2 : Jauges limites ── */}
+        {(settings.maxDD>0 || settings.dailyLimit>0 || settings.maxTrades>0) && (
+          <div style={{ background:`${T.bg}0.40)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'14px', display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:'14px' }}>
+            <div style={{ fontSize:'9px', color:T.text3, letterSpacing:'2px', marginBottom:'2px', gridColumn:'1/-1' }}>UTILISATION DES LIMITES</div>
+            <RmGauge label="Max Drawdown utilisé" value={maxDD} max={settings.maxDD} color="#7c3aed" />
+            <RmGauge label="Perte du jour" value={dailyLossUsed} max={settings.dailyLimit} color="#f59e0b" warning={0.6} />
+            {settings.maxTrades>0 && <RmTradeBar label="Trades du jour" value={todayTrades.length} max={settings.maxTrades} />}
           </div>
-          <div style={{ fontSize: '11px', color: T.text3, marginBottom: '6px' }}>
-            {weekTrades.length} trade{weekTrades.length !== 1 ? 's' : ''} cette semaine
-          </div>
-          {weekTrades.length > 0 && (
-            <div style={{ fontSize: '11px', color: T.text3 }}>
-              WR semaine : <span style={{ color: weekWR >= 50 ? '#00cc77' : '#ff3344', fontWeight: '600' }}>{weekWR}%</span>
+        )}
+
+        {/* ── Row 3 : Calculateur + Stats ── */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px', alignItems:'start' }}>
+
+          {/* Calculateur */}
+          <div style={{ background:`${T.bg}0.40)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'14px' }}>
+            <div style={{ fontSize:'10px', color:T.text3, letterSpacing:'2px', marginBottom:'12px' }}>CALCULATEUR DE POSITION</div>
+
+            {/* Instrument */}
+            <div style={{ marginBottom:'10px' }}>
+              <div style={lbl}>INSTRUMENT</div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:'4px' }}>
+                {Object.keys(RM_CONTRACTS).map(k => (
+                  <button key={k} onClick={() => setInstrument(k)} style={{
+                    padding:'3px 9px', borderRadius:'4px', fontSize:'10px', cursor:'pointer', fontFamily:'inherit',
+                    fontWeight:instrument===k?'700':'400', transition:'all 0.15s',
+                    background:instrument===k?'rgba(124,58,237,0.18)':'transparent',
+                    border:`1px solid ${instrument===k?'rgba(124,58,237,0.45)':T.border+'0.14)'}`,
+                    color:instrument===k?'#a78bfa':T.text3,
+                  }}>{k}</button>
+                ))}
+              </div>
+              {instrument && (
+                <div style={{ fontSize:'10px', color:T.text4, marginTop:'4px' }}>
+                  {RM_CONTRACTS[instrument].label} · {RM_CONTRACTS[instrument].pointValue}$/pt · tick {RM_CONTRACTS[instrument].tickSize}={RM_CONTRACTS[instrument].tickValue}$
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Direction */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px', marginBottom:'10px' }}>
+              {['LONG','SHORT'].map(d => (
+                <button key={d} onClick={() => setDirection(d)} style={{
+                  padding:'6px', borderRadius:'5px', fontSize:'11px', cursor:'pointer', fontFamily:'inherit', fontWeight:'700',
+                  background:direction===d?(d==='LONG'?'rgba(0,204,119,0.10)':'rgba(255,51,68,0.10)'):'transparent',
+                  border:`1px solid ${direction===d?(d==='LONG'?'rgba(0,204,119,0.32)':'rgba(255,51,68,0.32)'):T.border+'0.14)'}`,
+                  color:direction===d?(d==='LONG'?'#00cc77':'#ff3344'):T.text3,
+                }}>{d==='LONG'?'▲ LONG':'▼ SHORT'}</button>
+              ))}
+            </div>
+
+            {/* Inputs */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', marginBottom:'10px' }}>
+              <div>
+                <label style={lbl}>TAILLE COMPTE ($)</label>
+                <input type="number" value={accountSz} onChange={e=>setAccountSz(e.target.value)} placeholder="50000" style={inp} />
+              </div>
+              <div>
+                <label style={lbl}>
+                  RISQUE&nbsp;
+                  <span onClick={()=>setSettings(s=>({...s,riskMode:s.riskMode==='pct'?'usd':'pct'}))}
+                    style={{ color:'#7c3aed', cursor:'pointer', textDecoration:'underline', fontSize:'9px' }}>
+                    {settings.riskMode==='pct'?'(%) → $':'($) → %'}
+                  </span>
+                </label>
+                {settings.riskMode==='pct'
+                  ? <input type="number" value={settings.riskPct} onChange={e=>setSettings(s=>({...s,riskPct:parseFloat(e.target.value)||s.riskPct}))} placeholder="1" min="0.1" max="10" step="0.1" style={inp} />
+                  : <input type="number" value={settings.riskUsd} onChange={e=>setSettings(s=>({...s,riskUsd:e.target.value}))} placeholder="500" style={inp} />
+                }
+              </div>
+              <div>
+                <label style={lbl}>ENTRÉE</label>
+                <input type="number" value={entry} onChange={e=>setEntry(e.target.value)} placeholder="20000" style={inp} />
+              </div>
+              <div>
+                <label style={lbl}>STOP LOSS</label>
+                <input type="number" value={stopLoss} onChange={e=>setStopLoss(e.target.value)} placeholder="19950" style={inp} />
+              </div>
+            </div>
+
+            {/* Résultat */}
+            {calc ? (
+              <div style={{ padding:'12px', background:'rgba(0,204,119,0.05)', border:'1px solid rgba(0,204,119,0.18)', borderRadius:'8px' }}>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'10px' }}>
+                  <div>
+                    <div style={{ fontSize:'9px', color:T.text3 }}>CONTRATS</div>
+                    <div style={{ fontSize:'24px', fontWeight:'700', color:'#00cc77', lineHeight:1 }}>{calc.contractsF}</div>
+                    <div style={{ fontSize:'9px', color:T.text4 }}>exact: {calc.contracts.toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:'9px', color:T.text3 }}>$ RISQUÉS</div>
+                    <div style={{ fontSize:'24px', fontWeight:'700', color:'#f59e0b', lineHeight:1 }}>{calc.actualRisk.toFixed(0)}</div>
+                    <div style={{ fontSize:'9px', color:T.text4 }}>{(calc.actualRisk/calc.accSz*100).toFixed(2)}% du compte</div>
+                  </div>
+                </div>
+                <div style={{ fontSize:'10px', color:T.text4, marginBottom:'8px' }}>
+                  SL: {calc.dist.toFixed(2)} pts · {calc.ticks} ticks · {calc.dolPerContract.toFixed(2)}$/contrat
+                </div>
+                <div style={{ fontSize:'9px', color:T.text3, marginBottom:'6px', letterSpacing:'1px' }}>OBJECTIFS TP</div>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'5px' }}>
+                  {calc.rrTargets.map(({ rr, tpPrice, profit }) => (
+                    <div key={rr} style={{ padding:'6px 4px', background:'rgba(0,204,119,0.06)', border:'1px solid rgba(0,204,119,0.14)', borderRadius:'5px', textAlign:'center' }}>
+                      <div style={{ fontSize:'9px', color:'#00cc77', fontWeight:'700' }}>1:{rr}</div>
+                      <div style={{ fontSize:'10px', color:T.text2, fontWeight:'600' }}>{tpPrice.toFixed(2)}</div>
+                      <div style={{ fontSize:'9px', color:'#00aa66' }}>+{profit.toFixed(0)}$</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{ padding:'10px', background:`${T.border}0.04)`, border:`1px solid ${T.border}0.08)`, borderRadius:'6px', fontSize:'11px', color:T.text4, textAlign:'center' }}>
+                Renseigne l'entrée et le stop loss pour calculer
+              </div>
+            )}
+          </div>
+
+          {/* Stats globales */}
+          <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+            {/* Stats grid */}
+            <div style={{ background:`${T.bg}0.40)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'14px' }}>
+              <div style={{ fontSize:'10px', color:T.text3, letterSpacing:'2px', marginBottom:'10px' }}>STATISTIQUES DU COMPTE</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
+                {[
+                  ['PnL TOTAL',      totalPnl>=0?`+${totalPnl.toFixed(2)}$`:`${totalPnl.toFixed(2)}$`, pnlColor(totalPnl)],
+                  ['WIN RATE',       `${wr}%`,                                 wr>=50?'#00cc77':'#ff3344'],
+                  ['PROFIT FACTOR',  pf===99?'∞':pf.toFixed(2),               pf>=1.5?'#00cc77':pf>=1?T.text1:'#ff3344'],
+                  ['R:R MOYEN',      avgRR!=null?avgRR.toFixed(2):'—',        avgRR!=null?(avgRR>=settings.targetRR?'#00cc77':'#f59e0b'):T.text3],
+                  ['MOY. WIN',       `+${avgWin.toFixed(2)}$`,                '#00cc77'],
+                  ['MOY. LOSS',      avgLoss>0?`-${avgLoss.toFixed(2)}$`:'—', '#ff3344'],
+                  ['MAX DRAWDOWN',   `${maxDD.toFixed(2)}$`,                  maxDD>settings.maxDD*0.8?'#ff3344':'#f59e0b'],
+                  ['TOTAL TRADES',   String(trades.length),                    T.text2],
+                ].map(([l,v,c]) => (
+                  <div key={l} style={{ padding:'8px 10px', background:`${T.bg}0.60)`, borderRadius:'5px', border:`1px solid ${T.border}0.08)` }}>
+                    <div style={{ fontSize:'9px', color:T.text4, marginBottom:'2px', letterSpacing:'1px' }}>{l}</div>
+                    <div style={{ fontSize:'14px', fontWeight:'700', color:c }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Alertes */}
+            {(consLosses>=2 || shouldStop || wr<40) && (
+              <div style={{ background:`${T.bg}0.40)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'12px', display:'flex', flexDirection:'column', gap:'6px' }}>
+                <div style={{ fontSize:'10px', color:T.text3, letterSpacing:'2px', marginBottom:'2px' }}>ALERTES</div>
+                {shouldStop && <div style={{ fontSize:'12px', color:'#ff3344', padding:'5px 10px', background:'rgba(255,51,68,0.07)', borderRadius:'4px', border:'1px solid rgba(255,51,68,0.20)' }}>⛔ Limite de perte journalière atteinte</div>}
+                {consLosses>=2 && <div style={{ fontSize:'12px', color:'#f59e0b', padding:'5px 10px', background:'rgba(240,160,32,0.07)', borderRadius:'4px', border:'1px solid rgba(240,160,32,0.20)' }}>⚠ {consLosses} pertes consécutives</div>}
+                {wr<40 && <div style={{ fontSize:'12px', color:'#f59e0b', padding:'5px 10px', background:'rgba(240,160,32,0.07)', borderRadius:'4px', border:'1px solid rgba(240,160,32,0.20)' }}>⚠ Winrate bas : {wr}%</div>}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
