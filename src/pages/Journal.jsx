@@ -1710,6 +1710,29 @@ function RiskManager({ trades, account, loading }) {
     setEditing(false);
   }
 
+  // ── Calculateur (hook avant tout early return) ──
+  const calc = useMemo(() => {
+    const spec   = RM_CONTRACTS[instrument] ?? RM_CONTRACTS.MNQ;
+    const ent    = parseFloat(entry)||0;
+    const sl     = parseFloat(stopLoss)||0;
+    const accSz  = parseFloat(accountSz)||50000;
+    const rPct   = parseFloat(settings.riskPct)/100||0.01;
+    if (!ent||!sl) return null;
+    const dist = Math.abs(ent-sl); if(!dist) return null;
+    const dolPerContract = dist*spec.pointValue; if(!dolPerContract) return null;
+    const riskDollar = settings.riskMode==='pct' ? accSz*rPct : (parseFloat(settings.riskUsd)||0);
+    const contracts  = riskDollar/dolPerContract;
+    const contractsF = Math.floor(contracts);
+    const actualRisk = contractsF*dolPerContract;
+    const ticks      = dist/spec.tickSize;
+    const rrTargets  = [1,1.5,2,3].map(rr => {
+      const tpDist = dist*rr;
+      const tpPrice= direction==='LONG' ? ent+tpDist : ent-tpDist;
+      return { rr, tpPrice, profit:contractsF*tpDist*spec.pointValue };
+    });
+    return { spec, dist, dolPerContract, riskDollar, contracts, contractsF, actualRisk, ticks, rrTargets, accSz };
+  }, [instrument, entry, stopLoss, accountSz, settings.riskPct, settings.riskMode, settings.riskUsd, direction]);
+
   if (loading) return null;
 
   // ── Stats temps réel ──
@@ -1764,29 +1787,6 @@ function RiskManager({ trades, account, loading }) {
   // Limites journalières
   const dailyLossUsed = Math.max(0,-todayPnl);
   const shouldStop    = todayPnl<=-settings.dailyLimit;
-
-  // ── Calculateur ──
-  const calc = useMemo(() => {
-    const spec   = RM_CONTRACTS[instrument] ?? RM_CONTRACTS.MNQ;
-    const ent    = parseFloat(entry)||0;
-    const sl     = parseFloat(stopLoss)||0;
-    const accSz  = parseFloat(accountSz)||50000;
-    const rPct   = parseFloat(settings.riskPct)/100||0.01;
-    if (!ent||!sl) return null;
-    const dist = Math.abs(ent-sl); if(!dist) return null;
-    const dolPerContract = dist*spec.pointValue; if(!dolPerContract) return null;
-    const riskDollar = settings.riskMode==='pct' ? accSz*rPct : (parseFloat(settings.riskUsd)||0);
-    const contracts  = riskDollar/dolPerContract;
-    const contractsF = Math.floor(contracts);
-    const actualRisk = contractsF*dolPerContract;
-    const ticks      = dist/spec.tickSize;
-    const rrTargets  = [1,1.5,2,3].map(rr => {
-      const tpDist = dist*rr;
-      const tpPrice= direction==='LONG' ? ent+tpDist : ent-tpDist;
-      return { rr, tpPrice, profit:contractsF*tpDist*spec.pointValue };
-    });
-    return { spec, dist, dolPerContract, riskDollar, contracts, contractsF, actualRisk, ticks, rrTargets, accSz };
-  }, [instrument, entry, stopLoss, accountSz, settings.riskPct, settings.riskMode, settings.riskUsd, direction]);
 
   const inp = { width:'100%', background:`${T.bg}0.80)`, border:`1px solid ${T.border}0.20)`, borderRadius:'5px', padding:'7px 10px', color:T.text1, fontSize:'12px', fontFamily:'inherit', outline:'none', boxSizing:'border-box' };
   const lbl = { fontSize:'10px', color:T.text3, letterSpacing:'1px', display:'block', marginBottom:'4px' };
