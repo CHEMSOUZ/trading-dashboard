@@ -530,17 +530,6 @@ function TradesTab({ trades, loading, navigate, onDelete, onFeeUpdate }) {
         )}
       </div>
 
-      {/* Column header — sticky */}
-      {filtered.length > 0 && (
-        <div style={{ display:'grid', gridTemplateColumns:'3px 1fr auto', position:'sticky', top:0, zIndex:10, background:'#0c0d16', borderBottom:`1px solid ${T.border}0.15)`, marginBottom:'4px' }}>
-          <div />
-          <div style={{ padding:'7px 14px', display:'grid', gridTemplateColumns:'110px 68px 90px 90px 60px 1fr 115px 85px 56px', gap:'8px', fontSize:'11px', color:T.text3, letterSpacing:'1.5px' }}>
-            <span>PAIRE</span><span>DIR.</span><span>ENTRÉE</span><span>SORTIE</span><span>DURÉE</span><span>NOTES</span><span>P&L NET</span><span>FRAIS</span><span>TAGS</span>
-          </div>
-          <div style={{ width:'40px' }} />
-        </div>
-      )}
-
       {loading
         ? <div style={{ padding:'48px', textAlign:'center', color:T.text3, fontSize:'13px', letterSpacing:'2px' }}>CHARGEMENT...</div>
         : filtered.length === 0
@@ -550,6 +539,14 @@ function TradesTab({ trades, loading, navigate, onDelete, onFeeUpdate }) {
           : sortedGroups.map(([date, dayTrades]) => (
               <div key={date}>
                 <DayHeader date={date} dayTrades={dayTrades} />
+                {/* En-têtes directement au-dessus des trades */}
+                <div style={{ display:'grid', gridTemplateColumns:'3px 1fr auto', borderBottom:`1px solid ${T.border}0.12)`, marginBottom:'2px' }}>
+                  <div />
+                  <div style={{ padding:'4px 14px', display:'grid', gridTemplateColumns:'110px 68px 90px 90px 60px 1fr 115px 85px 56px', gap:'8px', fontSize:'11px', color:T.text3, letterSpacing:'1.5px' }}>
+                    <span>PAIRE</span><span>DIR.</span><span>ENTRÉE</span><span>SORTIE</span><span>DURÉE</span><span>NOTES</span><span>P&L NET</span><span>FRAIS</span><span>TAGS</span>
+                  </div>
+                  <div style={{ width:'40px' }} />
+                </div>
                 {dayTrades.map(t => (
                   <TradeRow key={t.id} trade={t} onDelete={onDelete} onFeeUpdate={onFeeUpdate} onClick={() => navigate(`/journal/${t.id}`)} />
                 ))}
