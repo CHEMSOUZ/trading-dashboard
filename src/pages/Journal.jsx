@@ -71,9 +71,9 @@ function FraisCell({ trade, onUpdate }) {
       <input autoFocus type="number" min="0" step="0.01" placeholder="0.00" value={val}
         onChange={e => setVal(e.target.value)}
         onKeyDown={e => { if (e.key==='Enter') saveEdit(e); if (e.key==='Escape') cancelEdit(e); }}
-        style={{ width:'70px', background:'rgba(14,15,22,0.9)', border:'1px solid rgba(240,160,32,0.5)', borderRadius:'3px', padding:'3px 6px', color:'#f0a020', fontSize:'11px', fontFamily:'inherit', outline:'none' }} />
-      <button onClick={saveEdit} disabled={saving} style={{ background:'rgba(0,204,119,0.12)', border:'1px solid rgba(0,204,119,0.3)', color:'#00cc77', borderRadius:'3px', padding:'2px 6px', fontSize:'10px', cursor:'pointer' }}>✓</button>
-      <button onClick={cancelEdit} style={{ background:'transparent', border:'1px solid rgba(136,153,187,0.2)', color:T.text3, borderRadius:'3px', padding:'2px 6px', fontSize:'10px', cursor:'pointer' }}>✕</button>
+        style={{ width:'70px', background:'rgba(14,15,22,0.9)', border:'1px solid rgba(240,160,32,0.5)', borderRadius:'3px', padding:'3px 6px', color:'#f0a020', fontSize:'13px', fontFamily:'inherit', outline:'none' }} />
+      <button onClick={saveEdit} disabled={saving} style={{ background:'rgba(0,204,119,0.12)', border:'1px solid rgba(0,204,119,0.3)', color:'#00cc77', borderRadius:'3px', padding:'2px 6px', fontSize:'12px', cursor:'pointer' }}>✓</button>
+      <button onClick={cancelEdit} style={{ background:'transparent', border:'1px solid rgba(136,153,187,0.2)', color:T.text3, borderRadius:'3px', padding:'2px 6px', fontSize:'12px', cursor:'pointer' }}>✕</button>
     </div>
   );
 
@@ -81,13 +81,13 @@ function FraisCell({ trade, onUpdate }) {
     <div onClick={startEdit} title="Modifier" style={{ display:'inline-flex', alignItems:'center', gap:'4px', cursor:'pointer', padding:'2px 6px', borderRadius:'4px', border:'1px solid transparent', transition:'all 0.15s' }}
       onMouseEnter={e => { e.currentTarget.style.border='1px solid rgba(240,160,32,0.3)'; e.currentTarget.style.background='rgba(240,160,32,0.06)'; }}
       onMouseLeave={e => { e.currentTarget.style.border='1px solid transparent'; e.currentTarget.style.background='transparent'; }}>
-      <span style={{ fontSize:'11px', fontWeight:'600', color:'#f0a020' }}>-{total.toFixed(2)}$</span>
-      <span style={{ fontSize:'9px', color:'#6a4a20' }}>✎</span>
+      <span style={{ fontSize:'13px', fontWeight:'600', color:'#f0a020' }}>-{total.toFixed(2)}$</span>
+      <span style={{ fontSize:'12px', color:'#6a4a20' }}>✎</span>
     </div>
   );
 
   return (
-    <div onClick={startEdit} title="Ajouter des frais" style={{ display:'inline-flex', alignItems:'center', gap:'3px', cursor:'pointer', padding:'2px 7px', borderRadius:'4px', border:'1px dashed rgba(240,160,32,0.2)', color:'#4a3020', fontSize:'10px', transition:'all 0.15s' }}
+    <div onClick={startEdit} title="Ajouter des frais" style={{ display:'inline-flex', alignItems:'center', gap:'3px', cursor:'pointer', padding:'2px 7px', borderRadius:'4px', border:'1px dashed rgba(240,160,32,0.2)', color:'#4a3020', fontSize:'12px', transition:'all 0.15s' }}
       onMouseEnter={e => { e.currentTarget.style.border='1px dashed rgba(240,160,32,0.45)'; e.currentTarget.style.color='#f0a020'; }}
       onMouseLeave={e => { e.currentTarget.style.border='1px dashed rgba(240,160,32,0.2)'; e.currentTarget.style.color='#4a3020'; }}>
       + frais
@@ -107,25 +107,25 @@ function PnlCell({ trade }) {
     <div style={{ position:'relative' }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       <span style={{ fontSize:'14px', fontWeight:'700', color, cursor: hasFees ? 'help' : 'default', letterSpacing:'-0.3px' }}>
         {fmt(net, true)}
-        {hasFees && <span style={{ fontSize:'8px', color: T.text3, marginLeft:'2px' }}>net</span>}
+        {hasFees && <span style={{ fontSize:'11px', color: T.text3, marginLeft:'2px' }}>net</span>}
       </span>
       {hover && hasFees && (
         <div style={{ position:'absolute', bottom:'100%', right:0, marginBottom:'6px', zIndex:300, background:'rgba(8,9,16,0.98)', border:`1px solid ${T.border}0.22)`, borderRadius:'6px', padding:'10px 12px', minWidth:'170px', pointerEvents:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.6)' }}>
-          <div style={{ fontSize:'8px', color:T.text3, letterSpacing:'1px', marginBottom:'6px' }}>DÉTAIL P&L</div>
+          <div style={{ fontSize:'11px', color:T.text3, letterSpacing:'1px', marginBottom:'6px' }}>DÉTAIL P&L</div>
           <div style={{ display:'flex', flexDirection:'column', gap:'3px' }}>
             <div style={{ display:'flex', justifyContent:'space-between', gap:'12px' }}>
-              <span style={{ fontSize:'10px', color:T.text2 }}>P&L brut</span>
-              <span style={{ fontSize:'10px', fontWeight:'700', color:(trade.result ?? 0) >= 0 ? '#00cc77' : '#ff3344' }}>{fmt(trade.result, true)}</span>
+              <span style={{ fontSize:'12px', color:T.text2 }}>P&L brut</span>
+              <span style={{ fontSize:'12px', fontWeight:'700', color:(trade.result ?? 0) >= 0 ? '#00cc77' : '#ff3344' }}>{fmt(trade.result, true)}</span>
             </div>
-            {(trade.commissions ?? 0) > 0 && <div style={{ display:'flex', justifyContent:'space-between', gap:'12px' }}><span style={{ fontSize:'10px', color:T.text2 }}>Commissions</span><span style={{ fontSize:'10px', color:'#ff3344' }}>-{trade.commissions.toFixed(2)}$</span></div>}
-            {(trade.fees ?? 0) > 0 && <div style={{ display:'flex', justifyContent:'space-between', gap:'12px' }}><span style={{ fontSize:'10px', color:T.text2 }}>Frais</span><span style={{ fontSize:'10px', color:'#ff3344' }}>-{trade.fees.toFixed(2)}$</span></div>}
+            {(trade.commissions ?? 0) > 0 && <div style={{ display:'flex', justifyContent:'space-between', gap:'12px' }}><span style={{ fontSize:'12px', color:T.text2 }}>Commissions</span><span style={{ fontSize:'12px', color:'#ff3344' }}>-{trade.commissions.toFixed(2)}$</span></div>}
+            {(trade.fees ?? 0) > 0 && <div style={{ display:'flex', justifyContent:'space-between', gap:'12px' }}><span style={{ fontSize:'12px', color:T.text2 }}>Frais</span><span style={{ fontSize:'12px', color:'#ff3344' }}>-{trade.fees.toFixed(2)}$</span></div>}
             <div style={{ borderTop:`1px solid ${T.border}0.12)`, marginTop:'4px', paddingTop:'4px', display:'flex', justifyContent:'space-between', gap:'12px' }}>
-              <span style={{ fontSize:'10px', color:T.text1, fontWeight:'600' }}>P&L net</span>
-              <span style={{ fontSize:'11px', fontWeight:'700', color }}>{fmt(net, true)}</span>
+              <span style={{ fontSize:'12px', color:T.text1, fontWeight:'600' }}>P&L net</span>
+              <span style={{ fontSize:'13px', fontWeight:'700', color }}>{fmt(net, true)}</span>
             </div>
             <div style={{ display:'flex', justifyContent:'space-between', gap:'12px' }}>
-              <span style={{ fontSize:'9px', color:T.text3 }}>Total frais</span>
-              <span style={{ fontSize:'9px', color:'#f0a020' }}>-{totalFees.toFixed(2)}$</span>
+              <span style={{ fontSize:'12px', color:T.text3 }}>Total frais</span>
+              <span style={{ fontSize:'12px', color:'#f0a020' }}>-{totalFees.toFixed(2)}$</span>
             </div>
           </div>
         </div>
@@ -138,7 +138,7 @@ function PnlCell({ trade }) {
 function CTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background:'rgba(8,9,16,0.97)', border:`1px solid ${T.border}0.22)`, borderRadius:'5px', padding:'8px 12px', fontSize:'11px', fontFamily:'inherit' }}>
+    <div style={{ background:'rgba(8,9,16,0.97)', border:`1px solid ${T.border}0.22)`, borderRadius:'5px', padding:'8px 12px', fontSize:'13px', fontFamily:'inherit' }}>
       <div style={{ color:T.text3, marginBottom:'4px' }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ color: typeof p.value === 'number' ? pnlColor(p.value) : T.text1, fontWeight:'700' }}>
@@ -174,14 +174,14 @@ function CalendarHeatmap({ trades }) {
   return (
     <div style={{ background:`${T.bg}0.65)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'14px 16px' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px' }}>
-        <span style={{ fontSize:'8px', color:T.text3, letterSpacing:'2.5px' }}>CALENDRIER — {monthLabel.toUpperCase()}</span>
-        <div style={{ display:'flex', gap:'8px', fontSize:'8px', color:T.text4 }}>
+        <span style={{ fontSize:'11px', color:T.text3, letterSpacing:'2.5px' }}>CALENDRIER — {monthLabel.toUpperCase()}</span>
+        <div style={{ display:'flex', gap:'8px', fontSize:'11px', color:T.text4 }}>
           <span style={{ display:'flex', alignItems:'center', gap:'3px' }}><span style={{ width:'8px', height:'8px', borderRadius:'2px', background:'rgba(0,204,119,0.4)', display:'inline-block' }} /> Profit</span>
           <span style={{ display:'flex', alignItems:'center', gap:'3px' }}><span style={{ width:'8px', height:'8px', borderRadius:'2px', background:'rgba(255,51,68,0.4)', display:'inline-block' }} /> Perte</span>
         </div>
       </div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'4px', marginBottom:'4px' }}>
-        {['LUN','MAR','MER','JEU','VEN','SAM','DIM'].map((d,i) => <div key={i} style={{ textAlign:'center', fontSize:'9px', color:T.text3, fontWeight:'700', paddingBottom:'4px' }}>{d}</div>)}
+        {['LUN','MAR','MER','JEU','VEN','SAM','DIM'].map((d,i) => <div key={i} style={{ textAlign:'center', fontSize:'12px', color:T.text3, fontWeight:'700', paddingBottom:'4px' }}>{d}</div>)}
       </div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'4px' }}>
         {cells.map((day, i) => {
@@ -202,9 +202,9 @@ function CalendarHeatmap({ trades }) {
               style={{ minHeight:'52px', borderRadius:'5px', background:bg, border:`1px solid ${isToday?`${T.border}0.60)`:'transparent'}`, outline:isToday?`1px solid ${T.border}0.30)`:'none', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'3px', cursor:data?'pointer':'default', transition:'opacity 0.15s', padding:'4px 2px' }}
               onMouseEnter={e => { if(data) e.currentTarget.style.opacity='0.75'; }}
               onMouseLeave={e => e.currentTarget.style.opacity='1'}>
-              <span style={{ fontSize:'12px', color:textColor, fontWeight:data?'700':'400', lineHeight:1 }}>{day}</span>
-              {data && <span style={{ fontSize:'9px', color:textColor, opacity:0.90, lineHeight:1, fontWeight:'600' }}>{pnlText}</span>}
-              {data && <span style={{ fontSize:'8px', color:textColor, opacity:0.55, lineHeight:1 }}>{data.count}t</span>}
+              <span style={{ fontSize:'13px', color:textColor, fontWeight:data?'700':'400', lineHeight:1 }}>{day}</span>
+              {data && <span style={{ fontSize:'12px', color:textColor, opacity:0.90, lineHeight:1, fontWeight:'600' }}>{pnlText}</span>}
+              {data && <span style={{ fontSize:'11px', color:textColor, opacity:0.55, lineHeight:1 }}>{data.count}t</span>}
             </div>
           );
         })}
@@ -219,9 +219,9 @@ function StatCard({ label, value, sub, color=T.text1 }) {
   return (
     <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{ background: hov ? `${T.bgHov}0.75)` : `${T.bg}0.60)`, border:`1px solid ${T.border}0.10)`, borderTop:`2px solid ${color}30`, borderRadius:'7px', padding:'14px 16px', transition:'all 0.18s', transform:hov?'translateY(-1px)':'none', boxShadow:hov?`0 4px 16px rgba(0,0,0,0.3)`:'none' }}>
-      <div style={{ fontSize:'8px', color:T.text3, letterSpacing:'1.8px', marginBottom:'6px' }}>{label}</div>
+      <div style={{ fontSize:'11px', color:T.text3, letterSpacing:'1.8px', marginBottom:'6px' }}>{label}</div>
       <div style={{ fontSize:'20px', fontWeight:'700', color, letterSpacing:'-0.5px', lineHeight:1 }}>{value}</div>
-      {sub && <div style={{ fontSize:'9px', color:T.text3, marginTop:'5px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize:'12px', color:T.text3, marginTop:'5px' }}>{sub}</div>}
     </div>
   );
 }
@@ -229,7 +229,7 @@ function StatCard({ label, value, sub, color=T.text1 }) {
 // ── Section Title ─────────────────────────────────────────────
 function SectionTitle({ children }) {
   return (
-    <div style={{ fontSize:'8px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700', marginBottom:'10px', display:'flex', alignItems:'center', gap:'8px' }}>
+    <div style={{ fontSize:'11px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700', marginBottom:'10px', display:'flex', alignItems:'center', gap:'8px' }}>
       <span style={{ width:'20px', height:'1px', background:T.text4, display:'inline-block' }} />
       {children}
       <span style={{ flex:1, height:'1px', background:`${T.border}0.07)`, display:'inline-block' }} />
@@ -239,7 +239,7 @@ function SectionTitle({ children }) {
 
 // ── SYNTHÈSE TAB ──────────────────────────────────────────────
 function SyntheseTab({ trades, loading }) {
-  if (loading) return <div style={{ padding:'60px', textAlign:'center', color:T.text3, fontSize:'11px', letterSpacing:'2px' }}>CHARGEMENT...</div>;
+  if (loading) return <div style={{ padding:'60px', textAlign:'center', color:T.text3, fontSize:'13px', letterSpacing:'2px' }}>CHARGEMENT...</div>;
 
   // Core stats
   const nets   = trades.map(t => getNet(t) ?? 0);
@@ -334,7 +334,7 @@ function SyntheseTab({ trades, loading }) {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:T.text3, fontSize:'11px' }}>Pas assez de données</div>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:T.text3, fontSize:'13px' }}>Pas assez de données</div>
           )}
         </div>
       </div>
@@ -353,7 +353,7 @@ function SyntheseTab({ trades, loading }) {
           <SectionTitle>PERFORMANCE PAR INSTRUMENT</SectionTitle>
           <div style={{ background:`${T.bg}0.60)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', overflow:'hidden' }}>
             {topPairs.length === 0
-              ? <div style={{ padding:'28px', textAlign:'center', color:T.text3, fontSize:'11px' }}>Aucune donnée</div>
+              ? <div style={{ padding:'28px', textAlign:'center', color:T.text3, fontSize:'13px' }}>Aucune donnée</div>
               : topPairs.map(([pair, d]) => {
                   const wr = d.n>0 ? Math.round((d.w/d.n)*100) : 0;
                   const bar = Math.abs(d.pnl)/Math.max(...topPairs.map(([,x]) => Math.abs(x.pnl)),1)*100;
@@ -361,8 +361,8 @@ function SyntheseTab({ trades, loading }) {
                   return (
                     <div key={pair} style={{ padding:'10px 16px', borderBottom:`1px solid ${T.border}0.06)`, display:'flex', alignItems:'center', gap:'12px', position:'relative', overflow:'hidden' }}>
                       <div style={{ position:'absolute', left:0, top:0, bottom:0, width:`${bar}%`, background:`${d.pnl>0?'rgba(0,204,119,':'rgba(255,51,68,'}0.05)`, zIndex:0 }} />
-                      <span style={{ fontSize:'12px', fontWeight:'700', color:T.text1, minWidth:'55px', position:'relative' }}>{pair}</span>
-                      <span style={{ fontSize:'9px', color:T.text3, position:'relative' }}>{d.n}t · {wr}%WR</span>
+                      <span style={{ fontSize:'13px', fontWeight:'700', color:T.text1, minWidth:'55px', position:'relative' }}>{pair}</span>
+                      <span style={{ fontSize:'12px', color:T.text3, position:'relative' }}>{d.n}t · {wr}%WR</span>
                       <span style={{ marginLeft:'auto', fontSize:'13px', fontWeight:'700', color:c, position:'relative' }}>{fmt(d.pnl,true)}</span>
                     </div>
                   );
@@ -402,12 +402,12 @@ function DayHeader({ date, dayTrades }) {
   return (
     <div style={{ display:'flex', alignItems:'center', gap:'12px', padding:'7px 16px', borderRadius:'5px', background:`${T.bg}0.65)`, border:`1px solid ${T.border}0.08)`, marginBottom:'4px', marginTop:'14px' }}>
       <div style={{ flex:1, display:'flex', alignItems:'center', gap:'8px' }}>
-        <span style={{ fontSize:'11px', fontWeight:'700', color:T.text1, textTransform:'capitalize' }}>{fmtDayLabel(date)}</span>
-        <span style={{ fontSize:'9px', color:T.text3 }}>{dayTrades.length} trade{dayTrades.length>1?'s':''}</span>
+        <span style={{ fontSize:'13px', fontWeight:'700', color:T.text1, textTransform:'capitalize' }}>{fmtDayLabel(date)}</span>
+        <span style={{ fontSize:'12px', color:T.text3 }}>{dayTrades.length} trade{dayTrades.length>1?'s':''}</span>
       </div>
       <div style={{ display:'flex', gap:'5px' }}>
-        {wins   > 0 && <span style={{ fontSize:'9px', color:'#00cc77', fontWeight:'600', background:'rgba(0,204,119,0.08)', border:'1px solid rgba(0,204,119,0.18)', padding:'1px 5px', borderRadius:'3px' }}>{wins}W</span>}
-        {losses > 0 && <span style={{ fontSize:'9px', color:'#ff3344', fontWeight:'600', background:'rgba(255,51,68,0.08)', border:'1px solid rgba(255,51,68,0.18)', padding:'1px 5px', borderRadius:'3px' }}>{losses}L</span>}
+        {wins   > 0 && <span style={{ fontSize:'12px', color:'#00cc77', fontWeight:'600', background:'rgba(0,204,119,0.08)', border:'1px solid rgba(0,204,119,0.18)', padding:'1px 5px', borderRadius:'3px' }}>{wins}W</span>}
+        {losses > 0 && <span style={{ fontSize:'12px', color:'#ff3344', fontWeight:'600', background:'rgba(255,51,68,0.08)', border:'1px solid rgba(255,51,68,0.18)', padding:'1px 5px', borderRadius:'3px' }}>{losses}L</span>}
       </div>
       <div style={{ fontWeight:'700', fontSize:'14px', color:pnlColor(dayPnl), letterSpacing:'-0.3px', minWidth:'85px', textAlign:'right' }}>{fmt(dayPnl,true)}</div>
     </div>
@@ -432,27 +432,27 @@ function TradeRow({ trade, onDelete, onFeeUpdate, onClick }) {
       <div style={{ padding:'10px 14px', display:'grid', gridTemplateColumns:'110px 68px 95px 70px 1fr 115px 85px 56px', gap:'8px', alignItems:'center' }}>
         <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
           <span style={{ fontSize:'13px', fontWeight:'700', color:T.text1 }}>{trade.pair}</span>
-          {trade.size != null && <span style={{ fontSize:'9px', color:T.text3 }}>{trade.size} contrat{trade.size>1?'s':''}</span>}
+          {trade.size != null && <span style={{ fontSize:'12px', color:T.text3 }}>{trade.size} contrat{trade.size>1?'s':''}</span>}
         </div>
-        <span style={{ fontSize:'10px', fontWeight:'700', letterSpacing:'0.5px', color:trade.direction==='LONG'?'#00cc77':'#ff3344', background:`rgba(${trade.direction==='LONG'?'0,204,119':'255,51,68'},0.10)`, border:`1px solid rgba(${trade.direction==='LONG'?'0,204,119':'255,51,68'},0.22)`, padding:'3px 7px', borderRadius:'3px', textAlign:'center', width:'fit-content' }}>{trade.direction}</span>
+        <span style={{ fontSize:'12px', fontWeight:'700', letterSpacing:'0.5px', color:trade.direction==='LONG'?'#00cc77':'#ff3344', background:`rgba(${trade.direction==='LONG'?'0,204,119':'255,51,68'},0.10)`, border:`1px solid rgba(${trade.direction==='LONG'?'0,204,119':'255,51,68'},0.22)`, padding:'3px 7px', borderRadius:'3px', textAlign:'center', width:'fit-content' }}>{trade.direction}</span>
         <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
-          <span style={{ fontSize:'10px', color:T.text3 }}>E <span style={{ color:T.text2 }}>{trade.entry??'—'}</span></span>
-          <span style={{ fontSize:'10px', color:T.text3 }}>S <span style={{ color:T.text2 }}>{trade.exit_price??trade.tp??'—'}</span></span>
+          <span style={{ fontSize:'12px', color:T.text3 }}>E <span style={{ color:T.text2 }}>{trade.entry??'—'}</span></span>
+          <span style={{ fontSize:'12px', color:T.text3 }}>S <span style={{ color:T.text2 }}>{trade.exit_price??trade.tp??'—'}</span></span>
         </div>
         <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
-          {entryTime  && <span style={{ fontSize:'10px', color:T.text2 }}>{entryTime}</span>}
-          {trade.duration && <span style={{ fontSize:'10px', color:T.text3 }}>{trade.duration}</span>}
-          {trade.rr && <span style={{ fontSize:'9px', color:T.text3 }}>R {trade.rr}</span>}
+          {entryTime  && <span style={{ fontSize:'12px', color:T.text2 }}>{entryTime}</span>}
+          {trade.duration && <span style={{ fontSize:'12px', color:T.text3 }}>{trade.duration}</span>}
+          {trade.rr && <span style={{ fontSize:'12px', color:T.text3 }}>R {trade.rr}</span>}
         </div>
-        <span style={{ fontSize:'10px', color:T.text3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+        <span style={{ fontSize:'12px', color:T.text3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
           {notesClean || <span style={{ color:T.text4, fontStyle:'italic' }}>—</span>}
         </span>
         <div onClick={e => e.stopPropagation()}><PnlCell trade={trade} /></div>
         <div onClick={e => e.stopPropagation()}><FraisCell trade={trade} onUpdate={onFeeUpdate} /></div>
         <div style={{ display:'flex', alignItems:'center', gap:'4px' }}>
           {trade.emotion && <span title={trade.emotion} style={{ fontSize:'13px', cursor:'default' }}>{EMOTION_EMOJI[trade.emotion]||'😐'}</span>}
-          {hasScreenshot && <span title="Screenshot" style={{ fontSize:'11px', color:T.text3 }}>📸</span>}
-          {checklistScore && <span style={{ fontSize:'8px', color:T.text3, background:`${T.border}0.08)`, border:`1px solid ${T.border}0.15)`, borderRadius:'3px', padding:'1px 4px' }}>✓{checklistScore}</span>}
+          {hasScreenshot && <span title="Screenshot" style={{ fontSize:'13px', color:T.text3 }}>📸</span>}
+          {checklistScore && <span style={{ fontSize:'11px', color:T.text3, background:`${T.border}0.08)`, border:`1px solid ${T.border}0.15)`, borderRadius:'3px', padding:'1px 4px' }}>✓{checklistScore}</span>}
         </div>
       </div>
       <div style={{ display:'flex', alignItems:'center', padding:'0 10px' }}>
@@ -507,19 +507,19 @@ function TradesTab({ trades, loading, navigate, onDelete, onFeeUpdate }) {
       <div style={{ display:'flex', alignItems:'center', gap:'16px', marginBottom:'14px', flexWrap:'wrap' }}>
         <div style={{ display:'flex', gap:'4px' }}>
           {[['ALL','Tout'],['TODAY',"Auj."],['WEEK','7j'],['MONTH','Ce mois']].map(([v,l]) => (
-            <button key={v} onClick={() => setTimeRange(v)} style={{ padding:'5px 12px', borderRadius:'20px', border:`1px solid ${timeRange===v?`${T.border}0.50)`:`${T.border}0.12)`}`, background:timeRange===v?`${T.border}0.12)`:'transparent', color:timeRange===v?T.text1:T.text3, fontSize:'10px', fontFamily:'inherit', cursor:'pointer', transition:'all 0.15s', fontWeight:timeRange===v?'700':'400' }}>{l}</button>
+            <button key={v} onClick={() => setTimeRange(v)} style={{ padding:'5px 12px', borderRadius:'20px', border:`1px solid ${timeRange===v?`${T.border}0.50)`:`${T.border}0.12)`}`, background:timeRange===v?`${T.border}0.12)`:'transparent', color:timeRange===v?T.text1:T.text3, fontSize:'12px', fontFamily:'inherit', cursor:'pointer', transition:'all 0.15s', fontWeight:timeRange===v?'700':'400' }}>{l}</button>
           ))}
         </div>
         <div style={{ width:'1px', height:'18px', background:`${T.border}0.15)` }} />
         <div style={{ display:'flex', gap:'4px' }}>
           {[['ALL','Tous','#8899bb'],['WIN','Wins','#00cc77'],['LOSS','Losses','#ff3344'],['BE','BE','#f0a020']].map(([v,l,c]) => (
-            <button key={v} onClick={() => setFilter(v)} style={{ padding:'5px 12px', borderRadius:'20px', border:`1px solid ${filter===v?c:`${T.border}0.12)`}`, background:filter===v?`${c}1a`:'transparent', color:filter===v?c:T.text3, fontSize:'10px', fontFamily:'inherit', cursor:'pointer', transition:'all 0.15s', display:'flex', gap:'5px', alignItems:'center' }}>
-              {l}<span style={{ fontSize:'9px', opacity:0.65 }}>({counts[v]})</span>
+            <button key={v} onClick={() => setFilter(v)} style={{ padding:'5px 12px', borderRadius:'20px', border:`1px solid ${filter===v?c:`${T.border}0.12)`}`, background:filter===v?`${c}1a`:'transparent', color:filter===v?c:T.text3, fontSize:'12px', fontFamily:'inherit', cursor:'pointer', transition:'all 0.15s', display:'flex', gap:'5px', alignItems:'center' }}>
+              {l}<span style={{ fontSize:'12px', opacity:0.65 }}>({counts[v]})</span>
             </button>
           ))}
         </div>
         {totalFees > 0 && (
-          <span style={{ marginLeft:'auto', fontSize:'9px', color:'#f0a020' }}>Frais : -{totalFees.toFixed(2)}$</span>
+          <span style={{ marginLeft:'auto', fontSize:'12px', color:'#f0a020' }}>Frais : -{totalFees.toFixed(2)}$</span>
         )}
       </div>
 
@@ -527,7 +527,7 @@ function TradesTab({ trades, loading, navigate, onDelete, onFeeUpdate }) {
       {filtered.length > 0 && (
         <div style={{ display:'grid', gridTemplateColumns:'3px 1fr auto', marginBottom:'4px' }}>
           <div />
-          <div style={{ padding:'0 14px', display:'grid', gridTemplateColumns:'110px 68px 95px 70px 1fr 115px 85px 56px', gap:'8px', fontSize:'8px', color:T.text3, letterSpacing:'1.5px' }}>
+          <div style={{ padding:'0 14px', display:'grid', gridTemplateColumns:'110px 68px 95px 70px 1fr 115px 85px 56px', gap:'8px', fontSize:'11px', color:T.text3, letterSpacing:'1.5px' }}>
             <span>PAIRE</span><span>DIR.</span><span>PRIX</span><span>TEMPS</span><span>NOTES</span><span>P&L NET</span><span>FRAIS</span><span>TAGS</span>
           </div>
           <div style={{ width:'40px' }} />
@@ -535,9 +535,9 @@ function TradesTab({ trades, loading, navigate, onDelete, onFeeUpdate }) {
       )}
 
       {loading
-        ? <div style={{ padding:'48px', textAlign:'center', color:T.text3, fontSize:'11px', letterSpacing:'2px' }}>CHARGEMENT...</div>
+        ? <div style={{ padding:'48px', textAlign:'center', color:T.text3, fontSize:'13px', letterSpacing:'2px' }}>CHARGEMENT...</div>
         : filtered.length === 0
-          ? <div style={{ padding:'48px', textAlign:'center', border:`1px dashed ${T.border}0.15)`, borderRadius:'6px', color:T.text4, fontSize:'11px', letterSpacing:'2px' }}>
+          ? <div style={{ padding:'48px', textAlign:'center', border:`1px dashed ${T.border}0.15)`, borderRadius:'6px', color:T.text4, fontSize:'13px', letterSpacing:'2px' }}>
               {filter==='ALL'&&timeRange==='ALL' ? 'Aucun trade — commencez à journaliser !' : 'Aucun trade pour ces filtres'}
             </div>
           : sortedGroups.map(([date, dayTrades]) => (
@@ -555,7 +555,7 @@ function TradesTab({ trades, loading, navigate, onDelete, onFeeUpdate }) {
 
 // ── GRAPHIQUES TAB ────────────────────────────────────────────
 function GraphiquesTab({ trades, loading }) {
-  if (loading) return <div style={{ padding:'60px', textAlign:'center', color:T.text3, fontSize:'11px', letterSpacing:'2px' }}>CHARGEMENT...</div>;
+  if (loading) return <div style={{ padding:'60px', textAlign:'center', color:T.text3, fontSize:'13px', letterSpacing:'2px' }}>CHARGEMENT...</div>;
 
   // Equity curve (by trade)
   let cum = 0;
@@ -613,7 +613,7 @@ function GraphiquesTab({ trades, loading }) {
                 <Area type="monotone" dataKey="cum" name="Équité" stroke={totalPnl>=0?'#00cc77':'#ff3344'} strokeWidth={2} fill="url(#eqFull)" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
-          ) : <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:T.text3, fontSize:'11px' }}>Pas assez de données</div>}
+          ) : <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:T.text3, fontSize:'13px' }}>Pas assez de données</div>}
         </div>
       </div>
 
@@ -635,7 +635,7 @@ function GraphiquesTab({ trades, loading }) {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-            ) : <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:T.text3, fontSize:'11px' }}>Pas assez de données</div>}
+            ) : <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:T.text3, fontSize:'13px' }}>Pas assez de données</div>}
           </div>
         </div>
 
@@ -675,7 +675,7 @@ function GraphiquesTab({ trades, loading }) {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          ) : <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:T.text3, fontSize:'11px' }}>Pas assez de données</div>}
+          ) : <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:T.text3, fontSize:'13px' }}>Pas assez de données</div>}
         </div>
       </div>
     </div>
@@ -714,12 +714,12 @@ export default function Journal() {
       {/* Header */}
       <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:'20px' }}>
         <div>
-          <div style={{ fontSize:'9px', color:T.text3, letterSpacing:'3px', marginBottom:'5px' }}>HUB TRADING</div>
+          <div style={{ fontSize:'12px', color:T.text3, letterSpacing:'3px', marginBottom:'5px' }}>HUB TRADING</div>
           <h1 style={{ fontSize:'22px', fontWeight:'700', color:T.text1, margin:0, letterSpacing:'-0.5px' }}>Journal</h1>
         </div>
         <button
           onClick={() => navigate('/journal/new')}
-          style={{ background:`${T.border}0.12)`, border:`1px solid ${T.border}0.35)`, color:T.accentL, padding:'9px 18px', borderRadius:'6px', fontSize:'10px', fontFamily:'inherit', letterSpacing:'1.5px', cursor:'pointer', fontWeight:'700', transition:'all 0.2s' }}
+          style={{ background:`${T.border}0.12)`, border:`1px solid ${T.border}0.35)`, color:T.accentL, padding:'9px 18px', borderRadius:'6px', fontSize:'12px', fontFamily:'inherit', letterSpacing:'1.5px', cursor:'pointer', fontWeight:'700', transition:'all 0.2s' }}
           onMouseEnter={e => { e.currentTarget.style.background=`${T.border}0.22)`; e.currentTarget.style.boxShadow='0 0 16px rgba(136,153,187,0.15)'; }}
           onMouseLeave={e => { e.currentTarget.style.background=`${T.border}0.12)`; e.currentTarget.style.boxShadow='none'; }}
         >+ NOUVEAU TRADE</button>
@@ -731,7 +731,7 @@ export default function Journal() {
       {/* Séparateur Trades */}
       <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'28px 0 16px' }}>
         <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
-        <span style={{ fontSize:'9px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>HISTORIQUE DES TRADES</span>
+        <span style={{ fontSize:'12px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>HISTORIQUE DES TRADES</span>
         <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
       </div>
       <TradesTab trades={trades} loading={loading} navigate={navigate} onDelete={handleDelete} onFeeUpdate={handleFeeUpdate} />
@@ -739,7 +739,7 @@ export default function Journal() {
       {/* Séparateur Graphiques */}
       <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'28px 0 16px' }}>
         <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
-        <span style={{ fontSize:'9px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>GRAPHIQUES & ANALYSES</span>
+        <span style={{ fontSize:'12px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>GRAPHIQUES & ANALYSES</span>
         <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
       </div>
       <GraphiquesTab trades={trades} loading={loading} />

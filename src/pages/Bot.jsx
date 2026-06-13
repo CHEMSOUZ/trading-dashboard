@@ -1644,31 +1644,31 @@ function SignalCard({ signal, onSave, isLatest }) {
           {isLong ? '▲' : '▼'} {dir}
         </div>
         <div style={{ fontSize: '13px', color: '#7888a0', fontWeight: '600' }}>{signal.symbol || 'MNQ'}</div>
-        {signal.bot && (() => { const b = PINE_BOTS.find(x => x.botId === signal.bot); const c = b?.color ?? '#aa88ff'; return <div style={{ fontSize: '10px', color: c, background: `${c}15`, border: `1px solid ${c}40`, padding: '2px 8px', borderRadius: '3px', fontWeight: '700', letterSpacing: '1px' }}>{signal.bot}</div>; })()}
-        {fmtTf(signal.timeframe) && <div style={{ fontSize: '11px', color: '#5a6a82', background: 'rgba(136,153,187,0.06)', border: '1px solid rgba(136,153,187,0.12)', padding: '2px 7px', borderRadius: '3px' }}>{fmtTf(signal.timeframe)}</div>}
+        {signal.bot && (() => { const b = PINE_BOTS.find(x => x.botId === signal.bot); const c = b?.color ?? '#aa88ff'; return <div style={{ fontSize:'12px', color: c, background: `${c}15`, border: `1px solid ${c}40`, padding: '2px 8px', borderRadius: '3px', fontWeight: '700', letterSpacing: '1px' }}>{signal.bot}</div>; })()}
+        {fmtTf(signal.timeframe) && <div style={{ fontSize:'13px', color: '#5a6a82', background: 'rgba(136,153,187,0.06)', border: '1px solid rgba(136,153,187,0.12)', padding: '2px 7px', borderRadius: '3px' }}>{fmtTf(signal.timeframe)}</div>}
         <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1px' }}>
           <div style={{ fontSize: '13px', color: '#dde4ef', fontWeight: '600', fontVariantNumeric: 'tabular-nums' }}>{timeRecu}</div>
           {timeBougie && timeBougie !== timeRecu && (
-            <div style={{ fontSize: '9px', color: '#5a6a82' }}>bougie : {timeBougie}</div>
+            <div style={{ fontSize:'12px', color: '#5a6a82' }}>bougie : {timeBougie}</div>
           )}
-          <div style={{ fontSize: '9px', color: '#3a1818' }}>heure Paris</div>
+          <div style={{ fontSize:'12px', color: '#3a1818' }}>heure Paris</div>
         </div>
-        {signal.type === 'test' && <div style={{ fontSize: '8px', background: 'rgba(240,120,32,0.15)', border: '1px solid rgba(240,120,32,0.4)', color: '#f07820', padding: '2px 6px', borderRadius: '3px', letterSpacing: '1px', fontWeight: '700' }}>TEST</div>}
-        {isLatest && <div style={{ fontSize: '8px', background: 'rgba(136,153,187,0.18)', border: '1px solid rgba(136,153,187,0.35)', color: '#8899bb', padding: '2px 6px', borderRadius: '3px', letterSpacing: '1px', fontWeight: '700' }}>NOUVEAU</div>}
+        {signal.type === 'test' && <div style={{ fontSize:'11px', background: 'rgba(240,120,32,0.15)', border: '1px solid rgba(240,120,32,0.4)', color: '#f07820', padding: '2px 6px', borderRadius: '3px', letterSpacing: '1px', fontWeight: '700' }}>TEST</div>}
+        {isLatest && <div style={{ fontSize:'11px', background: 'rgba(136,153,187,0.18)', border: '1px solid rgba(136,153,187,0.35)', color: '#8899bb', padding: '2px 6px', borderRadius: '3px', letterSpacing: '1px', fontWeight: '700' }}>NOUVEAU</div>}
       </div>
 
       {/* Levels grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
         {/* Entry */}
         <div style={{ background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.18)', borderRadius: '6px', padding: '10px 14px' }}>
-          <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '4px' }}>📍 ENTRÉE</div>
+          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '4px' }}>📍 ENTRÉE</div>
           <div style={{ fontSize: '18px', fontWeight: '700', color: '#e8edf8' }}>{entry.toFixed(2)}</div>
         </div>
         {/* SL */}
         <div style={{ background: 'rgba(255,68,85,0.05)', border: '1px solid rgba(255,68,85,0.15)', borderRadius: '6px', padding: '10px 14px' }}>
-          <div style={{ fontSize: '9px', color: '#4a5a72', letterSpacing: '2px', marginBottom: '4px' }}>🛑 STOP LOSS</div>
+          <div style={{ fontSize:'12px', color: '#4a5a72', letterSpacing: '2px', marginBottom: '4px' }}>🛑 STOP LOSS</div>
           <div style={{ fontSize: '18px', fontWeight: '700', color: '#ff7788' }}>{sl.toFixed(2)}</div>
-          <div style={{ fontSize: '10px', color: '#5a3a3a', marginTop: '2px' }}>
+          <div style={{ fontSize:'12px', color: '#5a3a3a', marginTop: '2px' }}>
             {slPts.toFixed(2)} pts · <span style={{ color: '#ff4455' }}>-${calcUsd(slPts)}</span>
             <span style={{ color: '#3a2a2a', marginLeft: '4px' }}>(5 MNQ)</span>
           </div>
@@ -1676,9 +1676,9 @@ function SignalCard({ signal, onSave, isLatest }) {
         {/* TP unique */}
         {tp > 0 && (
           <div style={{ background: 'rgba(136,153,187,0.05)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '6px', padding: '10px 14px' }}>
-            <div style={{ fontSize: '9px', color: '#3a1a1a', letterSpacing: '2px', marginBottom: '4px' }}>🎯 TP  <span style={{ color: '#3a9a5a', fontSize: '8px', marginLeft: '4px' }}>R:R 1:2</span></div>
+            <div style={{ fontSize:'12px', color: '#3a1a1a', letterSpacing: '2px', marginBottom: '4px' }}>🎯 TP  <span style={{ color: '#3a9a5a', fontSize:'11px', marginLeft: '4px' }}>R:R 1:2</span></div>
             <div style={{ fontSize: '18px', fontWeight: '700', color: '#8899bb' }}>{tp.toFixed(2)}</div>
-            <div style={{ fontSize: '10px', color: '#3a1a1a', marginTop: '2px' }}>
+            <div style={{ fontSize:'12px', color: '#3a1a1a', marginTop: '2px' }}>
               {tpPts.toFixed(2)} pts · <span style={{ color: '#8899bb' }}>+${calcUsd(tpPts)}</span>
               <span style={{ color: '#3a1a1a', marginLeft: '4px' }}>(5 MNQ)</span>
             </div>
@@ -1692,14 +1692,14 @@ function SignalCard({ signal, onSave, isLatest }) {
           R:R {rrDisplay}
         </div>
         {signal.context && (
-          <div style={{ fontSize: '11px', color: '#6878a0', fontStyle: 'italic', flex: 1 }}>{signal.context}</div>
+          <div style={{ fontSize:'13px', color: '#6878a0', fontStyle: 'italic', flex: 1 }}>{signal.context}</div>
         )}
       </div>
 
       {/* Save button */}
       {onSave && (
         <button onClick={() => onSave(signal)}
-          style={{ width: '100%', padding: '9px', background: 'transparent', border: `1px dashed ${accentColor}50`, borderRadius: '5px', color: accentColor, fontSize: '11px', fontFamily: 'inherit', letterSpacing: '2px', cursor: 'pointer', transition: 'all 0.15s' }}
+          style={{ width: '100%', padding: '9px', background: 'transparent', border: `1px dashed ${accentColor}50`, borderRadius: '5px', color: accentColor, fontSize:'13px', fontFamily: 'inherit', letterSpacing: '2px', cursor: 'pointer', transition: 'all 0.15s' }}
           onMouseEnter={e => { e.currentTarget.style.background = `${accentColor}10`; e.currentTarget.style.borderStyle = 'solid'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderStyle = 'dashed'; }}
         >+ ENREGISTRER DANS LE JOURNAL</button>
@@ -1774,16 +1774,16 @@ function getDayFr(iso) {
 function BSStatCard({ label, value, sub, color = '#dde4ef' }) {
   return (
     <div style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.10)', borderTop: `2px solid ${color}`, borderRadius: '6px', padding: '14px 16px' }}>
-      <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>{label}</div>
+      <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>{label}</div>
       <div style={{ fontSize: '19px', fontWeight: '700', color, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '11px', color: '#5868a0', marginTop: '5px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize:'13px', color: '#5868a0', marginTop: '5px' }}>{sub}</div>}
     </div>
   );
 }
 function BSSection({ title, children }) {
   return (
     <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '8px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <div style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>{title}</div>
+      <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>{title}</div>
       {children}
     </div>
   );
@@ -1797,18 +1797,18 @@ function BSInsight({ icon, title, value, desc, color, onClick, active }) {
     >
       <div style={{ fontSize: '26px', flexShrink: 0 }}>{icon}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>{title}</div>
+        <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>{title}</div>
         <div style={{ fontSize: '15px', fontWeight: '700', color, marginBottom: '2px' }}>{value}</div>
-        <div style={{ fontSize: '11px', color: '#5868a0' }}>{desc}</div>
+        <div style={{ fontSize:'13px', color: '#5868a0' }}>{desc}</div>
       </div>
-      {onClick && <div style={{ fontSize: '10px', color: active ? color : '#3a1818', letterSpacing: '1px' }}>{active ? '▲' : '▼'}</div>}
+      {onClick && <div style={{ fontSize:'12px', color: active ? color : '#3a1818', letterSpacing: '1px' }}>{active ? '▲' : '▼'}</div>}
     </div>
   );
 }
 function BSTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: 'rgba(8,9,16,0.97)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', padding: '8px 12px', fontSize: '12px', fontFamily: 'inherit' }}>
+    <div style={{ background: 'rgba(8,9,16,0.97)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', padding: '8px 12px', fontSize:'13px', fontFamily: 'inherit' }}>
       <div style={{ color: '#5a6a82', marginBottom: '4px' }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ color: (p.value ?? 0) >= 0 ? '#00cc77' : '#ff3344', fontWeight: '700' }}>
@@ -1924,7 +1924,7 @@ function BotStats({ signals }) {
     <div style={{ textAlign: 'center', padding: '60px 20px', border: '1px dashed rgba(136,153,187,0.12)', borderRadius: '8px' }}>
       <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.4 }}>📊</div>
       <div style={{ fontSize: '13px', color: '#5a6a82', marginBottom: '6px' }}>Aucun signal noté</div>
-      <div style={{ fontSize: '11px', color: '#3a1818' }}>Utilise les boutons W / L / BE dans l'onglet SIGNAUX pour noter chaque position</div>
+      <div style={{ fontSize:'13px', color: '#3a1818' }}>Utilise les boutons W / L / BE dans l'onglet SIGNAUX pour noter chaque position</div>
     </div>
   );
 
@@ -1943,7 +1943,7 @@ function BotStats({ signals }) {
       {/* ── Points forts ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{ height: '1px', flex: 1, background: 'rgba(136,153,187,0.12)' }} />
-        <span style={{ fontSize: '11px', color: '#8899bb', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>✅ POINTS FORTS — cliquer pour voir les positions</span>
+        <span style={{ fontSize:'13px', color: '#8899bb', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>✅ POINTS FORTS — cliquer pour voir les positions</span>
         <div style={{ height: '1px', flex: 1, background: 'rgba(136,153,187,0.12)' }} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '10px' }}>
@@ -1957,7 +1957,7 @@ function BotStats({ signals }) {
       {/* ── Points faibles ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{ height: '1px', flex: 1, background: 'rgba(255,68,85,0.1)' }} />
-        <span style={{ fontSize: '11px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>❌ POINTS FAIBLES — cliquer pour voir les positions</span>
+        <span style={{ fontSize:'13px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>❌ POINTS FAIBLES — cliquer pour voir les positions</span>
         <div style={{ height: '1px', flex: 1, background: 'rgba(255,68,85,0.1)' }} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '10px' }}>
@@ -1972,12 +1972,12 @@ function BotStats({ signals }) {
       {drill && drillSignals.length > 0 && (
         <div style={{ background: 'rgba(8,9,16,0.6)', border: `1px solid ${drill.color}30`, borderRadius: '8px', padding: '16px 18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '11px', color: drill.color, letterSpacing: '2px', fontWeight: '700' }}>{drill.label}</span>
-            <span style={{ fontSize: '10px', background: `${drill.color}15`, border: `1px solid ${drill.color}30`, color: drill.color, padding: '1px 8px', borderRadius: '10px' }}>{drillSignals.length} trades</span>
-            <span style={{ fontSize: '10px', color: '#8899bb', fontWeight: '700' }}>✓ {drillSignals.filter(s => s._outcome === 'win').length}W</span>
-            <span style={{ fontSize: '10px', color: '#ff4455', fontWeight: '700' }}>✗ {drillSignals.filter(s => s._outcome === 'loss').length}L</span>
-            {drillSignals.filter(s => s._outcome === 'be').length > 0 && <span style={{ fontSize: '10px', color: '#f0c020', fontWeight: '700' }}>— {drillSignals.filter(s => s._outcome === 'be').length}BE</span>}
-            <button onClick={() => setDrill(null)} style={{ marginLeft: 'auto', background: 'none', border: '1px solid rgba(255,68,85,0.2)', borderRadius: '3px', color: '#5a3a3a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', padding: '2px 8px' }}
+            <span style={{ fontSize:'13px', color: drill.color, letterSpacing: '2px', fontWeight: '700' }}>{drill.label}</span>
+            <span style={{ fontSize:'12px', background: `${drill.color}15`, border: `1px solid ${drill.color}30`, color: drill.color, padding: '1px 8px', borderRadius: '10px' }}>{drillSignals.length} trades</span>
+            <span style={{ fontSize:'12px', color: '#8899bb', fontWeight: '700' }}>✓ {drillSignals.filter(s => s._outcome === 'win').length}W</span>
+            <span style={{ fontSize:'12px', color: '#ff4455', fontWeight: '700' }}>✗ {drillSignals.filter(s => s._outcome === 'loss').length}L</span>
+            {drillSignals.filter(s => s._outcome === 'be').length > 0 && <span style={{ fontSize:'12px', color: '#f0c020', fontWeight: '700' }}>— {drillSignals.filter(s => s._outcome === 'be').length}BE</span>}
+            <button onClick={() => setDrill(null)} style={{ marginLeft: 'auto', background: 'none', border: '1px solid rgba(255,68,85,0.2)', borderRadius: '3px', color: '#5a3a3a', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', padding: '2px 8px' }}
               onMouseEnter={e => { e.currentTarget.style.color = '#ff4455'; e.currentTarget.style.borderColor = 'rgba(255,68,85,0.4)'; }}
               onMouseLeave={e => { e.currentTarget.style.color = '#5a3a3a'; e.currentTarget.style.borderColor = 'rgba(255,68,85,0.2)'; }}
             >✕ FERMER</button>
@@ -1989,7 +1989,7 @@ function BotStats({ signals }) {
             const ocLabel = oc === 'win' ? '✅ WIN' : oc === 'loss' ? '❌ LOSS' : '🔄 BE';
             return (
               <div key={oc} style={{ marginBottom: '10px' }}>
-                <div style={{ fontSize: '10px', color: ocColor, letterSpacing: '2px', fontWeight: '700', marginBottom: '6px' }}>{ocLabel} ({ocSigs.length})</div>
+                <div style={{ fontSize:'12px', color: ocColor, letterSpacing: '2px', fontWeight: '700', marginBottom: '6px' }}>{ocLabel} ({ocSigs.length})</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                   {ocSigs.map((sig, i) => {
                     const dir = (sig.signal ?? sig.direction ?? '').toUpperCase();
@@ -1998,12 +1998,12 @@ function BotStats({ signals }) {
                     const tf  = fmtTf(sig.timeframe);
                     return (
                       <div key={sig._id ?? i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 10px', background: 'rgba(14,15,22,0.5)', borderRadius: '4px', borderLeft: `2px solid ${ocColor}60` }}>
-                        <span style={{ fontSize: '10px', color: '#5868a0', minWidth: '70px' }}>{fmtTime(sig._receivedAt)}</span>
-                        {tf && <span style={{ fontSize: '9px', color: '#3a7a5a', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.12)', padding: '0px 4px', borderRadius: '2px', fontWeight: '700' }}>{tf}</span>}
-                        <span style={{ fontSize: '10px', color: isL ? '#8899bb' : '#ff4455', fontWeight: '700' }}>{isL ? '▲' : '▼'} {dir}</span>
-                        {sig.bot && <span style={{ fontSize: '9px', color: '#7a5a9a' }}>{sig.bot}</span>}
-                        <span style={{ fontSize: '10px', color: '#6a8a7a' }}>{parseFloat(sig.entry)?.toFixed(2) ?? '—'}</span>
-                        <span style={{ fontSize: '10px', color: pnlColor(pnl), fontWeight: '700', marginLeft: 'auto' }}>{fmtUsd(pnl, true)}</span>
+                        <span style={{ fontSize:'12px', color: '#5868a0', minWidth: '70px' }}>{fmtTime(sig._receivedAt)}</span>
+                        {tf && <span style={{ fontSize:'12px', color: '#3a7a5a', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.12)', padding: '0px 4px', borderRadius: '2px', fontWeight: '700' }}>{tf}</span>}
+                        <span style={{ fontSize:'12px', color: isL ? '#8899bb' : '#ff4455', fontWeight: '700' }}>{isL ? '▲' : '▼'} {dir}</span>
+                        {sig.bot && <span style={{ fontSize:'12px', color: '#7a5a9a' }}>{sig.bot}</span>}
+                        <span style={{ fontSize:'12px', color: '#6a8a7a' }}>{parseFloat(sig.entry)?.toFixed(2) ?? '—'}</span>
+                        <span style={{ fontSize:'12px', color: pnlColor(pnl), fontWeight: '700', marginLeft: 'auto' }}>{fmtUsd(pnl, true)}</span>
                       </div>
                     );
                   })}
@@ -2035,10 +2035,10 @@ function BotStats({ signals }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {byBot.map(b => (
                 <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', background: 'rgba(14,15,22,0.4)', borderRadius: '4px', borderLeft: `2px solid ${pnlColor(b.pnl)}` }}>
-                  <span style={{ fontSize: '12px', color: '#dde4ef', flex: 1 }}>{b.label}</span>
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: pnlColor(b.pnl) }}>{fmtUsd(b.pnl, true)}</span>
-                  <span style={{ fontSize: '11px', color: b.wr >= 50 ? '#00cc77' : '#ff3344' }}>{b.wr}% WR</span>
-                  <span style={{ fontSize: '11px', color: '#5a6a82' }}>{b.total}T</span>
+                  <span style={{ fontSize:'13px', color: '#dde4ef', flex: 1 }}>{b.label}</span>
+                  <span style={{ fontSize:'13px', fontWeight: '700', color: pnlColor(b.pnl) }}>{fmtUsd(b.pnl, true)}</span>
+                  <span style={{ fontSize:'13px', color: b.wr >= 50 ? '#00cc77' : '#ff3344' }}>{b.wr}% WR</span>
+                  <span style={{ fontSize:'13px', color: '#5a6a82' }}>{b.total}T</span>
                 </div>
               ))}
             </div>
@@ -2064,7 +2064,7 @@ function BotStats({ signals }) {
               <div key={d.label} style={{ background: 'rgba(14,15,22,0.4)', borderRadius: '6px', padding: '10px 14px', borderLeft: `3px solid ${d.label === 'LONG' ? '#00cc77' : '#ff3344'}` }}>
                 <div style={{ fontSize: '13px', fontWeight: '700', color: d.label === 'LONG' ? '#00cc77' : '#ff3344', marginBottom: '4px' }}>{d.label}</div>
                 <div style={{ fontSize: '16px', fontWeight: '700', color: pnlColor(d.pnl) }}>{fmtUsd(d.pnl, true)}</div>
-                <div style={{ fontSize: '11px', color: '#5868a0', marginTop: '3px' }}>{d.wr}% WR · {d.wins}W {d.total - d.wins}L</div>
+                <div style={{ fontSize:'13px', color: '#5868a0', marginTop: '3px' }}>{d.wr}% WR · {d.wins}W {d.total - d.wins}L</div>
               </div>
             ))}
           </div>
@@ -2089,9 +2089,9 @@ function BotStats({ signals }) {
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {byKZ.map(k => (
               <div key={k.label} style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '5px', padding: '6px 10px', textAlign: 'center' }}>
-                <div style={{ fontSize: '11px', color: '#5868a0', marginBottom: '2px' }}>{k.label}</div>
-                <div style={{ fontSize: '12px', fontWeight: '700', color: pnlColor(k.pnl) }}>{fmtUsd(k.pnl, true)}</div>
-                <div style={{ fontSize: '10px', color: k.wr >= 50 ? '#00cc77' : '#ff3344' }}>{k.wr}% WR · {k.total}T</div>
+                <div style={{ fontSize:'13px', color: '#5868a0', marginBottom: '2px' }}>{k.label}</div>
+                <div style={{ fontSize:'13px', fontWeight: '700', color: pnlColor(k.pnl) }}>{fmtUsd(k.pnl, true)}</div>
+                <div style={{ fontSize:'12px', color: k.wr >= 50 ? '#00cc77' : '#ff3344' }}>{k.wr}% WR · {k.total}T</div>
               </div>
             ))}
           </div>
@@ -2133,9 +2133,9 @@ function BotStats({ signals }) {
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {byDay.map(d => (
                 <div key={d.label} style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '5px', padding: '5px 8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '11px', color: '#5868a0', textTransform: 'capitalize' }}>{d.label}</div>
-                  <div style={{ fontSize: '11px', fontWeight: '700', color: pnlColor(d.pnl) }}>{fmtUsd(d.pnl, true)}</div>
-                  <div style={{ fontSize: '9px', color: d.wr >= 50 ? '#00cc77' : '#ff3344' }}>{d.wr}% · {d.total}T</div>
+                  <div style={{ fontSize:'13px', color: '#5868a0', textTransform: 'capitalize' }}>{d.label}</div>
+                  <div style={{ fontSize:'13px', fontWeight: '700', color: pnlColor(d.pnl) }}>{fmtUsd(d.pnl, true)}</div>
+                  <div style={{ fontSize:'12px', color: d.wr >= 50 ? '#00cc77' : '#ff3344' }}>{d.wr}% · {d.total}T</div>
                 </div>
               ))}
             </div>
@@ -2151,31 +2151,31 @@ function BotStats({ signals }) {
             const count = f === 'ALL' ? rated.length : f === 'WIN' ? wins.length : f === 'LOSS' ? losses.length : bes.length;
             return (
               <button key={f} onClick={() => setFilter(f)}
-                style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${filter === f ? c : '#1e2c40'}`, background: filter === f ? `${c}18` : 'transparent', color: filter === f ? c : '#5a6a82', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>
+                style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${filter === f ? c : '#1e2c40'}`, background: filter === f ? `${c}18` : 'transparent', color: filter === f ? c : '#5a6a82', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>
                 {f} ({count})
               </button>
             );
           })}
           {botList.length > 2 && botList.map(b => (
             <button key={b} onClick={() => setBotFilter(b)}
-              style={{ padding: '4px 10px', borderRadius: '4px', border: `1px solid ${botFilter === b ? '#aa88ff' : 'rgba(136,153,187,0.10)'}`, background: botFilter === b ? 'rgba(170,136,255,0.12)' : 'transparent', color: botFilter === b ? '#aa88ff' : '#3a5a3a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>
+              style={{ padding: '4px 10px', borderRadius: '4px', border: `1px solid ${botFilter === b ? '#aa88ff' : 'rgba(136,153,187,0.10)'}`, background: botFilter === b ? 'rgba(170,136,255,0.12)' : 'transparent', color: botFilter === b ? '#aa88ff' : '#3a5a3a', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer' }}>
               {b}
             </button>
           ))}
         </div>
 
         <div style={{ overflowX: 'auto', maxHeight: '420px', overflowY: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize:'13px' }}>
             <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
               <tr style={{ background: 'rgba(6,12,8,0.95)', borderBottom: '1px solid rgba(136,153,187,0.10)' }}>
                 {['HEURE', 'TF', 'BOT', 'SCRIPT', 'DIR', 'ENTRY', 'BE', 'SL', 'TP', 'R:R', 'PTS', 'P&L (5 MNQ)', 'SESSION KZ', 'RÉSULTAT'].map(h => (
-                  <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: '9px', color: '#5a6a82', letterSpacing: '1.5px', fontWeight: '700', whiteSpace: 'nowrap' }}>{h}</th>
+                  <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize:'12px', color: '#5a6a82', letterSpacing: '1.5px', fontWeight: '700', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {listSignals.length === 0 && (
-                <tr><td colSpan={14} style={{ padding: '24px', textAlign: 'center', color: '#3a1818', fontSize: '12px' }}>Aucun signal</td></tr>
+                <tr><td colSpan={14} style={{ padding: '24px', textAlign: 'center', color: '#3a1818', fontSize:'13px' }}>Aucun signal</td></tr>
               )}
               {listSignals.map((sig, i) => {
                 const dir    = (sig.signal ?? sig.direction ?? '').toUpperCase();
@@ -2193,16 +2193,16 @@ function BotStats({ signals }) {
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,136,0.03)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
-                    <td style={{ padding: '7px 10px', color: '#5868a0', fontSize: '11px', whiteSpace: 'nowrap' }}>{fmtTime(sig._receivedAt)}</td>
+                    <td style={{ padding: '7px 10px', color: '#5868a0', fontSize:'13px', whiteSpace: 'nowrap' }}>{fmtTime(sig._receivedAt)}</td>
                     <td style={{ padding: '7px 6px' }}>
-                      {fmtTf(sig.timeframe) ? <span style={{ fontSize: '9px', color: '#3a9a5a', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.12)', padding: '1px 4px', borderRadius: '2px', fontWeight: '700' }}>{fmtTf(sig.timeframe)}</span> : <span style={{ color: '#3a1818' }}>—</span>}
+                      {fmtTf(sig.timeframe) ? <span style={{ fontSize:'12px', color: '#3a9a5a', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.12)', padding: '1px 4px', borderRadius: '2px', fontWeight: '700' }}>{fmtTf(sig.timeframe)}</span> : <span style={{ color: '#3a1818' }}>—</span>}
                     </td>
-                    <td style={{ padding: '7px 10px', fontSize: '10px', color: '#aa88ff' }}>{sig.bot ?? '—'}</td>
+                    <td style={{ padding: '7px 10px', fontSize:'12px', color: '#aa88ff' }}>{sig.bot ?? '—'}</td>
                     <td style={{ padding: '7px 6px' }}>
-                      {(() => { const s = getBotScriptName(sig.bot); return s ? <span style={{ fontSize: '9px', color: s.color, background: `${s.color}18`, border: `1px solid ${s.color}40`, padding: '2px 6px', borderRadius: '3px', fontWeight: '700', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>{s.name}</span> : <span style={{ color: '#3a1818' }}>—</span>; })()}
+                      {(() => { const s = getBotScriptName(sig.bot); return s ? <span style={{ fontSize:'12px', color: s.color, background: `${s.color}18`, border: `1px solid ${s.color}40`, padding: '2px 6px', borderRadius: '3px', fontWeight: '700', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>{s.name}</span> : <span style={{ color: '#3a1818' }}>—</span>; })()}
                     </td>
                     <td style={{ padding: '7px 10px' }}>
-                      <span style={{ color: isL ? '#8899bb' : '#ff4455', background: `rgba(${isL ? '0,204,119' : '255,51,68'},0.08)`, padding: '1px 5px', borderRadius: '3px', fontSize: '11px', fontWeight: '600' }}>{dir}</span>
+                      <span style={{ color: isL ? '#8899bb' : '#ff4455', background: `rgba(${isL ? '0,204,119' : '255,51,68'},0.08)`, padding: '1px 5px', borderRadius: '3px', fontSize:'13px', fontWeight: '600' }}>{dir}</span>
                     </td>
                     <td style={{ padding: '7px 10px', color: '#7888a0' }}>{parseFloat(sig.entry)?.toFixed(2) ?? '—'}</td>
                     <td style={{ padding: '7px 10px', color: '#f0c020', fontVariantNumeric: 'tabular-nums' }}>{parseFloat(sig.entry) ? parseFloat(sig.entry).toFixed(2) : '—'}</td>
@@ -2211,9 +2211,9 @@ function BotStats({ signals }) {
                     <td style={{ padding: '7px 10px', color: '#f0c020' }}>{sig.rr ?? '—'}</td>
                     <td style={{ padding: '7px 10px', color: pnlColor(pts), fontWeight: '600' }}>{pts ? `${pts >= 0 ? '+' : ''}${pts.toFixed(2)}` : '—'}</td>
                     <td style={{ padding: '7px 10px', color: pnlColor(pnl), fontWeight: '700' }}>{fmtUsd(pnl, true)}</td>
-                    <td style={{ padding: '7px 10px', fontSize: '10px', color: '#5a6a82', whiteSpace: 'nowrap' }}>{kzLabel}</td>
+                    <td style={{ padding: '7px 10px', fontSize:'12px', color: '#5a6a82', whiteSpace: 'nowrap' }}>{kzLabel}</td>
                     <td style={{ padding: '7px 10px' }}>
-                      <span style={{ fontSize: '10px', fontWeight: '700', color: ocC, background: `${ocC}15`, border: `1px solid ${ocC}40`, padding: '2px 7px', borderRadius: '3px' }}>{ocTxt}</span>
+                      <span style={{ fontSize:'12px', fontWeight: '700', color: ocC, background: `${ocC}15`, border: `1px solid ${ocC}40`, padding: '2px 7px', borderRadius: '3px' }}>{ocTxt}</span>
                     </td>
                   </tr>
                 );
@@ -2230,7 +2230,7 @@ function BotStats({ signals }) {
 function CustomTVInput() {
   const [sym, setSym]   = useState('CME_MINI:MNQ1!');
   const [tf, setTf]     = useState('5');
-  const inp = { background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.18)', borderRadius: '5px', padding: '8px 11px', color: '#dde4ef', fontSize: '12px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' };
+  const inp = { background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.18)', borderRadius: '5px', padding: '8px 11px', color: '#dde4ef', fontSize:'13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' };
   function open() {
     const url = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(sym)}&interval=${tf}`;
     window.shell.openExternal(url);
@@ -2241,7 +2241,7 @@ function CustomTVInput() {
       <select value={tf} onChange={e => setTf(e.target.value)} style={{ ...inp, width: '90px' }}>
         {[['1','1 min'],['3','3 min'],['5','5 min'],['15','15 min'],['30','30 min'],['60','1H'],['240','4H'],['D','1J']].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
       </select>
-      <button onClick={open} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid rgba(136,153,187,0.35)', borderRadius: '5px', color: '#8899bb', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', whiteSpace: 'nowrap', transition: 'all 0.15s' }}
+      <button onClick={open} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid rgba(136,153,187,0.35)', borderRadius: '5px', color: '#8899bb', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', whiteSpace: 'nowrap', transition: 'all 0.15s' }}
         onMouseEnter={e => e.currentTarget.style.background = 'rgba(136,153,187,0.10)'}
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       >OUVRIR ↗</button>
@@ -2395,7 +2395,7 @@ export default function Bot() {
   const activeSignals    = signals.filter(s => !s._outcome); // TOUS bots — aucune position ouverte cachée
   const completedSignals = filtered.filter(s => s._outcome === 'win' || s._outcome === 'loss' || s._outcome === 'be');
 
-  const inp = { background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.18)', borderRadius: '5px', padding: '7px 10px', color: '#dde4ef', fontSize: '12px', fontFamily: 'inherit', outline: 'none', width: '80px', boxSizing: 'border-box' };
+  const inp = { background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.18)', borderRadius: '5px', padding: '7px 10px', color: '#dde4ef', fontSize:'13px', fontFamily: 'inherit', outline: 'none', width: '80px', boxSizing: 'border-box' };
 
   return (
     <div style={{ padding: '24px 28px', maxWidth: '960px' }} ref={flashRef}>
@@ -2410,29 +2410,29 @@ export default function Bot() {
             <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8edf8', margin: '0 0 4px 0', letterSpacing: '1px' }}>
               BOT TRADING
             </h1>
-            <div style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '2px' }}>MNQ · SIGNAUX ICT / SMC EN TEMPS RÉEL</div>
+            <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px' }}>MNQ · SIGNAUX ICT / SMC EN TEMPS RÉEL</div>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: serverOk ? '#8899bb' : '#ff4455', boxShadow: serverOk ? '0 0 8px #8899bb' : '0 0 8px #ff4455', animation: serverOk ? 'pulse 2s infinite' : 'none' }} />
-            <span style={{ fontSize: '11px', color: serverOk ? '#566880' : '#ff4455', letterSpacing: '1px' }}>{serverOk ? 'SERVEUR ACTIF' : 'SERVEUR ERREUR'}</span>
+            <span style={{ fontSize:'13px', color: serverOk ? '#566880' : '#ff4455', letterSpacing: '1px' }}>{serverOk ? 'SERVEUR ACTIF' : 'SERVEUR ERREUR'}</span>
           </div>
         </div>
       </div>
 
       {/* Webhook URL bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(0,255,136,0.03)', border: '1px solid rgba(136,153,187,0.14)', borderRadius: '6px', padding: '10px 14px', marginBottom: '20px' }}>
-        <span style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', flexShrink: 0 }}>WEBHOOK URL</span>
-        <code style={{ flex: 1, fontSize: '12px', color: '#8899bb', background: 'rgba(136,153,187,0.08)', padding: '4px 10px', borderRadius: '4px', letterSpacing: '0.5px' }}>
+        <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', flexShrink: 0 }}>WEBHOOK URL</span>
+        <code style={{ flex: 1, fontSize:'13px', color: '#8899bb', background: 'rgba(136,153,187,0.08)', padding: '4px 10px', borderRadius: '4px', letterSpacing: '0.5px' }}>
           {webhookUrl}
         </code>
         <button onClick={() => copyText(webhookUrl, 'url')}
-          style={{ padding: '5px 12px', background: copied === 'url' ? 'rgba(136,153,187,0.22)' : 'transparent', border: '1px solid rgba(136,153,187,0.35)', borderRadius: '4px', color: '#8899bb', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '1px' }}>
+          style={{ padding: '5px 12px', background: copied === 'url' ? 'rgba(136,153,187,0.22)' : 'transparent', border: '1px solid rgba(136,153,187,0.35)', borderRadius: '4px', color: '#8899bb', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '1px' }}>
           {copied === 'url' ? '✓ COPIÉ' : 'COPIER'}
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', borderLeft: '1px solid rgba(136,153,187,0.10)', paddingLeft: '10px' }}>
-          <span style={{ fontSize: '10px', color: '#5a6a82' }}>PORT</span>
+          <span style={{ fontSize:'12px', color: '#5a6a82' }}>PORT</span>
           <input value={portInput} onChange={e => setPortInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSetPort()} style={{ ...inp, width: '60px' }} />
-          <button onClick={handleSetPort} style={{ padding: '5px 8px', background: 'transparent', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', color: '#5a6a82', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>OK</button>
+          <button onClick={handleSetPort} style={{ padding: '5px 8px', background: 'transparent', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', color: '#5a6a82', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>OK</button>
         </div>
       </div>
 
@@ -2446,12 +2446,12 @@ export default function Bot() {
           { key: 'pine',    label: 'PINE SCRIPT' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            style={{ padding: '8px 16px', background: 'transparent', border: 'none', borderBottom: `2px solid ${tab === t.key ? '#8899bb' : 'transparent'}`, color: tab === t.key ? '#8899bb' : '#5a6a82', fontSize: '11px', fontFamily: 'inherit', letterSpacing: '2px', cursor: 'pointer', transition: 'all 0.15s', marginBottom: '-1px' }}>
+            style={{ padding: '8px 16px', background: 'transparent', border: 'none', borderBottom: `2px solid ${tab === t.key ? '#8899bb' : 'transparent'}`, color: tab === t.key ? '#8899bb' : '#5a6a82', fontSize:'13px', fontFamily: 'inherit', letterSpacing: '2px', cursor: 'pointer', transition: 'all 0.15s', marginBottom: '-1px' }}>
             {t.label}
           </button>
         ))}
         {signals.length > 0 && (
-          <button onClick={handleClearSignals} style={{ marginLeft: 'auto', padding: '6px 12px', background: 'transparent', border: '1px solid rgba(255,68,85,0.15)', borderRadius: '4px', color: '#5a3a3a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.15s', marginBottom: '2px' }}
+          <button onClick={handleClearSignals} style={{ marginLeft: 'auto', padding: '6px 12px', background: 'transparent', border: '1px solid rgba(255,68,85,0.15)', borderRadius: '4px', color: '#5a3a3a', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.15s', marginBottom: '2px' }}
             onMouseEnter={e => { e.currentTarget.style.color = '#ff4455'; e.currentTarget.style.borderColor = 'rgba(255,68,85,0.4)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = '#5a3a3a'; e.currentTarget.style.borderColor = 'rgba(255,68,85,0.15)'; }}
           >EFFACER</button>
@@ -2463,24 +2463,24 @@ export default function Bot() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '10px 16px', background: 'rgba(0,255,136,0.03)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#8899bb', boxShadow: '0 0 6px #8899bb' }} />
-            <span style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px' }}>HISTORIQUE SAUVEGARDÉ</span>
+            <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px' }}>HISTORIQUE SAUVEGARDÉ</span>
           </div>
           <div style={{ display: 'flex', gap: '14px', flex: 1, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '12px', color: '#dde4ef', fontWeight: '700' }}>{stats.total} signal{stats.total > 1 ? 's' : ''}</span>
-            <span style={{ fontSize: '12px', color: '#8899bb' }}>▲ {stats.longs} LONG</span>
-            <span style={{ fontSize: '12px', color: '#ff4455' }}>▼ {stats.shorts} SHORT</span>
+            <span style={{ fontSize:'13px', color: '#dde4ef', fontWeight: '700' }}>{stats.total} signal{stats.total > 1 ? 's' : ''}</span>
+            <span style={{ fontSize:'13px', color: '#8899bb' }}>▲ {stats.longs} LONG</span>
+            <span style={{ fontSize:'13px', color: '#ff4455' }}>▼ {stats.shorts} SHORT</span>
             {stats.oldest && (
-              <span style={{ fontSize: '11px', color: '#5a6a82' }}>
+              <span style={{ fontSize:'13px', color: '#5a6a82' }}>
                 depuis {fmtTime(stats.oldest)}
               </span>
             )}
             {stats.bots?.length > 0 && (
-              <span style={{ fontSize: '11px', color: '#5a6a82' }}>
+              <span style={{ fontSize:'13px', color: '#5a6a82' }}>
                 {stats.bots.join(' · ')}
               </span>
             )}
           </div>
-          <div style={{ fontSize: '9px', color: '#3a1818', fontStyle: 'italic' }}>persisté au redémarrage</div>
+          <div style={{ fontSize:'12px', color: '#3a1818', fontStyle: 'italic' }}>persisté au redémarrage</div>
         </div>
       )}
 
@@ -2500,10 +2500,10 @@ export default function Bot() {
                 const sel      = selectedBot === bid;
                 return (
                   <button key={bid} onClick={() => setSelectedBot(bid)}
-                    style={{ padding: '5px 14px', borderRadius: '4px', border: `1px solid ${sel ? c + '80' : 'rgba(136,153,187,0.12)'}`, background: sel ? `${c}15` : 'transparent', color: sel ? c : '#5a6a82', fontSize: '11px', fontFamily: 'inherit', fontWeight: sel ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '1px', position: 'relative' }}>
+                    style={{ padding: '5px 14px', borderRadius: '4px', border: `1px solid ${sel ? c + '80' : 'rgba(136,153,187,0.12)'}`, background: sel ? `${c}15` : 'transparent', color: sel ? c : '#5a6a82', fontSize:'13px', fontFamily: 'inherit', fontWeight: sel ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '1px', position: 'relative' }}>
                     {bid} <span style={{ opacity: 0.6 }}>({cnt})</span>
                     {activeCnt > 0 && (
-                      <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#f0c020', color: '#1a1a00', fontSize: '8px', fontWeight: '900', borderRadius: '8px', padding: '0px 4px', minWidth: '14px', textAlign: 'center', lineHeight: '14px', animation: 'pulse 2s infinite' }}>{activeCnt}</span>
+                      <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#f0c020', color: '#1a1a00', fontSize:'11px', fontWeight: '900', borderRadius: '8px', padding: '0px 4px', minWidth: '14px', textAlign: 'center', lineHeight: '14px', animation: 'pulse 2s infinite' }}>{activeCnt}</span>
                     )}
                   </button>
                 );
@@ -2524,9 +2524,9 @@ export default function Bot() {
                   { label: 'P&L NET', value: `${st.totalUsd >= 0 ? '+' : ''}$${st.totalUsd}`, sub: '5 × $2/pt', color: ptsColor },
                 ].map(card => (
                   <div key={card.label} style={{ background: 'rgba(14,15,22,0.5)', border: `1px solid ${card.color}20`, borderRadius: '6px', padding: '10px 14px' }}>
-                    <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '4px' }}>{card.label}</div>
+                    <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '4px' }}>{card.label}</div>
                     <div style={{ fontSize: '16px', fontWeight: '700', color: card.color }}>{card.value}</div>
-                    <div style={{ fontSize: '10px', color: '#3a5a3a', marginTop: '2px' }}>{card.sub}</div>
+                    <div style={{ fontSize:'12px', color: '#3a5a3a', marginTop: '2px' }}>{card.sub}</div>
                   </div>
                 ))}
               </div>
@@ -2534,7 +2534,7 @@ export default function Bot() {
           })()}
 
           {saveMsg && (
-            <div style={{ marginBottom: '14px', padding: '10px 14px', background: saveMsg.startsWith('Erreur') ? 'rgba(255,68,85,0.1)' : 'rgba(136,153,187,0.12)', border: `1px solid ${saveMsg.startsWith('Erreur') ? 'rgba(255,68,85,0.3)' : 'rgba(136,153,187,0.35)'}`, borderRadius: '5px', fontSize: '12px', color: saveMsg.startsWith('Erreur') ? '#ff4455' : '#8899bb' }}>
+            <div style={{ marginBottom: '14px', padding: '10px 14px', background: saveMsg.startsWith('Erreur') ? 'rgba(255,68,85,0.1)' : 'rgba(136,153,187,0.12)', border: `1px solid ${saveMsg.startsWith('Erreur') ? 'rgba(255,68,85,0.3)' : 'rgba(136,153,187,0.35)'}`, borderRadius: '5px', fontSize:'13px', color: saveMsg.startsWith('Erreur') ? '#ff4455' : '#8899bb' }}>
               {saveMsg}
             </div>
           )}
@@ -2543,8 +2543,8 @@ export default function Bot() {
             <div style={{ textAlign: 'center', padding: '60px 20px', border: '1px dashed rgba(136,153,187,0.12)', borderRadius: '8px' }}>
               <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.4 }}>📡</div>
               <div style={{ fontSize: '13px', color: '#5a6a82', marginBottom: '6px' }}>{signals.length > 0 ? `Aucun signal pour ${selectedBot}` : 'En attente de signaux...'}</div>
-              <div style={{ fontSize: '11px', color: '#3a1818' }}>Configure ngrok + TradingView pour recevoir les alertes</div>
-              <button onClick={() => setTab('setup')} style={{ marginTop: '14px', padding: '7px 16px', background: 'transparent', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', color: '#566880', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px' }}>
+              <div style={{ fontSize:'13px', color: '#3a1818' }}>Configure ngrok + TradingView pour recevoir les alertes</div>
+              <button onClick={() => setTab('setup')} style={{ marginTop: '14px', padding: '7px 16px', background: 'transparent', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', color: '#566880', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px' }}>
                 VOIR LA CONFIGURATION →
               </button>
             </div>
@@ -2554,7 +2554,7 @@ export default function Bot() {
               {/* DERNIER SIGNAL — affiché uniquement quand aucun slot actif (évite le double affichage) */}
               {activeSignals.length === 0 && latest && (
                 <div>
-                  <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>DERNIER SIGNAL</div>
+                  <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>DERNIER SIGNAL</div>
                   <SignalCard signal={latest} onSave={saving ? null : handleSaveSignal} isLatest={true} />
                 </div>
               )}
@@ -2564,9 +2564,9 @@ export default function Bot() {
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                     <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#f0c020', boxShadow: '0 0 6px #f0c020', animation: 'pulse 2s infinite', flexShrink: 0 }} />
-                    <span style={{ fontSize: '10px', color: '#f0c020', letterSpacing: '2px', fontWeight: '700' }}>SLOTS EN COURS</span>
-                    <span style={{ fontSize: '10px', background: 'rgba(240,192,32,0.12)', border: '1px solid rgba(240,192,32,0.3)', color: '#f0c020', padding: '1px 8px', borderRadius: '10px', fontWeight: '700' }}>{activeSignals.length}</span>
-                    <span style={{ fontSize: '10px', color: '#3a5a3a' }}>— BE manuel ou auto (retour entrée) libère le slot TradingView</span>
+                    <span style={{ fontSize:'12px', color: '#f0c020', letterSpacing: '2px', fontWeight: '700' }}>SLOTS EN COURS</span>
+                    <span style={{ fontSize:'12px', background: 'rgba(240,192,32,0.12)', border: '1px solid rgba(240,192,32,0.3)', color: '#f0c020', padding: '1px 8px', borderRadius: '10px', fontWeight: '700' }}>{activeSignals.length}</span>
+                    <span style={{ fontSize:'12px', color: '#3a5a3a' }}>— BE manuel ou auto (retour entrée) libère le slot TradingView</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {activeSignals.map((sig, i) => {
@@ -2587,55 +2587,55 @@ export default function Bot() {
                           {/* Header */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                             <div style={{ fontSize: '14px', fontWeight: '800', color: dirColor, letterSpacing: '1px' }}>{isL ? '▲' : '▼'} {dir}</div>
-                            {sig.bot && <span style={{ fontSize: '9px', color: botColor, background: `${botColor}15`, border: `1px solid ${botColor}40`, padding: '1px 6px', borderRadius: '3px', fontWeight: '700' }}>{sig.bot}</span>}
-                            {tf && <span style={{ fontSize: '9px', color: '#b09020', background: 'rgba(240,192,32,0.1)', border: '1px solid rgba(240,192,32,0.25)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{tf}</span>}
-                            {sig.type === 'test' && <span style={{ fontSize: '8px', background: 'rgba(240,120,32,0.15)', border: '1px solid rgba(240,120,32,0.4)', color: '#f07820', padding: '1px 4px', borderRadius: '2px', fontWeight: '700' }}>TEST</span>}
-                            <span style={{ marginLeft: 'auto', fontSize: '10px', color: '#5868a0' }}>{fmtTime(sig._receivedAt)}</span>
+                            {sig.bot && <span style={{ fontSize:'12px', color: botColor, background: `${botColor}15`, border: `1px solid ${botColor}40`, padding: '1px 6px', borderRadius: '3px', fontWeight: '700' }}>{sig.bot}</span>}
+                            {tf && <span style={{ fontSize:'12px', color: '#b09020', background: 'rgba(240,192,32,0.1)', border: '1px solid rgba(240,192,32,0.25)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{tf}</span>}
+                            {sig.type === 'test' && <span style={{ fontSize:'11px', background: 'rgba(240,120,32,0.15)', border: '1px solid rgba(240,120,32,0.4)', color: '#f07820', padding: '1px 4px', borderRadius: '2px', fontWeight: '700' }}>TEST</span>}
+                            <span style={{ marginLeft: 'auto', fontSize:'12px', color: '#5868a0' }}>{fmtTime(sig._receivedAt)}</span>
                           </div>
                           {/* Niveaux */}
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '6px', marginBottom: '10px' }}>
                             <div style={{ background: 'rgba(14,15,22,0.5)', borderRadius: '5px', padding: '7px 10px' }}>
-                              <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '2px' }}>📍 ENTRÉE</div>
+                              <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '2px' }}>📍 ENTRÉE</div>
                               <div style={{ fontSize: '13px', fontWeight: '700', color: '#e8edf8' }}>{entry.toFixed(2)}</div>
                             </div>
                             <div style={{ background: 'rgba(255,68,85,0.06)', borderRadius: '5px', padding: '7px 10px' }}>
-                              <div style={{ fontSize: '9px', color: '#4a5a72', letterSpacing: '1px', marginBottom: '2px' }}>🛑 SL {slPts && <span style={{ color: '#3a2a2a' }}>−{slPts}pts</span>}</div>
+                              <div style={{ fontSize:'12px', color: '#4a5a72', letterSpacing: '1px', marginBottom: '2px' }}>🛑 SL {slPts && <span style={{ color: '#3a2a2a' }}>−{slPts}pts</span>}</div>
                               <div style={{ fontSize: '13px', fontWeight: '700', color: '#ff7788' }}>{sl ? sl.toFixed(2) : '—'}</div>
                             </div>
                             <div style={{ background: `rgba(${dirRgb},0.05)`, borderRadius: '5px', padding: '7px 10px' }}>
-                              <div style={{ fontSize: '9px', color: '#3a1a1a', letterSpacing: '1px', marginBottom: '2px' }}>🎯 TP {tpPts && <span style={{ color: '#3a1a1a' }}>+{tpPts}pts</span>}</div>
+                              <div style={{ fontSize:'12px', color: '#3a1a1a', letterSpacing: '1px', marginBottom: '2px' }}>🎯 TP {tpPts && <span style={{ color: '#3a1a1a' }}>+{tpPts}pts</span>}</div>
                               <div style={{ fontSize: '13px', fontWeight: '700', color: '#8899bb' }}>{tp ? tp.toFixed(2) : '—'}</div>
                             </div>
                           </div>
                           {/* Actions */}
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '10px', color: '#3a5a3a', marginRight: '2px' }}>Clôturer :</span>
+                            <span style={{ fontSize:'12px', color: '#3a5a3a', marginRight: '2px' }}>Clôturer :</span>
                             {[['win','✓ WIN','#8899bb'],['loss','✗ LOSS','#ff4455'],['be','— BE','#f0c020']].map(([key, label, c]) => (
                               <button key={key} onClick={() => handleUpdateOutcome(sig._id, sig._outcome, key)}
-                                style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${c}60`, background: `${c}15`, color: c, fontSize: '11px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', transition: 'all 0.12s', letterSpacing: '0.5px' }}
+                                style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${c}60`, background: `${c}15`, color: c, fontSize:'13px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', transition: 'all 0.12s', letterSpacing: '0.5px' }}
                                 onMouseEnter={e => e.currentTarget.style.background = `${c}25`}
                                 onMouseLeave={e => e.currentTarget.style.background = `${c}15`}
                               >{label}</button>
                             ))}
                             <div style={{ marginLeft: 'auto', display: 'flex', gap: '5px' }}>
                               <button onClick={() => handleSaveSignal(sig)} title="Sauvegarder dans le journal"
-                                style={{ padding: '4px 10px', background: 'none', border: '1px solid rgba(136,153,187,0.18)', borderRadius: '4px', color: '#5a6a82', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s' }}
+                                style={{ padding: '4px 10px', background: 'none', border: '1px solid rgba(136,153,187,0.18)', borderRadius: '4px', color: '#5a6a82', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s' }}
                                 onMouseEnter={e => { e.currentTarget.style.color = '#8899bb'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.45)'; }}
                                 onMouseLeave={e => { e.currentTarget.style.color = '#5a6a82'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.18)'; }}
                               >+ Journal</button>
                               <button onClick={() => { if (window.confirm('Ignorer ce signal ?')) handleUpdateOutcome(sig._id, sig._outcome, 'skip'); }} title="Ignorer — sortie non comptabilisée"
-                                style={{ padding: '4px 8px', background: 'none', border: '1px solid rgba(100,100,100,0.15)', borderRadius: '4px', color: '#3a3a3a', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s' }}
+                                style={{ padding: '4px 8px', background: 'none', border: '1px solid rgba(100,100,100,0.15)', borderRadius: '4px', color: '#3a3a3a', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s' }}
                                 onMouseEnter={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.borderColor = 'rgba(100,100,100,0.35)'; }}
                                 onMouseLeave={e => { e.currentTarget.style.color = '#3a3a3a'; e.currentTarget.style.borderColor = 'rgba(100,100,100,0.15)'; }}
                               >✕</button>
                             </div>
                           </div>
-                          {sig.context && <div style={{ marginTop: '6px', fontSize: '10px', color: '#5a6a82', fontStyle: 'italic' }}>{sig.context}</div>}
+                          {sig.context && <div style={{ marginTop: '6px', fontSize:'12px', color: '#5a6a82', fontStyle: 'italic' }}>{sig.context}</div>}
                         </div>
                       );
                     })}
                   </div>
-                  <div style={{ marginTop: '8px', fontSize: '10px', color: '#3a1818', lineHeight: '1.6' }}>
+                  <div style={{ marginTop: '8px', fontSize:'12px', color: '#3a1818', lineHeight: '1.6' }}>
                     💡 <strong style={{ color: '#f0c020' }}>BE = Break Even</strong> — libère le slot dans le dashboard. Sur TradingView, cocher "🟡 Clôturer en BE" dans les settings du script OU attendre le retour auto au prix d'entrée (≥5pts de profit puis retour).
                   </div>
                 </div>
@@ -2645,24 +2645,24 @@ export default function Bot() {
               {completedSignals.length > 0 && (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>TERMINÉS</span>
-                    <span style={{ fontSize: '10px', background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.18)', color: '#3a9a5a', padding: '1px 8px', borderRadius: '10px', fontWeight: '700' }}>{completedSignals.length}</span>
+                    <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>TERMINÉS</span>
+                    <span style={{ fontSize:'12px', background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.18)', color: '#3a9a5a', padding: '1px 8px', borderRadius: '10px', fontWeight: '700' }}>{completedSignals.length}</span>
                     {completedSignals.filter(s => s._outcome === 'win').length > 0 && (
-                      <span style={{ fontSize: '10px', color: '#8899bb', fontWeight: '700' }}>✓ {completedSignals.filter(s => s._outcome === 'win').length}W</span>
+                      <span style={{ fontSize:'12px', color: '#8899bb', fontWeight: '700' }}>✓ {completedSignals.filter(s => s._outcome === 'win').length}W</span>
                     )}
                     {completedSignals.filter(s => s._outcome === 'loss').length > 0 && (
-                      <span style={{ fontSize: '10px', color: '#ff4455', fontWeight: '700' }}>✗ {completedSignals.filter(s => s._outcome === 'loss').length}L</span>
+                      <span style={{ fontSize:'12px', color: '#ff4455', fontWeight: '700' }}>✗ {completedSignals.filter(s => s._outcome === 'loss').length}L</span>
                     )}
                     {completedSignals.filter(s => s._outcome === 'be').length > 0 && (
-                      <span style={{ fontSize: '10px', color: '#f0c020', fontWeight: '700' }}>— {completedSignals.filter(s => s._outcome === 'be').length}BE</span>
+                      <span style={{ fontSize:'12px', color: '#f0c020', fontWeight: '700' }}>— {completedSignals.filter(s => s._outcome === 'be').length}BE</span>
                     )}
                   </div>
                   <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', overflow: 'hidden' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize:'13px' }}>
                       <thead>
                         <tr style={{ background: 'rgba(136,153,187,0.05)', borderBottom: '1px solid rgba(136,153,187,0.10)' }}>
                           {['HEURE', 'TF', 'DIR', 'ENTRY', 'SL', 'TP', 'R:R', 'CONTEXTE', 'RÉSULTAT', ''].map(h => (
-                            <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: '9px', color: '#5a6a82', letterSpacing: '1.5px', fontWeight: '700' }}>{h}</th>
+                            <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize:'12px', color: '#5a6a82', letterSpacing: '1.5px', fontWeight: '700' }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -2683,8 +2683,8 @@ export default function Bot() {
                               <td style={{ padding: '8px 10px', color: '#6878a0' }}>{time}</td>
                               <td style={{ padding: '8px 6px' }}>
                                 {tf
-                                  ? <span style={{ fontSize: '10px', color: '#3a9a5a', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.14)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{tf}</span>
-                                  : <span style={{ fontSize: '10px', color: '#3a1818' }}>—</span>
+                                  ? <span style={{ fontSize:'12px', color: '#3a9a5a', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.14)', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{tf}</span>
+                                  : <span style={{ fontSize:'12px', color: '#3a1818' }}>—</span>
                                 }
                               </td>
                               <td style={{ padding: '8px 10px', fontWeight: '700', color }}>{isL ? '▲' : '▼'} {dir}</td>
@@ -2692,18 +2692,18 @@ export default function Bot() {
                               <td style={{ padding: '8px 10px', color: '#ff7788' }}>{parseFloat(sig.sl)?.toFixed(2) ?? '—'}</td>
                               <td style={{ padding: '8px 10px', color: '#8899bb' }}>{tp?.toFixed(2) ?? '—'}</td>
                               <td style={{ padding: '8px 10px', color }}>{sig.rr || '—'}</td>
-                              <td style={{ padding: '8px 10px', color: '#5868a0', fontSize: '10px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sig.context || '—'}</td>
+                              <td style={{ padding: '8px 10px', color: '#5868a0', fontSize:'12px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sig.context || '—'}</td>
                               <td style={{ padding: '6px 8px' }}>
                                 <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-                                  {sig.type === 'test' && <span style={{ fontSize: '8px', background: 'rgba(240,120,32,0.15)', border: '1px solid rgba(240,120,32,0.4)', color: '#f07820', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', letterSpacing: '1px', marginRight: '2px' }}>TEST</span>}
+                                  {sig.type === 'test' && <span style={{ fontSize:'11px', background: 'rgba(240,120,32,0.15)', border: '1px solid rgba(240,120,32,0.4)', color: '#f07820', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', letterSpacing: '1px', marginRight: '2px' }}>TEST</span>}
                                   {sig._autoOutcome && sig._outcome && (
-                                    <span style={{ fontSize: '8px', background: 'rgba(0,170,255,0.15)', border: '1px solid rgba(0,170,255,0.3)', color: '#00aaff', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', letterSpacing: '1px', marginRight: '2px' }}>AUTO</span>
+                                    <span style={{ fontSize:'11px', background: 'rgba(0,170,255,0.15)', border: '1px solid rgba(0,170,255,0.3)', color: '#00aaff', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', letterSpacing: '1px', marginRight: '2px' }}>AUTO</span>
                                   )}
                                   {[['win','W','#8899bb'],['loss','L','#ff4455'],['be','BE','#f0c020']].map(([key, label, c]) => {
                                     const sel = sig._outcome === key;
                                     return (
                                       <button key={key} onClick={() => handleUpdateOutcome(sig._id, sig._outcome, key)}
-                                        style={{ padding: '2px 6px', borderRadius: '3px', border: `1px solid ${sel ? c + '80' : 'rgba(136,153,187,0.12)'}`, background: sel ? `${c}20` : 'transparent', color: sel ? c : '#5a6a82', fontSize: '10px', fontFamily: 'inherit', fontWeight: sel ? '700' : '400', cursor: 'pointer', transition: 'all 0.12s' }}
+                                        style={{ padding: '2px 6px', borderRadius: '3px', border: `1px solid ${sel ? c + '80' : 'rgba(136,153,187,0.12)'}`, background: sel ? `${c}20` : 'transparent', color: sel ? c : '#5a6a82', fontSize:'12px', fontFamily: 'inherit', fontWeight: sel ? '700' : '400', cursor: 'pointer', transition: 'all 0.12s' }}
                                         onMouseEnter={e => { if (!sel) { e.currentTarget.style.color = c; e.currentTarget.style.borderColor = `${c}50`; }}}
                                         onMouseLeave={e => { if (!sel) { e.currentTarget.style.color = '#5a6a82'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.12)'; }}}
                                       >{label}</button>
@@ -2713,7 +2713,7 @@ export default function Bot() {
                               </td>
                               <td style={{ padding: '6px 8px' }}>
                                 <button onClick={() => handleSaveSignal(sig)}
-                                  style={{ background: 'none', border: '1px solid rgba(136,153,187,0.18)', borderRadius: '3px', color: '#5a6a82', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', padding: '2px 7px', transition: 'all 0.12s' }}
+                                  style={{ background: 'none', border: '1px solid rgba(136,153,187,0.18)', borderRadius: '3px', color: '#5a6a82', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', padding: '2px 7px', transition: 'all 0.12s' }}
                                   onMouseEnter={e => { e.currentTarget.style.color = '#8899bb'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.45)'; }}
                                   onMouseLeave={e => { e.currentTarget.style.color = '#5a6a82'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.18)'; }}
                                 >+</button>
@@ -2739,7 +2739,7 @@ export default function Bot() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
           {/* Explanation */}
-          <div style={{ padding: '14px 18px', background: 'rgba(0,170,255,0.05)', border: '1px solid rgba(0,170,255,0.15)', borderRadius: '6px', fontSize: '12px', color: '#5a8a9a', lineHeight: '1.7' }}>
+          <div style={{ padding: '14px 18px', background: 'rgba(0,170,255,0.05)', border: '1px solid rgba(0,170,255,0.15)', borderRadius: '6px', fontSize:'13px', color: '#5a8a9a', lineHeight: '1.7' }}>
             <span style={{ color: '#00aaff', fontWeight: '700' }}>Pourquoi pas en iframe ?</span> — Le symbole <code style={{ background: 'rgba(0,170,255,0.1)', padding: '1px 6px', borderRadius: '3px', color: '#00ddff' }}>MNQ1!</code> sur TradingView nécessite ta session active (compte + données CME). Un iframe ne peut pas accéder à tes cookies de connexion. Ouvre TradingView dans ton navigateur : ta session est déjà là, les données sont en temps réel.
           </div>
 
@@ -2783,7 +2783,7 @@ export default function Bot() {
                 </div>
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: '700', color: btn.color, marginBottom: '2px' }}>{btn.label}</div>
-                  <div style={{ fontSize: '11px', color: '#5a6a82' }}>{btn.sub}</div>
+                  <div style={{ fontSize:'13px', color: '#5a6a82' }}>{btn.sub}</div>
                 </div>
                 <div style={{ marginLeft: 'auto', fontSize: '16px', color: `${btn.color}60` }}>↗</div>
               </button>
@@ -2792,14 +2792,14 @@ export default function Bot() {
 
           {/* Custom URL */}
           <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '14px 18px' }}>
-            <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>OUVRIR UN SYMBOLE PERSONNALISÉ</div>
+            <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>OUVRIR UN SYMBOLE PERSONNALISÉ</div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <CustomTVInput />
             </div>
           </div>
 
           {/* Tip */}
-          <div style={{ padding: '10px 14px', background: 'rgba(240,192,32,0.04)', border: '1px solid rgba(240,192,32,0.12)', borderRadius: '5px', fontSize: '11px', color: '#6a5a20', lineHeight: '1.6' }}>
+          <div style={{ padding: '10px 14px', background: 'rgba(240,192,32,0.04)', border: '1px solid rgba(240,192,32,0.12)', borderRadius: '5px', fontSize:'13px', color: '#6a5a20', lineHeight: '1.6' }}>
             <strong style={{ color: '#f0c020' }}>Astuce :</strong> Dans TradingView, active les alertes sur l'indicateur Pine Script (onglet PINE SCRIPT) et configure le webhook vers ton URL ngrok. Le dashboard recevra les signaux automatiquement pendant que le graphique tourne en parallèle.
           </div>
         </div>
@@ -2811,38 +2811,38 @@ export default function Bot() {
 
           {/* ── DIAGNOSTIQUE RAPIDE ── */}
           <div style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.18)', borderRadius: '8px', padding: '16px 20px' }}>
-            <div style={{ fontSize: '10px', color: '#8899bb', letterSpacing: '2px', marginBottom: '14px', fontWeight: '700' }}>🔍 DIAGNOSTIQUE RAPIDE</div>
+            <div style={{ fontSize:'12px', color: '#8899bb', letterSpacing: '2px', marginBottom: '14px', fontWeight: '700' }}>🔍 DIAGNOSTIQUE RAPIDE</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '14px' }}>
               {/* Serveur local */}
               <div style={{ background: serverOk ? 'rgba(136,153,187,0.08)' : 'rgba(255,68,85,0.06)', border: `1px solid ${serverOk ? 'rgba(136,153,187,0.22)' : 'rgba(255,68,85,0.2)'}`, borderRadius: '6px', padding: '10px 12px' }}>
-                <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>SERVEUR LOCAL</div>
+                <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>SERVEUR LOCAL</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: serverOk ? '#8899bb' : '#ff4455', boxShadow: serverOk ? '0 0 6px #8899bb' : '0 0 6px #ff4455' }} />
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: serverOk ? '#8899bb' : '#ff4455' }}>{serverOk ? 'ACTIF' : 'ERREUR'}</span>
+                  <span style={{ fontSize:'13px', fontWeight: '700', color: serverOk ? '#8899bb' : '#ff4455' }}>{serverOk ? 'ACTIF' : 'ERREUR'}</span>
                 </div>
-                <div style={{ fontSize: '10px', color: '#5a6a82', marginTop: '4px' }}>Port {port}</div>
+                <div style={{ fontSize:'12px', color: '#5a6a82', marginTop: '4px' }}>Port {port}</div>
               </div>
               {/* Test local */}
               <div style={{ background: testStatus === 'ok' ? 'rgba(136,153,187,0.08)' : testStatus === 'err' ? 'rgba(255,68,85,0.06)' : 'rgba(14,15,22,0.3)', border: `1px solid ${testStatus === 'ok' ? 'rgba(136,153,187,0.22)' : testStatus === 'err' ? 'rgba(255,68,85,0.2)' : 'rgba(136,153,187,0.10)'}`, borderRadius: '6px', padding: '10px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>TEST LOCAL</div>
-                {testStatus === 'ok' && <div style={{ fontSize: '11px', color: '#8899bb', fontWeight: '700' }}>✓ Signal reçu !</div>}
-                {testStatus === 'err' && <div style={{ fontSize: '11px', color: '#ff4455', fontWeight: '700' }}>✗ Serveur KO</div>}
-                {testStatus === null && <div style={{ fontSize: '10px', color: '#5a6a82' }}>Envoi direct localhost</div>}
-                <button onClick={handleTestWebhook} style={{ marginTop: '6px', padding: '4px 10px', background: 'transparent', border: '1px solid rgba(136,153,187,0.35)', borderRadius: '4px', color: '#566880', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s' }}
+                <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>TEST LOCAL</div>
+                {testStatus === 'ok' && <div style={{ fontSize:'13px', color: '#8899bb', fontWeight: '700' }}>✓ Signal reçu !</div>}
+                {testStatus === 'err' && <div style={{ fontSize:'13px', color: '#ff4455', fontWeight: '700' }}>✗ Serveur KO</div>}
+                {testStatus === null && <div style={{ fontSize:'12px', color: '#5a6a82' }}>Envoi direct localhost</div>}
+                <button onClick={handleTestWebhook} style={{ marginTop: '6px', padding: '4px 10px', background: 'transparent', border: '1px solid rgba(136,153,187,0.35)', borderRadius: '4px', color: '#566880', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(136,153,187,0.10)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >TESTER →</button>
               </div>
               {/* Signaux reçus */}
               <div style={{ background: 'rgba(14,15,22,0.3)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '10px 12px' }}>
-                <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>SIGNAUX REÇUS</div>
+                <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>SIGNAUX REÇUS</div>
                 <div style={{ fontSize: '20px', fontWeight: '700', color: signals.length > 0 ? '#8899bb' : '#5a6a82' }}>{signals.length}</div>
-                <div style={{ fontSize: '10px', color: '#5a6a82', marginTop: '2px' }}>
+                <div style={{ fontSize:'12px', color: '#5a6a82', marginTop: '2px' }}>
                   {signals.length > 0 ? `dernier : ${fmtTime(signals[0]?._receivedAt)}` : 'aucun signal reçu'}
                 </div>
               </div>
             </div>
-            <div style={{ fontSize: '11px', color: '#3a5a3a', lineHeight: '1.7', background: 'rgba(0,0,0,0.2)', padding: '10px 12px', borderRadius: '5px' }}>
+            <div style={{ fontSize:'13px', color: '#3a5a3a', lineHeight: '1.7', background: 'rgba(0,0,0,0.2)', padding: '10px 12px', borderRadius: '5px' }}>
               <strong style={{ color: '#f0c020' }}>Alertes non reçues ?</strong> Vérifie dans l'ordre :<br/>
               <span style={{ color: '#dde4ef' }}>① Clique TESTER</span> — si ça fonctionne, le serveur local est OK → le problème est <strong style={{ color: '#f0c020' }}>ngrok ou TradingView</strong><br/>
               <span style={{ color: '#dde4ef' }}>② Vérifie que ngrok tourne</span> avec la bonne URL dans l'alerte TradingView<br/>
@@ -2853,14 +2853,14 @@ export default function Bot() {
           {/* ── LOG WEBHOOK EN TEMPS RÉEL ── */}
           <div style={{ background: 'rgba(4,12,8,0.8)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '8px', padding: '14px 18px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-              <div style={{ fontSize: '10px', color: '#8899bb', letterSpacing: '2px', fontWeight: '700' }}>📡 LOG WEBHOOK — TEMPS RÉEL</div>
-              <span style={{ fontSize: '10px', color: '#5a6a82' }}>{webhookLogs.length} requête{webhookLogs.length > 1 ? 's' : ''}</span>
+              <div style={{ fontSize:'12px', color: '#8899bb', letterSpacing: '2px', fontWeight: '700' }}>📡 LOG WEBHOOK — TEMPS RÉEL</div>
+              <span style={{ fontSize:'12px', color: '#5a6a82' }}>{webhookLogs.length} requête{webhookLogs.length > 1 ? 's' : ''}</span>
               {webhookLogs.length > 0 && (
-                <button onClick={() => setWebhookLogs([])} style={{ marginLeft: 'auto', fontSize: '9px', padding: '1px 7px', background: 'transparent', border: '1px solid rgba(255,68,85,0.2)', borderRadius: '3px', color: '#4a2a2a', cursor: 'pointer', fontFamily: 'inherit' }}>EFFACER</button>
+                <button onClick={() => setWebhookLogs([])} style={{ marginLeft: 'auto', fontSize:'12px', padding: '1px 7px', background: 'transparent', border: '1px solid rgba(255,68,85,0.2)', borderRadius: '3px', color: '#4a2a2a', cursor: 'pointer', fontFamily: 'inherit' }}>EFFACER</button>
               )}
             </div>
             {webhookLogs.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '20px', fontSize: '11px', color: '#3a1818' }}>
+              <div style={{ textAlign: 'center', padding: '20px', fontSize:'13px', color: '#3a1818' }}>
                 Aucune requête reçue — les alertes TradingView apparaîtront ici en temps réel
               </div>
             ) : (
@@ -2871,22 +2871,22 @@ export default function Bot() {
                   const time = log.ts ? new Date(log.ts).toLocaleTimeString('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
                   return (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 8px', background: typeBg, borderRadius: '4px', borderLeft: `2px solid ${typeColor}` }}>
-                      <span style={{ fontSize: '9px', color: '#5a6a82', minWidth: '50px', fontFamily: 'monospace' }}>{time}</span>
-                      <span style={{ fontSize: '9px', background: `${typeColor}20`, color: typeColor, padding: '0px 5px', borderRadius: '2px', fontWeight: '700', minWidth: '45px', textAlign: 'center' }}>{log.status}</span>
-                      <span style={{ fontSize: '10px', color: log.status === 400 ? '#ff7766' : '#7888a0', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.label}</span>
-                      <span style={{ fontSize: '9px', color: '#3a1818', fontFamily: 'monospace' }}>{log.from?.replace('::ffff:', '') ?? ''}</span>
+                      <span style={{ fontSize:'12px', color: '#5a6a82', minWidth: '50px', fontFamily: 'monospace' }}>{time}</span>
+                      <span style={{ fontSize:'12px', background: `${typeColor}20`, color: typeColor, padding: '0px 5px', borderRadius: '2px', fontWeight: '700', minWidth: '45px', textAlign: 'center' }}>{log.status}</span>
+                      <span style={{ fontSize:'12px', color: log.status === 400 ? '#ff7766' : '#7888a0', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.label}</span>
+                      <span style={{ fontSize:'12px', color: '#3a1818', fontFamily: 'monospace' }}>{log.from?.replace('::ffff:', '') ?? ''}</span>
                     </div>
                   );
                 })}
               </div>
             )}
-            <div style={{ marginTop: '10px', fontSize: '10px', color: '#3a1a1a', lineHeight: '1.6' }}>
+            <div style={{ marginTop: '10px', fontSize:'12px', color: '#3a1a1a', lineHeight: '1.6' }}>
               Si les alertes TradingView <strong style={{ color: '#dde4ef' }}>n'apparaissent pas ici</strong> mais que le test local fonctionne → <strong style={{ color: '#f0c020' }}>ngrok n'est plus actif ou l'URL a changé.</strong> Relance ngrok et mets à jour l'URL dans TradingView.
             </div>
           </div>
 
-          <div style={{ fontSize: '12px', color: '#6878a0', lineHeight: '1.6', background: 'rgba(0,255,136,0.03)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '6px', padding: '16px 20px' }}>
-            <div style={{ fontSize: '10px', color: '#8899bb', letterSpacing: '2px', marginBottom: '12px', fontWeight: '700' }}>COMMENT ÇA FONCTIONNE</div>
+          <div style={{ fontSize:'13px', color: '#6878a0', lineHeight: '1.6', background: 'rgba(0,255,136,0.03)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '6px', padding: '16px 20px' }}>
+            <div style={{ fontSize:'12px', color: '#8899bb', letterSpacing: '2px', marginBottom: '12px', fontWeight: '700' }}>COMMENT ÇA FONCTIONNE</div>
             Le bot reçoit les alertes de TradingView via un <strong style={{ color: '#8899bb' }}>webhook</strong>. Comme TradingView envoie depuis ses serveurs, il faut exposer ton serveur local sur Internet via <strong style={{ color: '#8899bb' }}>ngrok</strong> (gratuit).
           </div>
 
@@ -2896,32 +2896,32 @@ export default function Bot() {
               n: '1', title: 'Installe ngrok',
               content: (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ fontSize: '11px', color: '#6878a0' }}>Télécharge ngrok sur <span style={{ color: '#00aaff' }}>ngrok.com</span> (gratuit) puis lance :</div>
+                  <div style={{ fontSize:'13px', color: '#6878a0' }}>Télécharge ngrok sur <span style={{ color: '#00aaff' }}>ngrok.com</span> (gratuit) puis lance :</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <code style={{ flex: 1, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '4px', padding: '8px 12px', fontSize: '12px', color: '#8899bb', fontFamily: 'monospace' }}>
+                    <code style={{ flex: 1, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '4px', padding: '8px 12px', fontSize:'13px', color: '#8899bb', fontFamily: 'monospace' }}>
                       ngrok http {port}
                     </code>
-                    <button onClick={() => copyText(`ngrok http ${port}`, 'ngrok')} style={{ padding: '7px 12px', background: 'transparent', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', color: '#5a6a82', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    <button onClick={() => copyText(`ngrok http ${port}`, 'ngrok')} style={{ padding: '7px 12px', background: 'transparent', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', color: '#5a6a82', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                       {copied === 'ngrok' ? '✓' : 'COPIER'}
                     </button>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#5a6a82' }}>Tu obtiendras une URL du type : <span style={{ color: '#f0c020' }}>https://abc123.ngrok.io</span></div>
+                  <div style={{ fontSize:'13px', color: '#5a6a82' }}>Tu obtiendras une URL du type : <span style={{ color: '#f0c020' }}>https://abc123.ngrok.io</span></div>
                 </div>
               )
             },
             {
               n: '2', title: 'Configure l\'alerte TradingView',
               content: (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px', color: '#6878a0', lineHeight: '1.7' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize:'13px', color: '#6878a0', lineHeight: '1.7' }}>
                   <div>1. Dans TradingView, ajoute le <strong style={{ color: '#dde4ef' }}>Pine Script</strong> (onglet PINE SCRIPT) sur la chart MNQ1! au bon TF</div>
                   <div>2. Clique l'icône <strong style={{ color: '#dde4ef' }}>Horloge ⏰ → Créer une Alerte</strong></div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'rgba(255,68,85,0.05)', border: '1px solid rgba(255,68,85,0.15)', borderRadius: '5px', padding: '8px 12px' }}>
-                    <div style={{ fontSize: '10px', color: '#ff6644', fontWeight: '700', letterSpacing: '1px' }}>⚠ RÉGLAGES CRITIQUES</div>
-                    <div>• Condition : <code style={{ color: '#8899bb', background: 'rgba(136,153,187,0.12)', padding: '1px 5px', borderRadius: '3px', fontSize: '10px' }}>Alert() function calls only</code></div>
-                    <div>• Message : <code style={{ color: '#8899bb', background: 'rgba(136,153,187,0.12)', padding: '1px 5px', borderRadius: '3px', fontSize: '10px' }}>laisser VIDE</code> — le script envoie son propre JSON</div>
-                    <div>• Webhook URL : <code style={{ color: '#f0c020', background: 'rgba(240,192,32,0.1)', padding: '1px 5px', borderRadius: '3px', fontSize: '10px' }}>https://TON_URL_NGROK/webhook</code></div>
+                    <div style={{ fontSize:'12px', color: '#ff6644', fontWeight: '700', letterSpacing: '1px' }}>⚠ RÉGLAGES CRITIQUES</div>
+                    <div>• Condition : <code style={{ color: '#8899bb', background: 'rgba(136,153,187,0.12)', padding: '1px 5px', borderRadius: '3px', fontSize:'12px' }}>Alert() function calls only</code></div>
+                    <div>• Message : <code style={{ color: '#8899bb', background: 'rgba(136,153,187,0.12)', padding: '1px 5px', borderRadius: '3px', fontSize:'12px' }}>laisser VIDE</code> — le script envoie son propre JSON</div>
+                    <div>• Webhook URL : <code style={{ color: '#f0c020', background: 'rgba(240,192,32,0.1)', padding: '1px 5px', borderRadius: '3px', fontSize:'12px' }}>https://TON_URL_NGROK/webhook</code></div>
                   </div>
-                  <div style={{ color: '#3a1a1a', fontSize: '10px' }}>→ Si "Alert() function calls only" n'est pas sélectionné, TradingView envoie le champ Message (vide ou texte) au lieu du JSON du script → 400 Bad Request</div>
+                  <div style={{ color: '#3a1a1a', fontSize:'12px' }}>→ Si "Alert() function calls only" n'est pas sélectionné, TradingView envoie le champ Message (vide ou texte) au lieu du JSON du script → 400 Bad Request</div>
                 </div>
               )
             },
@@ -2929,24 +2929,24 @@ export default function Bot() {
               n: '3', title: 'Teste la connexion',
               content: (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ fontSize: '11px', color: '#6878a0' }}>Envoie un signal de test depuis le terminal :</div>
+                  <div style={{ fontSize:'13px', color: '#6878a0' }}>Envoie un signal de test depuis le terminal :</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <code style={{ flex: 1, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '4px', padding: '8px 12px', fontSize: '11px', color: '#dde4ef', fontFamily: 'monospace', lineHeight: '1.4' }}>
+                    <code style={{ flex: 1, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '4px', padding: '8px 12px', fontSize:'13px', color: '#dde4ef', fontFamily: 'monospace', lineHeight: '1.4' }}>
                       {`curl -X POST ${webhookUrl} -H "Content-Type: application/json" -d "{\\"symbol\\":\\"MNQ\\",\\"signal\\":\\"LONG\\",\\"entry\\":21450,\\"sl\\":21425,\\"tp1\\":21487,\\"tp2\\":21512,\\"rr\\":\\"1:2.5\\",\\"context\\":\\"TEST\\"}"`}
                     </code>
-                    <button onClick={() => copyText(`curl -X POST ${webhookUrl} -H "Content-Type: application/json" -d "{\\"symbol\\":\\"MNQ\\",\\"signal\\":\\"LONG\\",\\"entry\\":21450,\\"sl\\":21425,\\"tp1\\":21487,\\"tp2\\":21512,\\"rr\\":\\"1:2.5\\",\\"context\\":\\"TEST\\"}"`, 'curl')} style={{ padding: '7px 12px', background: 'transparent', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', color: '#5a6a82', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    <button onClick={() => copyText(`curl -X POST ${webhookUrl} -H "Content-Type: application/json" -d "{\\"symbol\\":\\"MNQ\\",\\"signal\\":\\"LONG\\",\\"entry\\":21450,\\"sl\\":21425,\\"tp1\\":21487,\\"tp2\\":21512,\\"rr\\":\\"1:2.5\\",\\"context\\":\\"TEST\\"}"`, 'curl')} style={{ padding: '7px 12px', background: 'transparent', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', color: '#5a6a82', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                       {copied === 'curl' ? '✓' : 'COPIER'}
                     </button>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#5a6a82' }}>Si la connexion est OK, le signal apparaît dans l'onglet SIGNAUX.</div>
+                  <div style={{ fontSize:'13px', color: '#5a6a82' }}>Si la connexion est OK, le signal apparaît dans l'onglet SIGNAUX.</div>
                 </div>
               )
             },
           ].map(step => (
             <div key={step.n} style={{ display: 'flex', gap: '14px', background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '16px 18px' }}>
-              <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'rgba(136,153,187,0.14)', border: '1px solid rgba(136,153,187,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', color: '#8899bb', flexShrink: 0 }}>{step.n}</div>
+              <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'rgba(136,153,187,0.14)', border: '1px solid rgba(136,153,187,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize:'13px', fontWeight: '700', color: '#8899bb', flexShrink: 0 }}>{step.n}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '12px', fontWeight: '700', color: '#dde4ef', marginBottom: '8px', letterSpacing: '1px' }}>{step.title}</div>
+                <div style={{ fontSize:'13px', fontWeight: '700', color: '#dde4ef', marginBottom: '8px', letterSpacing: '1px' }}>{step.title}</div>
                 {step.content}
               </div>
             </div>
@@ -2954,8 +2954,8 @@ export default function Bot() {
 
           {/* Format JSON */}
           <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '16px 18px' }}>
-            <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>FORMAT JSON ACCEPTÉ PAR LE WEBHOOK</div>
-            <pre style={{ margin: 0, fontSize: '11px', color: '#6878a0', fontFamily: 'monospace', lineHeight: '1.6', background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '4px', overflow: 'auto' }}>{`{
+            <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>FORMAT JSON ACCEPTÉ PAR LE WEBHOOK</div>
+            <pre style={{ margin: 0, fontSize:'13px', color: '#6878a0', fontFamily: 'monospace', lineHeight: '1.6', background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '4px', overflow: 'auto' }}>{`{
   "symbol":    "MNQ",          // requis
   "signal":    "LONG",         // requis : "LONG" ou "SHORT"
   "entry":     21450.25,       // requis
@@ -2980,11 +2980,11 @@ export default function Bot() {
               <button key={bot.id} onClick={() => setSelectedPine(bot.id)}
                 style={{ padding: '12px 14px', borderRadius: '7px', border: `1px solid ${selectedPine === bot.id ? bot.color + '60' : 'rgba(136,153,187,0.12)'}`, background: selectedPine === bot.id ? `${bot.color}12` : 'rgba(14,15,22,0.4)', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'all 0.15s' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: selectedPine === bot.id ? bot.color : '#dde4ef' }}>{bot.name}</div>
-                  <div style={{ fontSize: '9px', background: `${bot.color}18`, border: `1px solid ${bot.color}30`, color: bot.color, padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{bot.tf}</div>
+                  <div style={{ fontSize:'13px', fontWeight: '700', color: selectedPine === bot.id ? bot.color : '#dde4ef' }}>{bot.name}</div>
+                  <div style={{ fontSize:'12px', background: `${bot.color}18`, border: `1px solid ${bot.color}30`, color: bot.color, padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>{bot.tf}</div>
                 </div>
-                <div style={{ fontSize: '10px', color: '#5a6a82' }}>SL ×{bot.sl} · TP ×{(bot.sl * 2).toFixed(1)} · R:R 1:2</div>
-                <div style={{ fontSize: '10px', color: '#5a6a82' }}>HTF {bot.htfTf === 'D' ? '1J' : bot.htfTf + 'min'} · score ≥ {bot.minScore}/5</div>
+                <div style={{ fontSize:'12px', color: '#5a6a82' }}>SL ×{bot.sl} · TP ×{(bot.sl * 2).toFixed(1)} · R:R 1:2</div>
+                <div style={{ fontSize:'12px', color: '#5a6a82' }}>HTF {bot.htfTf === 'D' ? '1J' : bot.htfTf + 'min'} · score ≥ {bot.minScore}/5</div>
               </button>
             ))}
           </div>
@@ -2992,23 +2992,23 @@ export default function Bot() {
           {/* Info + copy */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: `${activePine.color}08`, border: `1px solid ${activePine.color}25`, borderRadius: '7px' }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '11px', color: '#6878a0', lineHeight: '1.7' }}>
-                Bot ID : <code style={{ color: activePine.color, background: `${activePine.color}15`, padding: '1px 6px', borderRadius: '3px', fontSize: '11px' }}>{activePine.botId}</code>
+              <div style={{ fontSize:'13px', color: '#6878a0', lineHeight: '1.7' }}>
+                Bot ID : <code style={{ color: activePine.color, background: `${activePine.color}15`, padding: '1px 6px', borderRadius: '3px', fontSize:'13px' }}>{activePine.botId}</code>
                 {' '}— TF <strong style={{ color: activePine.color }}>{activePine.tf}</strong> · HTF {activePine.htfTf === 'D' ? '1J' : activePine.htfTf + 'min'} · SL ×{activePine.sl} · TP ×{(activePine.sl * 2).toFixed(1)}
               </div>
-              <div style={{ fontSize: '10px', color: '#3a5a3a', marginTop: '2px' }}>
+              <div style={{ fontSize:'12px', color: '#3a5a3a', marginTop: '2px' }}>
                 Déployer sur une chart MNQ1! <strong style={{ color: '#dde4ef' }}>{activePine.tf}</strong> · créer une alerte → webhook vers l'URL ngrok
               </div>
             </div>
             <button onClick={() => copyText(generateScript(activePine), `pine_${activePine.id}`)}
-              style={{ padding: '8px 16px', background: copied === `pine_${activePine.id}` ? `${activePine.color}25` : 'transparent', border: `1px solid ${activePine.color}50`, borderRadius: '5px', color: activePine.color, fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
+              style={{ padding: '8px 16px', background: copied === `pine_${activePine.id}` ? `${activePine.color}25` : 'transparent', border: `1px solid ${activePine.color}50`, borderRadius: '5px', color: activePine.color, fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>
               {copied === `pine_${activePine.id}` ? '✓ COPIÉ' : 'COPIER'}
             </button>
           </div>
 
           {/* Script preview */}
           <div style={{ background: 'rgba(4,12,8,0.9)', border: `1px solid ${activePine.color}18`, borderRadius: '6px', overflow: 'auto', maxHeight: '480px' }}>
-            <pre style={{ margin: 0, padding: '16px 18px', fontSize: '11px', color: '#7aaa8a', fontFamily: "'JetBrains Mono','Fira Code',monospace", lineHeight: '1.65', whiteSpace: 'pre' }}>
+            <pre style={{ margin: 0, padding: '16px 18px', fontSize:'13px', color: '#7aaa8a', fontFamily: "'JetBrains Mono','Fira Code',monospace", lineHeight: '1.65', whiteSpace: 'pre' }}>
               {generateScript(activePine).split('\n').map((line, i) => {
                 let color = '#7aaa8a';
                 if (line.startsWith('//')) color = '#5a6a82';
@@ -3021,49 +3021,49 @@ export default function Bot() {
             </pre>
           </div>
 
-          <div style={{ padding: '12px 16px', background: 'rgba(0,170,255,0.04)', border: '1px solid rgba(0,170,255,0.12)', borderRadius: '6px', fontSize: '11px', color: '#3a5a6a', lineHeight: '1.8' }}>
+          <div style={{ padding: '12px 16px', background: 'rgba(0,170,255,0.04)', border: '1px solid rgba(0,170,255,0.12)', borderRadius: '6px', fontSize:'13px', color: '#3a5a6a', lineHeight: '1.8' }}>
             <div style={{ color: '#00aaff', fontWeight: '700', letterSpacing: '1px', marginBottom: '6px' }}>DÉPLOIEMENT MULTI-BOT — 1 chart TradingView par bot</div>
             {PINE_BOTS.map(bot => (
               <div key={bot.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-                <span style={{ fontSize: '9px', background: `${bot.color}18`, border: `1px solid ${bot.color}30`, color: bot.color, padding: '1px 5px', borderRadius: '2px', fontWeight: '700', minWidth: '36px', textAlign: 'center' }}>{bot.tf}</span>
-                <span style={{ color: '#5868a0' }}>→ chart MNQ1! <strong style={{ color: '#7888a0' }}>{bot.tf}</strong> · indicateur <code style={{ color: bot.color, fontSize: '10px' }}>{bot.botId}</code> · alerte webhook</span>
+                <span style={{ fontSize:'12px', background: `${bot.color}18`, border: `1px solid ${bot.color}30`, color: bot.color, padding: '1px 5px', borderRadius: '2px', fontWeight: '700', minWidth: '36px', textAlign: 'center' }}>{bot.tf}</span>
+                <span style={{ color: '#5868a0' }}>→ chart MNQ1! <strong style={{ color: '#7888a0' }}>{bot.tf}</strong> · indicateur <code style={{ color: bot.color, fontSize:'12px' }}>{bot.botId}</code> · alerte webhook</span>
               </div>
             ))}
-            <div style={{ marginTop: '6px', color: '#2a5a4a', fontSize: '10px' }}>Tous les bots pointent vers le même webhook URL ngrok — les signaux arrivent séparés par bot ID.</div>
+            <div style={{ marginTop: '6px', color: '#2a5a4a', fontSize:'12px' }}>Tous les bots pointent vers le même webhook URL ngrok — les signaux arrivent séparés par bot ID.</div>
           </div>
 
           {/* ── PINE EDIT — Indicateur Analyse ── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0' }}>
             <div style={{ height: '1px', flex: 1, background: 'rgba(240,120,32,0.2)' }} />
-            <span style={{ fontSize: '10px', color: '#f07820', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>🔬 INDICATEUR ANALYSE — ICT EDIT</span>
+            <span style={{ fontSize:'12px', color: '#f07820', letterSpacing: '2px', fontWeight: '700', whiteSpace: 'nowrap' }}>🔬 INDICATEUR ANALYSE — ICT EDIT</span>
             <div style={{ height: '1px', flex: 1, background: 'rgba(240,120,32,0.2)' }} />
           </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', padding: '14px 16px', background: 'rgba(240,120,32,0.05)', border: '1px solid rgba(240,120,32,0.2)', borderRadius: '7px' }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: '#f07820', marginBottom: '5px' }}>ICT Setup — Liquidity + MSS + FVG</div>
-              <div style={{ fontSize: '11px', color: '#5a5a3a', lineHeight: '1.7' }}>
-                Indicateur d'analyse visuelle qui envoie des signaux <span style={{ background: 'rgba(240,120,32,0.15)', border: '1px solid rgba(240,120,32,0.4)', color: '#f07820', padding: '0px 5px', borderRadius: '2px', fontSize: '9px', fontWeight: '700' }}>TEST</span> dans le dashboard.
+              <div style={{ fontSize:'13px', fontWeight: '700', color: '#f07820', marginBottom: '5px' }}>ICT Setup — Liquidity + MSS + FVG</div>
+              <div style={{ fontSize:'13px', color: '#5a5a3a', lineHeight: '1.7' }}>
+                Indicateur d'analyse visuelle qui envoie des signaux <span style={{ background: 'rgba(240,120,32,0.15)', border: '1px solid rgba(240,120,32,0.4)', color: '#f07820', padding: '0px 5px', borderRadius: '2px', fontSize:'12px', fontWeight: '700' }}>TEST</span> dans le dashboard.
               </div>
-              <div style={{ fontSize: '10px', color: '#4a4a2a', lineHeight: '1.8', marginTop: '4px' }}>
+              <div style={{ fontSize:'12px', color: '#4a4a2a', lineHeight: '1.8', marginTop: '4px' }}>
                 <div>→ Liquidity sweep (EQH/EQL) · MSS · FVG · Order Block</div>
-                <div>→ Bot ID : <code style={{ color: '#f07820', fontSize: '10px' }}>ICT_EDIT</code> · R:R 1:2 · TP calculé dynamiquement</div>
+                <div>→ Bot ID : <code style={{ color: '#f07820', fontSize:'12px' }}>ICT_EDIT</code> · R:R 1:2 · TP calculé dynamiquement</div>
                 <div>→ BE auto si retour à l'entrée · BE manuel via settings Pine</div>
               </div>
-              <div style={{ marginTop: '8px', background: 'rgba(255,68,85,0.06)', border: '1px solid rgba(255,68,85,0.2)', borderRadius: '5px', padding: '8px 12px', fontSize: '10px', color: '#7a4a3a', lineHeight: '1.7' }}>
+              <div style={{ marginTop: '8px', background: 'rgba(255,68,85,0.06)', border: '1px solid rgba(255,68,85,0.2)', borderRadius: '5px', padding: '8px 12px', fontSize:'12px', color: '#7a4a3a', lineHeight: '1.7' }}>
                 <strong style={{ color: '#ff6644' }}>⚠ Alertes ICT EDIT non reçues ?</strong><br/>
                 Les signaux ne se déclenchent que si <strong style={{ color: '#dde4ef' }}>toutes les conditions s'alignent</strong> : EQH/EQL présent → Sweep → MSS → FVG actif → prix dans le FVG. Vérifier le tableau de bord sur la chart TradingView (5 ✅).<br/>
                 Alerte TradingView : condition = <strong style={{ color: '#8899bb' }}>"Alert() function calls only"</strong>, message = <strong style={{ color: '#8899bb' }}>vide</strong>.
               </div>
             </div>
             <button onClick={() => copyText(PINE_EDIT_SCRIPT, 'pine_edit')}
-              style={{ padding: '8px 16px', background: copied === 'pine_edit' ? 'rgba(240,120,32,0.25)' : 'transparent', border: '1px solid rgba(240,120,32,0.5)', borderRadius: '5px', color: '#f07820', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.15s', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              style={{ padding: '8px 16px', background: copied === 'pine_edit' ? 'rgba(240,120,32,0.25)' : 'transparent', border: '1px solid rgba(240,120,32,0.5)', borderRadius: '5px', color: '#f07820', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', transition: 'all 0.15s', whiteSpace: 'nowrap', flexShrink: 0 }}>
               {copied === 'pine_edit' ? '✓ COPIÉ' : 'COPIER'}
             </button>
           </div>
 
           <div style={{ background: 'rgba(4,12,8,0.9)', border: '1px solid rgba(240,120,32,0.15)', borderRadius: '6px', overflow: 'auto', maxHeight: '320px' }}>
-            <pre style={{ margin: 0, padding: '16px 18px', fontSize: '11px', color: '#7aaa8a', fontFamily: "'JetBrains Mono','Fira Code',monospace", lineHeight: '1.65', whiteSpace: 'pre' }}>
+            <pre style={{ margin: 0, padding: '16px 18px', fontSize:'13px', color: '#7aaa8a', fontFamily: "'JetBrains Mono','Fira Code',monospace", lineHeight: '1.65', whiteSpace: 'pre' }}>
               {PINE_EDIT_SCRIPT.split('\n').map((line, i) => {
                 let color = '#7aaa8a';
                 if (line.startsWith('//')) color = '#5a6a82';

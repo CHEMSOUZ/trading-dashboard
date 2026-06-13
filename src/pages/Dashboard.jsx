@@ -35,9 +35,9 @@ function StatCard({ label, value, sub, color = '#dde4ef', glow = false }) {
         transform: hovered ? 'translateY(-1px)' : 'none',
       }}
     >
-      <div style={{ fontSize: '8px', color: '#4a5a72', letterSpacing: '2px', marginBottom: '7px' }}>{label}</div>
+      <div style={{ fontSize:'11px', color: '#4a5a72', letterSpacing: '2px', marginBottom: '7px' }}>{label}</div>
       <div style={{ fontSize: '23px', fontWeight: '700', color, lineHeight: 1, letterSpacing: '-0.5px' }}>{value}</div>
-      {sub && <div style={{ fontSize: '9px', color: '#4a2525', marginTop: '6px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize:'12px', color: '#4a2525', marginTop: '6px' }}>{sub}</div>}
     </div>
   );
 }
@@ -54,33 +54,33 @@ function PnlCell({ trade }) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <span style={{ fontSize: '12px', fontWeight: '700', color, cursor: hasFees ? 'help' : 'default' }}>
+      <span style={{ fontSize:'13px', fontWeight: '700', color, cursor: hasFees ? 'help' : 'default' }}>
         {fmt(net, true)}
-        {hasFees && <span style={{ fontSize: '8px', color: '#4a5a72', marginLeft: '2px' }}>net</span>}
+        {hasFees && <span style={{ fontSize:'11px', color: '#4a5a72', marginLeft: '2px' }}>net</span>}
       </span>
       {hover && hasFees && (
         <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: '6px', zIndex: 100, background: 'rgba(8,9,16,0.98)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '6px', padding: '10px 12px', minWidth: '170px', pointerEvents: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
-          <div style={{ fontSize: '8px', color: '#4a5a72', letterSpacing: '1px', marginBottom: '6px' }}>DÉTAIL P&L</div>
+          <div style={{ fontSize:'11px', color: '#4a5a72', letterSpacing: '1px', marginBottom: '6px' }}>DÉTAIL P&L</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
-              <span style={{ fontSize: '10px', color: '#7888a0' }}>P&L brut</span>
-              <span style={{ fontSize: '10px', fontWeight: '700', color: (trade.result ?? 0) >= 0 ? '#00cc77' : '#ff3344' }}>{fmt(trade.result, true)}</span>
+              <span style={{ fontSize:'12px', color: '#7888a0' }}>P&L brut</span>
+              <span style={{ fontSize:'12px', fontWeight: '700', color: (trade.result ?? 0) >= 0 ? '#00cc77' : '#ff3344' }}>{fmt(trade.result, true)}</span>
             </div>
             {(trade.commissions ?? 0) > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
-                <span style={{ fontSize: '10px', color: '#7888a0' }}>Commissions</span>
-                <span style={{ fontSize: '10px', color: '#ff3344' }}>-{trade.commissions.toFixed(2)}$</span>
+                <span style={{ fontSize:'12px', color: '#7888a0' }}>Commissions</span>
+                <span style={{ fontSize:'12px', color: '#ff3344' }}>-{trade.commissions.toFixed(2)}$</span>
               </div>
             )}
             {(trade.fees ?? 0) > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
-                <span style={{ fontSize: '10px', color: '#7888a0' }}>Frais</span>
-                <span style={{ fontSize: '10px', color: '#ff3344' }}>-{trade.fees.toFixed(2)}$</span>
+                <span style={{ fontSize:'12px', color: '#7888a0' }}>Frais</span>
+                <span style={{ fontSize:'12px', color: '#ff3344' }}>-{trade.fees.toFixed(2)}$</span>
               </div>
             )}
             <div style={{ borderTop: '1px solid rgba(136,153,187,0.12)', marginTop: '3px', paddingTop: '3px', display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '10px', color: '#dde4ef', fontWeight: '600' }}>Net</span>
-              <span style={{ fontSize: '11px', fontWeight: '700', color }}>{fmt(net, true)}</span>
+              <span style={{ fontSize:'12px', color: '#dde4ef', fontWeight: '600' }}>Net</span>
+              <span style={{ fontSize:'13px', fontWeight: '700', color }}>{fmt(net, true)}</span>
             </div>
           </div>
         </div>
@@ -160,8 +160,8 @@ function TradeTable({ trades, onNavigate, onDelete }) {
   const templateCols = COLS.map(c => `${colWidths[c.key]}px`).join(' ') + ' 36px';
 
   function SortIcon({ col }) {
-    if (sortCol !== col) return <span style={{ color: '#2a1010', fontSize: '9px' }}>⇅</span>;
-    return <span style={{ color: '#8899bb', fontSize: '9px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
+    if (sortCol !== col) return <span style={{ color: '#2a1010', fontSize:'12px' }}>⇅</span>;
+    return <span style={{ color: '#8899bb', fontSize:'12px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
   }
 
   if (sorted.length === 0) return null;
@@ -209,23 +209,23 @@ function TradeTable({ trades, onNavigate, onDelete }) {
           return (
             <div key={t.id}
               onClick={() => onNavigate(t.id)}
-              style={{ display: 'grid', gridTemplateColumns: templateCols, alignItems: 'center', padding: '9px 10px', background: 'rgba(14,15,22,0.45)', border: '1px solid rgba(136,153,187,0.05)', borderLeft: `2px solid ${color}`, borderRadius: '4px', cursor: 'pointer', transition: 'background 0.12s', fontSize: '11px' }}
+              style={{ display: 'grid', gridTemplateColumns: templateCols, alignItems: 'center', padding: '9px 10px', background: 'rgba(14,15,22,0.45)', border: '1px solid rgba(136,153,187,0.05)', borderLeft: `2px solid ${color}`, borderRadius: '4px', cursor: 'pointer', transition: 'background 0.12s', fontSize:'13px' }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(136,153,187,0.05)'}
               onMouseLeave={e => e.currentTarget.style.background = 'rgba(14,15,22,0.45)'}
             >
-              <span style={{ color: '#5a3030', fontSize: '9px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.date}</span>
-              <span style={{ color: '#7a5050', fontSize: '9px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+              <span style={{ color: '#5a3030', fontSize:'12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.date}</span>
+              <span style={{ color: '#7a5050', fontSize:'12px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
                 <span>{entryTime ?? '—'}</span>
                 {exitTime && <span style={{ color: '#5a3535' }}>↓{exitTime}</span>}
               </span>
               <span style={{ color: '#dde4ef', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.pair}</span>
-              <span style={{ color: t.direction === 'LONG' ? '#00cc77' : '#ff3344', fontSize: '9px', background: `rgba(${t.direction === 'LONG' ? '0,204,119' : '255,51,68'},0.10)`, border: `1px solid rgba(${t.direction === 'LONG' ? '0,204,119' : '255,51,68'},0.22)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
+              <span style={{ color: t.direction === 'LONG' ? '#00cc77' : '#ff3344', fontSize:'12px', background: `rgba(${t.direction === 'LONG' ? '0,204,119' : '255,51,68'},0.10)`, border: `1px solid rgba(${t.direction === 'LONG' ? '0,204,119' : '255,51,68'},0.22)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
               <span style={{ color: '#7888a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.entry ?? '—'}</span>
               <span style={{ color: '#7888a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exitDisplay}</span>
               <span style={{ color: '#7888a0' }}>{t.size ?? '—'}</span>
               <div onClick={e => e.stopPropagation()}><PnlCell trade={t} /></div>
-              <span style={{ color: '#5a3030', fontSize: '9px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.duration ?? '—'}</span>
-              <span style={{ color: '#5a3030', fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.notes ?? '—'}</span>
+              <span style={{ color: '#5a3030', fontSize:'12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.duration ?? '—'}</span>
+              <span style={{ color: '#5a3030', fontSize:'12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.notes ?? '—'}</span>
               <button onClick={e => onDelete(t.id, e)}
                 style={{ background: 'none', border: 'none', color: '#2a1010', cursor: 'pointer', fontSize: '15px', padding: '0', transition: 'color 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.color = '#ff3344'}
@@ -287,7 +287,7 @@ export default function Dashboard() {
   }
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#5a6a82', fontSize: '11px', letterSpacing: '3px' }}>CHARGEMENT...</div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#5a6a82', fontSize:'13px', letterSpacing: '3px' }}>CHARGEMENT...</div>
   );
 
   const streakColor = (s.streak ?? 0) > 0 ? '#00cc77' : (s.streak ?? 0) < 0 ? '#ff3344' : '#888080';
@@ -299,24 +299,24 @@ export default function Dashboard() {
       {/* ── HEADER ── */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>
+          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>
             {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}
           </div>
           <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8edf8', margin: 0, letterSpacing: '-0.3px' }}>Tableau de bord</h1>
-          <div style={{ fontSize: '10px', color: '#5a3030', marginTop: '4px' }}>
+          <div style={{ fontSize:'12px', color: '#5a3030', marginTop: '4px' }}>
             {trades.length} trade{trades.length > 1 ? 's' : ''} · P&L net: <span style={{ color: pnlColor(s.totalPnl ?? 0), fontWeight: '700' }}>{fmt(s.totalPnl, true)}</span>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={() => navigate('/import')}
-            style={{ background: 'transparent', border: '1px solid rgba(136,153,187,0.18)', color: '#5a6a82', padding: '8px 14px', borderRadius: '5px', fontSize: '10px', fontFamily: 'inherit', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s' }}
+            style={{ background: 'transparent', border: '1px solid rgba(136,153,187,0.18)', color: '#5a6a82', padding: '8px 14px', borderRadius: '5px', fontSize:'12px', fontFamily: 'inherit', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s' }}
             onMouseEnter={e => { e.currentTarget.style.color = '#8899bb'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.45)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = '#5a6a82'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.18)'; }}
           >
             📂 Import CSV
           </button>
           <button onClick={() => navigate('/dashboard/new')}
-            style={{ background: 'linear-gradient(135deg,rgba(136,153,187,0.20),rgba(74,96,128,0.12))', border: '1px solid rgba(136,153,187,0.35)', color: '#8899bb', padding: '8px 16px', borderRadius: '5px', fontSize: '10px', fontFamily: 'inherit', letterSpacing: '1px', cursor: 'pointer', fontWeight: '700', transition: 'all 0.15s' }}
+            style={{ background: 'linear-gradient(135deg,rgba(136,153,187,0.20),rgba(74,96,128,0.12))', border: '1px solid rgba(136,153,187,0.35)', color: '#8899bb', padding: '8px 16px', borderRadius: '5px', fontSize:'12px', fontFamily: 'inherit', letterSpacing: '1px', cursor: 'pointer', fontWeight: '700', transition: 'all 0.15s' }}
             onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 14px rgba(136,153,187,0.20)'; }}
             onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
           >
@@ -340,7 +340,7 @@ export default function Dashboard() {
 
         {/* Journal header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
-          <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px' }}>
+          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px' }}>
             JOURNAL — {filtered.length} trade{filtered.length > 1 ? 's' : ''}
             {totalFees > 0 && <span style={{ color: '#f0a020', marginLeft: '8px' }}>· -{totalFees.toFixed(2)}$ frais</span>}
           </div>
@@ -351,7 +351,7 @@ export default function Dashboard() {
               placeholder="Rechercher..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ background: 'rgba(14,15,22,0.65)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '4px', padding: '5px 10px', color: '#dde4ef', fontSize: '10px', fontFamily: 'inherit', outline: 'none', width: '140px', caretColor: '#8899bb', transition: 'border-color 0.15s' }}
+              style={{ background: 'rgba(14,15,22,0.65)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '4px', padding: '5px 10px', color: '#dde4ef', fontSize:'12px', fontFamily: 'inherit', outline: 'none', width: '140px', caretColor: '#8899bb', transition: 'border-color 0.15s' }}
               onFocus={e => e.target.style.borderColor = 'rgba(136,153,187,0.35)'}
               onBlur={e => e.target.style.borderColor = 'rgba(136,153,187,0.12)'}
             />
@@ -363,7 +363,7 @@ export default function Dashboard() {
               return (
                 <button key={f}
                   onClick={() => { setFilter(f); localStorage.setItem('dash_filter', f); }}
-                  style={{ padding: '4px 10px', borderRadius: '4px', border: `1px solid ${isActive ? c : 'rgba(136,153,187,0.15)'}`, background: isActive ? bg : 'transparent', color: isActive ? c : '#5a3030', fontSize: '9px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s', fontWeight: isActive ? '700' : '400' }}
+                  style={{ padding: '4px 10px', borderRadius: '4px', border: `1px solid ${isActive ? c : 'rgba(136,153,187,0.15)'}`, background: isActive ? bg : 'transparent', color: isActive ? c : '#5a3030', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s', fontWeight: isActive ? '700' : '400' }}
                   onMouseEnter={e => { if (!isActive) { e.currentTarget.style.color = c; e.currentTarget.style.borderColor = c + '44'; }}}
                   onMouseLeave={e => { if (!isActive) { e.currentTarget.style.color = '#5a3030'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.15)'; }}}
                 >{f}</button>
@@ -391,7 +391,7 @@ export default function Dashboard() {
 
         {/* Table */}
         {filtered.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#2c3c54', fontSize: '11px', letterSpacing: '2px', border: '1px dashed rgba(136,153,187,0.15)', borderRadius: '6px' }}>
+          <div style={{ padding: '40px', textAlign: 'center', color: '#2c3c54', fontSize:'13px', letterSpacing: '2px', border: '1px dashed rgba(136,153,187,0.15)', borderRadius: '6px' }}>
             {search ? 'Aucun résultat' : filter !== 'ALL' ? `Aucun trade ${filter}` : 'Aucun trade — ajoutez votre premier trade'}
           </div>
         ) : (

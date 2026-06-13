@@ -219,7 +219,7 @@ function CreateAccountModal({ onClose, onCreate }) {
               >←</button>
             )}
             <div>
-              <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>NOUVEAU COMPTE</div>
+              <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>NOUVEAU COMPTE</div>
               <div style={{ fontSize: '18px', fontWeight: '700', color: '#e8edf8' }}>{stepTitles[step]}</div>
             </div>
           </div>
@@ -240,10 +240,10 @@ function CreateAccountModal({ onClose, onCreate }) {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '15px', fontWeight: '700', color: p.color, marginBottom: '3px' }}>{p.label}</div>
-                  <div style={{ fontSize: '12px', color: '#5868a0', marginBottom: '6px' }}>{p.desc}</div>
+                  <div style={{ fontSize:'13px', color: '#5868a0', marginBottom: '6px' }}>{p.desc}</div>
                   <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                     {Object.values(p.types).map(t => (
-                      <span key={t.label} style={{ fontSize: '10px', color: '#3c4c64', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.12)', padding: '2px 7px', borderRadius: '3px' }}>{t.label}</span>
+                      <span key={t.label} style={{ fontSize:'12px', color: '#3c4c64', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.12)', padding: '2px 7px', borderRadius: '3px' }}>{t.label}</span>
                     ))}
                   </div>
                 </div>
@@ -261,11 +261,11 @@ function CreateAccountModal({ onClose, onCreate }) {
               <span style={{ fontSize: '13px', color: plat.color, fontWeight: '600' }}>{plat.label}</span>
             </div>
             <div>
-              <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>NOM DU COMPTE *</div>
+              <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>NOM DU COMPTE *</div>
               <input placeholder={`Ex: ${plat.label} Mai 2026`} value={form.name} onChange={set('name')} style={inp} autoFocus onKeyDown={e => { if (e.key === 'Enter') submit(); }} />
             </div>
             <div>
-              <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '8px' }}>TYPE</div>
+              <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '8px' }}>TYPE</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 {Object.entries(plat.types).map(([key, info], idx, arr) => {
                   const typeColor = TYPE_LABELS[key]?.color ?? plat.color;
@@ -281,7 +281,7 @@ function CreateAccountModal({ onClose, onCreate }) {
                       {showSep && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0 6px' }}>
                           <div style={{ flex: 1, height: '1px', background: 'rgba(136,153,187,0.10)' }} />
-                          <span style={{ fontSize: '9px', color: sepColor, letterSpacing: '2px' }}>{sepLabel}</span>
+                          <span style={{ fontSize:'12px', color: sepColor, letterSpacing: '2px' }}>{sepLabel}</span>
                           <div style={{ flex: 1, height: '1px', background: 'rgba(136,153,187,0.10)' }} />
                         </div>
                       )}
@@ -290,9 +290,9 @@ function CreateAccountModal({ onClose, onCreate }) {
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ fontSize: '13px', color: form.type === key ? typeColor : '#dde4ef', fontWeight: form.type === key ? '700' : '400' }}>{info.label}</span>
-                            {info.funded && <span style={{ fontSize: '8px', background: 'rgba(240,192,32,0.15)', border: '1px solid rgba(240,192,32,0.3)', color: '#f0c020', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>LIVE</span>}
+                            {info.funded && <span style={{ fontSize:'11px', background: 'rgba(240,192,32,0.15)', border: '1px solid rgba(240,192,32,0.3)', color: '#f0c020', padding: '1px 5px', borderRadius: '3px', fontWeight: '700' }}>LIVE</span>}
                           </div>
-                          <div style={{ fontSize: '11px', color: '#5a6a82' }}>{info.desc}</div>
+                          <div style={{ fontSize:'13px', color: '#5a6a82' }}>{info.desc}</div>
                         </div>
                         <div style={{ width: '15px', height: '15px', borderRadius: '50%', border: `2px solid ${form.type === key ? typeColor : '#3a1a1a'}`, background: form.type === key ? typeColor : 'transparent', flexShrink: 0 }} />
                       </div>
@@ -302,7 +302,7 @@ function CreateAccountModal({ onClose, onCreate }) {
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '8px' }}>COULEUR</div>
+              <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '8px' }}>COULEUR</div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 {COLORS.map(c => (
                   <div key={c} onClick={() => setForm(p => ({ ...p, color: c }))} style={{ width: '24px', height: '24px', borderRadius: '50%', background: c, cursor: 'pointer', border: form.color === c ? '2px solid white' : '2px solid transparent', boxShadow: form.color === c ? `0 0 8px ${c}` : 'none', transition: 'all 0.15s' }} />
@@ -310,13 +310,13 @@ function CreateAccountModal({ onClose, onCreate }) {
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>ID BROKER (optionnel)</div>
+              <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>ID BROKER (optionnel)</div>
               <input placeholder="Ex: 50KTC-236410" value={form.brokerAccountId} onChange={set('brokerAccountId')} style={inp} />
             </div>
-            {error && <div style={{ padding: '10px', background: 'rgba(255,68,85,0.1)', border: '1px solid rgba(255,68,85,0.3)', borderRadius: '5px', color: '#ff4455', fontSize: '12px' }}>⚠ {error}</div>}
+            {error && <div style={{ padding: '10px', background: 'rgba(255,68,85,0.1)', border: '1px solid rgba(255,68,85,0.3)', borderRadius: '5px', color: '#ff4455', fontSize:'13px' }}>⚠ {error}</div>}
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #1e2c40', background: 'transparent', color: '#6878a0', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>ANNULER</button>
-              <button onClick={submit} disabled={saving} style={{ padding: '10px 28px', borderRadius: '5px', background: `${form.color}22`, border: `1px solid ${form.color}60`, color: form.color, fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving ? 'wait' : 'pointer' }}>
+              <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #1e2c40', background: 'transparent', color: '#6878a0', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>ANNULER</button>
+              <button onClick={submit} disabled={saving} style={{ padding: '10px 28px', borderRadius: '5px', background: `${form.color}22`, border: `1px solid ${form.color}60`, color: form.color, fontSize:'13px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving ? 'wait' : 'pointer' }}>
                 {saving ? 'CRÉATION...' : 'CRÉER'}
               </button>
             </div>
@@ -365,7 +365,7 @@ function EditAccountModal({ acc, onClose, onSave }) {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
           <div>
-            <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>MODIFIER LE COMPTE</div>
+            <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>MODIFIER LE COMPTE</div>
             <div style={{ fontSize: '18px', fontWeight: '700', color: '#e8edf8' }}>{acc.name}</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
@@ -375,19 +375,19 @@ function EditAccountModal({ acc, onClose, onSave }) {
 
           {/* Name */}
           <div>
-            <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>NOM DU COMPTE *</div>
+            <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>NOM DU COMPTE *</div>
             <input value={form.name} onChange={set('name')} style={inp} autoFocus onKeyDown={e => { if (e.key === 'Enter') submit(); }} />
           </div>
 
           {/* Type — grouped by platform */}
           <div>
-            <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>TYPE</div>
+            <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>TYPE</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {Object.entries(PLATFORMS).map(([platKey, plat]) => (
                 <div key={platKey}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                     <PlatformLogo platform={platKey} size={14} />
-                    <span style={{ fontSize: '9px', color: plat.color, letterSpacing: '2px', fontWeight: '700' }}>{plat.label.toUpperCase()}</span>
+                    <span style={{ fontSize:'12px', color: plat.color, letterSpacing: '2px', fontWeight: '700' }}>{plat.label.toUpperCase()}</span>
                   </div>
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                     {Object.entries(plat.types).map(([typeKey, typeInfo], tidx, tarr) => {
@@ -405,12 +405,12 @@ function EditAccountModal({ acc, onClose, onSave }) {
                           {showTypeSep && (
                             <div style={{ flexBasis: '100%', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', marginBottom: '2px' }}>
                               <div style={{ flex: 1, height: '1px', background: 'rgba(136,153,187,0.10)' }} />
-                              <span style={{ fontSize: '8px', color: typeSepColor, letterSpacing: '2px' }}>{typeSepLabel}</span>
+                              <span style={{ fontSize:'11px', color: typeSepColor, letterSpacing: '2px' }}>{typeSepLabel}</span>
                               <div style={{ flex: 1, height: '1px', background: 'rgba(136,153,187,0.10)' }} />
                             </div>
                           )}
                           <div onClick={() => setForm(p => ({ ...p, type: typeKey, color: tc }))}
-                            style={{ padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '11px', fontWeight: sel ? '700' : '400', color: sel ? tc : '#6878a0', background: sel ? `${tc}15` : 'rgba(14,15,22,0.5)', border: `1px solid ${sel ? tc + '50' : 'rgba(136,153,187,0.10)'}`, transition: 'all 0.12s' }}>
+                            style={{ padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize:'13px', fontWeight: sel ? '700' : '400', color: sel ? tc : '#6878a0', background: sel ? `${tc}15` : 'rgba(14,15,22,0.5)', border: `1px solid ${sel ? tc + '50' : 'rgba(136,153,187,0.10)'}`, transition: 'all 0.12s' }}>
                             {typeInfo.label}
                           </div>
                         </div>
@@ -424,7 +424,7 @@ function EditAccountModal({ acc, onClose, onSave }) {
 
           {/* Color */}
           <div>
-            <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '8px' }}>COULEUR</div>
+            <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '8px' }}>COULEUR</div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {COLORS.map(c => (
                 <div key={c} onClick={() => setForm(p => ({ ...p, color: c }))}
@@ -437,23 +437,23 @@ function EditAccountModal({ acc, onClose, onSave }) {
             </div>
             <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <input type="color" value={form.color} onChange={set('color')} style={{ width: '32px', height: '28px', padding: '0', border: 'none', background: 'none', cursor: 'pointer', borderRadius: '4px' }} />
-              <span style={{ fontSize: '11px', color: '#5a6a82' }}>Couleur personnalisée</span>
+              <span style={{ fontSize:'13px', color: '#5a6a82' }}>Couleur personnalisée</span>
             </div>
           </div>
 
           {/* Broker ID */}
           <div>
-            <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>ID BROKER (optionnel)</div>
+            <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>ID BROKER (optionnel)</div>
             <input value={form.brokerAccountId} onChange={set('brokerAccountId')} placeholder="Ex: 50KTC-236410" style={inp} />
           </div>
 
           {error && (
-            <div style={{ padding: '10px', background: 'rgba(255,68,85,0.1)', border: '1px solid rgba(255,68,85,0.3)', borderRadius: '5px', color: '#ff4455', fontSize: '12px' }}>⚠ {error}</div>
+            <div style={{ padding: '10px', background: 'rgba(255,68,85,0.1)', border: '1px solid rgba(255,68,85,0.3)', borderRadius: '5px', color: '#ff4455', fontSize:'13px' }}>⚠ {error}</div>
           )}
 
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-            <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #1e2c40', background: 'transparent', color: '#6878a0', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>ANNULER</button>
-            <button onClick={submit} disabled={saving} style={{ padding: '10px 28px', borderRadius: '5px', background: `${form.color}22`, border: `1px solid ${form.color}60`, color: form.color, fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving ? 'wait' : 'pointer' }}>
+            <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #1e2c40', background: 'transparent', color: '#6878a0', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>ANNULER</button>
+            <button onClick={submit} disabled={saving} style={{ padding: '10px 28px', borderRadius: '5px', background: `${form.color}22`, border: `1px solid ${form.color}60`, color: form.color, fontSize:'13px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving ? 'wait' : 'pointer' }}>
               {saving ? 'ENREGISTREMENT...' : 'ENREGISTRER'}
             </button>
           </div>
@@ -483,25 +483,25 @@ function AccountCard({ acc, isActive, status, onSelect, onEdit, onDelete, onMark
       {/* Badges top-right */}
       <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '170px' }}>
         {isBlown && (
-          <div style={{ background: 'rgba(255,68,85,0.2)', border: '1px solid rgba(255,68,85,0.5)', borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: '#ff4455', letterSpacing: '1px', fontWeight: '700' }}>💀 CRAMÉ</div>
+          <div style={{ background: 'rgba(255,68,85,0.2)', border: '1px solid rgba(255,68,85,0.5)', borderRadius: '4px', padding: '2px 7px', fontSize:'11px', color: '#ff4455', letterSpacing: '1px', fontWeight: '700' }}>💀 CRAMÉ</div>
         )}
         {!isBlown && status?.isExpressFunded && (
-          <div style={{ background: 'rgba(240,192,32,0.2)', border: '1px solid rgba(240,192,32,0.5)', borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: '#f0c020', letterSpacing: '1px', fontWeight: '700' }}>💰 FUNDED</div>
+          <div style={{ background: 'rgba(240,192,32,0.2)', border: '1px solid rgba(240,192,32,0.5)', borderRadius: '4px', padding: '2px 7px', fontSize:'11px', color: '#f0c020', letterSpacing: '1px', fontWeight: '700' }}>💰 FUNDED</div>
         )}
         {!isBlown && isTdvLive && (
-          <div style={{ background: 'rgba(0,170,255,0.2)', border: '1px solid rgba(0,170,255,0.5)', borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: '#00aaff', letterSpacing: '1px', fontWeight: '700' }}>● LIVE</div>
+          <div style={{ background: 'rgba(0,170,255,0.2)', border: '1px solid rgba(0,170,255,0.5)', borderRadius: '4px', padding: '2px 7px', fontSize:'11px', color: '#00aaff', letterSpacing: '1px', fontWeight: '700' }}>● LIVE</div>
         )}
         {!isBlown && isTdvDemo && (
-          <div style={{ background: 'rgba(0,170,255,0.1)', border: '1px solid rgba(0,170,255,0.3)', borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: '#4a8aaa', letterSpacing: '1px', fontWeight: '700' }}>DEMO</div>
+          <div style={{ background: 'rgba(0,170,255,0.1)', border: '1px solid rgba(0,170,255,0.3)', borderRadius: '4px', padding: '2px 7px', fontSize:'11px', color: '#4a8aaa', letterSpacing: '1px', fontWeight: '700' }}>DEMO</div>
         )}
         {!isBlown && isChallenge && (
-          <div style={{ background: 'rgba(136,153,187,0.14)', border: '1px solid rgba(136,153,187,0.35)', borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: '#8899bb', letterSpacing: '1px', fontWeight: '700' }}>CHALLENGE</div>
+          <div style={{ background: 'rgba(136,153,187,0.14)', border: '1px solid rgba(136,153,187,0.35)', borderRadius: '4px', padding: '2px 7px', fontSize:'11px', color: '#8899bb', letterSpacing: '1px', fontWeight: '700' }}>CHALLENGE</div>
         )}
         {!isBlown && status?.isValidated && (
-          <div style={{ background: 'rgba(136,153,187,0.22)', border: '1px solid rgba(136,153,187,0.55)', borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: '#8899bb', letterSpacing: '1px', fontWeight: '700' }}>✅ VALIDÉ</div>
+          <div style={{ background: 'rgba(136,153,187,0.22)', border: '1px solid rgba(136,153,187,0.55)', borderRadius: '4px', padding: '2px 7px', fontSize:'11px', color: '#8899bb', letterSpacing: '1px', fontWeight: '700' }}>✅ VALIDÉ</div>
         )}
         {!isBlown && isActive && (
-          <div style={{ background: `${acc.color}20`, border: `1px solid ${acc.color}40`, borderRadius: '4px', padding: '2px 7px', fontSize: '8px', color: acc.color, letterSpacing: '1px', fontWeight: '700' }}>ACTIF</div>
+          <div style={{ background: `${acc.color}20`, border: `1px solid ${acc.color}40`, borderRadius: '4px', padding: '2px 7px', fontSize:'11px', color: acc.color, letterSpacing: '1px', fontWeight: '700' }}>ACTIF</div>
         )}
       </div>
 
@@ -515,7 +515,7 @@ function AccountCard({ acc, isActive, status, onSelect, onEdit, onDelete, onMark
 
       {/* Name + type */}
       <div style={{ fontSize: '14px', fontWeight: '700', color: isBlown ? '#c88a8a' : '#e8edf8', marginBottom: '3px' }}>{acc.name}</div>
-      <div style={{ fontSize: '11px', color: isBlown ? '#ff6666' : acc.color, marginBottom: '8px' }}>{typeInfo.label}</div>
+      <div style={{ fontSize:'13px', color: isBlown ? '#ff6666' : acc.color, marginBottom: '8px' }}>{typeInfo.label}</div>
 
       {/* P&L + stats */}
       {hasStats && (
@@ -524,20 +524,20 @@ function AccountCard({ acc, isActive, status, onSelect, onEdit, onDelete, onMark
             <div style={{ fontSize: '17px', fontWeight: '700', color: pnlColor, lineHeight: 1 }}>
               {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}$
             </div>
-            <div style={{ fontSize: '10px', color: '#5a6a82', marginTop: '2px' }}>
+            <div style={{ fontSize:'12px', color: '#5a6a82', marginTop: '2px' }}>
               {status.winrate}% WR · {status.tradeCount}T
             </div>
           </div>
           {isBlown && status.floor != null && (
-            <div style={{ fontSize: '10px', color: '#ff4455', textAlign: 'right' }}>
+            <div style={{ fontSize:'12px', color: '#ff4455', textAlign: 'right' }}>
               ⚠ Floor {status.floor.toFixed(0)}$<br/>franchi
             </div>
           )}
         </div>
       )}
 
-      {acc.brokerAccountId && <div style={{ fontSize: '10px', color: '#5a6a82', marginTop: '4px' }}>{acc.brokerAccountId}</div>}
-      <div style={{ fontSize: '10px', color: '#3a1818', marginTop: '2px' }}>Créé le {new Date(acc.createdAt).toLocaleDateString('fr-FR')}</div>
+      {acc.brokerAccountId && <div style={{ fontSize:'12px', color: '#5a6a82', marginTop: '4px' }}>{acc.brokerAccountId}</div>}
+      <div style={{ fontSize:'12px', color: '#3a1818', marginTop: '2px' }}>Créé le {new Date(acc.createdAt).toLocaleDateString('fr-FR')}</div>
 
       <div style={{ position: 'absolute', bottom: '10px', right: '10px', display: 'flex', gap: '4px' }}>
         {/* Restaurer — uniquement si cramé manuellement */}
@@ -634,7 +634,7 @@ export default function AccountSelect({ onSelect, onBack }) {
   }
 
   if (loading) return (
-    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#090a10', color: '#5a6a82', fontSize: '12px', letterSpacing: '2px', fontFamily: 'monospace' }}>CHARGEMENT...</div>
+    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#090a10', color: '#5a6a82', fontSize:'13px', letterSpacing: '2px', fontFamily: 'monospace' }}>CHARGEMENT...</div>
   );
 
   // ── Section ordering (top → bottom) ──────────────────────────
@@ -684,7 +684,7 @@ export default function AccountSelect({ onSelect, onBack }) {
 
       {onBack && (
         <div style={{ position: 'fixed', top: '20px', left: '20px' }}>
-          <button onClick={onBack} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', padding: '8px 14px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit', transition: 'all 0.15s' }}
+          <button onClick={onBack} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', padding: '8px 14px', borderRadius: '5px', cursor: 'pointer', fontSize:'13px', fontFamily: 'inherit', transition: 'all 0.15s' }}
             onMouseEnter={e => { e.currentTarget.style.color = '#8899bb'; e.currentTarget.style.borderColor = '#8899bb'; }}
             onMouseLeave={e => { e.currentTarget.style.color = '#5868a0'; e.currentTarget.style.borderColor = '#1e2c40'; }}
           >← Retour</button>
@@ -701,7 +701,7 @@ export default function AccountSelect({ onSelect, onBack }) {
         </div>
         <div>
           <div style={{ fontSize: '20px', fontWeight: '700', color: '#e8edf8', letterSpacing: '2px' }}>TRADE DASHBOARD</div>
-          <div style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '3px' }}>
+          <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '3px' }}>
             SÉLECTIONNER UN COMPTE
             {loadingStats && <span style={{ marginLeft: '8px', color: '#3c4c64' }}>· calcul en cours...</span>}
           </div>
@@ -713,7 +713,7 @@ export default function AccountSelect({ onSelect, onBack }) {
           <div style={{ textAlign: 'center', padding: '60px 20px', border: '1px dashed #1e2c40', borderRadius: '10px', marginBottom: '20px' }}>
             <div style={{ fontSize: '40px', marginBottom: '16px' }}>📊</div>
             <div style={{ fontSize: '14px', color: '#dde4ef', marginBottom: '8px' }}>Aucun compte créé</div>
-            <div style={{ fontSize: '12px', color: '#5a6a82' }}>Créez votre premier compte pour commencer</div>
+            <div style={{ fontSize:'13px', color: '#5a6a82' }}>Créez votre premier compte pour commencer</div>
           </div>
         ) : (
           <>
@@ -722,8 +722,8 @@ export default function AccountSelect({ onSelect, onBack }) {
               <div style={{ marginBottom: '28px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                   <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: activeAcc.color, boxShadow: `0 0 12px ${activeAcc.color}` }} />
-                  <span style={{ fontSize: '10px', color: activeAcc.color, letterSpacing: '2px', fontWeight: '700' }}>COMPTE ACTIF</span>
-                  <span style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '1px' }}>En cours de trading</span>
+                  <span style={{ fontSize:'12px', color: activeAcc.color, letterSpacing: '2px', fontWeight: '700' }}>COMPTE ACTIF</span>
+                  <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1px' }}>En cours de trading</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: '14px' }}>
                   <AccountCard acc={activeAcc} isActive={true} status={statuses[activeAcc.id]} onSelect={handleSelect} onEdit={setEditingAcc} onDelete={handleDelete} onMarkBlown={handleMarkBlown} onRestoreBlown={handleRestoreBlown} />
@@ -735,8 +735,8 @@ export default function AccountSelect({ onSelect, onBack }) {
             {liveAccounts.length > 0 && renderSection(liveAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#00ddff', boxShadow: '0 0 10px #00ddff' }} />
-                <span style={{ fontSize: '10px', color: '#00ddff', letterSpacing: '2px', fontWeight: '700' }}>LIVE — {liveAccounts.length}</span>
-                <span style={{ fontSize: '9px', color: '#2a7a8a', letterSpacing: '1px' }}>Compte live réel</span>
+                <span style={{ fontSize:'12px', color: '#00ddff', letterSpacing: '2px', fontWeight: '700' }}>LIVE — {liveAccounts.length}</span>
+                <span style={{ fontSize:'12px', color: '#2a7a8a', letterSpacing: '1px' }}>Compte live réel</span>
               </div>
             ))}
 
@@ -744,8 +744,8 @@ export default function AccountSelect({ onSelect, onBack }) {
             {fundedAccounts.length > 0 && renderSection(fundedAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f0c020', boxShadow: '0 0 10px #f0c020' }} />
-                <span style={{ fontSize: '10px', color: '#f0c020', letterSpacing: '2px', fontWeight: '700' }}>FUNDED — {fundedAccounts.length}</span>
-                <span style={{ fontSize: '9px', color: '#8a7a30', letterSpacing: '1px' }}>Express Funded · Lucid Funded</span>
+                <span style={{ fontSize:'12px', color: '#f0c020', letterSpacing: '2px', fontWeight: '700' }}>FUNDED — {fundedAccounts.length}</span>
+                <span style={{ fontSize:'12px', color: '#8a7a30', letterSpacing: '1px' }}>Express Funded · Lucid Funded</span>
               </div>
             ))}
 
@@ -753,8 +753,8 @@ export default function AccountSelect({ onSelect, onBack }) {
             {challengeAccounts.length > 0 && renderSection(challengeAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#8899bb', boxShadow: '0 0 8px #8899bb' }} />
-                <span style={{ fontSize: '10px', color: '#8899bb', letterSpacing: '2px', fontWeight: '700' }}>CHALLENGE — {challengeAccounts.length}</span>
-                <span style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '1px' }}>En cours</span>
+                <span style={{ fontSize:'12px', color: '#8899bb', letterSpacing: '2px', fontWeight: '700' }}>CHALLENGE — {challengeAccounts.length}</span>
+                <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1px' }}>En cours</span>
               </div>
             ))}
 
@@ -762,8 +762,8 @@ export default function AccountSelect({ onSelect, onBack }) {
             {validatedAccounts.length > 0 && renderSection(validatedAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#8899bb', boxShadow: '0 0 8px #8899bb' }} />
-                <span style={{ fontSize: '10px', color: '#8899bb', letterSpacing: '2px', fontWeight: '700' }}>VALIDÉ — {validatedAccounts.length}</span>
-                <span style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '1px' }}>Challenge réussi ✓</span>
+                <span style={{ fontSize:'12px', color: '#8899bb', letterSpacing: '2px', fontWeight: '700' }}>VALIDÉ — {validatedAccounts.length}</span>
+                <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1px' }}>Challenge réussi ✓</span>
               </div>
             ))}
 
@@ -771,15 +771,15 @@ export default function AccountSelect({ onSelect, onBack }) {
             {blownAccounts.length > 0 && renderSection(blownAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#ff4455', boxShadow: '0 0 8px #ff4455' }} />
-                <span style={{ fontSize: '10px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', opacity: 0.8 }}>CRAMÉS — {blownAccounts.length}</span>
-                <span style={{ fontSize: '9px', color: '#4a5a72', letterSpacing: '1px' }}>↺ = restaurer</span>
+                <span style={{ fontSize:'12px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', opacity: 0.8 }}>CRAMÉS — {blownAccounts.length}</span>
+                <span style={{ fontSize:'12px', color: '#4a5a72', letterSpacing: '1px' }}>↺ = restaurer</span>
               </div>
             ))}
           </>
         )}
 
         <button onClick={() => setShowCreate(true)}
-          style={{ width: '100%', padding: '14px', background: 'transparent', border: '1px dashed #1a4a2a', borderRadius: '8px', color: '#5a6a82', fontSize: '12px', fontFamily: 'inherit', letterSpacing: '2px', cursor: 'pointer', transition: 'all 0.2s ease' }}
+          style={{ width: '100%', padding: '14px', background: 'transparent', border: '1px dashed #1a4a2a', borderRadius: '8px', color: '#5a6a82', fontSize:'13px', fontFamily: 'inherit', letterSpacing: '2px', cursor: 'pointer', transition: 'all 0.2s ease' }}
           onMouseEnter={e => { e.currentTarget.style.borderColor = '#8899bb'; e.currentTarget.style.color = '#8899bb'; e.currentTarget.style.background = 'rgba(136,153,187,0.05)'; }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = '#1a4a2a'; e.currentTarget.style.color = '#5a6a82'; e.currentTarget.style.background = 'transparent'; }}
         >+ CRÉER UN NOUVEAU COMPTE</button>

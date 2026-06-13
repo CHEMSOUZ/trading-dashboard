@@ -13,7 +13,7 @@ function CustomTooltip({ active, payload, label }) {
       background: 'rgba(6,18,12,0.97)',
       border: '1px solid rgba(0,255,136,0.2)',
       borderRadius: '4px', padding: '8px 12px',
-      fontSize: '11px', fontFamily: 'inherit',
+      fontSize:'13px', fontFamily: 'inherit',
     }}>
       <div style={{ color: '#3a6a4a', marginBottom: '4px' }}>{label}</div>
       {payload.map((p, i) => (
@@ -39,7 +39,7 @@ export default function Charts() {
   }, []);
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#3a6a4a', fontSize: '11px', letterSpacing: '2px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#3a6a4a', fontSize:'13px', letterSpacing: '2px' }}>
       CHARGEMENT...
     </div>
   );
@@ -106,9 +106,9 @@ export default function Charts() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '24px' }}>
         <div>
-          <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '6px' }}>ANALYSE</div>
+          <div style={{ fontSize:'12px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '6px' }}>ANALYSE</div>
           <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8f8e8', margin: 0 }}>Graphiques P&L</h1>
-          <div style={{ fontSize: '11px', color: '#3a6a4a', marginTop: '4px' }}>
+          <div style={{ fontSize:'13px', color: '#3a6a4a', marginTop: '4px' }}>
             {filtered.length} trade{filtered.length > 1 ? 's' : ''} ·{' '}
             <span style={{ color: totalPnl >= 0 ? '#00ff88' : '#ff4455', fontWeight: '700' }}>
               {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(0)}$
@@ -124,7 +124,7 @@ export default function Charts() {
               border: `1px solid ${period === p ? '#00ff88' : '#1a3a22'}`,
               background: period === p ? 'rgba(0,255,136,0.1)' : 'transparent',
               color: period === p ? '#00ff88' : '#3a6a4a',
-              fontSize: '10px', fontFamily: 'inherit',
+              fontSize:'12px', fontFamily: 'inherit',
               letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s',
             }}>{p}</button>
           ))}
@@ -139,7 +139,7 @@ export default function Charts() {
           border: '1px solid rgba(0,255,136,0.08)',
           borderRadius: '6px', padding: '20px',
         }}>
-          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '16px' }}>
+          <div style={{ fontSize:'12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '16px' }}>
             COURBE DE CAPITAL (P&L CUMULÉ)
           </div>
           {equityData.length > 1 ? (
@@ -168,7 +168,7 @@ export default function Charts() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div style={{ height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '11px', letterSpacing: '2px' }}>
+            <div style={{ height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize:'13px', letterSpacing: '2px' }}>
               Enregistrez des trades pour voir la courbe
             </div>
           )}
@@ -183,7 +183,7 @@ export default function Charts() {
             border: '1px solid rgba(0,255,136,0.08)',
             borderRadius: '6px', padding: '20px',
           }}>
-            <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '16px' }}>P&L PAR JOUR</div>
+            <div style={{ fontSize:'12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '16px' }}>P&L PAR JOUR</div>
             {dailyData.length > 0 ? (
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={dailyData} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
@@ -199,7 +199,7 @@ export default function Charts() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '10px' }}>
+              <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize:'12px' }}>
                 Aucune donnée
               </div>
             )}
@@ -212,7 +212,7 @@ export default function Charts() {
             borderRadius: '6px', padding: '20px',
             display: 'flex', flexDirection: 'column', alignItems: 'center',
           }}>
-            <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px', alignSelf: 'flex-start' }}>
+            <div style={{ fontSize:'12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px', alignSelf: 'flex-start' }}>
               RÉSULTATS
             </div>
             {pieData.length > 0 ? (
@@ -228,15 +228,15 @@ export default function Charts() {
                     <div key={d.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: d.color, flexShrink: 0 }} />
-                        <span style={{ fontSize: '9px', color: '#8aaa90' }}>{d.name}</span>
+                        <span style={{ fontSize:'12px', color: '#8aaa90' }}>{d.name}</span>
                       </div>
-                      <span style={{ fontSize: '10px', color: d.color, fontWeight: '700' }}>{d.value}</span>
+                      <span style={{ fontSize:'12px', color: d.color, fontWeight: '700' }}>{d.value}</span>
                     </div>
                   ))}
                 </div>
               </>
             ) : (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '10px' }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize:'12px' }}>
                 Aucune donnée
               </div>
             )}
@@ -248,7 +248,7 @@ export default function Charts() {
             border: '1px solid rgba(0,255,136,0.08)',
             borderRadius: '6px', padding: '20px',
           }}>
-            <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '16px' }}>P&L PAR PAIRE</div>
+            <div style={{ fontSize:'12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '16px' }}>P&L PAR PAIRE</div>
             {pairData.length > 0 ? (
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={pairData} layout="vertical" margin={{ top: 0, right: 30, bottom: 0, left: 10 }}>
@@ -262,7 +262,7 @@ export default function Charts() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '10px' }}>
+              <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize:'12px' }}>
                 Aucune donnée
               </div>
             )}

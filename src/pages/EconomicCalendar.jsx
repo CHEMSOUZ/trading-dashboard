@@ -272,7 +272,7 @@ function getDateRangeLabel(mode) {
 // ── Sub-components ───────────────────────────────────────────────────────────
 function Spinner() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '60px 0', color: '#5a6a82', fontSize: '12px', letterSpacing: '2px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '60px 0', color: '#5a6a82', fontSize:'13px', letterSpacing: '2px' }}>
       <div style={{ width: '16px', height: '16px', border: '2px solid rgba(136,153,187,0.22)', borderTop: '2px solid #8899bb', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       CHARGEMENT...
     </div>
@@ -296,7 +296,7 @@ function ValueDelta({ actual, estimate }) {
   const a = parseFloat(String(actual).replace(/[%KMB]/g, ''));
   const e = parseFloat(String(estimate).replace(/[%KMB]/g, ''));
   if (isNaN(a) || isNaN(e)) return null;
-  return <span style={{ fontSize: '10px', marginLeft: '3px', color: a >= e ? '#8899bb' : '#ff4455' }}>{a >= e ? '▲' : '▼'}</span>;
+  return <span style={{ fontSize:'12px', marginLeft: '3px', color: a >= e ? '#8899bb' : '#ff4455' }}>{a >= e ? '▲' : '▼'}</span>;
 }
 
 function Countdown({ dateStr }) {
@@ -316,7 +316,7 @@ function Countdown({ dateStr }) {
     return () => clearInterval(t);
   }, [dateStr]);
   if (!label) return null;
-  return <span style={{ fontSize: '9px', color: '#f0a020', fontWeight: '700' }}>{label}</span>;
+  return <span style={{ fontSize:'12px', color: '#f0a020', fontWeight: '700' }}>{label}</span>;
 }
 
 // ── Day separator header ─────────────────────────────────────────────────────
@@ -351,7 +351,7 @@ function DayHeader({ dateStr, tz }) {
         </div>
         {relLabel && (
           <div style={{
-            fontSize: '9px', letterSpacing: '2px', marginTop: '1px',
+            fontSize:'12px', letterSpacing: '2px', marginTop: '1px',
             color: isToday ? 'rgba(0,255,136,0.6)' : 'rgba(240,160,32,0.6)',
           }}>
             {relLabel}
@@ -399,10 +399,10 @@ function EventRow({ event, isGroupFirst, tz, tzAbbr }) {
       >
         {/* Heure + fuseau */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-          <span style={{ fontSize: '12px', color: upcoming30 ? '#f0a020' : '#7888a0', fontWeight: upcoming30 ? '700' : '400', letterSpacing: '0.5px' }}>
+          <span style={{ fontSize:'13px', color: upcoming30 ? '#f0a020' : '#7888a0', fontWeight: upcoming30 ? '700' : '400', letterSpacing: '0.5px' }}>
             {formatTime(event.time ?? event.date, tz)}
           </span>
-          <span style={{ fontSize: '9px', color: upcoming30 ? 'rgba(240,160,32,0.6)' : '#3c4c64', letterSpacing: '1px' }}>
+          <span style={{ fontSize:'12px', color: upcoming30 ? 'rgba(240,160,32,0.6)' : '#3c4c64', letterSpacing: '1px' }}>
             {upcoming30 ? <Countdown dateStr={event.time ?? event.date} /> : tzAbbr}
           </span>
         </div>
@@ -410,7 +410,7 @@ function EventRow({ event, isGroupFirst, tz, tzAbbr }) {
         {/* Devise */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <span style={{ fontSize: '13px' }}>{CURRENCY_FLAGS[event.country] ?? '🌐'}</span>
-          <span style={{ fontSize: '11px', color: '#6a8a7a', fontWeight: '600' }}>{event.country ?? '—'}</span>
+          <span style={{ fontSize:'13px', color: '#6a8a7a', fontWeight: '600' }}>{event.country ?? '—'}</span>
         </div>
 
         {/* Impact */}
@@ -421,24 +421,24 @@ function EventRow({ event, isGroupFirst, tz, tzAbbr }) {
           <div style={{ fontSize: '13px', color: past ? '#5a7a6a' : '#e8edf8', fontWeight: impact === 'high' ? '600' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {event.event ?? '—'}
           </div>
-          {upcoming30 && <div style={{ fontSize: '9px', color: '#f0a020', letterSpacing: '1px' }}>⚡ IMMINENTE</div>}
+          {upcoming30 && <div style={{ fontSize:'12px', color: '#f0a020', letterSpacing: '1px' }}>⚡ IMMINENTE</div>}
         </div>
 
         {/* Précédent */}
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '8px', color: '#1a4a22', letterSpacing: '1px', marginBottom: '2px' }}>PRÉC.</div>
-          <div style={{ fontSize: '12px', color: '#5868a0' }}>{formatValue(event.prev)}</div>
+          <div style={{ fontSize:'11px', color: '#1a4a22', letterSpacing: '1px', marginBottom: '2px' }}>PRÉC.</div>
+          <div style={{ fontSize:'13px', color: '#5868a0' }}>{formatValue(event.prev)}</div>
         </div>
 
         {/* Estimé */}
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '8px', color: '#1a4a22', letterSpacing: '1px', marginBottom: '2px' }}>ESTIMÉ</div>
-          <div style={{ fontSize: '12px', color: '#7888a0' }}>{formatValue(event.estimate)}</div>
+          <div style={{ fontSize:'11px', color: '#1a4a22', letterSpacing: '1px', marginBottom: '2px' }}>ESTIMÉ</div>
+          <div style={{ fontSize:'13px', color: '#7888a0' }}>{formatValue(event.estimate)}</div>
         </div>
 
         {/* Réel */}
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '8px', color: '#1a4a22', letterSpacing: '1px', marginBottom: '2px' }}>RÉEL</div>
+          <div style={{ fontSize:'11px', color: '#1a4a22', letterSpacing: '1px', marginBottom: '2px' }}>RÉEL</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
             <span style={{ fontSize: '13px', fontWeight: hasActual ? '700' : '400', color: hasActual ? (parseFloat(String(event.actual)) >= parseFloat(String(event.estimate || event.prev || '0')) ? '#8899bb' : '#ff4455') : '#1e2c40' }}>
               {hasActual ? formatValue(event.actual) : '—'}
@@ -455,23 +455,23 @@ function EventRow({ event, isGroupFirst, tz, tzAbbr }) {
       {expanded && (
         <div style={{ padding: '12px 20px 14px 80px', background: 'rgba(0,0,0,0.25)', borderBottom: '1px solid rgba(136,153,187,0.05)', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontSize: '8px', color: '#1a4a22', letterSpacing: '1.5px', marginBottom: '4px' }}>IMPACT</div>
+            <div style={{ fontSize:'11px', color: '#1a4a22', letterSpacing: '1.5px', marginBottom: '4px' }}>IMPACT</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <ImpactDots impact={impact} />
-              <span style={{ fontSize: '12px', color: cfg.color, fontWeight: '700' }}>{cfg.label}</span>
+              <span style={{ fontSize:'13px', color: cfg.color, fontWeight: '700' }}>{cfg.label}</span>
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '8px', color: '#1a4a22', letterSpacing: '1.5px', marginBottom: '4px' }}>DEVISE</div>
-            <div style={{ fontSize: '12px', color: '#dde4ef' }}>{CURRENCY_FLAGS[event.country] ?? ''} {event.country}</div>
+            <div style={{ fontSize:'11px', color: '#1a4a22', letterSpacing: '1.5px', marginBottom: '4px' }}>DEVISE</div>
+            <div style={{ fontSize:'13px', color: '#dde4ef' }}>{CURRENCY_FLAGS[event.country] ?? ''} {event.country}</div>
           </div>
           <div>
-            <div style={{ fontSize: '8px', color: '#1a4a22', letterSpacing: '1.5px', marginBottom: '4px' }}>HEURE ({tzAbbr})</div>
-            <div style={{ fontSize: '12px', color: '#dde4ef' }}>{formatTime(event.time ?? event.date, tz)}</div>
+            <div style={{ fontSize:'11px', color: '#1a4a22', letterSpacing: '1.5px', marginBottom: '4px' }}>HEURE ({tzAbbr})</div>
+            <div style={{ fontSize:'13px', color: '#dde4ef' }}>{formatTime(event.time ?? event.date, tz)}</div>
           </div>
           <div>
-            <div style={{ fontSize: '8px', color: '#1a4a22', letterSpacing: '1.5px', marginBottom: '4px' }}>JOUR</div>
-            <div style={{ fontSize: '12px', color: '#dde4ef' }}>{formatDayHeader(event.time ?? event.date, tz)}</div>
+            <div style={{ fontSize:'11px', color: '#1a4a22', letterSpacing: '1.5px', marginBottom: '4px' }}>JOUR</div>
+            <div style={{ fontSize:'13px', color: '#dde4ef' }}>{formatDayHeader(event.time ?? event.date, tz)}</div>
           </div>
         </div>
       )}
@@ -634,9 +634,9 @@ export default function EconomicCalendar() {
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>MACRO</div>
+          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>MACRO</div>
           <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8edf8', margin: 0 }}>Annonces Économiques</h1>
-          <div style={{ fontSize: '10px', color: '#5a6a82', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ fontSize:'12px', color: '#5a6a82', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             {filtered.length} événement{filtered.length !== 1 ? 's' : ''}
             {highCount > 0   && <span style={{ color: '#ff4455' }}>· {highCount} fort impact</span>}
             {upcoming30 > 0  && <span style={{ color: '#f0a020', animation: 'blink 1.5s infinite' }}>· ⚡ {upcoming30} dans 30 min</span>}
@@ -644,7 +644,7 @@ export default function EconomicCalendar() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {lastUpdate && (
-            <div style={{ fontSize: '10px', color: '#3c4c64', textAlign: 'right' }}>
+            <div style={{ fontSize:'12px', color: '#3c4c64', textAlign: 'right' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: refreshing ? '#f0a020' : '#8899bb', boxShadow: `0 0 6px ${refreshing ? '#f0a020' : '#8899bb'}`, animation: 'blink 2s infinite' }} />
                 <span>{refreshing ? 'Actualisation...' : `MAJ ${lastUpdate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}</span>
@@ -653,7 +653,7 @@ export default function EconomicCalendar() {
             </div>
           )}
           <button onClick={() => fetchEvents(false)}
-            style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.22)', color: '#8899bb', padding: '8px 16px', borderRadius: '5px', fontSize: '10px', fontFamily: 'inherit', letterSpacing: '1px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.22)', color: '#8899bb', padding: '8px 16px', borderRadius: '5px', fontSize:'12px', fontFamily: 'inherit', letterSpacing: '1px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(136,153,187,0.18)'}
             onMouseLeave={e => e.currentTarget.style.background = 'rgba(136,153,187,0.10)'}
           >
@@ -670,21 +670,21 @@ export default function EconomicCalendar() {
 
         {/* Row 1 : Fuseau horaire (le plus important pour lire les heures) */}
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '9px', color: '#3c4c64', letterSpacing: '1.5px', marginRight: '4px', flexShrink: 0 }}>FUSEAU</span>
+          <span style={{ fontSize:'12px', color: '#3c4c64', letterSpacing: '1.5px', marginRight: '4px', flexShrink: 0 }}>FUSEAU</span>
           {TIMEZONES.map(zone => (
             <button key={zone.key} onClick={() => setTzPersist(zone.key)}
-              style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '4px 10px', borderRadius: '4px', border: `1px solid ${tz === zone.key ? '#aa88ff' : '#1e2c40'}`, background: tz === zone.key ? 'rgba(170,136,255,0.15)' : 'transparent', color: tz === zone.key ? '#aa88ff' : '#5868a0', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', fontWeight: tz === zone.key ? '700' : '400', transition: 'all 0.12s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '4px 10px', borderRadius: '4px', border: `1px solid ${tz === zone.key ? '#aa88ff' : '#1e2c40'}`, background: tz === zone.key ? 'rgba(170,136,255,0.15)' : 'transparent', color: tz === zone.key ? '#aa88ff' : '#5868a0', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', fontWeight: tz === zone.key ? '700' : '400', transition: 'all 0.12s' }}
             >
-              <span style={{ fontSize: '11px' }}>{zone.flag}</span>
+              <span style={{ fontSize:'13px' }}>{zone.flag}</span>
               <span>{zone.abbr}</span>
-              {tz === zone.key && <span style={{ fontSize: '9px', opacity: 0.75 }}>· {zone.label}</span>}
+              {tz === zone.key && <span style={{ fontSize:'12px', opacity: 0.75 }}>· {zone.label}</span>}
             </button>
           ))}
         </div>
 
         {/* Row 2 : Période + recherche + à venir */}
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '9px', color: '#3c4c64', letterSpacing: '1.5px', marginRight: '4px', flexShrink: 0 }}>PÉRIODE</span>
+          <span style={{ fontSize:'12px', color: '#3c4c64', letterSpacing: '1.5px', marginRight: '4px', flexShrink: 0 }}>PÉRIODE</span>
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
             {[
               { key: 'today',    label: "Aujourd'hui" },
@@ -694,10 +694,10 @@ export default function EconomicCalendar() {
               { key: 'month',    label: 'Ce mois' },
             ].map(({ key, label }) => (
               <button key={key} onClick={() => setDateModePersist(key)}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 10px', borderRadius: '4px', border: `1px solid ${dateMode === key ? '#8899bb' : '#1e2c40'}`, background: dateMode === key ? 'rgba(136,153,187,0.14)' : 'transparent', color: dateMode === key ? '#8899bb' : '#5a6a82', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s', lineHeight: '1.3' }}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 10px', borderRadius: '4px', border: `1px solid ${dateMode === key ? '#8899bb' : '#1e2c40'}`, background: dateMode === key ? 'rgba(136,153,187,0.14)' : 'transparent', color: dateMode === key ? '#8899bb' : '#5a6a82', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s', lineHeight: '1.3' }}
               >
                 <span>{label}</span>
-                <span style={{ fontSize: '8px', opacity: 0.65 }}>{getDateRangeLabel(key)}</span>
+                <span style={{ fontSize:'11px', opacity: 0.65 }}>{getDateRangeLabel(key)}</span>
               </button>
             ))}
           </div>
@@ -705,9 +705,9 @@ export default function EconomicCalendar() {
             placeholder="Rechercher..."
             value={searchQ}
             onChange={e => setSearchQ(e.target.value)}
-            style={{ background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '4px', padding: '5px 10px', color: '#dde4ef', fontSize: '10px', fontFamily: 'inherit', outline: 'none', width: '160px', caretColor: '#8899bb' }}
+            style={{ background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '4px', padding: '5px 10px', color: '#dde4ef', fontSize:'12px', fontFamily: 'inherit', outline: 'none', width: '160px', caretColor: '#8899bb' }}
           />
-          <div onClick={toggleUpcoming} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '10px', color: showUpcoming ? '#f0a020' : '#5a6a82', marginLeft: 'auto', userSelect: 'none' }}>
+          <div onClick={toggleUpcoming} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize:'12px', color: showUpcoming ? '#f0a020' : '#5a6a82', marginLeft: 'auto', userSelect: 'none' }}>
             <div style={{ width: '28px', height: '16px', borderRadius: '8px', background: showUpcoming ? 'rgba(240,160,32,0.3)' : 'rgba(136,153,187,0.10)', border: `1px solid ${showUpcoming ? '#f0a020' : 'rgba(136,153,187,0.18)'}`, position: 'relative', transition: 'all 0.2s' }}>
               <div style={{ position: 'absolute', top: '2px', left: showUpcoming ? '14px' : '2px', width: '10px', height: '10px', borderRadius: '50%', background: showUpcoming ? '#f0a020' : '#5a6a82', transition: 'left 0.2s' }} />
             </div>
@@ -717,10 +717,10 @@ export default function EconomicCalendar() {
 
         {/* Row 3 : Impact */}
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '9px', color: '#3c4c64', letterSpacing: '1.5px', marginRight: '4px', flexShrink: 0 }}>IMPACT</span>
+          <span style={{ fontSize:'12px', color: '#3c4c64', letterSpacing: '1.5px', marginRight: '4px', flexShrink: 0 }}>IMPACT</span>
           {Object.entries(IMPACT_CONFIG).filter(([k]) => k !== 'na').map(([key, cfg]) => (
             <button key={key} onClick={() => toggleImpact(key)}
-              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '4px', border: `1px solid ${impactFilter.includes(key) ? cfg.color : '#1e2c40'}`, background: impactFilter.includes(key) ? cfg.bg : 'transparent', color: impactFilter.includes(key) ? cfg.color : '#5a6a82', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '4px', border: `1px solid ${impactFilter.includes(key) ? cfg.color : '#1e2c40'}`, background: impactFilter.includes(key) ? cfg.bg : 'transparent', color: impactFilter.includes(key) ? cfg.color : '#5a6a82', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s' }}
             >
               <ImpactDots impact={impactFilter.includes(key) ? key : 'na'} />
               {cfg.label}
@@ -731,16 +731,16 @@ export default function EconomicCalendar() {
         {/* Row 4 : Devises */}
         {allCurrencies.length > 0 && (
           <div style={{ display: 'flex', gap: '5px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '9px', color: '#3c4c64', letterSpacing: '1.5px', marginRight: '4px', flexShrink: 0 }}>DEVISE</span>
+            <span style={{ fontSize:'12px', color: '#3c4c64', letterSpacing: '1.5px', marginRight: '4px', flexShrink: 0 }}>DEVISE</span>
             {allCurrencies.map(cur => (
               <button key={cur} onClick={() => toggleCurrency(cur)}
-                style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '3px 8px', borderRadius: '4px', border: `1px solid ${currencyFilter.includes(cur) ? '#00aaff' : '#1e2c40'}`, background: currencyFilter.includes(cur) ? 'rgba(0,170,255,0.1)' : 'transparent', color: currencyFilter.includes(cur) ? '#00aaff' : '#5868a0', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s' }}>
-                <span style={{ fontSize: '11px' }}>{CURRENCY_FLAGS[cur] ?? '🌐'}</span>
+                style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '3px 8px', borderRadius: '4px', border: `1px solid ${currencyFilter.includes(cur) ? '#00aaff' : '#1e2c40'}`, background: currencyFilter.includes(cur) ? 'rgba(0,170,255,0.1)' : 'transparent', color: currencyFilter.includes(cur) ? '#00aaff' : '#5868a0', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.12s' }}>
+                <span style={{ fontSize:'13px' }}>{CURRENCY_FLAGS[cur] ?? '🌐'}</span>
                 {cur}
               </button>
             ))}
             {hasActiveFilters && (
-              <button onClick={resetAll} style={{ marginLeft: '8px', padding: '3px 10px', borderRadius: '4px', border: '1px solid rgba(255,68,85,0.3)', background: 'rgba(255,68,85,0.06)', color: '#ff6677', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>
+              <button onClick={resetAll} style={{ marginLeft: '8px', padding: '3px 10px', borderRadius: '4px', border: '1px solid rgba(255,68,85,0.3)', background: 'rgba(255,68,85,0.06)', color: '#ff6677', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer' }}>
                 ✕ Réinitialiser
               </button>
             )}
@@ -758,7 +758,7 @@ export default function EconomicCalendar() {
             { label: '< 30 MIN',    value: upcoming30,       color: '#f0a020' },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '6px', padding: '10px 14px', borderTop: `2px solid ${color}` }}>
-              <div style={{ fontSize: '8px', color: '#3c4c64', letterSpacing: '1.5px', marginBottom: '4px' }}>{label}</div>
+              <div style={{ fontSize:'11px', color: '#3c4c64', letterSpacing: '1.5px', marginBottom: '4px' }}>{label}</div>
               <div style={{ fontSize: '18px', fontWeight: '700', color }}>{value}</div>
             </div>
           ))}
@@ -767,7 +767,7 @@ export default function EconomicCalendar() {
 
       {/* ── Table header ── */}
       {!loading && filtered.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: '64px 60px 36px 1fr 90px 90px 90px 16px', gap: '8px', padding: '6px 16px', fontSize: '8px', color: '#3c4c64', letterSpacing: '1.5px', borderBottom: '1px solid rgba(136,153,187,0.08)', marginBottom: '2px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '64px 60px 36px 1fr 90px 90px 90px 16px', gap: '8px', padding: '6px 16px', fontSize:'11px', color: '#3c4c64', letterSpacing: '1.5px', borderBottom: '1px solid rgba(136,153,187,0.08)', marginBottom: '2px' }}>
           <span>HEURE ({tzAbbr})</span>
           <span>DEVISE</span>
           <span>IMP.</span>
@@ -786,18 +786,18 @@ export default function EconomicCalendar() {
         <div style={{ padding: '40px', textAlign: 'center', background: 'rgba(255,68,85,0.06)', border: '1px solid rgba(255,68,85,0.2)', borderRadius: '8px' }}>
           <div style={{ fontSize: '24px', marginBottom: '10px' }}>⚠</div>
           <div style={{ fontSize: '13px', color: '#ff4455', marginBottom: '6px' }}>Erreur de chargement</div>
-          <div style={{ fontSize: '11px', color: '#4a3a3a', marginBottom: '16px' }}>{error}</div>
-          <button onClick={() => fetchEvents(false)} style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.28)', color: '#8899bb', padding: '8px 20px', borderRadius: '5px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>
+          <div style={{ fontSize:'13px', color: '#4a3a3a', marginBottom: '16px' }}>{error}</div>
+          <button onClick={() => fetchEvents(false)} style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.28)', color: '#8899bb', padding: '8px 20px', borderRadius: '5px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>
             Réessayer
           </button>
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ padding: '40px', textAlign: 'center', border: '1px dashed #1e2c40', borderRadius: '8px' }}>
-          <div style={{ fontSize: '12px', color: '#3a1818', letterSpacing: '2px', marginBottom: '16px' }}>
+          <div style={{ fontSize:'13px', color: '#3a1818', letterSpacing: '2px', marginBottom: '16px' }}>
             Aucune annonce pour cette période / ces filtres
           </div>
           {hasActiveFilters && (
-            <button onClick={resetAll} style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.35)', color: '#8899bb', padding: '8px 20px', borderRadius: '5px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>
+            <button onClick={resetAll} style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.35)', color: '#8899bb', padding: '8px 20px', borderRadius: '5px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>
               Réinitialiser tous les filtres
             </button>
           )}

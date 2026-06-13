@@ -58,17 +58,17 @@ function TopstepPhaseSelector({ account, onChanged }) {
     <div style={{ position: 'relative' }}>
       <div style={{ background: `rgba(${groupColor==='#00ff88'?'0,255,136':'240,192,32'},0.04)`, border: `1px solid ${groupColor}20`, borderRadius: '6px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '3px' }}>PHASE DU COMPTE</div>
+          <div style={{ fontSize:'12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '3px' }}>PHASE DU COMPTE</div>
           {current ? (
             <div>
               <span style={{ fontSize: '14px', fontWeight: '700', color: '#e8f8e8' }}>{current.phase === 'combine' ? '🎯' : '💰'} {account?.typeInfo?.label ?? account?.type}</span>
-              <span style={{ fontSize: '10px', color: groupColor, marginLeft: '10px' }}>{current.sub}</span>
+              <span style={{ fontSize:'12px', color: groupColor, marginLeft: '10px' }}>{current.sub}</span>
             </div>
           ) : (
             <div style={{ fontSize: '13px', color: '#f0a020' }}>⚠ Phase non définie — cliquez "Modifier" pour configurer</div>
           )}
         </div>
-        <button onClick={() => { setSelected(account?.type ?? ''); setOpen(true); }} style={{ background: 'rgba(0,170,255,0.1)', border: '1px solid rgba(0,170,255,0.25)', color: '#00aaff', padding: '7px 14px', borderRadius: '4px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', fontWeight: '600', whiteSpace: 'nowrap' }}>
+        <button onClick={() => { setSelected(account?.type ?? ''); setOpen(true); }} style={{ background: 'rgba(0,170,255,0.1)', border: '1px solid rgba(0,170,255,0.25)', color: '#00aaff', padding: '7px 14px', borderRadius: '4px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', fontWeight: '600', whiteSpace: 'nowrap' }}>
           Modifier →
         </button>
       </div>
@@ -78,7 +78,7 @@ function TopstepPhaseSelector({ account, onChanged }) {
           <div onClick={e => e.stopPropagation()} style={{ background: '#070d12', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '10px', padding: '24px', width: '560px', maxWidth: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
-                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>TOPSTEP</div>
+                <div style={{ fontSize:'12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>TOPSTEP</div>
                 <div style={{ fontSize: '16px', fontWeight: '700', color: '#e8f8e8' }}>Sélectionner la phase du compte</div>
               </div>
               <button onClick={() => setOpen(false)} style={{ background: 'none', border: '1px solid #1a3a22', color: '#4a7a5a', width: '28px', height: '28px', borderRadius: '50%', cursor: 'pointer', fontSize: '14px' }}>×</button>
@@ -86,7 +86,7 @@ function TopstepPhaseSelector({ account, onChanged }) {
 
             {TS_PHASE_OPTIONS.map(grp => (
               <div key={grp.group} style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '10px', color: grp.color, letterSpacing: '2px', marginBottom: '8px', opacity: 0.8 }}>{grp.group.toUpperCase()}</div>
+                <div style={{ fontSize:'12px', color: grp.color, letterSpacing: '2px', marginBottom: '8px', opacity: 0.8 }}>{grp.group.toUpperCase()}</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '6px' }}>
                   {grp.options.map(opt => (
                     <div key={opt.value} onClick={() => setSelected(opt.value)} style={{ padding: '10px 12px', borderRadius: '6px', cursor: 'pointer', background: selected === opt.value ? `rgba(${grp.color==='#00ff88'?'0,255,136':'240,192,32'},0.08)` : 'rgba(10,28,18,0.4)', border: `1px solid ${selected === opt.value ? grp.color+'44' : 'rgba(0,255,136,0.06)'}`, transition: 'all 0.15s' }}>
@@ -96,20 +96,20 @@ function TopstepPhaseSelector({ account, onChanged }) {
                         </div>
                         <span style={{ fontSize: '15px', fontWeight: '700', color: selected === opt.value ? '#e8f8e8' : '#8aaa90' }}>{opt.label}</span>
                       </div>
-                      <div style={{ fontSize: '10px', color: '#4a7a5a', paddingLeft: '22px' }}>{opt.sub}</div>
+                      <div style={{ fontSize:'12px', color: '#4a7a5a', paddingLeft: '22px' }}>{opt.sub}</div>
                     </div>
                   ))}
                 </div>
               </div>
             ))}
 
-            <div style={{ background: 'rgba(240,160,32,0.06)', border: '1px solid rgba(240,160,32,0.2)', borderRadius: '4px', padding: '8px 12px', marginBottom: '16px', fontSize: '11px', color: '#f0a020' }}>
+            <div style={{ background: 'rgba(240,160,32,0.06)', border: '1px solid rgba(240,160,32,0.2)', borderRadius: '4px', padding: '8px 12px', marginBottom: '16px', fontSize:'13px', color: '#f0a020' }}>
               ⚠ Ce choix est permanent. Combine → validé quand profit target atteint · Express Funded → compte LIVE dans la sidebar.
             </div>
 
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setOpen(false)} style={{ padding: '9px 18px', borderRadius: '5px', border: '1px solid #1a3a22', background: 'transparent', color: '#5a8a6a', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>Annuler</button>
-              <button onClick={confirm} disabled={saving || !selected || selected === account?.type} style={{ padding: '9px 22px', borderRadius: '5px', background: !selected || selected === account?.type ? 'rgba(10,28,18,0.4)' : 'linear-gradient(135deg,rgba(0,255,136,0.2),rgba(0,170,85,0.1))', border: `1px solid ${!selected || selected === account?.type ? '#1a3a22' : 'rgba(0,255,136,0.35)'}`, color: !selected || selected === account?.type ? '#2a5a32' : '#00ff88', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving || !selected || selected === account?.type ? 'not-allowed' : 'pointer' }}>
+              <button onClick={() => setOpen(false)} style={{ padding: '9px 18px', borderRadius: '5px', border: '1px solid #1a3a22', background: 'transparent', color: '#5a8a6a', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>Annuler</button>
+              <button onClick={confirm} disabled={saving || !selected || selected === account?.type} style={{ padding: '9px 22px', borderRadius: '5px', background: !selected || selected === account?.type ? 'rgba(10,28,18,0.4)' : 'linear-gradient(135deg,rgba(0,255,136,0.2),rgba(0,170,85,0.1))', border: `1px solid ${!selected || selected === account?.type ? '#1a3a22' : 'rgba(0,255,136,0.35)'}`, color: !selected || selected === account?.type ? '#2a5a32' : '#00ff88', fontSize:'13px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving || !selected || selected === account?.type ? 'not-allowed' : 'pointer' }}>
                 {saving ? 'SAUVEGARDE...' : selected === account?.type ? 'DÉJÀ SÉLECTIONNÉ' : '✓ CONFIRMER LA PHASE'}
               </button>
             </div>
@@ -152,9 +152,9 @@ function CTooltip({ active, payload, label }) {
 function MetricCard({ label, value, sub, color = '#c8d8c8', alert = false }) {
   return (
     <div style={{ background: alert ? 'rgba(255,68,85,0.06)' : 'rgba(10,28,18,0.5)', border: `1px solid ${alert ? 'rgba(255,68,85,0.3)' : 'rgba(0,255,136,0.08)'}`, borderTop: `2px solid ${color}`, borderRadius: '6px', padding: '14px 16px' }}>
-      <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '1.5px', marginBottom: '6px' }}>{label}</div>
+      <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '1.5px', marginBottom: '6px' }}>{label}</div>
       <div style={{ fontSize: '21px', fontWeight: '700', color, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '12px', color: alert ? '#ff8888' : '#3a6a4a', marginTop: '5px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize:'13px', color: alert ? '#ff8888' : '#3a6a4a', marginTop: '5px' }}>{sub}</div>}
     </div>
   );
 }
@@ -179,7 +179,7 @@ function ProgressBar({ label, current, max, color, displayText }) {
 function DayDot({ date, pnl }) {
   const isWin = pnl > 0;
   return (
-    <div title={`${date}: ${fmt(pnl, true)} (net)`} style={{ width: '34px', height: '34px', borderRadius: '50%', background: isWin ? 'rgba(0,255,136,0.12)' : 'rgba(255,68,85,0.12)', border: `1.5px solid ${isWin ? '#00ff88' : '#ff4455'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: isWin ? '#00ff88' : '#ff4455', fontWeight: '700', cursor: 'default' }}>
+    <div title={`${date}: ${fmt(pnl, true)} (net)`} style={{ width: '34px', height: '34px', borderRadius: '50%', background: isWin ? 'rgba(0,255,136,0.12)' : 'rgba(255,68,85,0.12)', border: `1.5px solid ${isWin ? '#00ff88' : '#ff4455'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize:'13px', color: isWin ? '#00ff88' : '#ff4455', fontWeight: '700', cursor: 'default' }}>
       {isWin ? '✓' : '✗'}
     </div>
   );
@@ -261,10 +261,10 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
       {/* Trailing drawdown */}
       <div style={{ background: 'rgba(10,28,18,0.4)', border: `1px solid ${distanceToFloor < 500 ? 'rgba(255,68,85,0.3)' : 'rgba(0,255,136,0.08)'}`, borderRadius: '8px', padding: '18px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '2px' }}>⚠️ TRAILING DRAWDOWN SUIVEUR — {MAX_LOSS.toLocaleString()}$</div>
+          <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px' }}>⚠️ TRAILING DRAWDOWN SUIVEUR — {MAX_LOSS.toLocaleString()}$</div>
           {floorLocked
-            ? <div style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', color: '#00ff88', fontWeight: '700', letterSpacing: '1px' }}>🔒 VERROUILLÉ AU CAPITAL INITIAL</div>
-            : <div style={{ background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.25)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', color: '#f0a020', letterSpacing: '1px' }}>↑ EN SUIVI — se verrouille à {ACCOUNT_SIZE.toLocaleString()}$ dès +{MAX_LOSS.toLocaleString()}$ de profit</div>
+            ? <div style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '4px', padding: '3px 8px', fontSize:'12px', color: '#00ff88', fontWeight: '700', letterSpacing: '1px' }}>🔒 VERROUILLÉ AU CAPITAL INITIAL</div>
+            : <div style={{ background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.25)', borderRadius: '4px', padding: '3px 8px', fontSize:'12px', color: '#f0a020', letterSpacing: '1px' }}>↑ EN SUIVI — se verrouille à {ACCOUNT_SIZE.toLocaleString()}$ dès +{MAX_LOSS.toLocaleString()}$ de profit</div>
           }
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '10px', marginBottom: '14px' }}>
@@ -275,7 +275,7 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
         </div>
         <div style={{ height: '20px', background: 'rgba(0,0,0,0.3)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
           <div style={{ height: '100%', width: `${Math.min((distanceToFloor / MAX_LOSS) * 100, 100)}%`, background: distanceToFloor < 500 ? 'linear-gradient(90deg,#ff4455,#ff6677)' : distanceToFloor < 1000 ? 'linear-gradient(90deg,#f0a020,#f0c040)' : 'linear-gradient(90deg,#00aa55,#00ff88)', borderRadius: '4px', transition: 'width 0.5s ease' }} />
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize:'13px', color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>
             {distanceToFloor.toFixed(2)}$ de marge · Floor: {floor.toFixed(2)}$
           </div>
         </div>
@@ -305,11 +305,11 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
                 <ProgressBar label="Meilleur jour / Total net positif" current={Math.min(bestDayPct,40)} max={40} color={bestDayPct<=40?'#00ff88':'#ff4455'} displayText={`${bestDayPct.toFixed(1)}%/40%`} />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '4px' }}>
                   <div style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '7px 10px' }}>
-                    <div style={{ fontSize: '12px', color: '#3a6a4a', marginBottom: '3px' }}>MEILLEUR JOUR NET</div>
+                    <div style={{ fontSize:'13px', color: '#3a6a4a', marginBottom: '3px' }}>MEILLEUR JOUR NET</div>
                     <div style={{ fontSize: '15px', fontWeight: '700', color: '#00ff88' }}>{fmt(bestDayNet, true)}</div>
                   </div>
                   <div style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '7px 10px' }}>
-                    <div style={{ fontSize: '12px', color: '#3a6a4a', marginBottom: '3px' }}>TOTAL NET POSITIF</div>
+                    <div style={{ fontSize:'13px', color: '#3a6a4a', marginBottom: '3px' }}>TOTAL NET POSITIF</div>
                     <div style={{ fontSize: '15px', fontWeight: '700', color: '#c8d8c8' }}>{fmt(posNetPnl, true)}</div>
                   </div>
                 </div>
@@ -327,9 +327,9 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
                 <div style={{ width: '17px', height: '17px', borderRadius: '50%', border: `2px solid ${localOption===opt.key?'#00ff88':'#2a5a3a'}`, background: localOption===opt.key?'#00ff88':'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {localOption===opt.key && <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#060c10' }} />}
                 </div>
-                <span style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '1.5px' }}>{opt.title}</span>
+                <span style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '1.5px' }}>{opt.title}</span>
               </div>
-              {opt.ready && localOption===opt.key && <span style={{ background: 'rgba(0,255,136,0.15)', border: '1px solid #00ff88', color: '#00ff88', fontSize: '12px', padding: '2px 8px', borderRadius: '3px', fontWeight: '700' }}>ÉLIGIBLE ✓</span>}
+              {opt.ready && localOption===opt.key && <span style={{ background: 'rgba(0,255,136,0.15)', border: '1px solid #00ff88', color: '#00ff88', fontSize:'13px', padding: '2px 8px', borderRadius: '3px', fontWeight: '700' }}>ÉLIGIBLE ✓</span>}
             </div>
             <div style={{ fontSize: '13px', color: '#4a7a5a', marginBottom: '12px' }}>{opt.desc}</div>
             {opt.body}
@@ -340,7 +340,7 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
       {/* Charts */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>COURBE CAPITAL (NET) + FLOOR</div>
+          <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>COURBE CAPITAL (NET) + FLOOR</div>
           {equityPoints.length > 1 ? (
             <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={equityPoints} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
@@ -357,7 +357,7 @@ function FundedTab({ trades, manualBalance, setManualBalance, balanceInput, setB
           ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '13px' }}>Aucun trade</div>}
         </div>
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
+          <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
           {dailyArr.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={dailyArr} margin={{ top: 5, right: 5, bottom: 0, left: 5 }} barCategoryGap="35%">
@@ -451,7 +451,7 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
                 { label: 'NOUVEAU TARGET', value: `+${dynamicProfitTarget}$`, color: '#f0a020' },
               ].map(({ label, value, color, strike }) => (
                 <div key={label} style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '8px 12px' }}>
-                  <div style={{ fontSize: '12px', color: '#3a6a4a', marginBottom: '3px' }}>{label}</div>
+                  <div style={{ fontSize:'13px', color: '#3a6a4a', marginBottom: '3px' }}>{label}</div>
                   <div style={{ fontSize: '14px', fontWeight: '700', color, textDecoration: strike ? 'line-through' : 'none' }}>{value}</div>
                 </div>
               ))}
@@ -462,7 +462,7 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
 
       {/* Rules */}
       <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', padding: '18px' }}>
-        <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>🎯 RÈGLES DU COMBINE (P&L NET)</div>
+        <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>🎯 RÈGLES DU COMBINE (P&L NET)</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
           {/* Rule 1 */}
@@ -471,7 +471,7 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '14px', color: '#c8d8c8', fontWeight: '600', marginBottom: '3px' }}>
                 Trailing Drawdown Suiveur — {MAX_LOSS.toLocaleString()}$
-                {floorLocked && <span style={{ fontSize: '11px', color: '#00ff88', marginLeft: '8px' }}>🔒 Verrouillé au capital initial</span>}
+                {floorLocked && <span style={{ fontSize:'13px', color: '#00ff88', marginLeft: '8px' }}>🔒 Verrouillé au capital initial</span>}
               </div>
               <div style={{ fontSize: '13px', color: '#4a7a5a' }}>Floor actuel: {floor.toFixed(2)}$ · Se verrouille à {ACCOUNT_SIZE.toLocaleString()}$ dès +{MAX_LOSS.toLocaleString()}$ de profit</div>
             </div>
@@ -484,7 +484,7 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '14px', color: '#c8d8c8', fontWeight: '600', marginBottom: '6px' }}>
                 Profit Target (net) — Atteindre +{dynamicProfitTarget.toLocaleString()}$
-                {targetAdjusted && <span style={{ fontSize: '12px', color: '#f0a020', marginLeft: '8px' }}>↑ AJUSTÉ</span>}
+                {targetAdjusted && <span style={{ fontSize:'13px', color: '#f0a020', marginLeft: '8px' }}>↑ AJUSTÉ</span>}
               </div>
               <ProgressBar label={null} current={Math.min(netProfit, dynamicProfitTarget)} max={dynamicProfitTarget} color={rule2 ? '#00ff88' : '#f0a020'} displayText={`${fmt(netProfit, true)} / +${dynamicProfitTarget}$`} />
             </div>
@@ -498,7 +498,7 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
               <div style={{ display: 'flex', gap: '6px' }}>
                 {allDays.slice(0, 6).map(([date, pnl]) => <DayDot key={date} date={date} pnl={pnl} />)}
                 {Array.from({ length: Math.max(0, MIN_DAYS - tradingDays) }).map((_, i) => (
-                  <div key={i} style={{ width: '34px', height: '34px', borderRadius: '50%', border: '1.5px dashed #1a3a22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#2a4a30' }}>—</div>
+                  <div key={i} style={{ width: '34px', height: '34px', borderRadius: '50%', border: '1.5px dashed #1a3a22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize:'13px', color: '#2a4a30' }}>—</div>
                 ))}
               </div>
             </div>
@@ -520,7 +520,7 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
                   { label: '% DU TARGET', value: `${consistencyPct.toFixed(1)}%`, color: isConsistencyBreached ? '#f0a020' : '#00ff88' },
                 ].map(({ label, value, color }) => (
                   <div key={label} style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '8px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: '#3a6a4a', marginBottom: '3px' }}>{label}</div>
+                    <div style={{ fontSize:'13px', color: '#3a6a4a', marginBottom: '3px' }}>{label}</div>
                     <div style={{ fontSize: '15px', fontWeight: '700', color }}>{value}</div>
                   </div>
                 ))}
@@ -541,7 +541,7 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
       {/* Charts */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>PROGRESSION NETTE — Objectif: +{dynamicProfitTarget}${targetAdjusted?' ⚡':''}</div>
+          <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>PROGRESSION NETTE — Objectif: +{dynamicProfitTarget}${targetAdjusted?' ⚡':''}</div>
           {equityWithTarget.length > 1 ? (
             <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={equityWithTarget} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
@@ -559,7 +559,7 @@ function CombineTab({ trades, manualBalance, setManualBalance, balanceInput, set
           ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '13px' }}>Aucun trade</div>}
         </div>
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
+          <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
           {dailyArr.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={dailyArr} margin={{ top: 5, right: 5, bottom: 0, left: 5 }} barCategoryGap="35%">
@@ -654,7 +654,7 @@ export default function Topstep() {
         ].map(({ key, label, desc }) => (
           <button key={key} onClick={() => switchTab(key)} style={{ flex: 1, padding: '13px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', transition: 'all 0.2s', background: tab===key?'rgba(0,255,136,0.12)':'transparent', fontFamily: 'inherit' }}>
             <div style={{ fontSize: '14px', fontWeight: '700', color: tab===key?'#00ff88':'#5a8a6a', marginBottom: '2px' }}>{label}</div>
-            <div style={{ fontSize: '12px', color: tab===key?'#3a8a4a':'#3a5a3a' }}>{desc}</div>
+            <div style={{ fontSize:'13px', color: tab===key?'#3a8a4a':'#3a5a3a' }}>{desc}</div>
             {tab===key && <div style={{ height: '2px', background: '#00ff88', borderRadius: '2px', marginTop: '8px', boxShadow: '0 0 6px #00ff88' }} />}
           </button>
         ))}

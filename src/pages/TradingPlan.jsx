@@ -155,9 +155,9 @@ function pnlColor(n) {
 function StatBox({ label, value, color, sub }) {
   return (
     <div style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(0,255,136,0.07)', borderRadius: '7px', padding: '12px 14px', borderTop: `2px solid ${color ?? '#5a6a82'}` }}>
-      <div style={{ fontSize: '9px', color: '#3c4c64', letterSpacing: '1.5px', marginBottom: '5px' }}>{label}</div>
+      <div style={{ fontSize:'12px', color: '#3c4c64', letterSpacing: '1.5px', marginBottom: '5px' }}>{label}</div>
       <div style={{ fontSize: '16px', fontWeight: '700', color: color ?? '#dde4ef', lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '10px', color: '#3c4c64', marginTop: '3px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize:'12px', color: '#3c4c64', marginTop: '3px' }}>{sub}</div>}
     </div>
   );
 }
@@ -166,8 +166,8 @@ function RuleItem({ rule }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '9px 12px', background: rule.critical ? 'rgba(255,68,85,0.04)' : 'rgba(14,15,22,0.3)', border: `1px solid ${rule.critical ? 'rgba(255,68,85,0.12)' : 'rgba(136,153,187,0.05)'}`, borderLeft: `2px solid ${rule.critical ? '#ff4455' : '#3c4c64'}`, borderRadius: '5px' }}>
       <span style={{ fontSize: '14px', flexShrink: 0, marginTop: '1px' }}>{rule.icon}</span>
-      <span style={{ fontSize: '12px', color: rule.critical ? '#e8c8c8' : '#7888a0', lineHeight: '1.5' }}>{rule.text}</span>
-      {rule.critical && <span style={{ marginLeft: 'auto', fontSize: '8px', color: '#ff4455', background: 'rgba(255,68,85,0.12)', border: '1px solid rgba(255,68,85,0.25)', padding: '1px 5px', borderRadius: '2px', letterSpacing: '0.5px', flexShrink: 0, alignSelf: 'center' }}>CRITIQUE</span>}
+      <span style={{ fontSize:'13px', color: rule.critical ? '#e8c8c8' : '#7888a0', lineHeight: '1.5' }}>{rule.text}</span>
+      {rule.critical && <span style={{ marginLeft: 'auto', fontSize:'11px', color: '#ff4455', background: 'rgba(255,68,85,0.12)', border: '1px solid rgba(255,68,85,0.25)', padding: '1px 5px', borderRadius: '2px', letterSpacing: '0.5px', flexShrink: 0, alignSelf: 'center' }}>CRITIQUE</span>}
     </div>
   );
 }
@@ -178,34 +178,34 @@ function DayCycleTable({ plan }) {
   return (
     <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(0,255,136,0.07)', borderRadius: '8px', overflow: 'hidden' }}>
       <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(136,153,187,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px' }}>EXEMPLE DE CYCLE</span>
-        <span style={{ fontSize: '11px', color: pnlColor(total), fontWeight: '700' }}>Total : {fmt(total)}</span>
+        <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px' }}>EXEMPLE DE CYCLE</span>
+        <span style={{ fontSize:'13px', color: pnlColor(total), fontWeight: '700' }}>Total : {fmt(total)}</span>
       </div>
       {/* Header */}
-      <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 1fr', padding: '6px 14px', fontSize: '9px', color: '#3c4c64', letterSpacing: '1.5px', borderBottom: '1px solid rgba(136,153,187,0.05)', background: 'rgba(0,0,0,0.2)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 1fr', padding: '6px 14px', fontSize:'12px', color: '#3c4c64', letterSpacing: '1.5px', borderBottom: '1px solid rgba(136,153,187,0.05)', background: 'rgba(0,0,0,0.2)' }}>
         <span>JOUR</span><span>OBJECTIF</span><span>% DU TOTAL</span><span>NOTE</span>
       </div>
       {plan.cycle.map((d, i) => {
         const pct = total > 0 ? ((d.target / total) * 100).toFixed(0) : '—';
         const over40 = total > 0 && (d.target / total) > 0.4 && d.target > 0;
         return (
-          <div key={i} style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 1fr', padding: '9px 14px', fontSize: '12px', borderBottom: i < plan.cycle.length - 1 ? '1px solid rgba(0,255,136,0.03)' : 'none', background: i % 2 === 0 ? 'rgba(14,15,22,0.3)' : 'transparent', alignItems: 'center' }}>
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 1fr', padding: '9px 14px', fontSize:'13px', borderBottom: i < plan.cycle.length - 1 ? '1px solid rgba(0,255,136,0.03)' : 'none', background: i % 2 === 0 ? 'rgba(14,15,22,0.3)' : 'transparent', alignItems: 'center' }}>
             <span style={{ color: '#5868a0', fontWeight: '700' }}>J{d.day}</span>
             <span style={{ color: pnlColor(d.target), fontWeight: '600' }}>{fmt(d.target)}</span>
             <span style={{ color: over40 ? '#ff4455' : '#6a8a7a' }}>
               {d.target > 0 ? `${pct}%` : '—'}
-              {over40 && <span style={{ marginLeft: '4px', fontSize: '9px', color: '#ff4455' }}>⚠ &gt;40%</span>}
+              {over40 && <span style={{ marginLeft: '4px', fontSize:'12px', color: '#ff4455' }}>⚠ &gt;40%</span>}
             </span>
-            <span style={{ color: '#4a6a54', fontSize: '11px' }}>{d.note}</span>
+            <span style={{ color: '#4a6a54', fontSize:'13px' }}>{d.note}</span>
           </div>
         );
       })}
       {/* Total row */}
       <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 1fr', padding: '10px 14px', fontSize: '13px', background: 'rgba(0,0,0,0.25)', borderTop: '1px solid rgba(136,153,187,0.10)', alignItems: 'center' }}>
-        <span style={{ color: '#5a6a82', fontSize: '10px', letterSpacing: '1px' }}>TOTAL</span>
+        <span style={{ color: '#5a6a82', fontSize:'12px', letterSpacing: '1px' }}>TOTAL</span>
         <span style={{ color: pnlColor(total), fontWeight: '700' }}>{fmt(total)}</span>
         <span style={{ color: '#5a6a82' }}>100%</span>
-        <span style={{ color: plan.color, fontSize: '10px' }}>Payout : {fmt(plan.payoutTarget?.[0])} → {fmt(plan.payoutTarget?.[1])}</span>
+        <span style={{ color: plan.color, fontSize:'12px' }}>Payout : {fmt(plan.payoutTarget?.[0])} → {fmt(plan.payoutTarget?.[1])}</span>
       </div>
     </div>
   );
@@ -262,10 +262,10 @@ function Simulator({ plan }) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
         <div>
-          <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px' }}>SIMULATEUR DE CYCLE</div>
-          <div style={{ fontSize: '10px', color: '#3a1818', marginTop: '2px' }}>Entre tes P&L réels ou simulés — règle des 40% calculée en temps réel</div>
+          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px' }}>SIMULATEUR DE CYCLE</div>
+          <div style={{ fontSize:'12px', color: '#3a1818', marginTop: '2px' }}>Entre tes P&L réels ou simulés — règle des 40% calculée en temps réel</div>
         </div>
-        <button onClick={reset} style={{ background: 'none', border: '1px solid #1e2c40', color: '#3a5a32', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '9px', fontFamily: 'inherit', letterSpacing: '1px' }}>RESET</button>
+        <button onClick={reset} style={{ background: 'none', border: '1px solid #1e2c40', color: '#3a5a32', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontSize:'12px', fontFamily: 'inherit', letterSpacing: '1px' }}>RESET</button>
       </div>
 
       {/* Day inputs */}
@@ -275,7 +275,7 @@ function Simulator({ plan }) {
           const isMax = v === maxDay && v > 0 && positiveVals.filter(x => x === maxDay).length === 1;
           return (
             <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '9px', color: isMax ? '#f0a020' : '#3c4c64', letterSpacing: '1px' }}>
+              <span style={{ fontSize:'12px', color: isMax ? '#f0a020' : '#3c4c64', letterSpacing: '1px' }}>
                 J{i + 1}{isMax ? ' ★' : ''}
               </span>
               <input
@@ -296,30 +296,30 @@ function Simulator({ plan }) {
       {/* KPI row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '8px', marginBottom: '12px' }}>
         <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '5px', padding: '8px 10px', borderTop: `2px solid ${pnlColor(total)}` }}>
-          <div style={{ fontSize: '9px', color: '#3c4c64', letterSpacing: '1px', marginBottom: '3px' }}>TOTAL CYCLE</div>
+          <div style={{ fontSize:'12px', color: '#3c4c64', letterSpacing: '1px', marginBottom: '3px' }}>TOTAL CYCLE</div>
           <div style={{ fontSize: '15px', fontWeight: '700', color: pnlColor(total) }}>{fmt(total)}</div>
           {minTotal > 0 && !consistencyOk && (
-            <div style={{ fontSize: '9px', color: '#3a4a32', marginTop: '2px' }}>min requis : {fmt(minTotal)}</div>
+            <div style={{ fontSize:'12px', color: '#3a4a32', marginTop: '2px' }}>min requis : {fmt(minTotal)}</div>
           )}
         </div>
         <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '5px', padding: '8px 10px', borderTop: `2px solid ${consistencyOk ? '#8899bb' : maxDay > 0 ? '#ff4455' : '#3c4c64'}` }}>
-          <div style={{ fontSize: '9px', color: '#3c4c64', letterSpacing: '1px', marginBottom: '3px' }}>MEILLEUR JOUR / TOTAL</div>
+          <div style={{ fontSize:'12px', color: '#3c4c64', letterSpacing: '1px', marginBottom: '3px' }}>MEILLEUR JOUR / TOTAL</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '15px', fontWeight: '700', color: consistencyOk ? '#8899bb' : maxDay > 0 ? '#ff4455' : '#5a6a82' }}>
               {total > 0 && maxDay > 0 ? `${consistency}%` : '—'}
             </span>
             {total > 0 && maxDay > 0 && (
-              <span style={{ fontSize: '10px', color: consistencyOk ? '#8899bb' : '#ff4455' }}>{consistencyOk ? '✓ OK' : '✗ >40%'}</span>
+              <span style={{ fontSize:'12px', color: consistencyOk ? '#8899bb' : '#ff4455' }}>{consistencyOk ? '✓ OK' : '✗ >40%'}</span>
             )}
           </div>
-          {maxDay > 0 && <div style={{ fontSize: '9px', color: '#3a4a32', marginTop: '2px' }}>max jour : {fmt(maxDay)}</div>}
+          {maxDay > 0 && <div style={{ fontSize:'12px', color: '#3a4a32', marginTop: '2px' }}>max jour : {fmt(maxDay)}</div>}
         </div>
         <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '5px', padding: '8px 10px', borderTop: `2px solid ${plan.color}` }}>
-          <div style={{ fontSize: '9px', color: '#3c4c64', letterSpacing: '1px', marginBottom: '3px' }}>PAYOUT POSSIBLE</div>
+          <div style={{ fontSize:'12px', color: '#3c4c64', letterSpacing: '1px', marginBottom: '3px' }}>PAYOUT POSSIBLE</div>
           {total > 0 && consistencyOk ? (
             <>
               <div style={{ fontSize: '15px', fontWeight: '700', color: plan.color }}>{fmt(Math.round(total * 0.5 * 0.9))}</div>
-              <div style={{ fontSize: '9px', color: '#5a6a82', marginTop: '2px' }}>50% · -10% frais</div>
+              <div style={{ fontSize:'12px', color: '#5a6a82', marginTop: '2px' }}>50% · -10% frais</div>
             </>
           ) : <div style={{ fontSize: '15px', fontWeight: '700', color: '#3a1818' }}>—</div>}
         </div>
@@ -328,7 +328,7 @@ function Simulator({ plan }) {
       {/* Bloqué → bouton simulation */}
       {!consistencyOk && total > 0 && maxDay > 0 && (
         <div style={{ marginBottom: '10px' }}>
-          <div style={{ padding: '8px 12px', background: 'rgba(255,68,85,0.06)', border: '1px solid rgba(255,68,85,0.18)', borderRadius: '5px', fontSize: '11px', color: '#ff8888', marginBottom: '8px' }}>
+          <div style={{ padding: '8px 12px', background: 'rgba(255,68,85,0.06)', border: '1px solid rgba(255,68,85,0.18)', borderRadius: '5px', fontSize:'13px', color: '#ff8888', marginBottom: '8px' }}>
             ⚠ J_max ({fmt(maxDay)}) = {consistency}% du total → payout bloqué · il manque encore{' '}
             <strong style={{ color: '#f0a020' }}>{fmt(gap)}</strong> pour atteindre le minimum de {fmt(minTotal)}
           </div>
@@ -336,18 +336,18 @@ function Simulator({ plan }) {
           {daysNeeded > 0 && (
             <button
               onClick={() => setShowSim(s => !s)}
-              style={{ width: '100%', padding: '11px 16px', background: showSim ? 'rgba(240,160,32,0.12)' : 'rgba(240,160,32,0.07)', border: `1px solid ${showSim ? 'rgba(240,160,32,0.5)' : 'rgba(240,160,32,0.25)'}`, borderRadius: '6px', color: '#f0a020', fontSize: '11px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1.5px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              style={{ width: '100%', padding: '11px 16px', background: showSim ? 'rgba(240,160,32,0.12)' : 'rgba(240,160,32,0.07)', border: `1px solid ${showSim ? 'rgba(240,160,32,0.5)' : 'rgba(240,160,32,0.25)'}`, borderRadius: '6px', color: '#f0a020', fontSize:'13px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1.5px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
               <span>📊</span>
               <span>SIMULATION PAYOUT — Calculer les jours suivants</span>
-              <span style={{ fontSize: '9px', opacity: 0.7 }}>{showSim ? '▲' : '▼'}</span>
+              <span style={{ fontSize:'12px', opacity: 0.7 }}>{showSim ? '▲' : '▼'}</span>
             </button>
           )}
         </div>
       )}
 
       {consistencyOk && total > 0 && (
-        <div style={{ padding: '9px 12px', background: 'rgba(136,153,187,0.06)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '5px', fontSize: '11px', color: '#8899bb' }}>
+        <div style={{ padding: '9px 12px', background: 'rgba(136,153,187,0.06)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '5px', fontSize:'13px', color: '#8899bb' }}>
           ✓ Règle des 40% respectée — payout débloqué
         </div>
       )}
@@ -357,29 +357,29 @@ function Simulator({ plan }) {
         <div style={{ marginTop: '12px', background: 'rgba(240,160,32,0.04)', border: '1px solid rgba(240,160,32,0.2)', borderRadius: '8px', padding: '14px' }}>
 
           {/* Info banner */}
-          <div style={{ fontSize: '9px', color: '#f0a020', letterSpacing: '2px', marginBottom: '10px' }}>SIMULATION PAYOUT · JOURS SUIVANTS</div>
+          <div style={{ fontSize:'12px', color: '#f0a020', letterSpacing: '2px', marginBottom: '10px' }}>SIMULATION PAYOUT · JOURS SUIVANTS</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
             <div style={{ padding: '8px 10px', background: 'rgba(0,0,0,0.25)', borderRadius: '5px', borderTop: '2px solid #f0a020' }}>
-              <div style={{ fontSize: '9px', color: '#5a4a20', letterSpacing: '1px', marginBottom: '3px' }}>MAX PAR JOUR</div>
+              <div style={{ fontSize:'12px', color: '#5a4a20', letterSpacing: '1px', marginBottom: '3px' }}>MAX PAR JOUR</div>
               <div style={{ fontSize: '14px', fontWeight: '700', color: '#f0d090' }}>{fmt(maxPerDay)}</div>
-              <div style={{ fontSize: '9px', color: '#4a3a18', marginTop: '2px' }}>sans créer de nouveau max</div>
+              <div style={{ fontSize:'12px', color: '#4a3a18', marginTop: '2px' }}>sans créer de nouveau max</div>
             </div>
             <div style={{ padding: '8px 10px', background: 'rgba(0,0,0,0.25)', borderRadius: '5px', borderTop: '2px solid #aa88ff' }}>
-              <div style={{ fontSize: '9px', color: '#5a4a20', letterSpacing: '1px', marginBottom: '3px' }}>JOURS REQUIS</div>
+              <div style={{ fontSize:'12px', color: '#5a4a20', letterSpacing: '1px', marginBottom: '3px' }}>JOURS REQUIS</div>
               <div style={{ fontSize: '14px', fontWeight: '700', color: '#aa88ff' }}>{daysNeeded} jour{daysNeeded > 1 ? 's' : ''}</div>
-              <div style={{ fontSize: '9px', color: '#4a3a18', marginTop: '2px' }}>à ~{fmt(suggestedAmt)}/jour</div>
+              <div style={{ fontSize:'12px', color: '#4a3a18', marginTop: '2px' }}>à ~{fmt(suggestedAmt)}/jour</div>
             </div>
             <div style={{ padding: '8px 10px', background: 'rgba(0,0,0,0.25)', borderRadius: '5px', borderTop: '2px solid #8899bb' }}>
-              <div style={{ fontSize: '9px', color: '#3c4c64', letterSpacing: '1px', marginBottom: '3px' }}>PAYOUT ESTIMÉ</div>
+              <div style={{ fontSize:'12px', color: '#3c4c64', letterSpacing: '1px', marginBottom: '3px' }}>PAYOUT ESTIMÉ</div>
               <div style={{ fontSize: '14px', fontWeight: '700', color: '#8899bb' }}>{payoutAfter}</div>
-              <div style={{ fontSize: '9px', color: '#3a1818', marginTop: '2px' }}>50% · -10% frais</div>
+              <div style={{ fontSize:'12px', color: '#3a1818', marginTop: '2px' }}>50% · -10% frais</div>
             </div>
           </div>
 
           {/* Timeline table */}
           <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '6px', overflow: 'hidden', marginBottom: '10px' }}>
             {/* Header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '50px 90px 90px 90px 1fr', gap: '6px', padding: '6px 12px', fontSize: '9px', color: '#3c4c64', letterSpacing: '1.5px', borderBottom: '1px solid rgba(136,153,187,0.08)', background: 'rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '50px 90px 90px 90px 1fr', gap: '6px', padding: '6px 12px', fontSize:'12px', color: '#3c4c64', letterSpacing: '1.5px', borderBottom: '1px solid rgba(136,153,187,0.08)', background: 'rgba(0,0,0,0.2)' }}>
               <span>JOUR</span><span>P&L</span><span>TOTAL</span><span>%</span><span>STATUT</span>
             </div>
             {/* Real days */}
@@ -389,12 +389,12 @@ function Simulator({ plan }) {
               const runPct = runTotal > 0 && runMax > 0 ? (runMax / runTotal * 100).toFixed(0) : '—';
               const isMaxDay = v === maxDay && v > 0;
               return (
-                <div key={`r${i}`} style={{ display: 'grid', gridTemplateColumns: '50px 90px 90px 90px 1fr', gap: '6px', padding: '7px 12px', fontSize: '11px', alignItems: 'center', borderBottom: '1px solid rgba(0,255,136,0.03)', background: i % 2 === 0 ? 'rgba(14,15,22,0.3)' : 'transparent', borderLeft: `2px solid ${v < 0 ? '#ff4455' : '#3c4c64'}` }}>
+                <div key={`r${i}`} style={{ display: 'grid', gridTemplateColumns: '50px 90px 90px 90px 1fr', gap: '6px', padding: '7px 12px', fontSize:'13px', alignItems: 'center', borderBottom: '1px solid rgba(0,255,136,0.03)', background: i % 2 === 0 ? 'rgba(14,15,22,0.3)' : 'transparent', borderLeft: `2px solid ${v < 0 ? '#ff4455' : '#3c4c64'}` }}>
                   <span style={{ color: '#5868a0', fontWeight: '700' }}>J{i + 1}</span>
                   <span style={{ color: pnlColor(v), fontWeight: '600' }}>{fmt(v)}{isMaxDay ? ' ★' : ''}</span>
                   <span style={{ color: pnlColor(runTotal) }}>{fmt(runTotal)}</span>
-                  <span style={{ color: runPct === '—' ? '#3a1818' : parseFloat(runPct) > 40 ? '#ff4455' : '#8899bb', fontSize: '10px' }}>{runPct !== '—' ? `${runPct}%` : '—'}</span>
-                  <span style={{ fontSize: '10px', color: '#3a5a32' }}>réel</span>
+                  <span style={{ color: runPct === '—' ? '#3a1818' : parseFloat(runPct) > 40 ? '#ff4455' : '#8899bb', fontSize:'12px' }}>{runPct !== '—' ? `${runPct}%` : '—'}</span>
+                  <span style={{ fontSize:'12px', color: '#3a5a32' }}>réel</span>
                 </div>
               );
             })}
@@ -406,12 +406,12 @@ function Simulator({ plan }) {
               const runPct = runTotal > 0 && runMax > 0 ? (runMax / runTotal * 100).toFixed(0) : '—';
               const compliant = runPct !== '—' && parseFloat(runPct) <= 40;
               return (
-                <div key={`s${i}`} style={{ display: 'grid', gridTemplateColumns: '50px 90px 90px 90px 1fr', gap: '6px', padding: '7px 12px', fontSize: '11px', alignItems: 'center', borderBottom: i < suggestedDays.length - 1 ? '1px solid rgba(240,160,32,0.08)' : 'none', background: 'rgba(240,160,32,0.05)', borderLeft: '2px solid #f0a020' }}>
+                <div key={`s${i}`} style={{ display: 'grid', gridTemplateColumns: '50px 90px 90px 90px 1fr', gap: '6px', padding: '7px 12px', fontSize:'13px', alignItems: 'center', borderBottom: i < suggestedDays.length - 1 ? '1px solid rgba(240,160,32,0.08)' : 'none', background: 'rgba(240,160,32,0.05)', borderLeft: '2px solid #f0a020' }}>
                   <span style={{ color: '#f0a020', fontWeight: '700' }}>J{values.length + i + 1}</span>
                   <span style={{ color: '#f0d090', fontWeight: '600' }}>{fmt(v)}</span>
                   <span style={{ color: pnlColor(runTotal) }}>{fmt(runTotal)}</span>
-                  <span style={{ color: runPct === '—' ? '#3a1818' : compliant ? '#8899bb' : '#f0a020', fontSize: '10px' }}>{runPct !== '—' ? `${runPct}%` : '—'}</span>
-                  <span style={{ fontSize: '10px', color: compliant ? '#8899bb' : '#f0a020' }}>{compliant ? '✓ OK' : 'suggéré'}</span>
+                  <span style={{ color: runPct === '—' ? '#3a1818' : compliant ? '#8899bb' : '#f0a020', fontSize:'12px' }}>{runPct !== '—' ? `${runPct}%` : '—'}</span>
+                  <span style={{ fontSize:'12px', color: compliant ? '#8899bb' : '#f0a020' }}>{compliant ? '✓ OK' : 'suggéré'}</span>
                 </div>
               );
             })}
@@ -420,15 +420,15 @@ function Simulator({ plan }) {
           {/* Final summary */}
           <div style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.25)', borderRadius: '5px', borderTop: `2px solid ${parseFloat(pctAfter) <= 40 ? '#8899bb' : '#f0a020'}`, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
             <div>
-              <div style={{ fontSize: '9px', color: '#3c4c64', letterSpacing: '1px', marginBottom: '2px' }}>TOTAL FINAL</div>
+              <div style={{ fontSize:'12px', color: '#3c4c64', letterSpacing: '1px', marginBottom: '2px' }}>TOTAL FINAL</div>
               <div style={{ fontSize: '13px', fontWeight: '700', color: pnlColor(totalAfter) }}>{fmt(totalAfter)}</div>
             </div>
             <div>
-              <div style={{ fontSize: '9px', color: '#3c4c64', letterSpacing: '1px', marginBottom: '2px' }}>CONSISTANCE</div>
+              <div style={{ fontSize:'12px', color: '#3c4c64', letterSpacing: '1px', marginBottom: '2px' }}>CONSISTANCE</div>
               <div style={{ fontSize: '13px', fontWeight: '700', color: parseFloat(pctAfter) <= 40 ? '#8899bb' : '#f0a020' }}>{pctAfter}%</div>
             </div>
             <div>
-              <div style={{ fontSize: '9px', color: '#3c4c64', letterSpacing: '1px', marginBottom: '2px' }}>PAYOUT NET</div>
+              <div style={{ fontSize:'12px', color: '#3c4c64', letterSpacing: '1px', marginBottom: '2px' }}>PAYOUT NET</div>
               <div style={{ fontSize: '13px', fontWeight: '700', color: plan.color }}>{payoutAfter}</div>
             </div>
           </div>
@@ -443,19 +443,19 @@ function PhaseTable({ phases }) {
   return (
     <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(0,255,136,0.07)', borderRadius: '8px', overflow: 'hidden' }}>
       <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(136,153,187,0.08)' }}>
-        <span style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px' }}>PROGRESSION PAR PHASE</span>
+        <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px' }}>PROGRESSION PAR PHASE</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '90px 120px 80px 130px 80px 1fr', padding: '6px 14px', fontSize: '9px', color: '#3c4c64', letterSpacing: '1.5px', borderBottom: '1px solid rgba(136,153,187,0.05)', background: 'rgba(0,0,0,0.2)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '90px 120px 80px 130px 80px 1fr', padding: '6px 14px', fontSize:'12px', color: '#3c4c64', letterSpacing: '1.5px', borderBottom: '1px solid rgba(136,153,187,0.05)', background: 'rgba(0,0,0,0.2)' }}>
         <span>PHASE</span><span>CAPITAL</span><span>RISQUE</span><span>OBJECTIF/JOUR</span><span>CONTRATS</span><span>NOTE</span>
       </div>
       {phases.map((p, i) => (
-        <div key={i} style={{ display: 'grid', gridTemplateColumns: '90px 120px 80px 130px 80px 1fr', padding: '11px 14px', fontSize: '12px', borderBottom: i < phases.length - 1 ? '1px solid rgba(0,255,136,0.03)' : 'none', background: i % 2 === 0 ? 'rgba(14,15,22,0.3)' : 'transparent', alignItems: 'center', borderLeft: `2px solid ${p.color}` }}>
-          <span style={{ color: p.color, fontWeight: '700', fontSize: '11px' }}>{p.label}</span>
-          <span style={{ color: '#dde4ef', fontSize: '11px' }}>{p.range}</span>
+        <div key={i} style={{ display: 'grid', gridTemplateColumns: '90px 120px 80px 130px 80px 1fr', padding: '11px 14px', fontSize:'13px', borderBottom: i < phases.length - 1 ? '1px solid rgba(0,255,136,0.03)' : 'none', background: i % 2 === 0 ? 'rgba(14,15,22,0.3)' : 'transparent', alignItems: 'center', borderLeft: `2px solid ${p.color}` }}>
+          <span style={{ color: p.color, fontWeight: '700', fontSize:'13px' }}>{p.label}</span>
+          <span style={{ color: '#dde4ef', fontSize:'13px' }}>{p.range}</span>
           <span style={{ color: '#f0a020' }}>{p.risk}</span>
           <span style={{ color: '#8899bb' }}>{p.target}</span>
           <span style={{ color: '#7888a0' }}>{p.contracts}</span>
-          <span style={{ color: '#4a6a54', fontSize: '11px' }}>{p.note}</span>
+          <span style={{ color: '#4a6a54', fontSize:'13px' }}>{p.note}</span>
         </div>
       ))}
     </div>
@@ -474,17 +474,17 @@ export default function TradingPlan() {
 
       {/* ── Header ── */}
       <div style={{ marginBottom: '24px' }}>
-        <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>DISCIPLINE</div>
+        <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>DISCIPLINE</div>
         <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8edf8', margin: '0 0 4px' }}>Règles & Plan de Trading</h1>
-        <div style={{ fontSize: '11px', color: '#5a6a82' }}>50 000$ · MNQ · 0.5% risque · Max 3 trades/jour</div>
+        <div style={{ fontSize:'13px', color: '#5a6a82' }}>50 000$ · MNQ · 0.5% risque · Max 3 trades/jour</div>
       </div>
 
       {/* ── Gold rules banner ── */}
       <div style={{ marginBottom: '22px', padding: '14px 18px', background: 'rgba(240,160,32,0.07)', border: '1px solid rgba(240,160,32,0.2)', borderRadius: '8px', borderLeft: '3px solid #f0a020' }}>
-        <div style={{ fontSize: '9px', color: '#f0a020', letterSpacing: '2px', marginBottom: '8px' }}>RÈGLES D'OR</div>
+        <div style={{ fontSize:'12px', color: '#f0a020', letterSpacing: '2px', marginBottom: '8px' }}>RÈGLES D'OR</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {GOLD_RULES.map((r, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '12px', color: i < 2 ? '#f0d090' : '#8a7a5a' }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize:'13px', color: i < 2 ? '#f0d090' : '#8a7a5a' }}>
               <span style={{ color: '#f0a020', flexShrink: 0 }}>▸</span>
               <span>{r}</span>
             </div>
@@ -496,9 +496,9 @@ export default function TradingPlan() {
       <div style={{ display: 'flex', gap: '6px', marginBottom: '22px', background: 'rgba(14,15,22,0.4)', padding: '5px', borderRadius: '8px', border: '1px solid rgba(0,255,136,0.07)' }}>
         {Object.values(PLANS).map(p => (
           <button key={p.id} onClick={() => { setActiveTab(p.id); localStorage.setItem('trading_plan_tab', p.id); }}
-            style={{ flex: 1, padding: '10px 6px', borderRadius: '5px', border: activeTab === p.id ? `1px solid ${p.color}40` : '1px solid transparent', background: activeTab === p.id ? `${p.color}12` : 'transparent', color: activeTab === p.id ? p.color : '#5a6a82', fontSize: '11px', fontFamily: 'inherit', fontWeight: activeTab === p.id ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '0.5px' }}>
+            style={{ flex: 1, padding: '10px 6px', borderRadius: '5px', border: activeTab === p.id ? `1px solid ${p.color}40` : '1px solid transparent', background: activeTab === p.id ? `${p.color}12` : 'transparent', color: activeTab === p.id ? p.color : '#5a6a82', fontSize:'13px', fontFamily: 'inherit', fontWeight: activeTab === p.id ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '0.5px' }}>
             <div style={{ fontSize: '13px', marginBottom: '2px' }}>{p.abbr}</div>
-            <div style={{ fontSize: '10px', opacity: 0.8 }}>{p.label}</div>
+            <div style={{ fontSize:'12px', opacity: 0.8 }}>{p.label}</div>
           </button>
         ))}
       </div>
@@ -509,7 +509,7 @@ export default function TradingPlan() {
         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: plan.color, boxShadow: `0 0 8px ${plan.color}`, animation: 'pulse 2s infinite' }} />
         <div>
           <div style={{ fontSize: '16px', fontWeight: '700', color: plan.color }}>{plan.label}</div>
-          <div style={{ fontSize: '11px', color: '#5a6a82' }}>{plan.subtitle}</div>
+          <div style={{ fontSize:'13px', color: '#5a6a82' }}>{plan.subtitle}</div>
         </div>
       </div>
 
@@ -533,9 +533,9 @@ export default function TradingPlan() {
           {/* Consistency note for 3j */}
           {plan.consistencyNote && (
             <div style={{ padding: '12px 14px', background: 'rgba(240,160,32,0.06)', border: '1px solid rgba(240,160,32,0.2)', borderRadius: '6px' }}>
-              <div style={{ fontSize: '9px', color: '#f0a020', letterSpacing: '2px', marginBottom: '6px' }}>RÈGLE DES 40%</div>
+              <div style={{ fontSize:'12px', color: '#f0a020', letterSpacing: '2px', marginBottom: '6px' }}>RÈGLE DES 40%</div>
               {plan.consistencyNote.split('\n').map((line, i) => (
-                <div key={i} style={{ fontSize: '11px', color: i === 0 ? '#f0d090' : '#8a7a5a', marginBottom: '3px' }}>{line}</div>
+                <div key={i} style={{ fontSize:'13px', color: i === 0 ? '#f0d090' : '#8a7a5a', marginBottom: '3px' }}>{line}</div>
               ))}
             </div>
           )}
@@ -543,22 +543,22 @@ export default function TradingPlan() {
           {/* Monthly projection */}
           {plan.cycleTarget && (
             <div style={{ padding: '12px 14px', background: 'rgba(14,15,22,0.5)', border: `1px solid ${plan.color}20`, borderRadius: '6px' }}>
-              <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '8px' }}>PROJECTION 30 JOURS</div>
+              <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '8px' }}>PROJECTION 30 JOURS</div>
               {activeTab === 'payout5j' ? (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '11px', color: '#6a8a7a' }}>6 cycles × {fmt(plan.cycleTarget[0])} → {fmt(plan.cycleTarget[1])}</span>
+                    <span style={{ fontSize:'13px', color: '#6a8a7a' }}>6 cycles × {fmt(plan.cycleTarget[0])} → {fmt(plan.cycleTarget[1])}</span>
                   </div>
                   <div style={{ fontSize: '16px', fontWeight: '700', color: plan.color }}>6 000$ → 9 000$ retirés</div>
-                  <div style={{ fontSize: '10px', color: '#5a6a82', marginTop: '3px' }}>Sans risque excessif</div>
+                  <div style={{ fontSize:'12px', color: '#5a6a82', marginTop: '3px' }}>Sans risque excessif</div>
                 </>
               ) : (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '11px', color: '#6a8a7a' }}>~10 cycles × {fmt(plan.cycleTarget[0])} → {fmt(plan.cycleTarget[1])}</span>
+                    <span style={{ fontSize:'13px', color: '#6a8a7a' }}>~10 cycles × {fmt(plan.cycleTarget[0])} → {fmt(plan.cycleTarget[1])}</span>
                   </div>
                   <div style={{ fontSize: '16px', fontWeight: '700', color: plan.color }}>10 000$ → 15 000$ potentiel</div>
-                  <div style={{ fontSize: '10px', color: '#5a6a82', marginTop: '3px' }}>Si la règle des 40% est respectée</div>
+                  <div style={{ fontSize:'12px', color: '#5a6a82', marginTop: '3px' }}>Si la règle des 40% est respectée</div>
                 </>
               )}
             </div>
@@ -567,7 +567,7 @@ export default function TradingPlan() {
 
         {/* Right: Rules */}
         <div>
-          <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>RÈGLES — {plan.rules.filter(r => r.critical).length} CRITIQUES</div>
+          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>RÈGLES — {plan.rules.filter(r => r.critical).length} CRITIQUES</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
             {plan.rules.map((r, i) => <RuleItem key={i} rule={r} />)}
           </div>
@@ -580,28 +580,28 @@ export default function TradingPlan() {
       {/* ── Weekly progression (5j & 3j) ── */}
       {activeTab !== 'liveFunded' && (
         <div style={{ marginTop: '20px', background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(0,255,136,0.07)', borderRadius: '8px', padding: '14px' }}>
-          <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>PROGRESSION HEBDOMADAIRE (SEMAINES 1-2)</div>
+          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>PROGRESSION HEBDOMADAIRE (SEMAINES 1-2)</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             {[
               { label: 'Semaine 1', contracts: '3 MNQ', target: '400$/jour', risk: '250$', note: 'Prendre les habitudes, ne pas forcer', color: '#8899bb' },
               { label: 'Semaine 2+', contracts: '5 MNQ', target: '500$–600$/jour', risk: '250$', note: 'Monter progressivement après stabilité', color: plan.color },
             ].map((w, i) => (
               <div key={i} style={{ padding: '12px 14px', background: 'rgba(0,0,0,0.2)', border: `1px solid ${w.color}20`, borderRadius: '6px', borderLeft: `2px solid ${w.color}` }}>
-                <div style={{ fontSize: '11px', color: w.color, fontWeight: '700', marginBottom: '6px' }}>{w.label}</div>
+                <div style={{ fontSize:'13px', color: w.color, fontWeight: '700', marginBottom: '6px' }}>{w.label}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize:'13px' }}>
                     <span style={{ color: '#5868a0' }}>Contrats</span>
                     <span style={{ color: '#dde4ef' }}>{w.contracts}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize:'13px' }}>
                     <span style={{ color: '#5868a0' }}>Objectif</span>
                     <span style={{ color: '#8899bb' }}>{w.target}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize:'13px' }}>
                     <span style={{ color: '#5868a0' }}>Risque/trade</span>
                     <span style={{ color: '#f0a020' }}>{w.risk}</span>
                   </div>
-                  <div style={{ fontSize: '10px', color: '#3a5a32', marginTop: '4px', fontStyle: 'italic' }}>{w.note}</div>
+                  <div style={{ fontSize:'12px', color: '#3a5a32', marginTop: '4px', fontStyle: 'italic' }}>{w.note}</div>
                 </div>
               </div>
             ))}

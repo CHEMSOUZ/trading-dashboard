@@ -49,7 +49,7 @@ function parseCsv(content) {
 function CTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: 'rgba(8,9,16,0.97)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', padding: '8px 12px', fontSize: '11px', fontFamily: 'inherit' }}>
+    <div style={{ background: 'rgba(8,9,16,0.97)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', padding: '8px 12px', fontSize:'13px', fontFamily: 'inherit' }}>
       <div style={{ color: '#5a6a82', marginBottom: '4px' }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ color: (p.value ?? 0) >= 0 ? '#00cc77' : '#ff3344', fontWeight: '700' }}>
@@ -64,9 +64,9 @@ function CTooltip({ active, payload, label }) {
 function StatCard({ label, value, sub, color = '#dde4ef' }) {
   return (
     <div style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.10)', borderTop: `2px solid ${color}`, borderRadius: '6px', padding: '12px 14px' }}>
-      <div style={{ fontSize: '8px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '5px' }}>{label}</div>
+      <div style={{ fontSize:'11px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '5px' }}>{label}</div>
       <div style={{ fontSize: '18px', fontWeight: '700', color, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '9px', color: '#5868a0', marginTop: '4px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize:'12px', color: '#5868a0', marginTop: '4px' }}>{sub}</div>}
     </div>
   );
 }
@@ -108,7 +108,7 @@ function ImportModal({ onClose, onImported }) {
       <div onClick={e => e.stopPropagation()} style={{ background: '#0c0d16', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '10px', width: '100%', maxWidth: '480px', padding: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div>
-            <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '4px' }}>TOPSTEPX</div>
+            <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '4px' }}>TOPSTEPX</div>
             <div style={{ fontSize: '18px', fontWeight: '700', color: '#e8edf8' }}>Import CSV</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
@@ -119,11 +119,11 @@ function ImportModal({ onClose, onImported }) {
             onClick={handleDialog}
           >
             <div style={{ fontSize: '32px', marginBottom: '8px' }}>📂</div>
-            <div style={{ fontSize: '12px', color: '#dde4ef', marginBottom: '4px' }}>Glisse ton fichier CSV ici</div>
-            <div style={{ fontSize: '10px', color: '#5a6a82' }}>ou clique pour ouvrir</div>
+            <div style={{ fontSize:'13px', color: '#dde4ef', marginBottom: '4px' }}>Glisse ton fichier CSV ici</div>
+            <div style={{ fontSize:'12px', color: '#5a6a82' }}>ou clique pour ouvrir</div>
           </div>
         )}
-        {status === 'loading' && <div style={{ padding: '40px', textAlign: 'center', color: '#5a6a82', fontSize: '12px', letterSpacing: '2px' }}>IMPORTATION...</div>}
+        {status === 'loading' && <div style={{ padding: '40px', textAlign: 'center', color: '#5a6a82', fontSize:'13px', letterSpacing: '2px' }}>IMPORTATION...</div>}
         {status === 'done' && result && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
@@ -131,20 +131,20 @@ function ImportModal({ onClose, onImported }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '10px', marginBottom: '20px' }}>
               {[['IMPORTÉS', result.imported, '#8899bb'], ['IGNORÉS', result.skipped, '#f0a020'], ['ERREURS', result.errors, '#ff4455']].map(([l,v,c]) => (
                 <div key={l} style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '5px', padding: '12px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '8px', color: '#5a6a82', marginBottom: '4px' }}>{l}</div>
+                  <div style={{ fontSize:'11px', color: '#5a6a82', marginBottom: '4px' }}>{l}</div>
                   <div style={{ fontSize: '20px', fontWeight: '700', color: c }}>{v}</div>
                 </div>
               ))}
             </div>
-            <button onClick={onClose} style={{ background: 'rgba(136,153,187,0.18)', border: '1px solid rgba(136,153,187,0.35)', color: '#8899bb', padding: '10px 24px', borderRadius: '5px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>FERMER</button>
+            <button onClick={onClose} style={{ background: 'rgba(136,153,187,0.18)', border: '1px solid rgba(136,153,187,0.35)', color: '#8899bb', padding: '10px 24px', borderRadius: '5px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>FERMER</button>
           </div>
         )}
         {status === 'error' && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>❌</div>
             <div style={{ fontSize: '14px', color: '#ff4455', marginBottom: '12px' }}>Erreur d'import</div>
-            <div style={{ fontSize: '11px', color: '#7888a0', marginBottom: '20px' }}>{result?.error}</div>
-            <button onClick={() => setStatus('idle')} style={{ background: 'transparent', border: '1px solid #1e2c40', color: '#5868a0', padding: '8px 16px', borderRadius: '5px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>RÉESSAYER</button>
+            <div style={{ fontSize:'13px', color: '#7888a0', marginBottom: '20px' }}>{result?.error}</div>
+            <button onClick={() => setStatus('idle')} style={{ background: 'transparent', border: '1px solid #1e2c40', color: '#5868a0', padding: '8px 16px', borderRadius: '5px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>RÉESSAYER</button>
           </div>
         )}
       </div>
@@ -227,17 +227,17 @@ function Calendar({ trades, onDayClick }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
         <div>
-          <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '3px' }}>CALENDRIER</div>
+          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '3px' }}>CALENDRIER</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: '#5868a0', cursor: 'pointer', fontSize: '14px' }}>‹</button>
             <span style={{ fontSize: '14px', fontWeight: '700', color: '#e8edf8' }}>{MONTHS[month]} {year}</span>
             <button onClick={nextMonth} style={{ background: 'none', border: 'none', color: '#5868a0', cursor: 'pointer', fontSize: '14px' }}>›</button>
             <button onClick={() => { setYear(new Date().getFullYear()); setMonth(new Date().getMonth()); }}
-              style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.18)', color: '#8899bb', padding: '3px 8px', borderRadius: '4px', fontSize: '9px', fontFamily: 'inherit', cursor: 'pointer' }}>Aujourd'hui</button>
+              style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.18)', color: '#8899bb', padding: '3px 8px', borderRadius: '4px', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer' }}>Aujourd'hui</button>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '8px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>P&L MENSUEL</div>
+          <div style={{ fontSize:'11px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>P&L MENSUEL</div>
           <div style={{ fontSize: '16px', fontWeight: '700', color: pnlColor(monthTotal) }}>{fmt(monthTotal, true)}</div>
         </div>
       </div>
@@ -246,9 +246,9 @@ function Calendar({ trades, onDayClick }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr) 90px', gap: '2px' }}>
         {/* DOW headers */}
         {['D','L','Ma','Me','J','V','S'].map(d => (
-          <div key={d} style={{ textAlign: 'center', fontSize: '9px', color: '#5a6a82', padding: '4px 0', letterSpacing: '1px' }}>{d}</div>
+          <div key={d} style={{ textAlign: 'center', fontSize:'12px', color: '#5a6a82', padding: '4px 0', letterSpacing: '1px' }}>{d}</div>
         ))}
-        <div style={{ textAlign: 'center', fontSize: '9px', color: '#5a6a82', padding: '4px 0' }}>SEMAINE</div>
+        <div style={{ textAlign: 'center', fontSize:'12px', color: '#5a6a82', padding: '4px 0' }}>SEMAINE</div>
 
         {/* Weeks */}
         {weeks.map((week, wi) => {
@@ -272,16 +272,16 @@ function Calendar({ trades, onDayClick }) {
                   onMouseEnter={e => { if (data) e.currentTarget.style.opacity = '0.75'; }}
                   onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
                 >
-                  <div style={{ fontSize: '9px', color: isToday ? '#00aaff' : '#5868a0', fontWeight: isToday ? '700' : '400', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize:'12px', color: isToday ? '#00aaff' : '#5868a0', fontWeight: isToday ? '700' : '400', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{day}</span>
                     {isToday && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00aaff' }} />}
                   </div>
                   {data && (
                     <>
-                      <div style={{ fontSize: '10px', fontWeight: '700', color: pnlColor(data.pnl), lineHeight: 1 }}>
+                      <div style={{ fontSize:'12px', fontWeight: '700', color: pnlColor(data.pnl), lineHeight: 1 }}>
                         {fmt(data.pnl, true)}
                       </div>
-                      <div style={{ fontSize: '8px', color: '#5a6a82' }}>{data.count} trade{data.count > 1 ? 's' : ''}</div>
+                      <div style={{ fontSize:'11px', color: '#5a6a82' }}>{data.count} trade{data.count > 1 ? 's' : ''}</div>
                     </>
                   )}
                 </div>
@@ -289,9 +289,9 @@ function Calendar({ trades, onDayClick }) {
             }),
             // Week summary
             <div key={`week-${wi}`} style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '3px', minHeight: '52px', padding: '6px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
-              <div style={{ fontSize: '8px', color: '#5a6a82', letterSpacing: '0.5px' }}>S{wi+1}</div>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: pnlColor(weekData.total) }}>{weekData.total !== 0 ? fmt(weekData.total, true) : '$0.00'}</div>
-              <div style={{ fontSize: '8px', color: '#5a6a82' }}>{weekData.count} trade{weekData.count > 1 ? 's' : ''}</div>
+              <div style={{ fontSize:'11px', color: '#5a6a82', letterSpacing: '0.5px' }}>S{wi+1}</div>
+              <div style={{ fontSize:'13px', fontWeight: '700', color: pnlColor(weekData.total) }}>{weekData.total !== 0 ? fmt(weekData.total, true) : '$0.00'}</div>
+              <div style={{ fontSize:'11px', color: '#5a6a82' }}>{weekData.count} trade{weekData.count > 1 ? 's' : ''}</div>
             </div>
           ];
         })}
@@ -312,7 +312,7 @@ function DayTradesModal({ dateKey, trades, onClose }) {
         <div style={{ padding: '16px 22px', borderBottom: '1px solid rgba(136,153,187,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: '16px', fontWeight: '700', color: '#e8edf8', textTransform: 'capitalize' }}>{dateLabel}</div>
-            <div style={{ fontSize: '12px', color: '#5868a0', marginTop: '3px' }}>
+            <div style={{ fontSize:'13px', color: '#5868a0', marginTop: '3px' }}>
               {sorted.length} trade{sorted.length > 1 ? 's' : ''} · WR: {sorted.length > 0 ? Math.round(wins / sorted.length * 100) : 0}% · <span style={{ color: pnlColor(dayPnl), fontWeight: '700' }}>{fmt(dayPnl, true)}</span>
             </div>
           </div>
@@ -323,13 +323,13 @@ function DayTradesModal({ dateKey, trades, onClose }) {
             const net = getNet(t);
             const hour = t.entered_at ? new Date(t.entered_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—';
             return (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '58px 78px 68px 64px 78px 78px 88px', alignItems: 'center', padding: '8px 12px', background: 'rgba(14,15,22,0.4)', borderLeft: `2px solid ${pnlColor(net)}`, borderRadius: '4px', fontSize: '12px', gap: '4px' }}>
-                <span style={{ color: '#6a8a7a', fontSize: '11px' }}>{hour}</span>
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '58px 78px 68px 64px 78px 78px 88px', alignItems: 'center', padding: '8px 12px', background: 'rgba(14,15,22,0.4)', borderLeft: `2px solid ${pnlColor(net)}`, borderRadius: '4px', fontSize:'13px', gap: '4px' }}>
+                <span style={{ color: '#6a8a7a', fontSize:'13px' }}>{hour}</span>
                 <span style={{ color: '#dde4ef', fontWeight: '600' }}>{t.pair}</span>
-                <span style={{ color: t.direction === 'LONG' ? '#00cc77' : '#ff3344', fontSize: '11px', background: `rgba(${t.direction === 'LONG' ? '0,204,119' : '255,51,68'},0.10)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
-                <span style={{ color: '#7888a0', fontSize: '11px' }}>{t.entry ?? '—'}</span>
-                <span style={{ color: '#7888a0', fontSize: '11px' }}>{t.exit_price ?? '—'}</span>
-                <span style={{ color: '#5868a0', fontSize: '11px' }}>{t.duration ?? '—'}</span>
+                <span style={{ color: t.direction === 'LONG' ? '#00cc77' : '#ff3344', fontSize:'13px', background: `rgba(${t.direction === 'LONG' ? '0,204,119' : '255,51,68'},0.10)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
+                <span style={{ color: '#7888a0', fontSize:'13px' }}>{t.entry ?? '—'}</span>
+                <span style={{ color: '#7888a0', fontSize:'13px' }}>{t.exit_price ?? '—'}</span>
+                <span style={{ color: '#5868a0', fontSize:'13px' }}>{t.duration ?? '—'}</span>
                 <span style={{ color: pnlColor(net), fontWeight: '700', textAlign: 'right' }}>{fmt(net, true)}</span>
               </div>
             );
@@ -360,7 +360,7 @@ export default function Stats() {
   useEffect(() => { load(); }, [load]);
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#5a6a82', fontSize: '11px', letterSpacing: '2px' }}>CALCUL EN COURS...</div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#5a6a82', fontSize:'13px', letterSpacing: '2px' }}>CALCUL EN COURS...</div>
   );
 
   const s = stats ?? {};
@@ -479,19 +479,19 @@ export default function Stats() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '6px' }}>ANALYSE</div>
+          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '6px' }}>ANALYSE</div>
           <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8edf8', margin: 0 }}>Statistiques & Performance</h1>
-          <div style={{ fontSize: '11px', color: '#5a6a82', marginTop: '4px' }}>
+          <div style={{ fontSize:'13px', color: '#5a6a82', marginTop: '4px' }}>
             {fTotal} trade{fTotal > 1 ? 's' : ''} · P&L net: <span style={{ color: pnlColor(fPnl), fontWeight: '700' }}>{fmt(fPnl, true)}</span>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <button onClick={() => setShowImport(true)} style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.28)', color: '#8899bb', padding: '7px 13px', borderRadius: '5px', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>
+          <button onClick={() => setShowImport(true)} style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.28)', color: '#8899bb', padding: '7px 13px', borderRadius: '5px', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer' }}>
             📥 Import CSV TopstepX
           </button>
           <div style={{ display: 'flex', gap: '4px' }}>
             {['TODAY','7D','30D','ALL'].map(p => (
-              <button key={p} onClick={() => { setPeriod(p); localStorage.setItem('stats_period', p); }} style={{ padding: '6px 10px', borderRadius: '4px', border: `1px solid ${period===p?'#8899bb':'#1e2c40'}`, background: period===p?'rgba(136,153,187,0.12)':'transparent', color: period===p?'#8899bb':'#5a6a82', fontSize: '9px', fontFamily: 'inherit', cursor: 'pointer' }}>{p}</button>
+              <button key={p} onClick={() => { setPeriod(p); localStorage.setItem('stats_period', p); }} style={{ padding: '6px 10px', borderRadius: '4px', border: `1px solid ${period===p?'#8899bb':'#1e2c40'}`, background: period===p?'rgba(136,153,187,0.12)':'transparent', color: period===p?'#8899bb':'#5a6a82', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer' }}>{p}</button>
             ))}
           </div>
         </div>
@@ -514,17 +514,17 @@ export default function Stats() {
           { label: 'PIRE TRADE (NET)',     trade: worstTrade, c: '#ff4455' },
         ].map(({ label, trade, c }) => (
           <div key={label} style={{ background: 'rgba(14,15,22,0.4)', border: `1px solid ${c}20`, borderLeft: `3px solid ${c}`, borderRadius: '6px', padding: '12px 16px' }}>
-            <div style={{ fontSize: '8px', color: '#5a6a82', letterSpacing: '1.5px', marginBottom: '8px' }}>{label}</div>
+            <div style={{ fontSize:'11px', color: '#5a6a82', letterSpacing: '1.5px', marginBottom: '8px' }}>{label}</div>
             {trade ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                 <div>
                   <span style={{ fontSize: '13px', fontWeight: '700', color: '#dde4ef' }}>{trade.pair}</span>
-                  <span style={{ fontSize: '9px', color: trade.direction==='LONG'?'#00cc77':'#ff3344', marginLeft: '8px', background: `rgba(${trade.direction==='LONG'?'0,204,119':'255,51,68'},0.10)`, padding: '1px 5px', borderRadius: '3px' }}>{trade.direction}</span>
-                  <div style={{ fontSize: '9px', color: '#5a6a82', marginTop: '3px' }}>{trade.date}{trade.entered_at ? ` · ${new Date(trade.entered_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : ''}</div>
+                  <span style={{ fontSize:'12px', color: trade.direction==='LONG'?'#00cc77':'#ff3344', marginLeft: '8px', background: `rgba(${trade.direction==='LONG'?'0,204,119':'255,51,68'},0.10)`, padding: '1px 5px', borderRadius: '3px' }}>{trade.direction}</span>
+                  <div style={{ fontSize:'12px', color: '#5a6a82', marginTop: '3px' }}>{trade.date}{trade.entered_at ? ` · ${new Date(trade.entered_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : ''}</div>
                 </div>
                 <div style={{ fontSize: '18px', fontWeight: '700', color: c }}>{fmt(getNet(trade), true)}</div>
               </div>
-            ) : <div style={{ color: '#3a1818', fontSize: '10px' }}>Aucun trade</div>}
+            ) : <div style={{ color: '#3a1818', fontSize:'12px' }}>Aucun trade</div>}
           </div>
         ))}
       </div>
@@ -533,7 +533,7 @@ export default function Stats() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
         {/* Equity curve */}
         <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>P&L CUMULÉ NET</div>
+          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>P&L CUMULÉ NET</div>
           {equityData.length > 1 ? (
             <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={equityData} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
@@ -551,12 +551,12 @@ export default function Stats() {
                 <Area type="monotone" dataKey="pnl" name="P&L net" stroke={fPnl >= 0 ? '#00cc77' : '#ff3344'} strokeWidth={2} fill="url(#eqG)" dot={false} activeDot={{ r: 3 }} />
               </AreaChart>
             </ResponsiveContainer>
-          ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a1818', fontSize: '10px' }}>Aucun trade</div>}
+          ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a1818', fontSize:'12px' }}>Aucun trade</div>}
         </div>
 
         {/* Daily bars */}
         <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
+          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
           {dailyArr.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
               <BarChart barCategoryGap="35%" data={dailyArr} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
@@ -570,7 +570,7 @@ export default function Stats() {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a1818', fontSize: '10px' }}>Aucun trade</div>}
+          ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a1818', fontSize:'12px' }}>Aucun trade</div>}
         </div>
       </div>
 
@@ -578,16 +578,16 @@ export default function Stats() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
         {/* By pair */}
         <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>PERFORMANCE PAR INSTRUMENT (NET)</div>
+          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>PERFORMANCE PAR INSTRUMENT (NET)</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {pairArr.slice(0, 6).map(p => (
               <div key={p.pair}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                  <span style={{ fontSize: '11px', color: '#dde4ef', fontWeight: '600' }}>{p.pair}</span>
+                  <span style={{ fontSize:'13px', color: '#dde4ef', fontWeight: '600' }}>{p.pair}</span>
                   <div style={{ display: 'flex', gap: '10px' }}>
-                    <span style={{ fontSize: '10px', color: pnlColor(p.pnl), fontWeight: '700' }}>{fmt(p.pnl, true)}</span>
-                    <span style={{ fontSize: '10px', color: p.wr >= 50 ? '#00cc77' : '#ff3344' }}>{p.wr}% WR</span>
-                    <span style={{ fontSize: '9px', color: '#5a6a82' }}>{p.total}T</span>
+                    <span style={{ fontSize:'12px', color: pnlColor(p.pnl), fontWeight: '700' }}>{fmt(p.pnl, true)}</span>
+                    <span style={{ fontSize:'12px', color: p.wr >= 50 ? '#00cc77' : '#ff3344' }}>{p.wr}% WR</span>
+                    <span style={{ fontSize:'12px', color: '#5a6a82' }}>{p.total}T</span>
                   </div>
                 </div>
                 <div style={{ height: '4px', background: 'rgba(136,153,187,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
@@ -595,7 +595,7 @@ export default function Stats() {
                 </div>
               </div>
             ))}
-            {pairArr.length === 0 && <div style={{ color: '#3a1818', fontSize: '10px', textAlign: 'center', padding: '20px 0' }}>Aucune donnée</div>}
+            {pairArr.length === 0 && <div style={{ color: '#3a1818', fontSize:'12px', textAlign: 'center', padding: '20px 0' }}>Aucune donnée</div>}
           </div>
         </div>
 
@@ -603,7 +603,7 @@ export default function Stats() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {/* Direction */}
           <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '16px', flex: 1 }}>
-            <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>DIRECTION</div>
+            <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>DIRECTION</div>
             {dirPie.length > 0 ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <PieChart width={80} height={80}>
@@ -615,19 +615,19 @@ export default function Stats() {
                   {dirPie.map(d => (
                     <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: d.color }} />
-                      <span style={{ fontSize: '11px', color: '#7888a0' }}>{d.name}</span>
+                      <span style={{ fontSize:'13px', color: '#7888a0' }}>{d.name}</span>
                       <span style={{ fontSize: '13px', fontWeight: '700', color: d.color }}>{d.value}</span>
-                      <span style={{ fontSize: '9px', color: '#5a6a82' }}>{fTotal > 0 ? Math.round(d.value/fTotal*100) : 0}%</span>
+                      <span style={{ fontSize:'12px', color: '#5a6a82' }}>{fTotal > 0 ? Math.round(d.value/fTotal*100) : 0}%</span>
                     </div>
                   ))}
                 </div>
               </div>
-            ) : <div style={{ color: '#3a1818', fontSize: '10px' }}>Aucune donnée</div>}
+            ) : <div style={{ color: '#3a1818', fontSize:'12px' }}>Aucune donnée</div>}
           </div>
 
           {/* DOW */}
           <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '16px', flex: 1 }}>
-            <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>P&L NET PAR JOUR DE LA SEMAINE</div>
+            <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>P&L NET PAR JOUR DE LA SEMAINE</div>
             <ResponsiveContainer width="100%" height={80}>
               <BarChart barCategoryGap="35%" data={dowArr.filter(d => d.count > 0)} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
                 <XAxis dataKey="label" tick={{ fill: '#5a6a82', fontSize: 8 }} axisLine={false} tickLine={false} />
@@ -648,7 +648,7 @@ export default function Stats() {
 
         {/* P&L par heure d'entrée */}
         <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR HEURE D'ENTRÉE</div>
+          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR HEURE D'ENTRÉE</div>
           {byHourArr.length > 0 ? (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart barCategoryGap="30%" data={byHourArr} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
@@ -659,7 +659,7 @@ export default function Stats() {
                   if (!active || !payload?.length) return null;
                   const d = payload[0]?.payload;
                   return (
-                    <div style={{ background: 'rgba(8,9,16,0.97)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', padding: '8px 12px', fontSize: '11px', fontFamily: 'inherit' }}>
+                    <div style={{ background: 'rgba(8,9,16,0.97)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', padding: '8px 12px', fontSize:'13px', fontFamily: 'inherit' }}>
                       <div style={{ color: '#5a6a82', marginBottom: '4px' }}>{d?.label}</div>
                       <div style={{ color: (d?.pnl ?? 0) >= 0 ? '#00cc77' : '#ff3344', fontWeight: '700' }}>P&L: {fmt(d?.pnl ?? 0, true)}</div>
                       <div style={{ color: '#7888a0', marginTop: '2px' }}>{d?.cnt} trade{d?.cnt > 1 ? 's' : ''} · {d?.wr}% WR</div>
@@ -672,14 +672,14 @@ export default function Stats() {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          ) : <div style={{ height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a1818', fontSize: '10px' }}>Aucune donnée horaire disponible</div>}
+          ) : <div style={{ height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a1818', fontSize:'12px' }}>Aucune donnée horaire disponible</div>}
         </div>
 
         {/* Durée + Taille */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {/* Durée */}
           <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '14px 16px', flex: 1 }}>
-            <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>DURÉE DES POSITIONS</div>
+            <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>DURÉE DES POSITIONS</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '8px' }}>
               {[
                 { label: 'MOYENNE', sec: avgDurSec, color: '#dde4ef' },
@@ -687,19 +687,19 @@ export default function Stats() {
                 { label: 'LOSS AVG', sec: avgDurLossSec, color: '#ff4455' },
               ].map(({ label, sec, color }) => (
                 <div key={label} style={{ textAlign: 'center', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
-                  <div style={{ fontSize: '8px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '6px' }}>{label}</div>
+                  <div style={{ fontSize:'11px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '6px' }}>{label}</div>
                   <div style={{ fontSize: '16px', fontWeight: '700', color }}>{fmtDur(sec)}</div>
                 </div>
               ))}
             </div>
             {withDur.length === 0 && (
-              <div style={{ fontSize: '9px', color: '#3a1818', textAlign: 'center', marginTop: '8px' }}>Disponible avec les imports CSV</div>
+              <div style={{ fontSize:'12px', color: '#3a1818', textAlign: 'center', marginTop: '8px' }}>Disponible avec les imports CSV</div>
             )}
           </div>
 
           {/* Taille */}
           <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '6px', padding: '14px 16px', flex: 1 }}>
-            <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>TAILLE DES POSITIONS</div>
+            <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '12px' }}>TAILLE DES POSITIONS</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '8px' }}>
               {[
                 { label: 'MOYENNE', val: avgSize, color: '#dde4ef' },
@@ -707,13 +707,13 @@ export default function Stats() {
                 { label: 'LOSS AVG', val: avgSizeLoss, color: '#ff4455' },
               ].map(({ label, val, color }) => (
                 <div key={label} style={{ textAlign: 'center', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
-                  <div style={{ fontSize: '8px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '6px' }}>{label}</div>
+                  <div style={{ fontSize:'11px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '6px' }}>{label}</div>
                   <div style={{ fontSize: '16px', fontWeight: '700', color }}>{val > 0 ? val.toFixed(2) : '—'}</div>
                 </div>
               ))}
             </div>
             {withSize.length === 0 && (
-              <div style={{ fontSize: '9px', color: '#3a1818', textAlign: 'center', marginTop: '8px' }}>Aucune donnée de taille disponible</div>
+              <div style={{ fontSize:'12px', color: '#3a1818', textAlign: 'center', marginTop: '8px' }}>Aucune donnée de taille disponible</div>
             )}
           </div>
         </div>

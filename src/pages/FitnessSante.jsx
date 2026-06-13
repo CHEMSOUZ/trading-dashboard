@@ -112,7 +112,7 @@ function ExerciseCard({ ex, sessionColor, isDone, onToggle }) {
         <div style={{ fontSize: 11, fontWeight: 700, color: isDone ? '#5a8a5a' : '#c8d8c8', marginBottom: 2, lineHeight: 1.3 }}>{ex.name}</div>
         <div style={{ fontSize: 10, color: sessionColor, marginBottom: 5, opacity: isDone ? 0.6 : 1 }}>{ex.muscle}</div>
         <div style={{ fontSize: 10, color: '#2a5a3a', lineHeight: 1.4, flex: 1 }}>💡 {ex.tip}</div>
-        <button onClick={onToggle} style={{ marginTop: 8, width: '100%', padding: '6px 0', background: isDone ? 'rgba(0,255,136,0.1)' : 'rgba(255,255,255,0.03)', border: `1px solid ${isDone ? 'rgba(0,255,136,0.25)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 4, color: isDone ? '#8899bb' : '#3a6a4a', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
+        <button onClick={onToggle} style={{ marginTop: 8, width: '100%', padding: '6px 0', background: isDone ? 'rgba(0,255,136,0.1)' : 'rgba(255,255,255,0.03)', border: `1px solid ${isDone ? 'rgba(0,255,136,0.25)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 4, color: isDone ? '#8899bb' : '#3a6a4a', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
           onMouseEnter={e => { if (!isDone) { e.currentTarget.style.background = 'rgba(0,255,136,0.06)'; e.currentTarget.style.color = '#566880'; }}}
           onMouseLeave={e => { if (!isDone) { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = '#3a6a4a'; }}}
         >
@@ -235,7 +235,7 @@ export default function FitnessSante() {
   }
 
   const card = { background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: 8, padding: '16px 18px' };
-  const inputBase = { background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.12)', borderRadius: 4, padding: '8px 10px', color: '#c8d8c8', fontSize: '12px', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box', transition: 'border-color 0.15s' };
+  const inputBase = { background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.12)', borderRadius: 4, padding: '8px 10px', color: '#c8d8c8', fontSize:'13px', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box', transition: 'border-color 0.15s' };
 
   const p1from     = prog?.p1from     ?? 120;
   const p1to       = prog?.p1to       ?? 100;
@@ -394,7 +394,7 @@ export default function FitnessSante() {
             const isActive  = activeSession === s.id;
             return (
               <button key={s.id} onClick={() => setActiveSession(isActive ? null : s.id)}
-                style={{ background: isActive ? `${s.color}18` : 'rgba(6,12,16,0.5)', border: `1px solid ${isActive ? s.color : 'rgba(255,255,255,0.06)'}`, borderRadius: 6, padding: '8px 14px', cursor: 'pointer', color: isActive ? s.color : '#5a8a6a', fontSize: '12px', fontFamily: 'inherit', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}
+                style={{ background: isActive ? `${s.color}18` : 'rgba(6,12,16,0.5)', border: `1px solid ${isActive ? s.color : 'rgba(255,255,255,0.06)'}`, borderRadius: 6, padding: '8px 14px', cursor: 'pointer', color: isActive ? s.color : '#5a8a6a', fontSize:'13px', fontFamily: 'inherit', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}
                 onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#8aaa90'; }}}
                 onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(6,12,16,0.5)'; e.currentTarget.style.color = '#5a8a6a'; }}}
               >
@@ -427,7 +427,7 @@ export default function FitnessSante() {
                 </div>
               )}
               <button onClick={() => resetSession(s.id)}
-                style={{ background: 'rgba(255,68,85,0.06)', border: '1px solid rgba(255,68,85,0.2)', borderRadius: 5, padding: '5px 10px', cursor: 'pointer', color: '#ff4455', fontSize: '10px', fontFamily: 'inherit', transition: 'all 0.15s' }}
+                style={{ background: 'rgba(255,68,85,0.06)', border: '1px solid rgba(255,68,85,0.2)', borderRadius: 5, padding: '5px 10px', cursor: 'pointer', color: '#ff4455', fontSize:'12px', fontFamily: 'inherit', transition: 'all 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,68,85,0.12)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,68,85,0.06)'}
                 title="Réinitialiser les cases cochées"

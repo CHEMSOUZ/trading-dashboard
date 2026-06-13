@@ -114,7 +114,7 @@ function computeTrailingMLL(trades, size, maxLoss, postPayout = false) {
 function CTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background:'rgba(8,9,16,0.97)', border:'1px solid rgba(136,153,187,0.22)', borderRadius:'4px', padding:'8px 12px', fontSize:'12px', fontFamily:'inherit' }}>
+    <div style={{ background:'rgba(8,9,16,0.97)', border:'1px solid rgba(136,153,187,0.22)', borderRadius:'4px', padding:'8px 12px', fontSize:'13px', fontFamily:'inherit' }}>
       <div style={{ color:'#5a6a82', marginBottom:'4px' }}>{label}</div>
       {payload.map((p,i) => (
         <div key={i} style={{ color:p.name==='MLL'?'#ff4455':p.name==='Balance'?'#8899bb':pnlColor(p.value??0), fontWeight:'700' }}>
@@ -128,9 +128,9 @@ function CTooltip({ active, payload, label }) {
 function MetricCard({ label, value, sub, color='#dde4ef', alert=false }) {
   return (
     <div style={{ background:alert?'rgba(255,68,85,0.06)':'rgba(14,15,22,0.5)', border:`1px solid ${alert?'rgba(255,68,85,0.30)':'rgba(136,153,187,0.10)'}`, borderTop:`2px solid ${color}`, borderRadius:'6px', padding:'14px 16px' }}>
-      <div style={{ fontSize:'11px', color:'#5a6a82', letterSpacing:'1.5px', marginBottom:'6px' }}>{label}</div>
+      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'1.5px', marginBottom:'6px' }}>{label}</div>
       <div style={{ fontSize:'20px', fontWeight:'700', color, lineHeight:1 }}>{value}</div>
-      {sub && <div style={{ fontSize:'11px', color:alert?'#ff8888':'#5a6a82', marginTop:'5px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize:'13px', color:alert?'#ff8888':'#5a6a82', marginTop:'5px' }}>{sub}</div>}
     </div>
   );
 }
@@ -141,14 +141,14 @@ function ProgressBar({ label, current, max, color, displayText, note }) {
     <div style={{ display:'flex', flexDirection:'column', gap:'4px' }}>
       {(label || displayText) && (
         <div style={{ display:'flex', justifyContent:'space-between' }}>
-          {label && <span style={{ fontSize:'12px', color:'#7888a0' }}>{label}</span>}
-          {displayText && <span style={{ fontSize:'12px', color, fontWeight:'700' }}>{displayText}</span>}
+          {label && <span style={{ fontSize:'13px', color:'#7888a0' }}>{label}</span>}
+          {displayText && <span style={{ fontSize:'13px', color, fontWeight:'700' }}>{displayText}</span>}
         </div>
       )}
       <div style={{ height:'6px', background:'rgba(136,153,187,0.08)', borderRadius:'3px', overflow:'hidden' }}>
         <div style={{ height:'100%', width:`${pct}%`, background:color, borderRadius:'3px', transition:'width 0.5s ease', boxShadow:`0 0 6px ${color}60` }} />
       </div>
-      {note && <div style={{ fontSize:'10px', color:'#5a6a82' }}>{note}</div>}
+      {note && <div style={{ fontSize:'12px', color:'#5a6a82' }}>{note}</div>}
     </div>
   );
 }
@@ -162,7 +162,7 @@ function ObjRow({ ok, pending, label, detail, children }) {
       <span style={{ fontSize:'18px', flexShrink:0, marginTop:'1px' }}>{icon}</span>
       <div style={{ flex:1 }}>
         <div style={{ fontSize:'13px', color:'#dde4ef', fontWeight:'600', marginBottom:(children||detail)?'8px':0 }}>{label}</div>
-        {detail && <div style={{ fontSize:'11px', color:'#5868a0', marginBottom:children?'8px':0 }}>{detail}</div>}
+        {detail && <div style={{ fontSize:'13px', color:'#5868a0', marginBottom:children?'8px':0 }}>{detail}</div>}
         {children}
       </div>
     </div>
@@ -175,10 +175,10 @@ function WinDayBadge({ date, pnl, minAmount }) {
   return (
     <div title={`${date}: ${fmt(pnl,true)}${qual?' ✓ qualifiant':''}`}
       style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'2px', minWidth:'38px' }}>
-      <div style={{ width:'36px', height:'36px', borderRadius:'50%', background:`rgba(${pnl>0?(qual?'0,204,119':'240,160,32'):'255,68,85'},0.12)`, border:`2px solid ${color}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', color, fontWeight:'700' }}>
+      <div style={{ width:'36px', height:'36px', borderRadius:'50%', background:`rgba(${pnl>0?(qual?'0,204,119':'240,160,32'):'255,68,85'},0.12)`, border:`2px solid ${color}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', color, fontWeight:'700' }}>
         {pnl > 0 ? (qual ? '✓' : '+') : '✗'}
       </div>
-      <span style={{ fontSize:'8px', color:'#5a6a82', textAlign:'center' }}>{date.slice(5)}</span>
+      <span style={{ fontSize:'11px', color:'#5a6a82', textAlign:'center' }}>{date.slice(5)}</span>
     </div>
   );
 }
@@ -190,13 +190,13 @@ function MLLSection({ mll, size, maxLoss, balance, isLocked, postPayout }) {
   return (
     <div style={{ background:alert?'rgba(255,68,85,0.06)':'rgba(14,15,22,0.4)', border:`1px solid ${alert?'rgba(255,68,85,0.30)':'rgba(136,153,187,0.10)'}`, borderRadius:'8px', padding:'16px' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px', flexWrap:'wrap', gap:'8px' }}>
-        <div style={{ fontSize:'11px', color:'#5a6a82', letterSpacing:'2px' }}>MAXIMUM LOSS LIMIT (MLL)</div>
+        <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>MAXIMUM LOSS LIMIT (MLL)</div>
         <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
           {postPayout
-            ? <span style={{ background:'rgba(0,204,119,0.12)', border:'1px solid rgba(0,204,119,0.35)', borderRadius:'4px', padding:'3px 10px', fontSize:'10px', color:'#00cc77', fontWeight:'700' }}>🔒 FIXÉE À 0$ — APRÈS PAYOUT</span>
+            ? <span style={{ background:'rgba(0,204,119,0.12)', border:'1px solid rgba(0,204,119,0.35)', borderRadius:'4px', padding:'3px 10px', fontSize:'12px', color:'#00cc77', fontWeight:'700' }}>🔒 FIXÉE À 0$ — APRÈS PAYOUT</span>
             : isLocked
-              ? <span style={{ background:'rgba(136,153,187,0.12)', border:'1px solid rgba(136,153,187,0.35)', borderRadius:'4px', padding:'3px 10px', fontSize:'10px', color:'#8899bb', fontWeight:'700' }}>🔒 VERROUILLÉE À {size.toLocaleString()}$</span>
-              : <span style={{ background:'rgba(240,160,32,0.08)', border:'1px solid rgba(240,160,32,0.25)', borderRadius:'4px', padding:'3px 10px', fontSize:'10px', color:'#f0a020' }}>⚡ Verrou dès {lockLevel.toLocaleString()}$ → MLL = {size.toLocaleString()}$</span>
+              ? <span style={{ background:'rgba(136,153,187,0.12)', border:'1px solid rgba(136,153,187,0.35)', borderRadius:'4px', padding:'3px 10px', fontSize:'12px', color:'#8899bb', fontWeight:'700' }}>🔒 VERROUILLÉE À {size.toLocaleString()}$</span>
+              : <span style={{ background:'rgba(240,160,32,0.08)', border:'1px solid rgba(240,160,32,0.25)', borderRadius:'4px', padding:'3px 10px', fontSize:'12px', color:'#f0a020' }}>⚡ Verrou dès {lockLevel.toLocaleString()}$ → MLL = {size.toLocaleString()}$</span>
           }
         </div>
       </div>
@@ -216,18 +216,18 @@ function MLLSection({ mll, size, maxLoss, balance, isLocked, postPayout }) {
 
       <div style={{ height:'16px', background:'rgba(0,0,0,0.3)', borderRadius:'4px', overflow:'hidden', position:'relative' }}>
         <div style={{ height:'100%', width:`${Math.min((dist/Math.max(maxLoss,1))*100,100)}%`, background:alert?'linear-gradient(90deg,#ff4455,#ff6677)':dist<1000?'linear-gradient(90deg,#f0a020,#f0c040)':'linear-gradient(90deg,#566880,#8899bb)', borderRadius:'4px', transition:'width 0.5s ease' }} />
-        <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px', color:'rgba(255,255,255,0.80)', fontWeight:'700' }}>
+        <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px', color:'rgba(255,255,255,0.80)', fontWeight:'700' }}>
           Marge: {dist.toFixed(0)}$ · MLL: {mll.toLocaleString()}$
         </div>
       </div>
 
       {isLocked && !postPayout && (
-        <div style={{ marginTop:'10px', background:'rgba(136,153,187,0.08)', border:'1px solid rgba(136,153,187,0.20)', borderRadius:'4px', padding:'8px 12px', fontSize:'11px', color:'#8899bb' }}>
+        <div style={{ marginTop:'10px', background:'rgba(136,153,187,0.08)', border:'1px solid rgba(136,153,187,0.20)', borderRadius:'4px', padding:'8px 12px', fontSize:'13px', color:'#8899bb' }}>
           🔒 MLL verrouillée à {size.toLocaleString()}$ — ton capital de départ est protégé définitivement.
         </div>
       )}
 
-      <div style={{ marginTop:'10px', background:'rgba(0,170,255,0.05)', border:'1px solid rgba(0,170,255,0.12)', borderRadius:'4px', padding:'8px 12px', fontSize:'10px', color:'#5a6a82' }}>
+      <div style={{ marginTop:'10px', background:'rgba(0,170,255,0.05)', border:'1px solid rgba(0,170,255,0.12)', borderRadius:'4px', padding:'8px 12px', fontSize:'12px', color:'#5a6a82' }}>
         ℹ La MLL peut augmenter mais ne diminue jamais · Se verrouille définitivement au solde de départ · Après 1er payout → fixée à 0$
       </div>
     </div>
@@ -239,8 +239,8 @@ function PayoutBox() {
     <div style={{ background:'rgba(240,192,32,0.05)', border:'1px solid rgba(240,192,32,0.18)', borderRadius:'6px', padding:'12px 16px', display:'flex', gap:'14px', alignItems:'center', flexWrap:'wrap' }}>
       <span style={{ fontSize:'18px' }}>💸</span>
       <div>
-        <div style={{ fontSize:'11px', color:'#f0c020', letterSpacing:'1.5px', fontWeight:'700', marginBottom:'4px' }}>PAYOUT</div>
-        <div style={{ fontSize:'11px', color:'#7888a0', display:'flex', gap:'16px', flexWrap:'wrap' }}>
+        <div style={{ fontSize:'13px', color:'#f0c020', letterSpacing:'1.5px', fontWeight:'700', marginBottom:'4px' }}>PAYOUT</div>
+        <div style={{ fontSize:'13px', color:'#7888a0', display:'flex', gap:'16px', flexWrap:'wrap' }}>
           <span>Minimum : <strong style={{ color:'#f0c020' }}>125$</strong></span>
           <span>Répartition : <strong style={{ color:'#f0c020' }}>90% / 10%</strong></span>
           <span>Pendant les heures CME</span>
@@ -258,11 +258,11 @@ function BalanceRow({ balanceInput, setBalanceInput, onSave, status }) {
         <input type="number" placeholder="Balance réelle ($)" value={balanceInput}
           onChange={e => setBalanceInput(e.target.value)}
           onKeyDown={e => e.key==='Enter' && onSave()}
-          style={{ background:'rgba(14,15,22,0.6)', border:'1px solid rgba(136,153,187,0.18)', borderRadius:'4px', padding:'7px 10px', color:'#dde4ef', fontSize:'12px', fontFamily:'inherit', outline:'none', width:'170px' }} />
+          style={{ background:'rgba(14,15,22,0.6)', border:'1px solid rgba(136,153,187,0.18)', borderRadius:'4px', padding:'7px 10px', color:'#dde4ef', fontSize:'13px', fontFamily:'inherit', outline:'none', width:'170px' }} />
         <button onClick={onSave}
-          style={{ background:'rgba(136,153,187,0.12)', border:'1px solid rgba(136,153,187,0.28)', color:'#8899bb', padding:'7px 14px', borderRadius:'4px', fontSize:'12px', fontFamily:'inherit', cursor:'pointer' }}>MAJ</button>
+          style={{ background:'rgba(136,153,187,0.12)', border:'1px solid rgba(136,153,187,0.28)', color:'#8899bb', padding:'7px 14px', borderRadius:'4px', fontSize:'13px', fontFamily:'inherit', cursor:'pointer' }}>MAJ</button>
       </div>
-      <div style={{ background:`rgba(${status.color==='#ff4455'?'255,68,85':status.color==='#00cc77'?'0,204,119':status.color==='#8899bb'?'136,153,187':'240,160,32'},0.10)`, border:`1px solid ${status.color}40`, borderRadius:'6px', padding:'8px 16px', fontSize:'12px', fontWeight:'700', color:status.color }}>
+      <div style={{ background:`rgba(${status.color==='#ff4455'?'255,68,85':status.color==='#00cc77'?'0,204,119':status.color==='#8899bb'?'136,153,187':'240,160,32'},0.10)`, border:`1px solid ${status.color}40`, borderRadius:'6px', padding:'8px 16px', fontSize:'13px', fontWeight:'700', color:status.color }}>
         {status.label}
       </div>
     </div>
@@ -272,7 +272,7 @@ function BalanceRow({ balanceInput, setBalanceInput, onSave, status }) {
 function PostPayoutToggle({ value, onChange }) {
   return (
     <button onClick={() => onChange(!value)}
-      style={{ background:value?'rgba(0,204,119,0.12)':'rgba(14,15,22,0.5)', border:`1px solid ${value?'rgba(0,204,119,0.40)':'rgba(136,153,187,0.18)'}`, color:value?'#00cc77':'#5a6a82', padding:'7px 14px', borderRadius:'4px', fontSize:'11px', fontFamily:'inherit', cursor:'pointer' }}>
+      style={{ background:value?'rgba(0,204,119,0.12)':'rgba(14,15,22,0.5)', border:`1px solid ${value?'rgba(0,204,119,0.40)':'rgba(136,153,187,0.18)'}`, color:value?'#00cc77':'#5a6a82', padding:'7px 14px', borderRadius:'4px', fontSize:'13px', fontFamily:'inherit', cursor:'pointer' }}>
       {value ? '✓ 1er Payout reçu — MLL=0$' : '⬜ Marquer 1er Payout reçu'}
     </button>
   );
@@ -281,7 +281,7 @@ function PostPayoutToggle({ value, onChange }) {
 // ── Charts ─────────────────────────────────────────────────────
 function MLLChart({ points, lockLevel, targetBalance }) {
   if (points.length < 2) return (
-    <div style={{ height:'200px', display:'flex', alignItems:'center', justifyContent:'center', color:'#3a4a62', fontSize:'12px' }}>Aucun trade</div>
+    <div style={{ height:'200px', display:'flex', alignItems:'center', justifyContent:'center', color:'#3a4a62', fontSize:'13px' }}>Aucun trade</div>
   );
   return (
     <ResponsiveContainer width="100%" height={200}>
@@ -307,7 +307,7 @@ function MLLChart({ points, lockLevel, targetBalance }) {
 
 function DailyBarChart({ dailyArr, consistencyLine, winDayMin }) {
   if (!dailyArr.length) return (
-    <div style={{ height:'200px', display:'flex', alignItems:'center', justifyContent:'center', color:'#3a4a62', fontSize:'12px' }}>Aucun trade</div>
+    <div style={{ height:'200px', display:'flex', alignItems:'center', justifyContent:'center', color:'#3a4a62', fontSize:'13px' }}>Aucun trade</div>
   );
   return (
     <ResponsiveContainer width="100%" height={200}>
@@ -360,19 +360,19 @@ function PhaseSelector({ account, onChanged }) {
     <div>
       <div style={{ background:'rgba(0,0,0,0.25)', border:`1px solid ${phColor}22`, borderLeft:`3px solid ${phColor}`, borderRadius:'6px', padding:'10px 14px', display:'flex', alignItems:'center', gap:'12px', flexWrap:'wrap' }}>
         <div style={{ flex:1 }}>
-          <div style={{ fontSize:'9px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'3px' }}>PHASE DU COMPTE</div>
+          <div style={{ fontSize:'12px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'3px' }}>PHASE DU COMPTE</div>
           {current ? (
             <div style={{ display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap' }}>
               <span style={{ fontSize:'14px', fontWeight:'700', color:'#e8edf8' }}>{phLabel}</span>
-              <span style={{ fontSize:'12px', color:phColor, fontWeight:'600' }}>{current.label}</span>
-              <span style={{ fontSize:'10px', color:'#5a6a82' }}>{current.sub}</span>
+              <span style={{ fontSize:'13px', color:phColor, fontWeight:'600' }}>{current.label}</span>
+              <span style={{ fontSize:'12px', color:'#5a6a82' }}>{current.sub}</span>
             </div>
           ) : (
-            <div style={{ fontSize:'12px', color:'#f0a020' }}>⚠ Phase non définie — configurer →</div>
+            <div style={{ fontSize:'13px', color:'#f0a020' }}>⚠ Phase non définie — configurer →</div>
           )}
         </div>
         <button onClick={() => { setSel(account?.type ?? ''); setOpen(true); }}
-          style={{ background:'rgba(0,170,255,0.10)', border:'1px solid rgba(0,170,255,0.25)', color:'#00aaff', padding:'7px 14px', borderRadius:'4px', fontSize:'11px', fontFamily:'inherit', cursor:'pointer', letterSpacing:'1px', fontWeight:'600', whiteSpace:'nowrap' }}>
+          style={{ background:'rgba(0,170,255,0.10)', border:'1px solid rgba(0,170,255,0.25)', color:'#00aaff', padding:'7px 14px', borderRadius:'4px', fontSize:'13px', fontFamily:'inherit', cursor:'pointer', letterSpacing:'1px', fontWeight:'600', whiteSpace:'nowrap' }}>
           Changer →
         </button>
       </div>
@@ -382,7 +382,7 @@ function PhaseSelector({ account, onChanged }) {
           <div onClick={e => e.stopPropagation()} style={{ background:'#0c0d16', border:'1px solid rgba(136,153,187,0.35)', borderRadius:'10px', padding:'24px', width:'620px', maxWidth:'100%', maxHeight:'85vh', overflowY:'auto' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px' }}>
               <div>
-                <div style={{ fontSize:'9px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'4px' }}>TOPSTEP PROPFIRM</div>
+                <div style={{ fontSize:'12px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'4px' }}>TOPSTEP PROPFIRM</div>
                 <div style={{ fontSize:'16px', fontWeight:'700', color:'#e8edf8' }}>Sélectionner le type de compte</div>
               </div>
               <button onClick={() => setOpen(false)} style={{ background:'none', border:'1px solid #1e2c40', color:'#5868a0', width:'28px', height:'28px', borderRadius:'50%', cursor:'pointer', fontSize:'16px' }}>×</button>
@@ -392,7 +392,7 @@ function PhaseSelector({ account, onChanged }) {
               const rStr = grp.color==='#8899bb'?'136,153,187':grp.color==='#f0c020'?'240,192,32':grp.color==='#aa88ff'?'170,136,255':'0,204,119';
               return (
                 <div key={grp.group} style={{ marginBottom:'16px' }}>
-                  <div style={{ fontSize:'10px', color:grp.color, letterSpacing:'2px', marginBottom:'8px', opacity:0.9 }}>— {grp.group}</div>
+                  <div style={{ fontSize:'12px', color:grp.color, letterSpacing:'2px', marginBottom:'8px', opacity:0.9 }}>— {grp.group}</div>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))', gap:'6px' }}>
                     {grp.options.map(opt => {
                       const isAct = sel === opt.value;
@@ -405,7 +405,7 @@ function PhaseSelector({ account, onChanged }) {
                             </div>
                             <span style={{ fontSize:'14px', fontWeight:'700', color:isAct?'#e8edf8':'#7888a0' }}>{opt.label}</span>
                           </div>
-                          <div style={{ fontSize:'9px', color:'#4a5a72', paddingLeft:'20px', lineHeight:'1.5' }}>{opt.sub}</div>
+                          <div style={{ fontSize:'12px', color:'#4a5a72', paddingLeft:'20px', lineHeight:'1.5' }}>{opt.sub}</div>
                         </div>
                       );
                     })}
@@ -415,9 +415,9 @@ function PhaseSelector({ account, onChanged }) {
             })}
 
             <div style={{ display:'flex', gap:'8px', justifyContent:'flex-end', marginTop:'16px' }}>
-              <button onClick={() => setOpen(false)} style={{ padding:'9px 18px', borderRadius:'5px', border:'1px solid #1e2c40', background:'transparent', color:'#6878a0', fontSize:'11px', fontFamily:'inherit', cursor:'pointer' }}>Annuler</button>
+              <button onClick={() => setOpen(false)} style={{ padding:'9px 18px', borderRadius:'5px', border:'1px solid #1e2c40', background:'transparent', color:'#6878a0', fontSize:'13px', fontFamily:'inherit', cursor:'pointer' }}>Annuler</button>
               <button onClick={confirm} disabled={saving || !sel || sel===account?.type}
-                style={{ padding:'9px 22px', borderRadius:'5px', background:!sel||sel===account?.type?'rgba(14,15,22,0.4)':'rgba(136,153,187,0.18)', border:`1px solid ${!sel||sel===account?.type?'#1e2c40':'rgba(136,153,187,0.40)'}`, color:!sel||sel===account?.type?'#3c4c64':'#8899bb', fontSize:'11px', fontFamily:'inherit', fontWeight:'700', letterSpacing:'1px', cursor:saving||!sel||sel===account?.type?'not-allowed':'pointer' }}>
+                style={{ padding:'9px 22px', borderRadius:'5px', background:!sel||sel===account?.type?'rgba(14,15,22,0.4)':'rgba(136,153,187,0.18)', border:`1px solid ${!sel||sel===account?.type?'#1e2c40':'rgba(136,153,187,0.40)'}`, color:!sel||sel===account?.type?'#3c4c64':'#8899bb', fontSize:'13px', fontFamily:'inherit', fontWeight:'700', letterSpacing:'1px', cursor:saving||!sel||sel===account?.type?'not-allowed':'pointer' }}>
                 {saving ? 'SAUVEGARDE...' : sel===account?.type ? 'DÉJÀ ACTIF' : '✓ CONFIRMER'}
               </button>
             </div>
@@ -466,7 +466,7 @@ function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput,
           <span style={{ fontSize:'20px', flexShrink:0 }}>⚡</span>
           <div>
             <div style={{ fontSize:'13px', color:'#f0a020', fontWeight:'700', marginBottom:'4px' }}>Règle Consistency — Target ajusté</div>
-            <div style={{ fontSize:'11px', color:'#7888a0' }}>
+            <div style={{ fontSize:'13px', color:'#7888a0' }}>
               Meilleur jour ({fmt(bestDay)}) ≥ {(consistency*100).toFixed(0)}% du target initial ({fmt(consLimit)}).
               Nouveau target nécessaire : <strong style={{ color:'#f0c020' }}>{dynTarget.toLocaleString()}$</strong>
             </div>
@@ -474,12 +474,12 @@ function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput,
         </div>
       )}
 
-      <div style={{ fontSize:'11px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLE</div>
+      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLE</div>
       <ObjRow ok={!lost} pending={!lost}
         label={`Ne pas descendre sous la MLL — trailing depuis ${(size-maxLoss).toLocaleString()}$`}
         detail={`Balance : ${balance.toFixed(2)}$ · MLL : ${mll.toFixed(2)}$ · Marge : ${dist.toFixed(2)}$`} />
 
-      <div style={{ fontSize:'11px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIFS</div>
+      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIFS</div>
 
       <ObjRow ok={targetOk} pending={!targetOk&&!lost}
         label={`Profit Target — atteindre et maintenir +${dynTarget.toLocaleString()}$${consBreach?' ⚡ ajusté':''}`}>
@@ -491,7 +491,7 @@ function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput,
         label={`Consistency — aucun jour ≥ ${(consistency*100).toFixed(0)}% du target (< ${dynLimit.toFixed(0)}$)`}
         detail={bestDay>0 ? `Meilleur jour : ${fmt(bestDay)} · Limite : ${fmt(dynLimit)}` : 'Aucun jour positif pour le moment'} />
 
-      <div style={{ fontSize:'11px', color:'#5a6a82', letterSpacing:'2px' }}>DRAWDOWN — MLL TRAILING</div>
+      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>DRAWDOWN — MLL TRAILING</div>
       <MLLSection mll={mll} size={size} maxLoss={maxLoss} balance={balance} isLocked={isLocked} postPayout={false} />
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:'8px' }}>
@@ -503,11 +503,11 @@ function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput,
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
         <div style={{ background:'rgba(14,15,22,0.4)', border:'1px solid rgba(136,153,187,0.10)', borderRadius:'6px', padding:'14px' }}>
-          <div style={{ fontSize:'10px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>CAPITAL + MLL TRAILING</div>
+          <div style={{ fontSize:'12px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>CAPITAL + MLL TRAILING</div>
           <MLLChart points={mllPts} lockLevel={size+maxLoss} targetBalance={size+dynTarget} />
         </div>
         <div style={{ background:'rgba(14,15,22,0.4)', border:'1px solid rgba(136,153,187,0.10)', borderRadius:'6px', padding:'14px' }}>
-          <div style={{ fontSize:'10px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>P&L PAR JOUR · limite consistency</div>
+          <div style={{ fontSize:'12px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>P&L PAR JOUR · limite consistency</div>
           <DailyBarChart dailyArr={dailyArr} consistencyLine={dynLimit} />
         </div>
       </div>
@@ -516,7 +516,7 @@ function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput,
         <div style={{ background:'rgba(0,204,119,0.08)', border:'2px solid rgba(0,204,119,0.50)', borderRadius:'8px', padding:'20px', textAlign:'center', boxShadow:'0 0 30px rgba(0,204,119,0.08)' }}>
           <div style={{ fontSize:'26px', marginBottom:'6px' }}>🎉</div>
           <div style={{ fontSize:'18px', fontWeight:'700', color:'#00cc77', marginBottom:'4px' }}>TRADING COMBINE VALIDÉ !</div>
-          <div style={{ fontSize:'11px', color:'#5868a0' }}>Profit target atteint · Consistency respectée · Demande ton compte Funded.</div>
+          <div style={{ fontSize:'13px', color:'#5868a0' }}>Profit target atteint · Consistency respectée · Demande ton compte Funded.</div>
         </div>
       )}
     </div>
@@ -551,10 +551,10 @@ function ExpressStdTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
         <PostPayoutToggle value={postPayout} onChange={setPostPayout} />
       </div>
 
-      <div style={{ fontSize:'11px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLE</div>
+      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLE</div>
       <MLLSection mll={mll} size={size} maxLoss={maxLoss} balance={balance} isLocked={isLocked} postPayout={postPayout} />
 
-      <div style={{ fontSize:'11px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIFS</div>
+      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIFS</div>
 
       <ObjRow ok={payoutOk} pending={!payoutOk&&!lost}
         label={`5 jours gagnants ≥ ${winDayMin}$ chacun (éligibilité payout)`}
@@ -580,11 +580,11 @@ function ExpressStdTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
         <div style={{ background:'rgba(14,15,22,0.4)', border:'1px solid rgba(136,153,187,0.10)', borderRadius:'6px', padding:'14px' }}>
-          <div style={{ fontSize:'10px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>CAPITAL + MLL TRAILING</div>
+          <div style={{ fontSize:'12px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>CAPITAL + MLL TRAILING</div>
           <MLLChart points={points} lockLevel={!postPayout?size+maxLoss:undefined} />
         </div>
         <div style={{ background:'rgba(14,15,22,0.4)', border:'1px solid rgba(136,153,187,0.10)', borderRadius:'6px', padding:'14px' }}>
-          <div style={{ fontSize:'10px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>P&L PAR JOUR — vert ≥ {winDayMin}$</div>
+          <div style={{ fontSize:'12px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>P&L PAR JOUR — vert ≥ {winDayMin}$</div>
           <DailyBarChart dailyArr={dailyArr} winDayMin={winDayMin} />
         </div>
       </div>
@@ -594,7 +594,7 @@ function ExpressStdTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
           <span style={{ fontSize:'26px' }}>💸</span>
           <div>
             <div style={{ fontSize:'16px', fontWeight:'700', color:'#f0c020', marginBottom:'4px' }}>ÉLIGIBLE AU PAYOUT !</div>
-            <div style={{ fontSize:'11px', color:'#7888a0' }}>{qualDays.length} jours qualifiants · Min 125$ · 90% pour toi · Pendant les heures CME</div>
+            <div style={{ fontSize:'13px', color:'#7888a0' }}>{qualDays.length} jours qualifiants · Min 125$ · 90% pour toi · Pendant les heures CME</div>
           </div>
         </div>
       )}
@@ -637,10 +637,10 @@ function ExpressConsTab({ trades, cfg, manualBalance, balanceInput, setBalanceIn
         <PostPayoutToggle value={postPayout} onChange={setPostPayout} />
       </div>
 
-      <div style={{ fontSize:'11px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLE</div>
+      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLE</div>
       <MLLSection mll={mll} size={size} maxLoss={maxLoss} balance={balance} isLocked={isLocked} postPayout={postPayout} />
 
-      <div style={{ fontSize:'11px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIFS</div>
+      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIFS</div>
 
       <ObjRow ok={daysOk} pending={!daysOk} label={`Trader au moins ${minTradeDays} jours — 1 trade minimum par jour`} detail={`${tradeDays} jour(s) tradés sur ${minTradeDays} requis`}>
         <ProgressBar current={tradeDays} max={minTradeDays} color={daysOk?'#00cc77':'#f0a020'}
@@ -675,11 +675,11 @@ function ExpressConsTab({ trades, cfg, manualBalance, balanceInput, setBalanceIn
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
         <div style={{ background:'rgba(14,15,22,0.4)', border:'1px solid rgba(136,153,187,0.10)', borderRadius:'6px', padding:'14px' }}>
-          <div style={{ fontSize:'10px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>CAPITAL + MLL TRAILING</div>
+          <div style={{ fontSize:'12px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>CAPITAL + MLL TRAILING</div>
           <MLLChart points={points} lockLevel={!postPayout?size+maxLoss:undefined} />
         </div>
         <div style={{ background:'rgba(14,15,22,0.4)', border:'1px solid rgba(136,153,187,0.10)', borderRadius:'6px', padding:'14px' }}>
-          <div style={{ fontSize:'10px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>P&L PAR JOUR</div>
+          <div style={{ fontSize:'12px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>P&L PAR JOUR</div>
           <DailyBarChart dailyArr={dailyArr} />
         </div>
       </div>
@@ -689,7 +689,7 @@ function ExpressConsTab({ trades, cfg, manualBalance, balanceInput, setBalanceIn
           <span style={{ fontSize:'26px' }}>💸</span>
           <div>
             <div style={{ fontSize:'16px', fontWeight:'700', color:'#aa88ff', marginBottom:'4px' }}>ÉLIGIBLE AU PAYOUT !</div>
-            <div style={{ fontSize:'11px', color:'#7888a0' }}>{tradeDays} jours tradés · Consistency {(consPct*100).toFixed(1)}% ≤ {(maxConsistency*100).toFixed(0)}% · Min 125$ · 90% pour toi</div>
+            <div style={{ fontSize:'13px', color:'#7888a0' }}>{tradeDays} jours tradés · Consistency {(consPct*100).toFixed(1)}% ≤ {(maxConsistency*100).toFixed(0)}% · Min 125$ · 90% pour toi</div>
           </div>
         </div>
       )}
@@ -733,12 +733,12 @@ function LiveFundedTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
           <span style={{ fontSize:'22px' }}>⛔</span>
           <div>
             <div style={{ fontSize:'13px', color:'#ff4455', fontWeight:'700', marginBottom:'4px' }}>Daily Loss Limit atteint — compte désactivé pour aujourd'hui</div>
-            <div style={{ fontSize:'11px', color:'#7888a0' }}>P&L aujourd'hui : {fmt(todayPnl,true)} · Limite : -{dailyLoss.toLocaleString()}$</div>
+            <div style={{ fontSize:'13px', color:'#7888a0' }}>P&L aujourd'hui : {fmt(todayPnl,true)} · Limite : -{dailyLoss.toLocaleString()}$</div>
           </div>
         </div>
       )}
 
-      <div style={{ fontSize:'11px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLES</div>
+      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLES</div>
 
       <ObjRow ok={!bust} pending={!bust}
         label="Ne pas laisser le solde atteindre ou passer sous 0$"
@@ -750,7 +750,7 @@ function LiveFundedTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
           detail={todayPnl!==null ? `Aujourd'hui : ${fmt(todayPnl,true)} · Marge : ${fmt(Math.max(0, dailyLoss + (todayPnl??0)))}` : "Aucun trade aujourd'hui"} />
       )}
 
-      <div style={{ fontSize:'11px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIF — PAYOUT</div>
+      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIF — PAYOUT</div>
 
       <ObjRow ok={payoutOk} pending={!payoutOk&&!bust}
         label={`5 jours gagnants ≥ ${winDayMin}$ chacun`}
@@ -764,7 +764,7 @@ function LiveFundedTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
 
       <PayoutBox />
 
-      <div style={{ background:'rgba(255,68,85,0.05)', border:'1px solid rgba(255,68,85,0.15)', borderRadius:'5px', padding:'10px 14px', fontSize:'10px', color:'#6878a0' }}>
+      <div style={{ background:'rgba(255,68,85,0.05)', border:'1px solid rgba(255,68,85,0.15)', borderRadius:'5px', padding:'10px 14px', fontSize:'12px', color:'#6878a0' }}>
         ⚠ Interdit : account stacking · Intentional depletion d'un Live Funded Account
       </div>
 
@@ -778,7 +778,7 @@ function LiveFundedTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
         <div style={{ background:'rgba(14,15,22,0.4)', border:'1px solid rgba(136,153,187,0.10)', borderRadius:'6px', padding:'14px' }}>
-          <div style={{ fontSize:'10px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>COURBE DE CAPITAL</div>
+          <div style={{ fontSize:'12px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>COURBE DE CAPITAL</div>
           {eqPts.length > 1 ? (
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={eqPts} margin={{ top:5, right:10, bottom:0, left:10 }}>
@@ -796,10 +796,10 @@ function LiveFundedTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
                 <Area type="monotone" dataKey="balance" name="Balance" stroke="#00cc77" strokeWidth={2} fill="url(#liveG)" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
-          ) : <div style={{ height:'200px', display:'flex', alignItems:'center', justifyContent:'center', color:'#3a4a62', fontSize:'12px' }}>Aucun trade</div>}
+          ) : <div style={{ height:'200px', display:'flex', alignItems:'center', justifyContent:'center', color:'#3a4a62', fontSize:'13px' }}>Aucun trade</div>}
         </div>
         <div style={{ background:'rgba(14,15,22,0.4)', border:'1px solid rgba(136,153,187,0.10)', borderRadius:'6px', padding:'14px' }}>
-          <div style={{ fontSize:'10px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>P&L PAR JOUR — vert ≥ {winDayMin}$</div>
+          <div style={{ fontSize:'12px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'10px' }}>P&L PAR JOUR — vert ≥ {winDayMin}$</div>
           <DailyBarChart dailyArr={dailyArr} winDayMin={winDayMin} />
         </div>
       </div>
@@ -809,7 +809,7 @@ function LiveFundedTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
           <span style={{ fontSize:'26px' }}>💸</span>
           <div>
             <div style={{ fontSize:'16px', fontWeight:'700', color:'#00cc77', marginBottom:'4px' }}>ÉLIGIBLE AU PAYOUT !</div>
-            <div style={{ fontSize:'11px', color:'#7888a0' }}>{qualDays.length} jours qualifiants · Min 125$ · 90% pour toi · Pendant les heures CME</div>
+            <div style={{ fontSize:'13px', color:'#7888a0' }}>{qualDays.length} jours qualifiants · Min 125$ · 90% pour toi · Pendant les heures CME</div>
           </div>
         </div>
       )}
@@ -865,14 +865,14 @@ export default function PropFirm() {
     <div style={{ padding:'24px 28px', maxWidth:'none', fontFamily:"'JetBrains Mono','Fira Code',monospace" }}>
       <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:'16px', flexWrap:'wrap', gap:'12px' }}>
         <div>
-          <div style={{ fontSize:'10px', color:'#5a6a82', letterSpacing:'3px', marginBottom:'4px' }}>PROPFIRM — TOPSTEP</div>
+          <div style={{ fontSize:'12px', color:'#5a6a82', letterSpacing:'3px', marginBottom:'4px' }}>PROPFIRM — TOPSTEP</div>
           <h1 style={{ fontSize:'22px', fontWeight:'700', color:'#e8edf8', margin:0 }}>
             <span style={{ color:phColor }}>{phLabel}</span>
             <span style={{ fontSize:'15px', color:'#5a6a82', marginLeft:'12px' }}>{sizeK}</span>
           </h1>
         </div>
         <button onClick={() => navigate('/journal')}
-          style={{ background:'transparent', border:'1px solid #1e2c40', color:'#5868a0', padding:'8px 16px', borderRadius:'5px', fontSize:'12px', fontFamily:'inherit', letterSpacing:'1px', cursor:'pointer', transition:'all 0.15s' }}
+          style={{ background:'transparent', border:'1px solid #1e2c40', color:'#5868a0', padding:'8px 16px', borderRadius:'5px', fontSize:'13px', fontFamily:'inherit', letterSpacing:'1px', cursor:'pointer', transition:'all 0.15s' }}
           onMouseEnter={e => { e.currentTarget.style.color='#8899bb'; e.currentTarget.style.borderColor='#8899bb'; }}
           onMouseLeave={e => { e.currentTarget.style.color='#5868a0'; e.currentTarget.style.borderColor='#1e2c40'; }}>
           ← Journal
@@ -911,7 +911,7 @@ export default function PropFirm() {
       )}
 
       {!phase && (
-        <div style={{ padding:'60px', textAlign:'center', color:'#5a6a82', fontSize:'12px', border:'1px dashed rgba(136,153,187,0.15)', borderRadius:'8px' }}>
+        <div style={{ padding:'60px', textAlign:'center', color:'#5a6a82', fontSize:'13px', border:'1px dashed rgba(136,153,187,0.15)', borderRadius:'8px' }}>
           Sélectionnez un type de compte ci-dessus pour commencer
         </div>
       )}

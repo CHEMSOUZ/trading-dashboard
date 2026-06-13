@@ -35,7 +35,7 @@ const inputStyle = {
 function Field({ label, children }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-      <label style={{ fontSize: '12px', color: '#5a6a82', letterSpacing: '1.5px' }}>{label}</label>
+      <label style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1.5px' }}>{label}</label>
       {children}
     </div>
   );
@@ -53,7 +53,7 @@ function Lightbox({ src, onClose }) {
       <img src={src} alt="Screenshot" onClick={e => e.stopPropagation()}
         style={{ maxWidth: '100%', maxHeight: '95vh', objectFit: 'contain', borderRadius: '4px', boxShadow: '0 0 40px rgba(136,153,187,0.18)' }} />
       <button onClick={onClose} style={{ position: 'absolute', top: '16px', right: '20px', background: 'rgba(14,15,22,0.8)', border: '1px solid rgba(136,153,187,0.35)', color: '#8899bb', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
-      <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Appuie sur Échap pour fermer</div>
+      <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', fontSize:'13px', color: 'rgba(255,255,255,0.4)' }}>Appuie sur Échap pour fermer</div>
     </div>
   );
 }
@@ -128,9 +128,9 @@ function ScreenshotZone({ screenshots, onChange }) {
         <div style={{ fontSize: '13px', color: '#dde4ef', marginBottom: '3px' }}>
           Glisse tes screenshots ici · Clique pour sélectionner
         </div>
-        <div style={{ fontSize: '12px', color: '#5a6a82' }}>
+        <div style={{ fontSize:'13px', color: '#5a6a82' }}>
           ou{' '}
-          <kbd style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.22)', padding: '1px 5px', borderRadius: '3px', fontSize: '11px', color: '#8899bb' }}>Ctrl+V</kbd>
+          <kbd style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.22)', padding: '1px 5px', borderRadius: '3px', fontSize:'13px', color: '#8899bb' }}>Ctrl+V</kbd>
           {' '}pour coller depuis le presse-papier
         </div>
       </div>
@@ -145,8 +145,8 @@ function ScreenshotZone({ screenshots, onChange }) {
                 style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in', display: 'block' }}
               />
               <button onClick={e => { e.stopPropagation(); remove(sc.id); }}
-                style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,68,85,0.5)', color: '#ff4455', width: '20px', height: '20px', borderRadius: '50%', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.65)', padding: '3px 6px', fontSize: '10px', color: '#7888a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sc.name}</div>
+                style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,68,85,0.5)', color: '#ff4455', width: '20px', height: '20px', borderRadius: '50%', cursor: 'pointer', fontSize:'13px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.65)', padding: '3px 6px', fontSize:'12px', color: '#7888a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sc.name}</div>
             </div>
           ))}
         </div>
@@ -192,11 +192,11 @@ function Checklist({ checked, onChange, items, onItemsChange }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid rgba(136,153,187,0.10)', background: 'rgba(0,255,136,0.03)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: ratio === 1 ? '#8899bb' : '#566880', boxShadow: ratio === 1 ? '0 0 8px #8899bb' : 'none' }} />
-          <span style={{ fontSize: '12px', color: '#00cc66', letterSpacing: '2px' }}>CONFIRMATION CHECKLIST</span>
+          <span style={{ fontSize:'13px', color: '#00cc66', letterSpacing: '2px' }}>CONFIRMATION CHECKLIST</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ background: 'rgba(136,153,187,0.10)', border: `1px solid ${ratio === 1 ? '#8899bb' : '#1a4a2a'}`, borderRadius: '3px', padding: '2px 8px', fontSize: '13px', fontWeight: '700', color: ratio === 1 ? '#8899bb' : '#dde4ef' }}>{score}/{total}</div>
-          <button onClick={resetAll} style={{ background: 'transparent', border: '1px solid #141e2e', color: '#3a5a3a', padding: '2px 6px', borderRadius: '2px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}
+          <button onClick={resetAll} style={{ background: 'transparent', border: '1px solid #141e2e', color: '#3a5a3a', padding: '2px 6px', borderRadius: '2px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}
             onMouseEnter={e => { e.currentTarget.style.color = '#ff4455'; e.currentTarget.style.borderColor = '#ff4455'; }}
             onMouseLeave={e => { e.currentTarget.style.color = '#3a5a3a'; e.currentTarget.style.borderColor = '#141e2e'; }}
           >↺</button>
@@ -231,7 +231,7 @@ function Checklist({ checked, onChange, items, onItemsChange }) {
               <div onClick={() => toggle(item.id)} style={{ width: '15px', height: '15px', flexShrink: 0, border: `1.5px solid ${isChecked ? '#8899bb' : '#3a1a1a'}`, borderRadius: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isChecked ? 'rgba(136,153,187,0.14)' : 'transparent', transition: 'all 0.15s', boxShadow: isChecked ? '0 0 6px #8899bb30' : 'none' }}>
                 {isChecked && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><polyline points="1,3.5 3,6 8,1" stroke="#8899bb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
               </div>
-              <span onClick={() => toggle(item.id)} style={{ flex: 1, fontSize: '12px', cursor: 'pointer', color: isChecked ? '#8a3a3a' : '#7888a0', textDecoration: isChecked ? 'line-through' : 'none', textDecorationColor: '#2a6a3a', transition: 'color 0.15s', lineHeight: '1.3' }}>{item.label}</span>
+              <span onClick={() => toggle(item.id)} style={{ flex: 1, fontSize:'13px', cursor: 'pointer', color: isChecked ? '#8a3a3a' : '#7888a0', textDecoration: isChecked ? 'line-through' : 'none', textDecorationColor: '#2a6a3a', transition: 'color 0.15s', lineHeight: '1.3' }}>{item.label}</span>
               <button onClick={() => removeItem(item.id)} style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '14px', padding: '0 2px', flexShrink: 0, transition: 'color 0.15s', lineHeight: 1 }}
                 onMouseEnter={e => e.currentTarget.style.color = '#ff4455'}
                 onMouseLeave={e => e.currentTarget.style.color = '#1a3a20'}
@@ -247,12 +247,12 @@ function Checklist({ checked, onChange, items, onItemsChange }) {
             <input autoFocus value={newLabel} onChange={e => setNewLabel(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addItem(); if (e.key === 'Escape') { setAdding(false); setNewLabel(''); } }}
               placeholder="Nouvelle confirmation..."
-              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#dde4ef', fontSize: '12px', fontFamily: 'inherit', caretColor: '#8899bb' }} />
-            <button onClick={addItem} style={{ background: '#8899bb', border: 'none', color: '#040d08', padding: '2px 8px', borderRadius: '2px', fontSize: '11px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer' }}>ADD</button>
-            <button onClick={() => { setAdding(false); setNewLabel(''); }} style={{ background: 'transparent', border: '1px solid #1e2c40', color: '#5868a0', padding: '2px 5px', borderRadius: '2px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>ESC</button>
+              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#dde4ef', fontSize:'13px', fontFamily: 'inherit', caretColor: '#8899bb' }} />
+            <button onClick={addItem} style={{ background: '#8899bb', border: 'none', color: '#040d08', padding: '2px 8px', borderRadius: '2px', fontSize:'13px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer' }}>ADD</button>
+            <button onClick={() => { setAdding(false); setNewLabel(''); }} style={{ background: 'transparent', border: '1px solid #1e2c40', color: '#5868a0', padding: '2px 5px', borderRadius: '2px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>ESC</button>
           </div>
         ) : (
-          <button onClick={() => setAdding(true)} style={{ width: '100%', background: 'transparent', border: '1px dashed #1e2c40', color: '#5a6a82', padding: '5px', borderRadius: '3px', fontSize: '11px', fontFamily: 'inherit', letterSpacing: '2px', cursor: 'pointer', transition: 'all 0.2s' }}
+          <button onClick={() => setAdding(true)} style={{ width: '100%', background: 'transparent', border: '1px dashed #1e2c40', color: '#5a6a82', padding: '5px', borderRadius: '3px', fontSize:'13px', fontFamily: 'inherit', letterSpacing: '2px', cursor: 'pointer', transition: 'all 0.2s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#3c4c64'; e.currentTarget.style.color = '#8899bb'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e2c40'; e.currentTarget.style.color = '#5a6a82'; }}
           >+ AJOUTER</button>
@@ -382,7 +382,7 @@ export default function NewTrade() {
 
       {/* Header */}
       <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <button onClick={() => navigate('/journal')} style={{ background: 'none', border: '1px solid rgba(136,153,187,0.15)', color: '#5a6a82', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit', padding: '6px 12px', borderRadius: '5px', transition: 'all 0.15s' }}
+        <button onClick={() => navigate('/journal')} style={{ background: 'none', border: '1px solid rgba(136,153,187,0.15)', color: '#5a6a82', cursor: 'pointer', fontSize:'13px', fontFamily: 'inherit', padding: '6px 12px', borderRadius: '5px', transition: 'all 0.15s' }}
           onMouseEnter={e => { e.currentTarget.style.color='#dde4ef'; e.currentTarget.style.borderColor='rgba(136,153,187,0.35)'; }}
           onMouseLeave={e => { e.currentTarget.style.color='#5a6a82'; e.currentTarget.style.borderColor='rgba(136,153,187,0.15)'; }}>
           ← Journal
@@ -390,7 +390,7 @@ export default function NewTrade() {
         <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#dde4ef', margin: 0, letterSpacing: '-0.5px' }}>
           {isEdit ? 'Modifier le trade' : 'Nouveau trade'}
         </h1>
-        {isEdit && <span style={{ fontSize: '10px', color: '#5a6a82', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.15)', padding: '3px 8px', borderRadius: '4px', letterSpacing: '1.5px' }}>ÉDITION</span>}
+        {isEdit && <span style={{ fontSize:'12px', color: '#5a6a82', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.15)', padding: '3px 8px', borderRadius: '4px', letterSpacing: '1.5px' }}>ÉDITION</span>}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr clamp(280px,28%,380px)', gap: '20px', alignItems: 'start' }}>
@@ -492,13 +492,13 @@ export default function NewTrade() {
           {/* P&L net calculé */}
           {(form.result !== '' || form.fees !== '' || form.commissions !== '') && (
             <div style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '5px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '1px' }}>P&L NET :</span>
+              <span style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1px' }}>P&L NET :</span>
               {(() => {
                 const net = (parseFloat(form.result) || 0) - (parseFloat(form.fees) || 0) - (parseFloat(form.commissions) || 0);
                 return <span style={{ fontSize: '15px', fontWeight: '700', color: net >= 0 ? '#00cc77' : '#ff3344' }}>{net >= 0 ? '+' : ''}{net.toFixed(2)}$</span>;
               })()}
               {((parseFloat(form.fees) || 0) + (parseFloat(form.commissions) || 0)) > 0 && (
-                <span style={{ fontSize: '10px', color: '#4a6a4a', marginLeft: 'auto' }}>
+                <span style={{ fontSize:'12px', color: '#4a6a4a', marginLeft: 'auto' }}>
                   -{((parseFloat(form.fees) || 0) + (parseFloat(form.commissions) || 0)).toFixed(2)}$ de frais
                 </span>
               )}
@@ -512,7 +512,7 @@ export default function NewTrade() {
                 {['WIN','LOSS','BE'].map(o => {
                   const c = o==='WIN'?'#00cc77':o==='LOSS'?'#ff3344':'#f0a020';
                   return (
-                    <button key={o} onClick={() => setForm(p => ({ ...p, outcome: o }))} style={{ flex: 1, padding: '7px 4px', borderRadius: '5px', border: `1px solid ${form.outcome===o?c:'rgba(136,153,187,0.14)'}`, background: form.outcome===o?`rgba(${o==='WIN'?'0,255,136':o==='LOSS'?'255,68,85':'240,160,32'},0.12)`:'rgba(14,15,22,0.6)', color: form.outcome===o?c:'#6878a0', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s' }}>{o}</button>
+                    <button key={o} onClick={() => setForm(p => ({ ...p, outcome: o }))} style={{ flex: 1, padding: '7px 4px', borderRadius: '5px', border: `1px solid ${form.outcome===o?c:'rgba(136,153,187,0.14)'}`, background: form.outcome===o?`rgba(${o==='WIN'?'0,255,136':o==='LOSS'?'255,68,85':'240,160,32'},0.12)`:'rgba(14,15,22,0.6)', color: form.outcome===o?c:'#6878a0', fontSize:'13px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s' }}>{o}</button>
                   );
                 })}
               </div>
@@ -534,7 +534,7 @@ export default function NewTrade() {
 
           {/* ── SCREENSHOTS ── */}
           <div>
-            <div style={{ fontSize: '12px', color: '#5a6a82', letterSpacing: '1.5px', marginBottom: '8px' }}>
+            <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1.5px', marginBottom: '8px' }}>
               SCREENSHOTS DU TRADE {screenshots.length > 0 && <span style={{ color: '#8899bb', marginLeft: '8px' }}>({screenshots.length} image{screenshots.length > 1 ? 's' : ''})</span>}
             </div>
             <ScreenshotZone screenshots={screenshots} onChange={setScreenshots} />
@@ -561,7 +561,7 @@ export default function NewTrade() {
 
         {/* ── Right — Checklist ── */}
         <div style={{ position: 'sticky', top: '24px' }}>
-          <div style={{ fontSize: '12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '8px' }}>CONFIRMATIONS</div>
+          <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '8px' }}>CONFIRMATIONS</div>
           <Checklist
             checked={checklistChecked}
             onChange={setChecklistChecked}
@@ -569,10 +569,10 @@ export default function NewTrade() {
             onItemsChange={setChecklistItems}
           />
           <div style={{ marginTop: '8px', padding: '8px 12px', background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', color: '#5a6a82', letterSpacing: '1px' }}>SCORE</span>
+            <span style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1px' }}>SCORE</span>
             <span style={{ fontSize: '15px', fontWeight: '700', color: checklistScore === checklistTotal && checklistTotal > 0 ? '#8899bb' : '#dde4ef' }}>
               {checklistScore}/{checklistTotal}
-              <span style={{ fontSize: '12px', color: '#5a6a82', marginLeft: '4px' }}>({Math.round((checklistScore / Math.max(checklistTotal, 1)) * 100)}%)</span>
+              <span style={{ fontSize:'13px', color: '#5a6a82', marginLeft: '4px' }}>({Math.round((checklistScore / Math.max(checklistTotal, 1)) * 100)}%)</span>
             </span>
           </div>
         </div>

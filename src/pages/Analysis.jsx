@@ -114,8 +114,8 @@ function ScreenshotZone({ screenshots, onChange }) {
         <div style={{ fontSize: '13px', color: '#dde4ef', marginBottom: '3px' }}>
           Glisse tes screenshots ici · Clique pour sélectionner
         </div>
-        <div style={{ fontSize: '12px', color: '#5a6a82' }}>
-          ou <kbd style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.22)', padding: '1px 5px', borderRadius: '3px', fontSize: '11px', color: '#8899bb' }}>Ctrl+V</kbd> pour coller depuis le presse-papier
+        <div style={{ fontSize:'13px', color: '#5a6a82' }}>
+          ou <kbd style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.22)', padding: '1px 5px', borderRadius: '3px', fontSize:'13px', color: '#8899bb' }}>Ctrl+V</kbd> pour coller depuis le presse-papier
         </div>
       </div>
 
@@ -136,7 +136,7 @@ function ScreenshotZone({ screenshots, onChange }) {
                 style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,68,85,0.4)', color: '#ff4455', width: '22px', height: '22px', borderRadius: '50%', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
               >×</button>
               {/* Name tooltip */}
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', padding: '3px 6px', fontSize: '10px', color: '#7888a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', padding: '3px 6px', fontSize:'12px', color: '#7888a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {sc.name}
               </div>
             </div>
@@ -153,7 +153,7 @@ function ScreenshotZone({ screenshots, onChange }) {
 function Textarea({ label, value, onChange, placeholder, rows = 4 }) {
   return (
     <div>
-      {label && <div style={{ fontSize: '12px', color: '#5a6a82', letterSpacing: '1.5px', marginBottom: '6px' }}>{label}</div>}
+      {label && <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1.5px', marginBottom: '6px' }}>{label}</div>}
       <textarea
         value={value}
         onChange={e => onChange(e.target.value)}
@@ -169,7 +169,7 @@ function Textarea({ label, value, onChange, placeholder, rows = 4 }) {
 function Section({ title, children }) {
   return (
     <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '8px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <div style={{ fontSize: '12px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>{title}</div>
+      <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>{title}</div>
       {children}
     </div>
   );
@@ -240,7 +240,7 @@ function DailyEditor({ date, instrument, onBack, onSaved }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button onClick={onBack} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>← Retour</button>
           <div>
-            <div style={{ fontSize: '12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '2px' }}>ANALYSE JOURNALIÈRE</div>
+            <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '2px' }}>ANALYSE JOURNALIÈRE</div>
             <div style={{ fontSize: '20px', fontWeight: '700', color: '#e8edf8' }}>
               {instrument} · {new Date(date + 'T12:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </div>
@@ -350,7 +350,7 @@ function WeeklyEditor({ weekStart, instrument, onBack, onSaved }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button onClick={onBack} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>← Retour</button>
           <div>
-            <div style={{ fontSize: '12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '2px' }}>ANALYSE HEBDOMADAIRE</div>
+            <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '2px' }}>ANALYSE HEBDOMADAIRE</div>
             <div style={{ fontSize: '20px', fontWeight: '700', color: '#e8edf8' }}>{instrument} · {getWeekLabel(weekStart)}</div>
           </div>
         </div>
@@ -438,15 +438,15 @@ function AnalysisList({ mode, analyses, instruments, onSelect, onNew, onDelete }
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '15px', fontWeight: '700', color: '#e8edf8' }}>{a.instrument}</span>
-                  <span style={{ fontSize: '12px', color: '#5868a0' }}>{label}</span>
-                  {bias && <span style={{ fontSize: '12px', color: getBiasColor(bias), background: `rgba(${getBiasColor(bias)==='#00cc77'?'0,204,119':getBiasColor(bias)==='#ff3344'?'255,51,68':'240,160,32'},0.12)`, padding: '2px 8px', borderRadius: '3px' }}>{bias}</span>}
-                  {screens.length > 0 && <span style={{ fontSize: '11px', color: '#5a6a82' }}>📸 {screens.length}</span>}
+                  <span style={{ fontSize:'13px', color: '#5868a0' }}>{label}</span>
+                  {bias && <span style={{ fontSize:'13px', color: getBiasColor(bias), background: `rgba(${getBiasColor(bias)==='#00cc77'?'0,204,119':getBiasColor(bias)==='#ff3344'?'255,51,68':'240,160,32'},0.12)`, padding: '2px 8px', borderRadius: '3px' }}>{bias}</span>}
+                  {screens.length > 0 && <span style={{ fontSize:'13px', color: '#5a6a82' }}>📸 {screens.length}</span>}
                 </div>
-                {a.notes && <div style={{ fontSize: '12px', color: '#5868a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.notes}</div>}
+                {a.notes && <div style={{ fontSize:'13px', color: '#5868a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.notes}</div>}
                 {(a.positives || a.negatives) && (
                   <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
-                    {a.positives && <span style={{ fontSize: '11px', color: '#00cc66' }}>✅ {a.positives.split('\n')[0]}</span>}
-                    {a.negatives && <span style={{ fontSize: '11px', color: '#cc4444' }}>❌ {a.negatives.split('\n')[0]}</span>}
+                    {a.positives && <span style={{ fontSize:'13px', color: '#00cc66' }}>✅ {a.positives.split('\n')[0]}</span>}
+                    {a.negatives && <span style={{ fontSize:'13px', color: '#cc4444' }}>❌ {a.negatives.split('\n')[0]}</span>}
                   </div>
                 )}
               </div>
@@ -552,7 +552,7 @@ export default function Analysis() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ fontSize: '12px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '6px' }}>TRADING JOURNAL</div>
+          <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '6px' }}>TRADING JOURNAL</div>
           <h1 style={{ fontSize: '23px', fontWeight: '700', color: '#e8edf8', margin: 0 }}>Analyse de Marché</h1>
           <div style={{ fontSize: '13px', color: '#5a6a82', marginTop: '3px' }}>
             {currentList.length} analyse{currentList.length > 1 ? 's' : ''} · {mode === 'daily' ? 'Vue journalière' : 'Vue hebdomadaire'}
@@ -571,7 +571,7 @@ export default function Analysis() {
         ].map(({ key, label, desc }) => (
           <button key={key} onClick={() => setMode(key)} style={{ flex: 1, padding: '12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: mode===key?'rgba(136,153,187,0.14)':'transparent', fontFamily: 'inherit', transition: 'all 0.2s' }}>
             <div style={{ fontSize: '14px', fontWeight: '700', color: mode===key?'#8899bb':'#6878a0', marginBottom: '2px' }}>{label}</div>
-            <div style={{ fontSize: '12px', color: mode===key?'#8a3a3a':'#3a5a3a' }}>{desc}</div>
+            <div style={{ fontSize:'13px', color: mode===key?'#8a3a3a':'#3a5a3a' }}>{desc}</div>
             {mode===key && <div style={{ height: '2px', background: '#8899bb', borderRadius: '2px', marginTop: '8px', boxShadow: '0 0 6px #8899bb' }} />}
           </button>
         ))}
@@ -580,12 +580,12 @@ export default function Analysis() {
       {/* Instruments management */}
       <div style={{ background: 'rgba(14,15,22,0.3)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '6px', padding: '12px 16px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '12px', color: '#5a6a82', letterSpacing: '1px', flexShrink: 0 }}>INSTRUMENTS :</span>
+          <span style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1px', flexShrink: 0 }}>INSTRUMENTS :</span>
           {instruments.map(inst => (
             <div key={inst} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.14)', borderRadius: '4px', padding: '3px 8px' }}>
-              <span style={{ fontSize: '12px', color: '#8899bb' }}>{inst}</span>
+              <span style={{ fontSize:'13px', color: '#8899bb' }}>{inst}</span>
               {!DEFAULT_INSTRUMENTS.includes(inst) && (
-                <button onClick={() => removeInstrument(inst)} style={{ background: 'none', border: 'none', color: '#5a6a82', cursor: 'pointer', fontSize: '12px', padding: '0 0 0 2px', lineHeight: 1 }}
+                <button onClick={() => removeInstrument(inst)} style={{ background: 'none', border: 'none', color: '#5a6a82', cursor: 'pointer', fontSize:'13px', padding: '0 0 0 2px', lineHeight: 1 }}
                   onMouseEnter={e => e.currentTarget.style.color = '#ff4455'}
                   onMouseLeave={e => e.currentTarget.style.color = '#5a6a82'}
                 >×</button>
@@ -596,12 +596,12 @@ export default function Analysis() {
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               <input autoFocus placeholder="Ex: EUR/GBP" value={newCustomInst} onChange={e => setNewCustomInst(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') addInstrument(); if (e.key === 'Escape') setShowAddInst(false); }}
-                style={{ ...inp, width: '120px', padding: '4px 8px', fontSize: '12px' }} />
-              <button onClick={addInstrument} style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.22)', color: '#8899bb', padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>+</button>
+                style={{ ...inp, width: '120px', padding: '4px 8px', fontSize:'13px' }} />
+              <button onClick={addInstrument} style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.22)', color: '#8899bb', padding: '4px 10px', borderRadius: '4px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>+</button>
               <button onClick={() => setShowAddInst(false)} style={{ background: 'none', border: 'none', color: '#5a6a82', cursor: 'pointer', fontSize: '14px' }}>×</button>
             </div>
           ) : (
-            <button onClick={() => setShowAddInst(true)} style={{ background: 'none', border: '1px dashed #1a4a2a', color: '#5a6a82', padding: '3px 10px', borderRadius: '4px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>+ Ajouter</button>
+            <button onClick={() => setShowAddInst(true)} style={{ background: 'none', border: '1px dashed #1a4a2a', color: '#5a6a82', padding: '3px 10px', borderRadius: '4px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>+ Ajouter</button>
           )}
         </div>
       </div>
@@ -626,7 +626,7 @@ export default function Analysis() {
           <div onClick={e => e.stopPropagation()} style={{ background: '#0c0d16', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '10px', width: '100%', maxWidth: '440px', padding: '28px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <div>
-                <div style={{ fontSize: '12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '4px' }}>NOUVELLE</div>
+                <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '4px' }}>NOUVELLE</div>
                 <div style={{ fontSize: '18px', fontWeight: '700', color: '#e8edf8' }}>Analyse {mode === 'daily' ? 'Journalière' : 'Hebdomadaire'}</div>
               </div>
               <button onClick={() => setShowNewForm(false)} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
@@ -634,16 +634,16 @@ export default function Analysis() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <div style={{ fontSize: '12px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '6px' }}>{mode === 'daily' ? 'DATE' : 'SEMAINE DU'}</div>
+                <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '6px' }}>{mode === 'daily' ? 'DATE' : 'SEMAINE DU'}</div>
                 <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} style={{ ...inp, width: '100%', colorScheme: 'dark' }} />
-                {mode === 'weekly' && <div style={{ fontSize: '12px', color: '#5a6a82', marginTop: '4px' }}>Semaine du {getWeekLabel(getWeekStart(newDate))}</div>}
+                {mode === 'weekly' && <div style={{ fontSize:'13px', color: '#5a6a82', marginTop: '4px' }}>Semaine du {getWeekLabel(getWeekStart(newDate))}</div>}
               </div>
 
               <div>
-                <div style={{ fontSize: '12px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '6px' }}>INSTRUMENT</div>
+                <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '6px' }}>INSTRUMENT</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '6px' }}>
                   {instruments.map(inst => (
-                    <button key={inst} onClick={() => setNewInstrument(inst)} style={{ padding: '8px 4px', borderRadius: '5px', border: `1px solid ${newInstrument===inst?'rgba(136,153,187,0.45)':'rgba(136,153,187,0.12)'}`, background: newInstrument===inst?'rgba(136,153,187,0.14)':'rgba(14,15,22,0.5)', color: newInstrument===inst?'#8899bb':'#7888a0', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer', fontWeight: newInstrument===inst?'700':'400' }}>{inst}</button>
+                    <button key={inst} onClick={() => setNewInstrument(inst)} style={{ padding: '8px 4px', borderRadius: '5px', border: `1px solid ${newInstrument===inst?'rgba(136,153,187,0.45)':'rgba(136,153,187,0.12)'}`, background: newInstrument===inst?'rgba(136,153,187,0.14)':'rgba(14,15,22,0.5)', color: newInstrument===inst?'#8899bb':'#7888a0', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer', fontWeight: newInstrument===inst?'700':'400' }}>{inst}</button>
                   ))}
                 </div>
               </div>

@@ -63,17 +63,17 @@ function LucidPhaseSelector({ account, onChanged }) {
     <div style={{ position: 'relative' }}>
       <div style={{ background: `rgba(${groupColor==='#00ff88'?'0,255,136':groupColor==='#f0c020'?'240,192,32':'58,106,74'},0.04)`, border: `1px solid ${groupColor}20`, borderRadius: '6px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '3px' }}>PHASE DU COMPTE</div>
+          <div style={{ fontSize:'12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '3px' }}>PHASE DU COMPTE</div>
           {current ? (
             <div>
               <span style={{ fontSize: '14px', fontWeight: '700', color: '#e8f8e8' }}>{current.phase === 'eval' ? '🎯' : '💰'} {account?.typeInfo?.label ?? account?.type}</span>
-              <span style={{ fontSize: '10px', color: groupColor, marginLeft: '10px' }}>{current.sub}</span>
+              <span style={{ fontSize:'12px', color: groupColor, marginLeft: '10px' }}>{current.sub}</span>
             </div>
           ) : (
             <div style={{ fontSize: '13px', color: '#f0a020' }}>⚠ Phase non définie — cliquez "Modifier" pour configurer</div>
           )}
         </div>
-        <button onClick={() => { setSelected(account?.type ?? ''); setOpen(true); }} style={{ background: 'rgba(0,170,255,0.1)', border: '1px solid rgba(0,170,255,0.25)', color: '#00aaff', padding: '7px 14px', borderRadius: '4px', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', fontWeight: '600', whiteSpace: 'nowrap' }}>
+        <button onClick={() => { setSelected(account?.type ?? ''); setOpen(true); }} style={{ background: 'rgba(0,170,255,0.1)', border: '1px solid rgba(0,170,255,0.25)', color: '#00aaff', padding: '7px 14px', borderRadius: '4px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '1px', fontWeight: '600', whiteSpace: 'nowrap' }}>
           Modifier →
         </button>
       </div>
@@ -83,7 +83,7 @@ function LucidPhaseSelector({ account, onChanged }) {
           <div onClick={e => e.stopPropagation()} style={{ background: '#070d12', border: '1px solid rgba(0,170,255,0.3)', borderRadius: '10px', padding: '24px', width: '560px', maxWidth: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
-                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>LUCID TRADING</div>
+                <div style={{ fontSize:'12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>LUCID TRADING</div>
                 <div style={{ fontSize: '16px', fontWeight: '700', color: '#e8f8e8' }}>Sélectionner la phase du compte</div>
               </div>
               <button onClick={() => setOpen(false)} style={{ background: 'none', border: '1px solid #1a3a22', color: '#4a7a5a', width: '28px', height: '28px', borderRadius: '50%', cursor: 'pointer', fontSize: '14px' }}>×</button>
@@ -91,7 +91,7 @@ function LucidPhaseSelector({ account, onChanged }) {
 
             {LUCID_PHASE_OPTIONS.map(grp => (
               <div key={grp.group} style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '10px', color: grp.color, letterSpacing: '2px', marginBottom: '8px', opacity: 0.8 }}>{grp.group.toUpperCase()}</div>
+                <div style={{ fontSize:'12px', color: grp.color, letterSpacing: '2px', marginBottom: '8px', opacity: 0.8 }}>{grp.group.toUpperCase()}</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '6px' }}>
                   {grp.options.map(opt => (
                     <div key={opt.value} onClick={() => setSelected(opt.value)} style={{ padding: '10px 12px', borderRadius: '6px', cursor: 'pointer', background: selected === opt.value ? `rgba(${grp.color==='#00ff88'?'0,255,136':'240,192,32'},0.08)` : 'rgba(10,28,18,0.4)', border: `1px solid ${selected === opt.value ? grp.color+'44' : 'rgba(0,255,136,0.06)'}`, transition: 'all 0.15s' }}>
@@ -101,20 +101,20 @@ function LucidPhaseSelector({ account, onChanged }) {
                         </div>
                         <span style={{ fontSize: '15px', fontWeight: '700', color: selected === opt.value ? '#e8f8e8' : '#8aaa90' }}>{opt.label}</span>
                       </div>
-                      <div style={{ fontSize: '10px', color: '#4a7a5a', paddingLeft: '22px' }}>{opt.sub}</div>
+                      <div style={{ fontSize:'12px', color: '#4a7a5a', paddingLeft: '22px' }}>{opt.sub}</div>
                     </div>
                   ))}
                 </div>
               </div>
             ))}
 
-            <div style={{ background: 'rgba(240,160,32,0.06)', border: '1px solid rgba(240,160,32,0.2)', borderRadius: '4px', padding: '8px 12px', marginBottom: '16px', fontSize: '11px', color: '#f0a020' }}>
+            <div style={{ background: 'rgba(240,160,32,0.06)', border: '1px solid rgba(240,160,32,0.2)', borderRadius: '4px', padding: '8px 12px', marginBottom: '16px', fontSize:'13px', color: '#f0a020' }}>
               ⚠ Ce choix est permanent. Éval → validé quand profit target atteint · Funded → compte LIVE dans la sidebar.
             </div>
 
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setOpen(false)} style={{ padding: '9px 18px', borderRadius: '5px', border: '1px solid #1a3a22', background: 'transparent', color: '#5a8a6a', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>Annuler</button>
-              <button onClick={confirm} disabled={saving || !selected || selected === account?.type} style={{ padding: '9px 22px', borderRadius: '5px', background: !selected || selected === account?.type ? 'rgba(10,28,18,0.4)' : 'linear-gradient(135deg,rgba(0,170,255,0.2),rgba(0,120,200,0.1))', border: `1px solid ${!selected || selected === account?.type ? '#1a3a22' : 'rgba(0,170,255,0.35)'}`, color: !selected || selected === account?.type ? '#2a5a32' : '#00aaff', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving || !selected || selected === account?.type ? 'not-allowed' : 'pointer' }}>
+              <button onClick={() => setOpen(false)} style={{ padding: '9px 18px', borderRadius: '5px', border: '1px solid #1a3a22', background: 'transparent', color: '#5a8a6a', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>Annuler</button>
+              <button onClick={confirm} disabled={saving || !selected || selected === account?.type} style={{ padding: '9px 22px', borderRadius: '5px', background: !selected || selected === account?.type ? 'rgba(10,28,18,0.4)' : 'linear-gradient(135deg,rgba(0,170,255,0.2),rgba(0,120,200,0.1))', border: `1px solid ${!selected || selected === account?.type ? '#1a3a22' : 'rgba(0,170,255,0.35)'}`, color: !selected || selected === account?.type ? '#2a5a32' : '#00aaff', fontSize:'13px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: saving || !selected || selected === account?.type ? 'not-allowed' : 'pointer' }}>
                 {saving ? 'SAUVEGARDE...' : selected === account?.type ? 'DÉJÀ SÉLECTIONNÉ' : '✓ CONFIRMER LA PHASE'}
               </button>
             </div>
@@ -154,9 +154,9 @@ function CTooltip({ active, payload, label }) {
 function MetricCard({ label, value, sub, color = '#c8d8c8', alert = false }) {
   return (
     <div style={{ background: alert ? 'rgba(255,68,85,0.06)' : 'rgba(10,28,18,0.5)', border: `1px solid ${alert ? 'rgba(255,68,85,0.3)' : 'rgba(0,255,136,0.08)'}`, borderTop: `2px solid ${color}`, borderRadius: '6px', padding: '14px 16px' }}>
-      <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '1.5px', marginBottom: '6px' }}>{label}</div>
+      <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '1.5px', marginBottom: '6px' }}>{label}</div>
       <div style={{ fontSize: '21px', fontWeight: '700', color, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '11px', color: alert ? '#ff8888' : '#3a6a4a', marginTop: '5px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize:'13px', color: alert ? '#ff8888' : '#3a6a4a', marginTop: '5px' }}>{sub}</div>}
     </div>
   );
 }
@@ -181,7 +181,7 @@ function ProgressBar({ label, current, max, color, displayText }) {
 function DayDot({ date, pnl }) {
   const isWin = pnl > 0;
   return (
-    <div title={`${date}: ${fmt(pnl, true)}`} style={{ width: '34px', height: '34px', borderRadius: '50%', background: isWin ? 'rgba(0,255,136,0.12)' : 'rgba(255,68,85,0.12)', border: `1.5px solid ${isWin ? '#00ff88' : '#ff4455'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: isWin ? '#00ff88' : '#ff4455', fontWeight: '700' }}>
+    <div title={`${date}: ${fmt(pnl, true)}`} style={{ width: '34px', height: '34px', borderRadius: '50%', background: isWin ? 'rgba(0,255,136,0.12)' : 'rgba(255,68,85,0.12)', border: `1.5px solid ${isWin ? '#00ff88' : '#ff4455'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize:'13px', color: isWin ? '#00ff88' : '#ff4455', fontWeight: '700' }}>
       {isWin ? '✓' : '✗'}
     </div>
   );
@@ -262,7 +262,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
 
       {/* Info */}
       <div style={{ background: 'rgba(0,170,255,0.04)', border: '1px solid rgba(0,170,255,0.15)', borderRadius: '6px', padding: '12px 16px', fontSize: '13px', color: '#4a7a5a' }}>
-        <div style={{ fontWeight: '700', color: '#00aaff', marginBottom: '6px', fontSize: '12px', letterSpacing: '1px' }}>RÈGLES LUCIDFLEX EVALUATION — COMPTE 50K</div>
+        <div style={{ fontWeight: '700', color: '#00aaff', marginBottom: '6px', fontSize:'13px', letterSpacing: '1px' }}>RÈGLES LUCIDFLEX EVALUATION — COMPTE 50K</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '8px', marginTop: '8px' }}>
           {[
             { label: 'Profit Target', value: `+${PROFIT_TARGET.toLocaleString()}$ (6%)`, color: '#00ff88' },
@@ -273,7 +273,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
             { label: 'Durée', value: 'Illimitée · 1 frais unique', color: '#c8d8c8' },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '8px 10px' }}>
-              <div style={{ fontSize: '10px', color: '#3a6a4a', marginBottom: '3px', letterSpacing: '0.5px' }}>{label}</div>
+              <div style={{ fontSize:'12px', color: '#3a6a4a', marginBottom: '3px', letterSpacing: '0.5px' }}>{label}</div>
               <div style={{ fontSize: '13px', fontWeight: '700', color }}>{value}</div>
             </div>
           ))}
@@ -293,10 +293,10 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
       {/* Trailing Drawdown */}
       <div style={{ background: 'rgba(10,28,18,0.4)', border: `1px solid ${distanceToFloor < 500 ? 'rgba(255,68,85,0.3)' : 'rgba(0,255,136,0.08)'}`, borderRadius: '8px', padding: '18px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px' }}>⚠️ TRAILING DRAWDOWN SUIVEUR — {MAX_TRAILING_DD.toLocaleString()}$</div>
+          <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px' }}>⚠️ TRAILING DRAWDOWN SUIVEUR — {MAX_TRAILING_DD.toLocaleString()}$</div>
           {floorLocked
-            ? <div style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', color: '#00ff88', fontWeight: '700', letterSpacing: '1px' }}>🔒 VERROUILLÉ AU CAPITAL INITIAL</div>
-            : <div style={{ background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.25)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', color: '#f0a020', letterSpacing: '1px' }}>↑ EN SUIVI — se verrouille à {ACCOUNT_SIZE.toLocaleString()}$ dès +{MAX_TRAILING_DD.toLocaleString()}$ de profit</div>
+            ? <div style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '4px', padding: '3px 8px', fontSize:'12px', color: '#00ff88', fontWeight: '700', letterSpacing: '1px' }}>🔒 VERROUILLÉ AU CAPITAL INITIAL</div>
+            : <div style={{ background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.25)', borderRadius: '4px', padding: '3px 8px', fontSize:'12px', color: '#f0a020', letterSpacing: '1px' }}>↑ EN SUIVI — se verrouille à {ACCOUNT_SIZE.toLocaleString()}$ dès +{MAX_TRAILING_DD.toLocaleString()}$ de profit</div>
           }
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '10px', marginBottom: '14px' }}>
@@ -307,7 +307,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
         </div>
         <div style={{ height: '18px', background: 'rgba(0,0,0,0.3)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
           <div style={{ height: '100%', width: `${Math.min((distanceToFloor / MAX_TRAILING_DD) * 100, 100)}%`, background: distanceToFloor < 500 ? 'linear-gradient(90deg,#ff4455,#ff6677)' : distanceToFloor < 1000 ? 'linear-gradient(90deg,#f0a020,#f0c040)' : 'linear-gradient(90deg,#00aa55,#00ff88)', borderRadius: '4px', transition: 'width 0.5s ease' }} />
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize:'13px', color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>
             {distanceToFloor.toFixed(2)}$ de marge · Floor: {floor.toFixed(2)}$
           </div>
         </div>
@@ -315,7 +315,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
 
       {/* Rules checklist */}
       <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', padding: '18px' }}>
-        <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>🎯 VALIDATION DES RÈGLES</div>
+        <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>🎯 VALIDATION DES RÈGLES</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
           {/* Rule 1 — Drawdown uniquement (pas de DLL) */}
@@ -323,7 +323,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
             <span style={{ fontSize: '19px' }}>{rule1 ? '✅' : '❌'}</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '14px', color: '#c8d8c8', fontWeight: '600', marginBottom: '3px' }}>Max Loss Limit (Trailing Drawdown)</div>
-              <div style={{ fontSize: '12px', color: '#4a7a5a' }}>
+              <div style={{ fontSize:'13px', color: '#4a7a5a' }}>
                 Marge restante: {fmt(distanceToFloor)} · Floor: {floor.toFixed(2)}$ · <span style={{ color: '#00aaff' }}>Pas de DLL</span>
               </div>
             </div>
@@ -343,7 +343,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
             <span style={{ fontSize: '19px' }}>{consistencyOk ? '✅' : '⚠️'}</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '14px', color: '#c8d8c8', fontWeight: '600', marginBottom: '4px' }}>Règle de cohérence — Max 50% du P&L net positif par jour</div>
-              <div style={{ fontSize: '12px', color: '#4a7a5a' }}>
+              <div style={{ fontSize:'13px', color: '#4a7a5a' }}>
                 Meilleur jour: {fmt(bestDayNet, true)} · Total net+: {fmt(posNetPnl, true)} · Part: {bestDayPct.toFixed(1)}%/50%
               </div>
             </div>
@@ -354,17 +354,17 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
       {/* Suivi journalier */}
       {allDays.length > 0 && (
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', padding: '18px' }}>
-          <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>📅 SUIVI JOURNALIER — <span style={{ color: '#00aaff', fontSize: '10px' }}>Pas de DLL · Max Loss Limit trailing: -{MAX_TRAILING_DD}$</span></div>
+          <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>📅 SUIVI JOURNALIER — <span style={{ color: '#00aaff', fontSize:'12px' }}>Pas de DLL · Max Loss Limit trailing: -{MAX_TRAILING_DD}$</span></div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
             {allDays.slice().reverse().map(([date, pnl]) => {
               const rowColor = pnl > 0 ? '#00ff88' : pnl < 0 ? '#ff4455' : '#8aaa90';
               return (
                 <div key={date} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 120px', gap: '10px', alignItems: 'center', padding: '7px 10px', background: 'rgba(10,28,18,0.3)', borderRadius: '4px', border: `1px solid rgba(0,255,136,0.04)` }}>
-                  <span style={{ fontSize: '11px', color: '#4a7a5a' }}>{date}</span>
+                  <span style={{ fontSize:'13px', color: '#4a7a5a' }}>{date}</span>
                   <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${Math.min(Math.abs(pnl) / Math.max(PROFIT_TARGET, 1) * 100, 100)}%`, background: pnl >= 0 ? '#00ff88' : '#ff4455', borderRadius: '3px', transition: 'width 0.3s' }} />
                   </div>
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: rowColor, textAlign: 'right' }}>
+                  <span style={{ fontSize:'13px', fontWeight: '700', color: rowColor, textAlign: 'right' }}>
                     {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}$
                   </span>
                 </div>
@@ -378,7 +378,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
               { label: 'MEILLEUR JOUR', value: tradingDays > 0 ? `+${Math.max(...Object.values(byDay)).toFixed(2)}$` : '—', color: '#00ff88' },
             ].map(({ label, value, color }) => (
               <div key={label} style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '8px 10px' }}>
-                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '0.5px', marginBottom: '3px' }}>{label}</div>
+                <div style={{ fontSize:'12px', color: '#3a6a4a', letterSpacing: '0.5px', marginBottom: '3px' }}>{label}</div>
                 <div style={{ fontSize: '13px', fontWeight: '700', color }}>{value}</div>
               </div>
             ))}
@@ -397,7 +397,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
       {/* Charts */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>PROGRESSION NETTE — Objectif: +{PROFIT_TARGET}$</div>
+          <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>PROGRESSION NETTE — Objectif: +{PROFIT_TARGET}$</div>
           {equityWithTarget.length > 1 ? (
             <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={equityWithTarget} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
@@ -415,7 +415,7 @@ function LucidEvalTab({ trades, manualBalance, setManualBalance, balanceInput, s
           ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '13px' }}>Aucun trade</div>}
         </div>
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
+          <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
           {dailyArr.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={dailyArr} margin={{ top: 5, right: 5, bottom: 0, left: 5 }} barCategoryGap="35%">
@@ -486,7 +486,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
 
       {/* Info */}
       <div style={{ background: 'rgba(0,255,136,0.04)', border: '1px solid rgba(0,255,136,0.15)', borderRadius: '6px', padding: '12px 16px', fontSize: '13px', color: '#4a7a5a' }}>
-        <div style={{ fontWeight: '700', color: '#00ff88', marginBottom: '6px', fontSize: '12px', letterSpacing: '1px' }}>CONDITIONS PAYOUT LUCID FUNDED — COMPTE 50K</div>
+        <div style={{ fontWeight: '700', color: '#00ff88', marginBottom: '6px', fontSize:'13px', letterSpacing: '1px' }}>CONDITIONS PAYOUT LUCID FUNDED — COMPTE 50K</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '8px', marginTop: '8px' }}>
           {[
             { label: 'Pas de Profit Target', value: 'Aucun objectif requis', color: '#00ff88' },
@@ -497,7 +497,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
             { label: 'Payout minimum / maximum', value: `${MIN_PAYOUT_AMOUNT}$ — ${MAX_PAYOUT_AMOUNT}$`, color: '#c8d8c8' },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '8px 10px' }}>
-              <div style={{ fontSize: '10px', color: '#3a6a4a', marginBottom: '3px', letterSpacing: '0.5px' }}>{label}</div>
+              <div style={{ fontSize:'12px', color: '#3a6a4a', marginBottom: '3px', letterSpacing: '0.5px' }}>{label}</div>
               <div style={{ fontSize: '13px', fontWeight: '700', color }}>{value}</div>
             </div>
           ))}
@@ -517,10 +517,10 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
       {/* Drawdown */}
       <div style={{ background: 'rgba(10,28,18,0.4)', border: `1px solid ${distanceToFloor < 500 ? 'rgba(255,68,85,0.3)' : 'rgba(0,255,136,0.08)'}`, borderRadius: '8px', padding: '18px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px' }}>⚠️ TRAILING DRAWDOWN SUIVEUR — {MAX_TRAILING_DD.toLocaleString()}$</div>
+          <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px' }}>⚠️ TRAILING DRAWDOWN SUIVEUR — {MAX_TRAILING_DD.toLocaleString()}$</div>
           {floorLocked
-            ? <div style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', color: '#00ff88', fontWeight: '700', letterSpacing: '1px' }}>🔒 VERROUILLÉ AU CAPITAL INITIAL</div>
-            : <div style={{ background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.25)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', color: '#f0a020', letterSpacing: '1px' }}>↑ EN SUIVI — se verrouille à {ACCOUNT_SIZE.toLocaleString()}$ dès +{MAX_TRAILING_DD.toLocaleString()}$ de profit</div>
+            ? <div style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '4px', padding: '3px 8px', fontSize:'12px', color: '#00ff88', fontWeight: '700', letterSpacing: '1px' }}>🔒 VERROUILLÉ AU CAPITAL INITIAL</div>
+            : <div style={{ background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.25)', borderRadius: '4px', padding: '3px 8px', fontSize:'12px', color: '#f0a020', letterSpacing: '1px' }}>↑ EN SUIVI — se verrouille à {ACCOUNT_SIZE.toLocaleString()}$ dès +{MAX_TRAILING_DD.toLocaleString()}$ de profit</div>
           }
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '10px', marginBottom: '14px' }}>
@@ -531,7 +531,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
         </div>
         <div style={{ height: '18px', background: 'rgba(0,0,0,0.3)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
           <div style={{ height: '100%', width: `${Math.min((distanceToFloor / MAX_TRAILING_DD) * 100, 100)}%`, background: distanceToFloor < 500 ? 'linear-gradient(90deg,#ff4455,#ff6677)' : distanceToFloor < 1000 ? 'linear-gradient(90deg,#f0a020,#f0c040)' : 'linear-gradient(90deg,#00aa55,#00ff88)', borderRadius: '4px', transition: 'width 0.5s ease' }} />
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize:'13px', color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>
             {distanceToFloor.toFixed(2)}$ de marge
           </div>
         </div>
@@ -539,7 +539,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
 
       {/* Payout eligibility */}
       <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', padding: '18px' }}>
-        <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>💰 ÉLIGIBILITÉ AU PAYOUT</div>
+        <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>💰 ÉLIGIBILITÉ AU PAYOUT</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {[
             { ok: !accountLost && !dailyLossBreached, label: 'Compte actif', desc: dailyLossBreached ? `Limite journalière dépassée (pire jour: ${fmt(worstDay)})` : accountLost ? 'Drawdown maximum atteint' : 'Aucune règle violée' },
@@ -550,7 +550,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
               <span style={{ fontSize: '18px' }}>{ok ? '✅' : '⏳'}</span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '13px', color: '#c8d8c8', fontWeight: '600' }}>{label}</div>
-                <div style={{ fontSize: '12px', color: '#4a7a5a', marginTop: '2px' }}>{desc}</div>
+                <div style={{ fontSize:'13px', color: '#4a7a5a', marginTop: '2px' }}>{desc}</div>
               </div>
             </div>
           ))}
@@ -560,7 +560,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
           <div style={{ marginTop: '14px', background: 'rgba(0,255,136,0.08)', border: '2px solid rgba(0,255,136,0.3)', borderRadius: '6px', padding: '16px', textAlign: 'center' }}>
             <div style={{ fontSize: '13px', color: '#4a7a5a', marginBottom: '6px' }}>Montant disponible au payout ({PROFIT_SPLIT}% · plafonné à {MAX_PAYOUT_AMOUNT}$)</div>
             <div style={{ fontSize: '28px', fontWeight: '700', color: '#00ff88' }}>{fmt(payoutAmount, true)}</div>
-            <div style={{ fontSize: '12px', color: '#3a6a4a', marginTop: '4px' }}>sur {fmt(cycleNetProfit, true)} de P&L net · brut: {fmt(rawPayout, true)}</div>
+            <div style={{ fontSize:'13px', color: '#3a6a4a', marginTop: '4px' }}>sur {fmt(cycleNetProfit, true)} de P&L net · brut: {fmt(rawPayout, true)}</div>
           </div>
         )}
       </div>
@@ -568,7 +568,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
       {/* Suivi journalier Funded */}
       {allDays.length > 0 && (
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '8px', padding: '18px' }}>
-          <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>📅 SUIVI JOURNALIER — Budget: -{MAX_DAILY_LOSS.toLocaleString()}$/jour · Qualifié si ≥+{MIN_DAILY_PROFIT}$</div>
+          <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '14px' }}>📅 SUIVI JOURNALIER — Budget: -{MAX_DAILY_LOSS.toLocaleString()}$/jour · Qualifié si ≥+{MIN_DAILY_PROFIT}$</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
             {allDays.slice().reverse().map(([date, pnl]) => {
               const isQualified = pnl >= MIN_DAILY_PROFIT;
@@ -578,17 +578,17 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
               const rowColor    = isBreached ? '#ff4455' : isQualified ? '#00ff88' : pnl > 0 ? '#8aaa90' : isWarning ? '#f0a020' : '#8aaa90';
               return (
                 <div key={date} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 80px 120px', gap: '10px', alignItems: 'center', padding: '7px 10px', background: isBreached ? 'rgba(255,68,85,0.06)' : isQualified ? 'rgba(0,255,136,0.04)' : 'rgba(10,28,18,0.3)', borderRadius: '4px', border: `1px solid ${isBreached ? 'rgba(255,68,85,0.2)' : isQualified ? 'rgba(0,255,136,0.1)' : 'rgba(0,255,136,0.04)'}` }}>
-                  <span style={{ fontSize: '11px', color: '#4a7a5a' }}>{date}</span>
+                  <span style={{ fontSize:'13px', color: '#4a7a5a' }}>{date}</span>
                   <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
                     {pnl < 0 && <div style={{ height: '100%', width: `${usedBudget}%`, background: isBreached ? '#ff4455' : '#f0a020', borderRadius: '3px' }} />}
                     {pnl > 0 && <div style={{ height: '100%', width: `${Math.min(pnl/MAX_DAILY_LOSS*100,100)}%`, background: isQualified ? '#00ff88' : '#00aa55', borderRadius: '3px' }} />}
                   </div>
-                  <span style={{ fontSize: '10px', color: '#4a7a5a', textAlign: 'right' }}>
+                  <span style={{ fontSize:'12px', color: '#4a7a5a', textAlign: 'right' }}>
                     {isQualified ? '✓ qualifié' : pnl < 0 ? `${usedBudget.toFixed(0)}%` : ''}
                   </span>
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: rowColor, textAlign: 'right' }}>
+                  <span style={{ fontSize:'13px', fontWeight: '700', color: rowColor, textAlign: 'right' }}>
                     {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}$
-                    {isBreached && <span style={{ fontSize: '9px', marginLeft: '4px' }}>⚠</span>}
+                    {isBreached && <span style={{ fontSize:'12px', marginLeft: '4px' }}>⚠</span>}
                   </span>
                 </div>
               );
@@ -602,7 +602,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
               { label: 'PIRE JOUR', value: allDays.length > 0 ? `${Math.min(...Object.values(byDay)).toFixed(2)}$` : '—', color: '#ff4455' },
             ].map(({ label, value, color }) => (
               <div key={label} style={{ background: 'rgba(10,28,18,0.5)', borderRadius: '4px', padding: '8px 10px' }}>
-                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '0.5px', marginBottom: '3px' }}>{label}</div>
+                <div style={{ fontSize:'12px', color: '#3a6a4a', letterSpacing: '0.5px', marginBottom: '3px' }}>{label}</div>
                 <div style={{ fontSize: '13px', fontWeight: '700', color }}>{value}</div>
               </div>
             ))}
@@ -621,7 +621,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
       {/* Charts */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>COURBE CAPITAL (NET) + FLOOR</div>
+          <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>COURBE CAPITAL (NET) + FLOOR</div>
           {equityPoints.length > 1 ? (
             <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={equityPoints} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
@@ -637,7 +637,7 @@ function LucidFundedTab({ trades, manualBalance, setManualBalance, balanceInput,
           ) : <div style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2a4a30', fontSize: '13px' }}>Aucun trade</div>}
         </div>
         <div style={{ background: 'rgba(10,28,18,0.4)', border: '1px solid rgba(0,255,136,0.08)', borderRadius: '6px', padding: '16px' }}>
-          <div style={{ fontSize: '11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
+          <div style={{ fontSize:'13px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '12px' }}>P&L NET PAR JOUR</div>
           {dailyArr.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={dailyArr} margin={{ top: 5, right: 5, bottom: 0, left: 5 }} barCategoryGap="35%">
@@ -703,7 +703,7 @@ export default function Lucid() {
             {tab === 'eval' ? `🎯 LucidFlex Eval — ${sizeLabel}` : `💰 LucidFlex Funded — ${sizeLabel}`}
           </h1>
         </div>
-        <div style={{ background: 'rgba(0,170,255,0.08)', border: '1px solid rgba(0,170,255,0.2)', borderRadius: '6px', padding: '8px 14px', fontSize: '12px', color: '#00aaff', fontWeight: '700', letterSpacing: '1px' }}>
+        <div style={{ background: 'rgba(0,170,255,0.08)', border: '1px solid rgba(0,170,255,0.2)', borderRadius: '6px', padding: '8px 14px', fontSize:'13px', color: '#00aaff', fontWeight: '700', letterSpacing: '1px' }}>
           PROP FIRM
         </div>
       </div>
@@ -725,7 +725,7 @@ export default function Lucid() {
         ].map(({ key, label, desc }) => (
           <button key={key} onClick={() => switchTab(key)} style={{ flex: 1, padding: '13px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', transition: 'all 0.2s', background: tab === key ? 'rgba(0,255,136,0.12)' : 'transparent', fontFamily: 'inherit' }}>
             <div style={{ fontSize: '14px', fontWeight: '700', color: tab === key ? '#00ff88' : '#5a8a6a', marginBottom: '2px' }}>{label}</div>
-            <div style={{ fontSize: '12px', color: tab === key ? '#3a8a4a' : '#3a5a3a' }}>{desc}</div>
+            <div style={{ fontSize:'13px', color: tab === key ? '#3a8a4a' : '#3a5a3a' }}>{desc}</div>
             {tab === key && <div style={{ height: '2px', background: '#00ff88', borderRadius: '2px', marginTop: '8px', boxShadow: '0 0 6px #00ff88' }} />}
           </button>
         ))}

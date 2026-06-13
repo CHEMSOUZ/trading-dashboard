@@ -78,7 +78,7 @@ function DayModal({ date, trades, onClose }) {
           position: 'sticky', top: 0, background: '#070d12', zIndex: 1,
         }}>
           <div>
-            <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>
+            <div style={{ fontSize:'12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>
               COMPTE RENDU JOURNALIER
             </div>
             <div style={{ fontSize: '16px', fontWeight: '700', color: '#e8f8e8', textTransform: 'capitalize' }}>
@@ -100,7 +100,7 @@ function DayModal({ date, trades, onClose }) {
         <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
           {dayTrades.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: '#2a4a30', fontSize: '11px', letterSpacing: '2px' }}>
+            <div style={{ padding: '40px', textAlign: 'center', color: '#2a4a30', fontSize:'13px', letterSpacing: '2px' }}>
               Aucun trade ce jour
             </div>
           ) : (
@@ -118,7 +118,7 @@ function DayModal({ date, trades, onClose }) {
                     background: 'rgba(10,28,18,0.6)', border: '1px solid rgba(0,255,136,0.08)',
                     borderRadius: '5px', padding: '10px 12px', textAlign: 'center',
                   }}>
-                    <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '4px' }}>{label}</div>
+                    <div style={{ fontSize:'11px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '4px' }}>{label}</div>
                     <div style={{ fontSize: '16px', fontWeight: '700', color }}>{value}</div>
                   </div>
                 ))}
@@ -126,7 +126,7 @@ function DayModal({ date, trades, onClose }) {
 
               {/* Trade list */}
               <div>
-                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>TRADES DU JOUR</div>
+                <div style={{ fontSize:'12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>TRADES DU JOUR</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {dayTrades.map((t, i) => {
                     const oc = t.outcome === 'WIN' ? '#00ff88' : t.outcome === 'LOSS' ? '#ff4455' : '#f0a020';
@@ -139,12 +139,12 @@ function DayModal({ date, trades, onClose }) {
                         background: 'rgba(10,28,18,0.4)',
                         border: '1px solid rgba(0,255,136,0.06)',
                         borderLeft: `2px solid ${oc}`,
-                        borderRadius: '4px', fontSize: '11px',
+                        borderRadius: '4px', fontSize:'13px',
                       }}>
-                        <span style={{ fontSize: '9px', color: '#3a6a4a' }}>#{i+1}</span>
+                        <span style={{ fontSize:'12px', color: '#3a6a4a' }}>#{i+1}</span>
                         <span style={{ color: '#c8d8c8', fontWeight: '600' }}>{t.pair}</span>
                         <span style={{
-                          fontSize: '9px', color: t.direction === 'LONG' ? '#00ff88' : '#ff4455',
+                          fontSize:'12px', color: t.direction === 'LONG' ? '#00ff88' : '#ff4455',
                           background: `rgba(${t.direction==='LONG'?'0,255,136':'255,68,85'},0.08)`,
                           border: `1px solid rgba(${t.direction==='LONG'?'0,255,136':'255,68,85'},0.2)`,
                           padding: '2px 5px', borderRadius: '3px', textAlign: 'center',
@@ -154,7 +154,7 @@ function DayModal({ date, trades, onClose }) {
                         <span style={{ color: '#00ff88' }}>{t.tp}</span>
                         <span style={{ color: '#c8d8c8' }}>{t.rr ? `1:${t.rr}` : '—'}</span>
                         <span style={{ color: oc, fontWeight: '700' }}>{fmt(t.result, true)}</span>
-                        <span style={{ color: '#4a7a5a', fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ color: '#4a7a5a', fontSize:'12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {t.emotion ?? '—'}
                         </span>
                       </div>
@@ -165,14 +165,14 @@ function DayModal({ date, trades, onClose }) {
 
               {/* Professional report */}
               <div>
-                <div style={{ fontSize: '9px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>
+                <div style={{ fontSize:'12px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '10px' }}>
                   COMPTE RENDU PROFESSIONNEL
                 </div>
                 <div style={{
                   background: 'rgba(6,15,10,0.8)',
                   border: '1px solid rgba(0,255,136,0.08)',
                   borderRadius: '6px', padding: '18px 20px',
-                  fontSize: '12px', lineHeight: '1.8', color: '#a0c0a8',
+                  fontSize:'13px', lineHeight: '1.8', color: '#a0c0a8',
                   whiteSpace: 'pre-wrap',
                 }}>
                   {report}
@@ -275,7 +275,7 @@ export default function Calendar() {
   }, []);
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#3a6a4a', fontSize: '11px', letterSpacing: '2px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#3a6a4a', fontSize:'13px', letterSpacing: '2px' }}>
       CHARGEMENT...
     </div>
   );
@@ -362,7 +362,7 @@ export default function Calendar() {
               {pnl >= 0 ? '+' : ''}{pnl.toFixed(0)}$
             </div>
             {/* Trade count */}
-            <div style={{ fontSize: '9px', color: '#3a6a4a' }}>
+            <div style={{ fontSize:'12px', color: '#3a6a4a' }}>
               {data.count} trade{data.count > 1 ? 's' : ''}
             </div>
           </>
@@ -385,7 +385,7 @@ export default function Calendar() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ fontSize: '10px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '6px' }}>TRADING</div>
+          <div style={{ fontSize:'12px', color: '#3a6a4a', letterSpacing: '3px', marginBottom: '6px' }}>TRADING</div>
           <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8f8e8', margin: 0 }}>Calendrier</h1>
         </div>
 
@@ -397,7 +397,7 @@ export default function Calendar() {
               border: `1px solid ${viewMode === v ? '#00ff88' : '#1a3a22'}`,
               background: viewMode === v ? 'rgba(0,255,136,0.1)' : 'transparent',
               color: viewMode === v ? '#00ff88' : '#3a6a4a',
-              fontSize: '10px', fontFamily: 'inherit', letterSpacing: '1px',
+              fontSize:'12px', fontFamily: 'inherit', letterSpacing: '1px',
               cursor: 'pointer', transition: 'all 0.15s',
               textTransform: 'capitalize',
             }}>{v === 'month' ? 'Mois' : 'Semaine'}</button>
@@ -420,7 +420,7 @@ export default function Calendar() {
             background: 'rgba(10,28,18,0.5)', border: '1px solid rgba(0,255,136,0.08)',
             borderRadius: '5px', padding: '10px 14px',
           }}>
-            <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>{label}</div>
+            <div style={{ fontSize:'11px', color: '#3a6a4a', letterSpacing: '2px', marginBottom: '4px' }}>{label}</div>
             <div style={{ fontSize: '18px', fontWeight: '700', color }}>{value}</div>
           </div>
         ))}
@@ -468,7 +468,7 @@ export default function Calendar() {
           {/* Day headers */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: '6px', marginBottom: '8px' }}>
             {DAYS_FR.map(d => (
-              <div key={d} style={{ textAlign: 'center', fontSize: '9px', color: '#3a6a4a', letterSpacing: '1px', padding: '4px' }}>
+              <div key={d} style={{ textAlign: 'center', fontSize:'12px', color: '#3a6a4a', letterSpacing: '1px', padding: '4px' }}>
                 {d}
               </div>
             ))}
@@ -500,7 +500,7 @@ export default function Calendar() {
               const isToday  = dateStr === today;
               return (
                 <div key={dateStr} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ textAlign: 'center', fontSize: '9px', color: isToday ? '#00ff88' : '#3a6a4a', letterSpacing: '1px', fontWeight: isToday ? '700' : '400' }}>
+                  <div style={{ textAlign: 'center', fontSize:'12px', color: isToday ? '#00ff88' : '#3a6a4a', letterSpacing: '1px', fontWeight: isToday ? '700' : '400' }}>
                     {dayLabel}
                   </div>
                   <DayCell dateStr={dateStr} dayNum={dayN} compact={false} />
@@ -522,15 +522,15 @@ export default function Calendar() {
               return (
                 <>
                   <div>
-                    <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '2px' }}>P&L SEMAINE</div>
+                    <div style={{ fontSize:'11px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '2px' }}>P&L SEMAINE</div>
                     <div style={{ fontSize: '16px', fontWeight: '700', color: pnlColor(weekPnl) }}>{fmt(weekPnl, true)}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '2px' }}>TRADES</div>
+                    <div style={{ fontSize:'11px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '2px' }}>TRADES</div>
                     <div style={{ fontSize: '16px', fontWeight: '700', color: '#c8d8c8' }}>{weekTrades.length}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '8px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '2px' }}>JOURS +</div>
+                    <div style={{ fontSize:'11px', color: '#3a6a4a', letterSpacing: '1px', marginBottom: '2px' }}>JOURS +</div>
                     <div style={{ fontSize: '16px', fontWeight: '700', color: '#00ff88' }}>{weekWinD}</div>
                   </div>
                 </>
@@ -549,10 +549,10 @@ export default function Calendar() {
         ].map(({ color, label }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: color }} />
-            <span style={{ fontSize: '9px', color: '#3a6a4a' }}>{label}</span>
+            <span style={{ fontSize:'12px', color: '#3a6a4a' }}>{label}</span>
           </div>
         ))}
-        <span style={{ fontSize: '9px', color: '#2a4a30', marginLeft: '8px' }}>
+        <span style={{ fontSize:'12px', color: '#2a4a30', marginLeft: '8px' }}>
           Cliquer sur un jour pour voir le détail
         </span>
       </div>

@@ -635,7 +635,7 @@ function DropZone({ onFile, disabled }) {
       <div style={{ fontSize: '14px', color: '#dde4ef', marginBottom: '6px', fontWeight: '600' }}>
         Glisse ton fichier CSV ici
       </div>
-      <div style={{ fontSize: '12px', color: '#5a6a82' }}>
+      <div style={{ fontSize:'13px', color: '#5a6a82' }}>
         ou clique pour sélectionner · Topstep &amp; Tradovate supportés
       </div>
     </div>
@@ -658,12 +658,12 @@ function PreviewRow({ trade, idx, duplicate }) {
         : idx % 2 === 0 ? 'rgba(14,15,22,0.4)' : 'rgba(14,15,22,0.25)',
       borderLeft: `2px solid ${duplicate ? '#f0a020' : pnlColor(net)}`,
       borderRadius: '3px',
-      fontSize: '11px',
+      fontSize:'13px',
       opacity: duplicate ? 0.7 : 1,
     }}>
-      <span style={{ color: '#3c4c64', fontSize: '10px' }}>{idx + 1}</span>
-      <span style={{ color: '#5868a0', fontSize: '10px' }}>{trade.date}</span>
-      <span style={{ color: '#6a8a7a', fontSize: '10px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+      <span style={{ color: '#3c4c64', fontSize:'12px' }}>{idx + 1}</span>
+      <span style={{ color: '#5868a0', fontSize:'12px' }}>{trade.date}</span>
+      <span style={{ color: '#6a8a7a', fontSize:'12px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
         <span>{fmtTime(trade.entered_at)}</span>
         {trade.exited_at && trade.exited_at !== trade.entered_at && (
           <span style={{ color: '#4a6a5a' }}>↓{fmtTime(trade.exited_at)}</span>
@@ -672,17 +672,17 @@ function PreviewRow({ trade, idx, duplicate }) {
       <span style={{ color: '#dde4ef', fontWeight: '600' }}>{trade.pair}</span>
       <span style={{
         color: trade.direction === 'LONG' ? '#00cc77' : '#ff3344',
-        fontSize: '10px',
+        fontSize:'12px',
         background: `rgba(${trade.direction === 'LONG' ? '0,255,136' : '255,68,85'},0.08)`,
         padding: '1px 5px', borderRadius: '3px', textAlign: 'center',
       }}>{trade.direction}</span>
       <span style={{ color: '#7888a0' }}>{trade.size ?? '—'}</span>
       <span style={{ color: pnlColor(net), fontWeight: '700' }}>{fmt(net, true)}</span>
-      <span style={{ color: '#f0a020', fontSize: '10px' }}>{totalFees > 0 ? `-${totalFees.toFixed(2)}$` : '—'}</span>
-      <span style={{ color: '#5868a0', fontSize: '10px' }}>{trade.duration ?? '—'}</span>
+      <span style={{ color: '#f0a020', fontSize:'12px' }}>{totalFees > 0 ? `-${totalFees.toFixed(2)}$` : '—'}</span>
+      <span style={{ color: '#5868a0', fontSize:'12px' }}>{trade.duration ?? '—'}</span>
       {duplicate
-        ? <span style={{ color: '#f0a020', fontSize: '10px' }}>⚠ Déjà importé</span>
-        : <span style={{ color: pnlColor(net), fontSize: '10px', fontWeight: '700' }}>{trade.outcome ?? '—'}</span>
+        ? <span style={{ color: '#f0a020', fontSize:'12px' }}>⚠ Déjà importé</span>
+        : <span style={{ color: pnlColor(net), fontSize:'12px', fontWeight: '700' }}>{trade.outcome ?? '—'}</span>
       }
     </div>
   );
@@ -791,7 +791,7 @@ export default function CsvImport() {
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div>
-            <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>IMPORT</div>
+            <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>IMPORT</div>
             <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8edf8', margin: 0 }}>Import CSV</h1>
           </div>
         </div>
@@ -805,8 +805,8 @@ export default function CsvImport() {
         ].map(({ key, label, Logo, color, soon }) => (
           <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', background: `rgba(${color === '#8899bb' ? '0,255,136' : '0,170,255'},0.06)`, border: `1px solid ${color}25`, borderRadius: '6px' }}>
             <Logo size={20} />
-            <span style={{ fontSize: '12px', color, fontWeight: '600' }}>{label}</span>
-            {soon && <span style={{ fontSize: '9px', color: '#5a6a82', background: 'rgba(136,153,187,0.10)', border: '1px solid #1a4a2a', padding: '1px 5px', borderRadius: '3px', letterSpacing: '1px' }}>BIENTÔT</span>}
+            <span style={{ fontSize:'13px', color, fontWeight: '600' }}>{label}</span>
+            {soon && <span style={{ fontSize:'12px', color: '#5a6a82', background: 'rgba(136,153,187,0.10)', border: '1px solid #1a4a2a', padding: '1px 5px', borderRadius: '3px', letterSpacing: '1px' }}>BIENTÔT</span>}
           </div>
         ))}
       </div>
@@ -823,7 +823,7 @@ export default function CsvImport() {
           {/* Instructions */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div style={{ background: 'rgba(14,15,22,0.3)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '8px', padding: '16px 20px' }}>
-              <div style={{ fontSize: '10px', color: '#8899bb', letterSpacing: '2px', marginBottom: '12px' }}>TOPSTEP — EXPORT CSV</div>
+              <div style={{ fontSize:'12px', color: '#8899bb', letterSpacing: '2px', marginBottom: '12px' }}>TOPSTEP — EXPORT CSV</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {[
                   'Connecte-toi sur topstep.com',
@@ -832,27 +832,27 @@ export default function CsvImport() {
                   'Télécharge le CSV et glisse-le ici',
                 ].map((s, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#8899bb', flexShrink: 0, marginTop: '1px' }}>{i + 1}</div>
-                    <span style={{ fontSize: '11px', color: '#7888a0', lineHeight: '1.5' }}>{s}</span>
+                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize:'12px', color: '#8899bb', flexShrink: 0, marginTop: '1px' }}>{i + 1}</div>
+                    <span style={{ fontSize:'13px', color: '#7888a0', lineHeight: '1.5' }}>{s}</span>
                   </div>
                 ))}
               </div>
             </div>
             <div style={{ background: 'rgba(0,170,255,0.03)', border: '1px solid rgba(0,170,255,0.08)', borderRadius: '8px', padding: '16px 20px' }}>
-              <div style={{ fontSize: '10px', color: '#00aaff', letterSpacing: '2px', marginBottom: '8px' }}>TRADOVATE — EXPORT ORDERS (recommandé)</div>
+              <div style={{ fontSize:'12px', color: '#00aaff', letterSpacing: '2px', marginBottom: '8px' }}>TRADOVATE — EXPORT ORDERS (recommandé)</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {[
                   { title: 'Orders / Ordres (format détecté ✓)', steps: ['Connecte-toi sur trader.tradovate.com', 'Menu latéral → "Orders" (Ordres)', 'Filtre : Status = "Filled" + période', 'Icône export (↓) → Download CSV', 'Colonnes clés : B/S, Product, avgPrice, filledQty, Fill Time'] },
                   { title: 'Ledger (relevé de compte)', steps: ['Menu latéral → "Account" → "Activity"', 'Export CSV', 'Colonnes : Transaction ID, Cash Change Type, Amount, Contract'] },
                 ].map(({ title, steps }) => (
                   <div key={title}>
-                    <div style={{ fontSize: '10px', color: '#4a8aaa', marginBottom: '4px', fontWeight: '600' }}>▸ {title}</div>
+                    <div style={{ fontSize:'12px', color: '#4a8aaa', marginBottom: '4px', fontWeight: '600' }}>▸ {title}</div>
                     {steps.map((s, i) => (
-                      <div key={i} style={{ fontSize: '10px', color: '#6a8a9a', paddingLeft: '10px', lineHeight: '1.6' }}>• {s}</div>
+                      <div key={i} style={{ fontSize:'12px', color: '#6a8a9a', paddingLeft: '10px', lineHeight: '1.6' }}>• {s}</div>
                     ))}
                   </div>
                 ))}
-                <div style={{ fontSize: '9px', color: '#3a5a6a', padding: '6px 8px', background: 'rgba(0,170,255,0.05)', borderRadius: '3px', borderLeft: '2px solid rgba(0,170,255,0.2)' }}>
+                <div style={{ fontSize:'12px', color: '#3a5a6a', padding: '6px 8px', background: 'rgba(0,170,255,0.05)', borderRadius: '3px', borderLeft: '2px solid rgba(0,170,255,0.2)' }}>
                   ℹ️ Les ordres Canceled sont ignorés automatiquement. Les frais ne sont pas dans cet export — tu peux les ajouter manuellement dans le Journal.
                 </div>
               </div>
@@ -870,9 +870,9 @@ export default function CsvImport() {
             <div style={{ fontSize: '20px' }}>{sourceInfo.icon}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '13px', color: sourceInfo.color, fontWeight: '700' }}>{sourceInfo.label} détecté</div>
-              <div style={{ fontSize: '11px', color: '#5868a0' }}>{fileName} · {trades.length} trade{trades.length > 1 ? 's' : ''}</div>
+              <div style={{ fontSize:'13px', color: '#5868a0' }}>{fileName} · {trades.length} trade{trades.length > 1 ? 's' : ''}</div>
             </div>
-            <button onClick={() => { setStep('drop'); setTrades([]); setSource(null); setFileName(''); }} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit' }}>
+            <button onClick={() => { setStep('drop'); setTrades([]); setSource(null); setFileName(''); }} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', fontSize:'13px', fontFamily: 'inherit' }}>
               Changer de fichier
             </button>
           </div>
@@ -887,7 +887,7 @@ export default function CsvImport() {
               { label: 'P&L NET',    value: fmt(totalNet, true),    color: pnlColor(totalNet) },
             ].map(({ label, value, color }) => (
               <div key={label} style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '6px', padding: '10px 12px', borderTop: `2px solid ${color}` }}>
-                <div style={{ fontSize: '9px', color: '#5a6a82', letterSpacing: '1.5px', marginBottom: '4px' }}>{label}</div>
+                <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1.5px', marginBottom: '4px' }}>{label}</div>
                 <div style={{ fontSize: '16px', fontWeight: '700', color }}>{value}</div>
               </div>
             ))}
@@ -895,14 +895,14 @@ export default function CsvImport() {
 
           {/* Duplicate warning */}
           {duplicates.size > 0 && (
-            <div style={{ padding: '10px 14px', background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.3)', borderRadius: '6px', fontSize: '12px', color: '#f0a020' }}>
+            <div style={{ padding: '10px 14px', background: 'rgba(240,160,32,0.08)', border: '1px solid rgba(240,160,32,0.3)', borderRadius: '6px', fontSize:'13px', color: '#f0a020' }}>
               ⚠ {duplicates.size} trade{duplicates.size > 1 ? 's' : ''} déjà présent{duplicates.size > 1 ? 's' : ''} dans la base (affiché{duplicates.size > 1 ? 's' : ''} en orange) — ils seront ignorés par défaut.
             </div>
           )}
 
           {/* Table header */}
           <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '8px', overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '28px 86px 90px 60px 60px 55px 90px 75px 70px 1fr', gap: '5px', padding: '8px 10px', fontSize: '9px', color: '#3c4c64', letterSpacing: '1.5px', borderBottom: '1px solid rgba(136,153,187,0.08)', background: 'rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '28px 86px 90px 60px 60px 55px 90px 75px 70px 1fr', gap: '5px', padding: '8px 10px', fontSize:'12px', color: '#3c4c64', letterSpacing: '1.5px', borderBottom: '1px solid rgba(136,153,187,0.08)', background: 'rgba(0,0,0,0.2)' }}>
               <span>#</span><span>DATE</span><span>ENTRÉE/SORTIE</span><span>PAIRE</span><span>DIR.</span><span>TAILLE</span><span>P&L NET</span><span style={{ color: '#5a4a20' }}>FRAIS</span><span>DURÉE</span><span>STATUT</span>
             </div>
             <div style={{ maxHeight: '380px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px', padding: '6px' }}>
@@ -915,14 +915,14 @@ export default function CsvImport() {
           {/* Actions */}
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', alignItems: 'center' }}>
             {duplicates.size > 0 && (
-              <button onClick={() => handleImport(false)} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid rgba(240,160,32,0.3)', background: 'rgba(240,160,32,0.08)', color: '#f0a020', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>
+              <button onClick={() => handleImport(false)} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid rgba(240,160,32,0.3)', background: 'rgba(240,160,32,0.08)', color: '#f0a020', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>
                 Tout importer (avec doublons)
               </button>
             )}
-            <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #1e2c40', background: 'transparent', color: '#6878a0', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>
+            <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #1e2c40', background: 'transparent', color: '#6878a0', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>
               ANNULER
             </button>
-            <button onClick={() => handleImport(true)} disabled={newTrades.length === 0} style={{ padding: '10px 28px', borderRadius: '5px', background: newTrades.length === 0 ? 'rgba(14,15,22,0.4)' : 'linear-gradient(135deg,rgba(136,153,187,0.28),rgba(0,170,85,0.15))', border: `1px solid ${newTrades.length === 0 ? '#1e2c40' : 'rgba(136,153,187,0.40)'}`, color: newTrades.length === 0 ? '#3c4c64' : '#8899bb', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: newTrades.length === 0 ? 'not-allowed' : 'pointer' }}>
+            <button onClick={() => handleImport(true)} disabled={newTrades.length === 0} style={{ padding: '10px 28px', borderRadius: '5px', background: newTrades.length === 0 ? 'rgba(14,15,22,0.4)' : 'linear-gradient(135deg,rgba(136,153,187,0.28),rgba(0,170,85,0.15))', border: `1px solid ${newTrades.length === 0 ? '#1e2c40' : 'rgba(136,153,187,0.40)'}`, color: newTrades.length === 0 ? '#3c4c64' : '#8899bb', fontSize:'13px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: newTrades.length === 0 ? 'not-allowed' : 'pointer' }}>
               IMPORTER {newTrades.length > 0 ? `${newTrades.length} TRADE${newTrades.length > 1 ? 'S' : ''}` : '(aucun nouveau)'}
             </button>
           </div>
@@ -937,7 +937,7 @@ export default function CsvImport() {
             <div style={{ height: '6px', background: 'rgba(136,153,187,0.10)', borderRadius: '3px', overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg,#566880,#8899bb)', borderRadius: '3px', transition: 'width 0.2s ease', boxShadow: '0 0 8px rgba(136,153,187,0.45)' }} />
             </div>
-            <div style={{ textAlign: 'center', marginTop: '8px', fontSize: '12px', color: '#5a6a82' }}>{progress}%</div>
+            <div style={{ textAlign: 'center', marginTop: '8px', fontSize:'13px', color: '#5a6a82' }}>{progress}%</div>
           </div>
         </div>
       )}
@@ -957,10 +957,10 @@ export default function CsvImport() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={() => { setStep('drop'); setTrades([]); setSource(null); setFileName(''); setError(''); }} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #1e2c40', background: 'transparent', color: '#6878a0', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>
+            <button onClick={() => { setStep('drop'); setTrades([]); setSource(null); setFileName(''); setError(''); }} style={{ padding: '10px 20px', borderRadius: '5px', border: '1px solid #1e2c40', background: 'transparent', color: '#6878a0', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>
               Nouvel import
             </button>
-            <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 28px', borderRadius: '5px', background: 'linear-gradient(135deg,rgba(136,153,187,0.28),rgba(0,170,85,0.15))', border: '1px solid rgba(136,153,187,0.40)', color: '#8899bb', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer' }}>
+            <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 28px', borderRadius: '5px', background: 'linear-gradient(135deg,rgba(136,153,187,0.28),rgba(0,170,85,0.15))', border: '1px solid rgba(136,153,187,0.40)', color: '#8899bb', fontSize:'13px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer' }}>
               VOIR LE DASHBOARD →
             </button>
           </div>

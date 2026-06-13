@@ -37,7 +37,7 @@ function getSessionObj(label) {
 function CTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: 'rgba(8,9,16,0.97)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', padding: '8px 12px', fontSize: '12px', fontFamily: 'inherit' }}>
+    <div style={{ background: 'rgba(8,9,16,0.97)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '4px', padding: '8px 12px', fontSize:'13px', fontFamily: 'inherit' }}>
       <div style={{ color: '#5a6a82', marginBottom: '4px' }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ color: (p.value ?? 0) >= 0 ? '#00cc77' : '#ff3344', fontWeight: '700' }}>
@@ -52,9 +52,9 @@ function CTooltip({ active, payload, label }) {
 function StatCard({ label, value, sub, color = '#dde4ef' }) {
   return (
     <div style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.10)', borderTop: `2px solid ${color}`, borderRadius: '6px', padding: '14px 16px' }}>
-      <div style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>{label}</div>
+      <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>{label}</div>
       <div style={{ fontSize: '20px', fontWeight: '700', color, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '11px', color: '#5868a0', marginTop: '5px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize:'13px', color: '#5868a0', marginTop: '5px' }}>{sub}</div>}
     </div>
   );
 }
@@ -63,7 +63,7 @@ function StatCard({ label, value, sub, color = '#dde4ef' }) {
 function Section({ title, children }) {
   return (
     <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '8px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <div style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>{title}</div>
+      <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>{title}</div>
       {children}
     </div>
   );
@@ -83,9 +83,9 @@ function InsightCard({ icon, title, value, desc, color, onClick }) {
     >
       <div style={{ fontSize: '28px', flexShrink: 0 }}>{icon}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>{title}</div>
+        <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>{title}</div>
         <div style={{ fontSize: '16px', fontWeight: '700', color, marginBottom: '3px' }}>{value}</div>
-        <div style={{ fontSize: '11px', color: '#5868a0' }}>{desc}</div>
+        <div style={{ fontSize:'13px', color: '#5868a0' }}>{desc}</div>
       </div>
       {onClick && <div style={{ fontSize: '16px', color: `${color}80`, flexShrink: 0 }}>›</div>}
     </div>
@@ -168,8 +168,8 @@ function TradeTable({ trades, storageKey = 'global_trade_cols' }) {
   const templateCols = COLS.map(c => `${colWidths[c.key]}px`).join(' ');
 
   function SortIcon({ col }) {
-    if (sortCol !== col) return <span style={{ color: '#1e2c40', fontSize: '9px' }}>⇅</span>;
-    return <span style={{ color: '#8899bb', fontSize: '9px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
+    if (sortCol !== col) return <span style={{ color: '#1e2c40', fontSize:'12px' }}>⇅</span>;
+    return <span style={{ color: '#8899bb', fontSize:'12px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
   }
 
   return (
@@ -183,7 +183,7 @@ function TradeTable({ trades, storageKey = 'global_trade_cols' }) {
           { label: 'TRADES',    value: filtered.length, color: '#dde4ef' },
         ].map(({ label, value, color }) => (
           <div key={label} style={{ background: 'rgba(14,15,22,0.5)', borderRadius: '5px', padding: '8px 12px', borderTop: `2px solid ${color}` }}>
-            <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>{label}</div>
+            <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>{label}</div>
             <div style={{ fontSize: '14px', fontWeight: '700', color }}>{value}</div>
           </div>
         ))}
@@ -193,14 +193,14 @@ function TradeTable({ trades, storageKey = 'global_trade_cols' }) {
       <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
         {['ALL','WIN','LOSS'].map(f => {
           const c = f === 'WIN' ? '#8899bb' : f === 'LOSS' ? '#ff4455' : '#8899bb';
-          return <button key={f} onClick={() => setFilter(f)} style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${filter===f?c:'#1e2c40'}`, background: filter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':'0,255,136'},0.1)`:'transparent', color: filter===f?c:'#5a6a82', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>;
+          return <button key={f} onClick={() => setFilter(f)} style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${filter===f?c:'#1e2c40'}`, background: filter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':'0,255,136'},0.1)`:'transparent', color: filter===f?c:'#5a6a82', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>;
         })}
       </div>
 
       {/* Scrollable table */}
       <div style={{ overflowX: 'auto' }}>
         {/* Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: templateCols, minWidth: 'max-content', padding: '5px 10px', fontSize: '10px', color: '#3c4c64', letterSpacing: '1.5px', borderBottom: '1px solid rgba(136,153,187,0.08)', marginBottom: '4px', userSelect: 'none' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: templateCols, minWidth: 'max-content', padding: '5px 10px', fontSize:'12px', color: '#3c4c64', letterSpacing: '1.5px', borderBottom: '1px solid rgba(136,153,187,0.08)', marginBottom: '4px', userSelect: 'none' }}>
           {COLS.map((col, idx) => (
             <div key={col.key} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', overflow: 'hidden' }}
               onClick={() => handleSort(col.key)}
@@ -224,7 +224,7 @@ function TradeTable({ trades, storageKey = 'global_trade_cols' }) {
         {/* Rows */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 'max-content' }}>
           {filtered.length === 0 ? (
-            <div style={{ padding: '24px', textAlign: 'center', color: '#3a1818', fontSize: '12px' }}>Aucun trade</div>
+            <div style={{ padding: '24px', textAlign: 'center', color: '#3a1818', fontSize:'13px' }}>Aucun trade</div>
           ) : filtered.map(t => {
             const net  = getNet(t);
             const hour = t.entered_at ? new Date(t.entered_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—';
@@ -236,21 +236,21 @@ function TradeTable({ trades, storageKey = 'global_trade_cols' }) {
             const exitDisplay = exitVal != null ? exitVal.toFixed(2) : '—';
             return (
               <div key={`${t._accountId}-${t.id}`}
-                style={{ display: 'grid', gridTemplateColumns: templateCols, alignItems: 'center', padding: '8px 10px', background: 'rgba(14,15,22,0.4)', borderLeft: `2px solid ${pnlColor(net)}`, borderRadius: '4px', fontSize: '12px', transition: 'background 0.1s' }}
+                style={{ display: 'grid', gridTemplateColumns: templateCols, alignItems: 'center', padding: '8px 10px', background: 'rgba(14,15,22,0.4)', borderLeft: `2px solid ${pnlColor(net)}`, borderRadius: '4px', fontSize:'13px', transition: 'background 0.1s' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(136,153,187,0.05)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'rgba(14,15,22,0.4)'}
               >
-                <span style={{ color: '#5868a0', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.date}</span>
-                <span style={{ color: '#6a8a7a', fontSize: '11px' }}>{hour}</span>
+                <span style={{ color: '#5868a0', fontSize:'13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.date}</span>
+                <span style={{ color: '#6a8a7a', fontSize:'13px' }}>{hour}</span>
                 <span style={{ color: '#dde4ef', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.pair}</span>
-                <span style={{ color: t.direction==='LONG'?'#00cc77':'#ff3344', fontSize: '11px', background: `rgba(${t.direction==='LONG'?'0,204,119':'255,51,68'},0.08)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
+                <span style={{ color: t.direction==='LONG'?'#00cc77':'#ff3344', fontSize:'13px', background: `rgba(${t.direction==='LONG'?'0,204,119':'255,51,68'},0.08)`, padding: '1px 4px', borderRadius: '3px', textAlign: 'center' }}>{t.direction}</span>
                 <span style={{ color: '#7888a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.entry ?? '—'}</span>
                 <span style={{ color: '#7888a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exitDisplay}</span>
                 <span style={{ color: pnlColor(net), fontWeight: '700' }}>{fmt(net, true)}</span>
-                <span style={{ color: '#5868a0', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.duration ?? '—'}</span>
+                <span style={{ color: '#5868a0', fontSize:'13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.duration ?? '—'}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden' }}>
                   <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: t._accountColor ?? '#5a6a82', flexShrink: 0 }} />
-                  <span style={{ color: '#5868a0', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t._accountName ?? '—'}</span>
+                  <span style={{ color: '#5868a0', fontSize:'13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t._accountName ?? '—'}</span>
                 </div>
               </div>
             );
@@ -316,26 +316,26 @@ function TradingCalendar({ trades, onDayClick }) {
     <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '8px', padding: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
         <div>
-          <div style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '3px' }}>CALENDRIER DE TRADING</div>
+          <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '3px' }}>CALENDRIER DE TRADING</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: '#5868a0', cursor: 'pointer', fontSize: '16px' }}>‹</button>
             <span style={{ fontSize: '14px', fontWeight: '700', color: '#e8edf8' }}>{CAL_MONTHS[month]} {year}</span>
             <button onClick={nextMonth} style={{ background: 'none', border: 'none', color: '#5868a0', cursor: 'pointer', fontSize: '16px' }}>›</button>
             <button onClick={() => { setYear(new Date().getFullYear()); setMonth(new Date().getMonth()); }}
-              style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.18)', color: '#8899bb', padding: '3px 8px', borderRadius: '4px', fontSize: '10px', fontFamily: 'inherit', cursor: 'pointer' }}>Aujourd'hui</button>
+              style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.18)', color: '#8899bb', padding: '3px 8px', borderRadius: '4px', fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer' }}>Aujourd'hui</button>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>P&L MENSUEL</div>
+          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>P&L MENSUEL</div>
           <div style={{ fontSize: '16px', fontWeight: '700', color: pnlColor(monthTotal) }}>{fmt(monthTotal, true)}</div>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr) 90px', gap: '2px' }}>
         {['D','L','Ma','Me','J','V','S'].map(d => (
-          <div key={d} style={{ textAlign: 'center', fontSize: '10px', color: '#5a6a82', padding: '4px 0', letterSpacing: '1px' }}>{d}</div>
+          <div key={d} style={{ textAlign: 'center', fontSize:'12px', color: '#5a6a82', padding: '4px 0', letterSpacing: '1px' }}>{d}</div>
         ))}
-        <div style={{ textAlign: 'center', fontSize: '10px', color: '#5a6a82', padding: '4px 0' }}>SEM.</div>
+        <div style={{ textAlign: 'center', fontSize:'12px', color: '#5a6a82', padding: '4px 0' }}>SEM.</div>
 
         {weeks.map((wk, wi) => {
           const firstNonNull = wk.find(d => d != null);
@@ -359,23 +359,23 @@ function TradingCalendar({ trades, onDayClick }) {
                   onMouseEnter={e => { if (data) e.currentTarget.style.opacity = '0.75'; }}
                   onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
                 >
-                  <div style={{ fontSize: '10px', color: isToday ? '#00aaff' : '#5868a0', fontWeight: isToday ? '700' : '400', display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize:'12px', color: isToday ? '#00aaff' : '#5868a0', fontWeight: isToday ? '700' : '400', display: 'flex', justifyContent: 'space-between' }}>
                     <span>{day}</span>
                     {isToday && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00aaff' }} />}
                   </div>
                   {data && (
                     <>
-                      <div style={{ fontSize: '10px', fontWeight: '700', color: pnlColor(data.pnl), lineHeight: 1 }}>{fmt(data.pnl, true)}</div>
-                      <div style={{ fontSize: '8px', color: '#5a6a82' }}>{data.count}T</div>
+                      <div style={{ fontSize:'12px', fontWeight: '700', color: pnlColor(data.pnl), lineHeight: 1 }}>{fmt(data.pnl, true)}</div>
+                      <div style={{ fontSize:'11px', color: '#5a6a82' }}>{data.count}T</div>
                     </>
                   )}
                 </div>
               );
             }),
             <div key={`week-${wi}`} style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '3px', minHeight: '54px', padding: '6px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
-              <div style={{ fontSize: '8px', color: '#5a6a82' }}>S{wi + 1}</div>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: pnlColor(weekData.total) }}>{weekData.total !== 0 ? fmt(weekData.total, true) : '—'}</div>
-              <div style={{ fontSize: '8px', color: '#5a6a82' }}>{weekData.count}T</div>
+              <div style={{ fontSize:'11px', color: '#5a6a82' }}>S{wi + 1}</div>
+              <div style={{ fontSize:'13px', fontWeight: '700', color: pnlColor(weekData.total) }}>{weekData.total !== 0 ? fmt(weekData.total, true) : '—'}</div>
+              <div style={{ fontSize:'11px', color: '#5a6a82' }}>{weekData.count}T</div>
             </div>,
           ];
         })}
@@ -396,7 +396,7 @@ function TradeModal({ title, subtitle, color, trades, onClose }) {
               <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color }} />
               <span style={{ fontSize: '18px', fontWeight: '700', color: '#e8edf8' }}>{title}</span>
             </div>
-            <span style={{ fontSize: '12px', color: '#5868a0' }}>{subtitle}</span>
+            <span style={{ fontSize:'13px', color: '#5868a0' }}>{subtitle}</span>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
         </div>
@@ -568,10 +568,10 @@ export default function GlobalView() {
     return true;
   }).sort((a,b) => b.date.localeCompare(a.date));
 
-  const inp = { background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '4px', padding: '5px 10px', color: '#dde4ef', fontSize: '12px', fontFamily: 'inherit', outline: 'none' };
+  const inp = { background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '4px', padding: '5px 10px', color: '#dde4ef', fontSize:'13px', fontFamily: 'inherit', outline: 'none' };
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#5a6a82', fontSize: '12px', letterSpacing: '2px' }}>CHARGEMENT DE TOUS LES COMPTES...</div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#5a6a82', fontSize:'13px', letterSpacing: '2px' }}>CHARGEMENT DE TOUS LES COMPTES...</div>
   );
 
   return (
@@ -580,25 +580,25 @@ export default function GlobalView() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '6px' }}>ANALYSE GLOBALE</div>
+          <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '6px' }}>ANALYSE GLOBALE</div>
           <h1 style={{ fontSize: '23px', fontWeight: '700', color: '#e8edf8', margin: 0 }}>Vue Globale</h1>
-          <div style={{ fontSize: '12px', color: '#5a6a82', marginTop: '3px' }}>
+          <div style={{ fontSize:'13px', color: '#5a6a82', marginTop: '3px' }}>
             {accounts.length} compte{accounts.length > 1 ? 's' : ''} · {total} trades · <span style={{ color: pnlColor(pnl), fontWeight: '700' }}>{fmt(pnl, true)}</span>
           </div>
         </div>
-        <button onClick={load} style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.22)', color: '#8899bb', padding: '8px 14px', borderRadius: '5px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>🔄 Actualiser</button>
+        <button onClick={load} style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.22)', color: '#8899bb', padding: '8px 14px', borderRadius: '5px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>🔄 Actualiser</button>
       </div>
 
       {/* Account filter */}
       {accounts.length > 1 && (
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: '11px', color: '#5a6a82', letterSpacing: '1px' }}>FILTRER :</span>
-          <button onClick={() => setSelectedAccounts([])} style={{ padding: '5px 12px', borderRadius: '4px', border: `1px solid ${selectedAccounts.length===0?'#8899bb':'#1e2c40'}`, background: selectedAccounts.length===0?'rgba(136,153,187,0.12)':'transparent', color: selectedAccounts.length===0?'#8899bb':'#5a6a82', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>Tous</button>
+          <span style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1px' }}>FILTRER :</span>
+          <button onClick={() => setSelectedAccounts([])} style={{ padding: '5px 12px', borderRadius: '4px', border: `1px solid ${selectedAccounts.length===0?'#8899bb':'#1e2c40'}`, background: selectedAccounts.length===0?'rgba(136,153,187,0.12)':'transparent', color: selectedAccounts.length===0?'#8899bb':'#5a6a82', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>Tous</button>
           {accounts.map(acc => {
             const active = selectedAccounts.includes(acc.id);
             return (
               <button key={acc.id} onClick={() => setSelectedAccounts(p => active ? p.filter(id => id !== acc.id) : [...p, acc.id])}
-                style={{ padding: '5px 12px', borderRadius: '4px', border: `1px solid ${active?acc.color:'#1e2c40'}`, background: active?`${acc.color}15`:'transparent', color: active?acc.color:'#5a6a82', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                style={{ padding: '5px 12px', borderRadius: '4px', border: `1px solid ${active?acc.color:'#1e2c40'}`, background: active?`${acc.color}15`:'transparent', color: active?acc.color:'#5a6a82', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: acc.color }} />
                 {acc.name}
               </button>
@@ -624,8 +624,8 @@ export default function GlobalView() {
           <div style={{ background: 'linear-gradient(90deg,rgba(0,204,119,0.10) 0%,rgba(0,204,119,0.04) 100%)', border: '1px solid rgba(0,204,119,0.25)', borderLeft: '3px solid #00cc77', borderRadius: '6px', padding: '10px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '18px' }}>✅</span>
             <div>
-              <div style={{ fontSize: '12px', color: '#00cc77', letterSpacing: '2px', fontWeight: '700' }}>POINTS FORTS</div>
-              <div style={{ fontSize: '10px', color: 'rgba(0,204,119,0.6)', marginTop: '1px' }}>Tes atouts — à exploiter davantage</div>
+              <div style={{ fontSize:'13px', color: '#00cc77', letterSpacing: '2px', fontWeight: '700' }}>POINTS FORTS</div>
+              <div style={{ fontSize:'12px', color: 'rgba(0,204,119,0.6)', marginTop: '1px' }}>Tes atouts — à exploiter davantage</div>
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '10px', marginBottom: '20px' }}>
@@ -640,8 +640,8 @@ export default function GlobalView() {
           <div style={{ background: 'linear-gradient(90deg,rgba(255,68,85,0.10) 0%,rgba(255,68,85,0.04) 100%)', border: '1px solid rgba(255,68,85,0.25)', borderLeft: '3px solid #ff4455', borderRadius: '6px', padding: '10px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '18px' }}>❌</span>
             <div>
-              <div style={{ fontSize: '12px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700' }}>POINTS FAIBLES</div>
-              <div style={{ fontSize: '10px', color: 'rgba(255,68,85,0.6)', marginTop: '1px' }}>À corriger — pièges récurrents à éviter</div>
+              <div style={{ fontSize:'13px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700' }}>POINTS FAIBLES</div>
+              <div style={{ fontSize:'12px', color: 'rgba(255,68,85,0.6)', marginTop: '1px' }}>À corriger — pièges récurrents à éviter</div>
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '10px', marginBottom: '24px' }}>
@@ -678,9 +678,9 @@ export default function GlobalView() {
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(136,153,187,0.08)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'rgba(14,15,22,0.5)'}
                   >
-                    <div style={{ fontSize: '11px', color: '#5868a0', marginBottom: '2px' }}>{d.label}</div>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: pnlColor(d.pnl) }}>{fmt(d.pnl, true)}</div>
-                    <div style={{ fontSize: '10px', color: d.wr >= 50 ? '#00cc77' : '#ff3344' }}>{d.wr}% WR</div>
+                    <div style={{ fontSize:'13px', color: '#5868a0', marginBottom: '2px' }}>{d.label}</div>
+                    <div style={{ fontSize:'13px', fontWeight: '700', color: pnlColor(d.pnl) }}>{fmt(d.pnl, true)}</div>
+                    <div style={{ fontSize:'12px', color: d.wr >= 50 ? '#00cc77' : '#ff3344' }}>{d.wr}% WR</div>
                   </div>
                 ))}
               </div>
@@ -698,12 +698,12 @@ export default function GlobalView() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: s.color }} />
                         <span style={{ fontSize: '13px', color: '#dde4ef', fontWeight: '600' }}>{s.label}</span>
-                        <span style={{ fontSize: '11px', color: '#5868a0' }}>{s.start}h-{s.end}h</span>
+                        <span style={{ fontSize:'13px', color: '#5868a0' }}>{s.start}h-{s.end}h</span>
                       </div>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <span style={{ fontSize: '12px', color: pnlColor(s.pnl), fontWeight: '700' }}>{fmt(s.pnl, true)}</span>
-                        <span style={{ fontSize: '12px', color: s.wr>=50?'#8899bb':'#ff4455' }}>{s.wr}% WR</span>
-                        <span style={{ fontSize: '11px', color: '#5a6a82' }}>{s.count}T</span>
+                        <span style={{ fontSize:'13px', color: pnlColor(s.pnl), fontWeight: '700' }}>{fmt(s.pnl, true)}</span>
+                        <span style={{ fontSize:'13px', color: s.wr>=50?'#8899bb':'#ff4455' }}>{s.wr}% WR</span>
+                        <span style={{ fontSize:'13px', color: '#5a6a82' }}>{s.count}T</span>
                         <span style={{ fontSize: '13px', color: '#5a6a82' }}>›</span>
                       </div>
                     </div>
@@ -713,7 +713,7 @@ export default function GlobalView() {
                   </div>
                 ))}
                 {bySessions.every(s => s.count === 0) && (
-                  <div style={{ color: '#3a1818', fontSize: '12px', textAlign: 'center', padding: '20px 0' }}>Importez via CSV TopstepX pour voir les sessions</div>
+                  <div style={{ color: '#3a1818', fontSize:'13px', textAlign: 'center', padding: '20px 0' }}>Importez via CSV TopstepX pour voir les sessions</div>
                 )}
               </div>
             </Section>
@@ -746,7 +746,7 @@ export default function GlobalView() {
                 ].map(s => (
                   <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: s.color }} />
-                    <span style={{ fontSize: '11px', color: '#5868a0' }}>{s.label} ({s.hours})</span>
+                    <span style={{ fontSize:'13px', color: '#5868a0' }}>{s.label} ({s.hours})</span>
                   </div>
                 ))}
               </div>
@@ -762,9 +762,9 @@ export default function GlobalView() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
                       <span style={{ fontSize: '13px', color: '#dde4ef', fontWeight: '600' }}>{p.pair}</span>
                       <div style={{ display: 'flex', gap: '10px' }}>
-                        <span style={{ fontSize: '12px', color: pnlColor(p.pnl), fontWeight: '700' }}>{fmt(p.pnl, true)}</span>
-                        <span style={{ fontSize: '12px', color: p.wr>=50?'#8899bb':'#ff4455' }}>{p.wr}% WR</span>
-                        <span style={{ fontSize: '11px', color: '#5a6a82' }}>{p.total}T</span>
+                        <span style={{ fontSize:'13px', color: pnlColor(p.pnl), fontWeight: '700' }}>{fmt(p.pnl, true)}</span>
+                        <span style={{ fontSize:'13px', color: p.wr>=50?'#8899bb':'#ff4455' }}>{p.wr}% WR</span>
+                        <span style={{ fontSize:'13px', color: '#5a6a82' }}>{p.total}T</span>
                       </div>
                     </div>
                     <div style={{ height: '4px', background: 'rgba(136,153,187,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
@@ -772,27 +772,27 @@ export default function GlobalView() {
                     </div>
                   </div>
                 ))}
-                {pairArr.length === 0 && <div style={{ color: '#3a1818', fontSize: '12px', textAlign: 'center', padding: '20px 0' }}>Aucune donnée</div>}
+                {pairArr.length === 0 && <div style={{ color: '#3a1818', fontSize:'13px', textAlign: 'center', padding: '20px 0' }}>Aucune donnée</div>}
               </div>
             </Section>
 
             <Section title="🧠 PERFORMANCE PAR ÉTAT MENTAL">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {emotionArr.length === 0 ? (
-                  <div style={{ color: '#3a1818', fontSize: '12px', textAlign: 'center', padding: '20px 0' }}>Renseigne ton émotion sur chaque trade</div>
+                  <div style={{ color: '#3a1818', fontSize:'13px', textAlign: 'center', padding: '20px 0' }}>Renseigne ton émotion sur chaque trade</div>
                 ) : emotionArr.map(e => (
                   <div key={e.em} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'rgba(14,15,22,0.4)', borderRadius: '5px', border: '1px solid rgba(136,153,187,0.08)' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '13px', color: '#dde4ef', fontWeight: '600', marginBottom: '2px' }}>{e.em}</div>
-                      <div style={{ fontSize: '11px', color: '#5868a0' }}>{e.total} trade{e.total>1?'s':''}</div>
+                      <div style={{ fontSize:'13px', color: '#5868a0' }}>{e.total} trade{e.total>1?'s':''}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: '13px', fontWeight: '700', color: pnlColor(e.pnl) }}>{fmt(e.pnl, true)}</div>
-                      <div style={{ fontSize: '12px', color: e.wr>=50?'#8899bb':'#ff4455' }}>{e.wr}% WR</div>
+                      <div style={{ fontSize:'13px', color: e.wr>=50?'#8899bb':'#ff4455' }}>{e.wr}% WR</div>
                     </div>
                     <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: `conic-gradient(${e.wr>=50?'#8899bb':'#ff4455'} ${e.wr*3.6}deg, rgba(14,15,22,0.8) 0deg)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#090a10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '11px', fontWeight: '700', color: e.wr>=50?'#8899bb':'#ff4455' }}>{e.wr}%</span>
+                        <span style={{ fontSize:'13px', fontWeight: '700', color: e.wr>=50?'#8899bb':'#ff4455' }}>{e.wr}%</span>
                       </div>
                     </div>
                   </div>
@@ -808,14 +808,14 @@ export default function GlobalView() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: '10px' }}>
                   {byAccount.map(acc => (
                     <div key={acc.name} style={{ background: acc.isBlown?'rgba(255,68,85,0.06)':'rgba(14,15,22,0.5)', border: `1px solid ${acc.isBlown?'rgba(255,68,85,0.3)':acc.color+'25'}`, borderLeft: `3px solid ${acc.isBlown?'#ff4455':acc.color}`, borderRadius: '6px', padding: '12px 14px', position: 'relative', opacity: acc.isBlown?0.75:1 }}>
-                      {acc.isBlown && <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,68,85,0.15)', border: '1px solid rgba(255,68,85,0.4)', borderRadius: '3px', padding: '2px 6px', fontSize: '9px', color: '#ff4455', fontWeight: '700', letterSpacing: '1px' }}>💀 CRAMÉ</div>}
+                      {acc.isBlown && <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,68,85,0.15)', border: '1px solid rgba(255,68,85,0.4)', borderRadius: '3px', padding: '2px 6px', fontSize:'12px', color: '#ff4455', fontWeight: '700', letterSpacing: '1px' }}>💀 CRAMÉ</div>}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: acc.isBlown?'#ff4455':acc.color }} />
                         <span style={{ fontSize: '13px', color: acc.isBlown?'#8a5a5a':'#dde4ef', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{acc.name}</span>
                       </div>
                       <div style={{ fontSize: '18px', fontWeight: '700', color: acc.isBlown?'#ff4455':pnlColor(acc.pnl), marginBottom: '4px' }}>{fmt(acc.pnl, true)}</div>
-                      <div style={{ fontSize: '12px', color: acc.isBlown?'#5a6a82':(acc.wr>=50?'#8899bb':'#ff4455') }}>{acc.wr.toFixed(1)}% WR · {acc.total}T</div>
-                      {acc.isBlown && <div style={{ fontSize: '11px', color: '#ff4455', marginTop: '4px' }}>⚠️ Floor {acc.floor}$ franchi</div>}
+                      <div style={{ fontSize:'13px', color: acc.isBlown?'#5a6a82':(acc.wr>=50?'#8899bb':'#ff4455') }}>{acc.wr.toFixed(1)}% WR · {acc.total}T</div>
+                      {acc.isBlown && <div style={{ fontSize:'13px', color: '#ff4455', marginTop: '4px' }}>⚠️ Floor {acc.floor}$ franchi</div>}
                     </div>
                   ))}
                 </div>
@@ -847,16 +847,16 @@ export default function GlobalView() {
                 <input placeholder="Rechercher paire, date, compte..." value={tradeSearch} onChange={e => setTradeSearch(e.target.value)} style={{ ...inp, width: '240px' }} />
                 {['ALL','WIN','LOSS'].map(f => {
                   const c = f==='WIN'?'#8899bb':f==='LOSS'?'#ff4455':'#8899bb';
-                  return <button key={f} onClick={() => setTradeFilter(f)} style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${tradeFilter===f?c:'#1e2c40'}`, background: tradeFilter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':'0,255,136'},0.1)`:'transparent', color: tradeFilter===f?c:'#5a6a82', fontSize: '11px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>;
+                  return <button key={f} onClick={() => setTradeFilter(f)} style={{ padding: '4px 12px', borderRadius: '4px', border: `1px solid ${tradeFilter===f?c:'#1e2c40'}`, background: tradeFilter===f?`rgba(${f==='WIN'?'0,255,136':f==='LOSS'?'255,68,85':'0,255,136'},0.1)`:'transparent', color: tradeFilter===f?c:'#5a6a82', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>{f}</button>;
                 })}
-                <span style={{ fontSize: '11px', color: '#5a6a82', marginLeft: 'auto' }}>
+                <span style={{ fontSize:'13px', color: '#5a6a82', marginLeft: 'auto' }}>
                   P&L: <span style={{ color: pnlColor(allTradesFiltered.reduce((s,t)=>s+getNet(t),0)), fontWeight: '700' }}>{fmt(allTradesFiltered.reduce((s,t)=>s+getNet(t),0), true)}</span>
                 </span>
               </div>
               <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                 <TradeTable trades={allTradesFiltered.slice(0, 200)} />
               </div>
-              {allTradesFiltered.length > 200 && <div style={{ textAlign: 'center', color: '#5a6a82', fontSize: '11px', padding: '8px' }}>Limité à 200 — utilisez les filtres</div>}
+              {allTradesFiltered.length > 200 && <div style={{ textAlign: 'center', color: '#5a6a82', fontSize:'13px', padding: '8px' }}>Limité à 200 — utilisez les filtres</div>}
             </Section>
           </div>
         </>
