@@ -492,7 +492,7 @@ function AccountCard({ acc, isActive, status, onSelect, onEdit, onDelete, onMark
 
   return (
     <div onClick={() => onSelect(acc.id)}
-      style={{ background: isBlown ? 'rgba(255,68,85,0.06)' : isActive ? `${acc.color}0d` : 'rgba(14,15,22,0.5)', border: `2px solid ${isBlown ? '#ff4455' : isActive ? acc.color : 'rgba(136,153,187,0.10)'}`, borderRadius: '10px', padding: '18px 20px', cursor: 'pointer', transition: 'all 0.2s ease', position: 'relative', boxShadow: isBlown ? '0 0 20px rgba(255,68,85,0.12)' : isActive ? `0 0 24px ${acc.color}20` : 'none', opacity: isBlown ? 0.85 : 1 }}
+      style={{ background: isBlown ? 'rgba(255,68,85,0.06)' : isActive ? `${acc.color}0d` : 'rgba(14,15,22,0.5)', border: `2px solid ${isBlown ? '#ff4455' : isActive ? acc.color : 'rgba(136,153,187,0.10)'}`, borderRadius: '10px', padding: '13px 15px', cursor: 'pointer', transition: 'all 0.2s ease', position: 'relative', boxShadow: isBlown ? '0 0 20px rgba(255,68,85,0.12)' : isActive ? `0 0 24px ${acc.color}20` : 'none', opacity: isBlown ? 0.85 : 1 }}
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = isBlown ? '0 0 28px rgba(255,68,85,0.2)' : `0 0 24px ${acc.color}20`; }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = isBlown ? '0 0 20px rgba(255,68,85,0.12)' : isActive ? `0 0 24px ${acc.color}20` : 'none'; }}
     >
@@ -522,22 +522,22 @@ function AccountCard({ acc, isActive, status, onSelect, onEdit, onDelete, onMark
       </div>
 
       {/* Logo + dot */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-        <div style={{ width: '40px', height: '40px', borderRadius: '9px', background: isBlown ? 'rgba(255,68,85,0.12)' : `${acc.color}12`, border: `1px solid ${isBlown ? 'rgba(255,68,85,0.3)' : acc.color + '30'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <PlatformLogo platform={typeInfo.platform} size={24} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+        <div style={{ width: '32px', height: '32px', borderRadius: '7px', background: isBlown ? 'rgba(255,68,85,0.12)' : `${acc.color}12`, border: `1px solid ${isBlown ? 'rgba(255,68,85,0.3)' : acc.color + '30'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <PlatformLogo platform={typeInfo.platform} size={18} />
         </div>
         <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: isBlown ? '#ff4455' : acc.color, boxShadow: `0 0 6px ${isBlown ? '#ff4455' : acc.color}` }} />
       </div>
 
       {/* Name + type */}
-      <div style={{ fontSize: '14px', fontWeight: '700', color: isBlown ? '#c88a8a' : '#e8edf8', marginBottom: '3px' }}>{acc.name}</div>
-      <div style={{ fontSize:'13px', color: isBlown ? '#ff6666' : acc.color, marginBottom: '8px' }}>{typeInfo.label}</div>
+      <div style={{ fontSize: '13px', fontWeight: '700', color: isBlown ? '#c88a8a' : '#e8edf8', marginBottom: '2px' }}>{acc.name}</div>
+      <div style={{ fontSize:'12px', color: isBlown ? '#ff6666' : acc.color, marginBottom: '6px' }}>{typeInfo.label}</div>
 
       {/* P&L + stats */}
       {hasStats && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '6px' }}>
           <div>
-            <div style={{ fontSize: '17px', fontWeight: '700', color: pnlColor, lineHeight: 1 }}>
+            <div style={{ fontSize: '15px', fontWeight: '700', color: pnlColor, lineHeight: 1 }}>
               {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}$
             </div>
             <div style={{ fontSize:'12px', color: '#5a6a82', marginTop: '2px' }}>
@@ -552,8 +552,8 @@ function AccountCard({ acc, isActive, status, onSelect, onEdit, onDelete, onMark
         </div>
       )}
 
-      {acc.brokerAccountId && <div style={{ fontSize:'12px', color: '#5a6a82', marginTop: '4px' }}>{acc.brokerAccountId}</div>}
-      <div style={{ fontSize:'12px', color: '#3a1818', marginTop: '2px' }}>Créé le {new Date(acc.createdAt).toLocaleDateString('fr-FR')}</div>
+      {acc.brokerAccountId && <div style={{ fontSize:'11px', color: '#4a5a70', marginTop: '3px' }}>{acc.brokerAccountId}</div>}
+      <div style={{ fontSize:'11px', color: '#3c4c60', marginTop: '2px' }}>Créé le {new Date(acc.createdAt).toLocaleDateString('fr-FR')}</div>
 
       <div style={{ position: 'absolute', bottom: '10px', right: '10px', display: 'flex', gap: '4px' }}>
         {/* Restaurer — uniquement si cramé manuellement */}
@@ -568,7 +568,7 @@ function AccountCard({ acc, isActive, status, onSelect, onEdit, onDelete, onMark
         {/* Marquer cramé — uniquement si pas encore cramé */}
         {!isBlown && (
           <button onClick={e => { e.stopPropagation(); onMarkBlown(acc.id); }}
-            style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '13px', padding: '2px 6px', borderRadius: '3px', transition: 'all 0.15s' }}
+            style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', fontSize: '13px', padding: '2px 6px', borderRadius: '3px', transition: 'all 0.15s' }}
             onMouseEnter={e => { e.currentTarget.style.color = '#ff4455'; e.currentTarget.style.background = 'rgba(255,68,85,0.08)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = '#1a3a20'; e.currentTarget.style.background = 'none'; }}
             title="Marquer comme cramé"
@@ -686,9 +686,9 @@ export default function AccountSelect({ onSelect, onBack }) {
 
   function renderSection(accounts, header) {
     return (
-      <div style={{ marginBottom: '28px' }}>
+      <div style={{ marginBottom: '20px' }}>
         {header}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: '14px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: '10px' }}>
           {accounts.map(acc => (
             <AccountCard key={acc.id} acc={acc} isActive={acc.id === data.activeId} status={statuses[acc.id]} onSelect={handleSelect} onEdit={setEditingAcc} onDelete={handleDelete} onMarkBlown={handleMarkBlown} onRestoreBlown={handleRestoreBlown} />
           ))}
@@ -737,13 +737,13 @@ export default function AccountSelect({ onSelect, onBack }) {
           <>
             {/* ── 0. COMPTE ACTIF (épinglé en tête) ── */}
             {activeAcc && (
-              <div style={{ marginBottom: '28px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: activeAcc.color, boxShadow: `0 0 12px ${activeAcc.color}` }} />
                   <span style={{ fontSize:'12px', color: activeAcc.color, letterSpacing: '2px', fontWeight: '700' }}>COMPTE ACTIF</span>
                   <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1px' }}>En cours de trading</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: '14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: '10px' }}>
                   <AccountCard acc={activeAcc} isActive={true} status={statuses[activeAcc.id]} onSelect={handleSelect} onEdit={setEditingAcc} onDelete={handleDelete} onMarkBlown={handleMarkBlown} onRestoreBlown={handleRestoreBlown} />
                 </div>
               </div>
@@ -751,7 +751,7 @@ export default function AccountSelect({ onSelect, onBack }) {
 
             {/* ── 1. LIVE : Lucid Live + Tradovate Live ── */}
             {liveAccounts.length > 0 && renderSection(liveAccounts, (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#00ddff', boxShadow: '0 0 10px #00ddff' }} />
                 <span style={{ fontSize:'12px', color: '#00ddff', letterSpacing: '2px', fontWeight: '700' }}>LIVE — {liveAccounts.length}</span>
                 <span style={{ fontSize:'12px', color: '#2a7a8a', letterSpacing: '1px' }}>Compte live réel</span>
@@ -760,7 +760,7 @@ export default function AccountSelect({ onSelect, onBack }) {
 
             {/* ── 2. FUNDED : Express Funded Topstep + Lucid Funded ── */}
             {fundedAccounts.length > 0 && renderSection(fundedAccounts, (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f0c020', boxShadow: '0 0 10px #f0c020' }} />
                 <span style={{ fontSize:'12px', color: '#f0c020', letterSpacing: '2px', fontWeight: '700' }}>FUNDED — {fundedAccounts.length}</span>
                 <span style={{ fontSize:'12px', color: '#8a7a30', letterSpacing: '1px' }}>Express Funded · Lucid Funded</span>
@@ -769,7 +769,7 @@ export default function AccountSelect({ onSelect, onBack }) {
 
             {/* ── 3. CHALLENGE : Topstep Combine + Lucid Eval non validés ── */}
             {challengeAccounts.length > 0 && renderSection(challengeAccounts, (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#8899bb', boxShadow: '0 0 8px #8899bb' }} />
                 <span style={{ fontSize:'12px', color: '#8899bb', letterSpacing: '2px', fontWeight: '700' }}>CHALLENGE — {challengeAccounts.length}</span>
                 <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1px' }}>En cours</span>
@@ -778,7 +778,7 @@ export default function AccountSelect({ onSelect, onBack }) {
 
             {/* ── 4. VALIDÉ : challenges réussis ── */}
             {validatedAccounts.length > 0 && renderSection(validatedAccounts, (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#8899bb', boxShadow: '0 0 8px #8899bb' }} />
                 <span style={{ fontSize:'12px', color: '#8899bb', letterSpacing: '2px', fontWeight: '700' }}>VALIDÉ — {validatedAccounts.length}</span>
                 <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1px' }}>Challenge réussi ✓</span>
@@ -787,7 +787,7 @@ export default function AccountSelect({ onSelect, onBack }) {
 
             {/* ── 5. CRAMÉS ── */}
             {blownAccounts.length > 0 && renderSection(blownAccounts, (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#ff4455', boxShadow: '0 0 8px #ff4455' }} />
                 <span style={{ fontSize:'12px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700', opacity: 0.8 }}>CRAMÉS — {blownAccounts.length}</span>
                 <span style={{ fontSize:'12px', color: '#4a5a72', letterSpacing: '1px' }}>↺ = restaurer</span>
@@ -796,7 +796,7 @@ export default function AccountSelect({ onSelect, onBack }) {
 
             {/* ── 6. AUTRES (démo, perso uniquement) ── */}
             {otherAccounts.length > 0 && renderSection(otherAccounts, (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#5a6a82' }} />
                 <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>AUTRES — {otherAccounts.length}</span>
                 <span style={{ fontSize:'12px', color: '#4a5a72', letterSpacing: '1px' }}>Démo · Perso</span>

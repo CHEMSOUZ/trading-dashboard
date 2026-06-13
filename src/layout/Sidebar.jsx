@@ -308,20 +308,20 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                       </div>
                     ) : (
                       <div onClick={() => switchTo(a.id)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 10px', cursor: 'pointer', background: isActive ? bgNormal : 'transparent', transition: 'background 0.12s', borderRadius: '5px', borderLeft: `2px solid ${isBlown || isEF || isLive || isVal ? borderAccent : isActive ? 'rgba(136,153,187,0.4)' : 'transparent'}` }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '6px 8px', cursor: 'pointer', background: isActive ? bgNormal : 'transparent', transition: 'background 0.12s', borderRadius: '5px', borderLeft: `2px solid ${isBlown || isEF || isLive || isVal ? borderAccent : isActive ? 'rgba(136,153,187,0.4)' : 'transparent'}` }}
                         onMouseEnter={e => e.currentTarget.style.background = bgNormal}
                         onMouseLeave={e => e.currentTarget.style.background = isActive ? bgNormal : 'transparent'}
                       >
-                        <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: dotColor, boxShadow: `0 0 5px ${dotColor}88`, flexShrink: 0 }} />
+                        <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: dotColor, boxShadow: `0 0 4px ${dotColor}88`, flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <span style={{ fontSize: '13px', color: isBlown ? '#ff7777' : isEF ? '#f0c020' : isLive ? '#00ddff' : isActive ? a.color : '#dde4ef', fontWeight: isActive ? '700' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ fontSize: '12px', color: isBlown ? '#ff7777' : isEF ? '#f0c020' : isLive ? '#00ddff' : isActive ? a.color : '#dde4ef', fontWeight: isActive ? '700' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
                             {isBlown && <span title={st?.dailyLossBreached ? 'Perte journalière dépassée' : 'Drawdown maximum atteint'} style={{ fontSize: '8px', background: 'rgba(255,68,85,0.2)', border: '1px solid rgba(255,68,85,0.4)', color: '#ff4455', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0, cursor: 'help' }}>{st?.dailyLossBreached ? 'DAILY 🔴' : 'CRAMÉ'}</span>}
                             {!isBlown && isLive && <span style={{ fontSize: '8px', background: 'rgba(0,221,255,0.15)', border: '1px solid rgba(0,221,255,0.4)', color: '#00ddff', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>LIVE</span>}
                             {!isBlown && !isLive && isEF && <span style={{ fontSize: '8px', background: 'rgba(240,192,32,0.2)', border: '1px solid rgba(240,192,32,0.4)', color: '#f0c020', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0 }}>FUNDED</span>}
                             {!isBlown && !isLive && isVal && <span title="Challenge validé — objectif atteint" style={{ fontSize: '8px', background: 'rgba(0,200,119,0.15)', border: '1px solid rgba(0,200,119,0.3)', color: '#00cc77', padding: '1px 4px', borderRadius: '2px', fontWeight: '700', flexShrink: 0, cursor: 'help' }}>VALIDÉ ✅</span>}
                           </div>
-                          <div style={{ fontSize: '11px', color: isBlown ? '#6a3535' : '#5a6a82', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <div style={{ fontSize: '10px', color: isBlown ? '#6a3535' : '#5a6a82', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <span>{a.typeInfo?.label}</span>
                             {st?.pnl != null && <span style={{ color: st.pnl >= 0 ? '#00aa55' : '#ff4455' }}>{st.pnl >= 0 ? '+' : ''}{st.pnl.toFixed(0)}$</span>}
                           </div>
@@ -348,7 +348,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         LIVE
                       </div>
                       {liveAccts.map(renderAccItem)}
-                      {hasMore(liveAccts, fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '4px 0 6px' }} />}
+                      {hasMore(liveAccts, fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '2px 0 4px' }} />}
                     </>
                   )}
 
@@ -359,7 +359,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         FUNDED
                       </div>
                       {fundedAccts.map(renderAccItem)}
-                      {hasMore(fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '4px 0 6px' }} />}
+                      {hasMore(fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '2px 0 4px' }} />}
                     </>
                   )}
 
@@ -370,7 +370,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         CHALLENGE
                       </div>
                       {challengeAccts.map(renderAccItem)}
-                      {hasMore(challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '4px 0 6px' }} />}
+                      {hasMore(challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '2px 0 4px' }} />}
                     </>
                   )}
 
@@ -381,7 +381,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         VALIDÉ
                       </div>
                       {validatedAccts.map(renderAccItem)}
-                      {blownAccts.length > 0 && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '4px 0 6px' }} />}
+                      {blownAccts.length > 0 && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '2px 0 4px' }} />}
                     </>
                   )}
 
