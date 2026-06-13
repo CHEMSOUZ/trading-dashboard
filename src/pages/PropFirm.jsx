@@ -9,14 +9,14 @@ import {
 // ── Configuration complète par type de compte ──────────────────
 const ACCOUNT_CONFIGS = {
   // Trading Combine — Évaluation (MLL trailing, cible profit, consistency)
-  topstep_50k:       { phase:'combine',        size:50000,  maxLoss:2000, target:3000, consistency:0.50 },
-  topstep_100k:      { phase:'combine',        size:100000, maxLoss:3000, target:6000, consistency:0.50 },
-  topstep_150k:      { phase:'combine',        size:150000, maxLoss:4500, target:9000, consistency:0.50 },
-  lucid_eval_25k:    { phase:'combine',        size:25000,  maxLoss:1000, target:1250, consistency:0.50 },
-  lucid_eval_50k:    { phase:'combine',        size:50000,  maxLoss:2000, target:3000, consistency:0.50 },
-  lucid_eval_100k:   { phase:'combine',        size:100000, maxLoss:3000, target:6000, consistency:0.50 },
-  lucid_eval_150k:   { phase:'combine',        size:150000, maxLoss:4500, target:9000, consistency:0.50 },
-  tradovate_live:    { phase:'combine',        size:50000,  maxLoss:2000, target:3000, consistency:0.50 },
+  topstep_50k:       { phase:'combine',        size:50000,  maxLoss:2000, target:3000, consistency:0.50, minDays:5 },
+  topstep_100k:      { phase:'combine',        size:100000, maxLoss:3000, target:6000, consistency:0.50, minDays:5 },
+  topstep_150k:      { phase:'combine',        size:150000, maxLoss:4500, target:9000, consistency:0.50, minDays:5 },
+  lucid_eval_25k:    { phase:'combine',        size:25000,  maxLoss:1000, target:1250, consistency:0.50, minDays:5 },
+  lucid_eval_50k:    { phase:'combine',        size:50000,  maxLoss:2000, target:3000, consistency:0.50, minDays:5 },
+  lucid_eval_100k:   { phase:'combine',        size:100000, maxLoss:3000, target:6000, consistency:0.50, minDays:5 },
+  lucid_eval_150k:   { phase:'combine',        size:150000, maxLoss:4500, target:9000, consistency:0.50, minDays:5 },
+  tradovate_live:    { phase:'combine',        size:50000,  maxLoss:2000, target:3000, consistency:0.50, minDays:5 },
   // Express Funded Standard — MLL trailing + 5 jours ≥150$
   topstep_ef_50k:    { phase:'ef_standard',   size:50000,  maxLoss:2000, winDaysNeeded:5, winDayMin:150 },
   topstep_ef_100k:   { phase:'ef_standard',   size:100000, maxLoss:3000, winDaysNeeded:5, winDayMin:150 },
@@ -430,7 +430,7 @@ function PhaseSelector({ account, onChanged }) {
 
 // ── TRADING COMBINE ────────────────────────────────────────────
 function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput, onSaveBalance }) {
-  const { size, maxLoss, target, consistency } = cfg;
+  const { size, maxLoss, target, consistency, minDays = 5 } = cfg;
   const totalNet = trades.reduce((s,t) => s + getNet(t), 0);
   const balance  = manualBalance > 0 ? manualBalance : size + totalNet;
 
@@ -443,17 +443,22 @@ function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput,
   const dailyArr   = dayEntries.map(([d,p]) => ({ date:d.slice(5), pnl:round2(p) }));
 
   // Consistency rule: best day < 50% of target; if breached, target adjusts
-  const bestDay  = Math.max(...dayEntries.map(([,p]) => p).filter(p=>p>0), 0);
+  const posDays  = dayEntries.filter(([,p]) => p > 0);
+  const bestDay  = posDays.length > 0 ? Math.max(...posDays.map(([,p]) => p)) : 0;
   const consLimit = target * consistency;
   const consBreach= bestDay > 0 && bestDay >= consLimit;
   const dynTarget = consBreach ? Math.ceil(bestDay / consistency) : target;
   const dynLimit  = dynTarget * consistency;
   const targetOk  = totalNet >= dynTarget;
-  const consOk    = !consBreach;
+  // consOk requires at least one positive day AND no breach
+  const consOk    = posDays.length > 0 && !consBreach;
+  // Minimum trading days (all days with any activity, positive or not)
+  const tradeDays = dayEntries.length;
+  const daysOk    = tradeDays >= minDays;
 
   const status = lost
     ? { label:'COMPTE ÉLIMINÉ ❌', color:'#ff4455' }
-    : (targetOk && consOk)
+    : (targetOk && consOk && daysOk)
       ? { label:'✅ CHALLENGE VALIDÉ', color:'#00cc77' }
       : { label:'⏳ EN COURS', color:'#f0a020' };
 
@@ -487,9 +492,13 @@ function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput,
           displayText={`${fmt(totalNet,true)} / +${dynTarget.toLocaleString()}$`} />
       </ObjRow>
 
-      <ObjRow ok={consOk&&bestDay>0} pending={bestDay===0}
+      <ObjRow ok={consOk} pending={posDays.length===0}
         label={`Consistency — aucun jour ≥ ${(consistency*100).toFixed(0)}% du target (< ${dynLimit.toFixed(0)}$)`}
         detail={bestDay>0 ? `Meilleur jour : ${fmt(bestDay)} · Limite : ${fmt(dynLimit)}` : 'Aucun jour positif pour le moment'} />
+
+      <ObjRow ok={daysOk} pending={!daysOk&&!lost}
+        label={`Jours tradés minimum — ${minDays} jours requis`}
+        detail={`${tradeDays} jour${tradeDays>1?'s':''} tradé${tradeDays>1?'s':''} · Requis : ${minDays}`} />
 
       <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>DRAWDOWN — MLL TRAILING</div>
       <MLLSection mll={mll} size={size} maxLoss={maxLoss} balance={balance} isLocked={isLocked} postPayout={false} />
@@ -512,11 +521,11 @@ function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput,
         </div>
       </div>
 
-      {targetOk && consOk && !lost && (
+      {targetOk && consOk && daysOk && !lost && (
         <div style={{ background:'rgba(0,204,119,0.08)', border:'2px solid rgba(0,204,119,0.50)', borderRadius:'8px', padding:'20px', textAlign:'center', boxShadow:'0 0 30px rgba(0,204,119,0.08)' }}>
           <div style={{ fontSize:'26px', marginBottom:'6px' }}>🎉</div>
           <div style={{ fontSize:'18px', fontWeight:'700', color:'#00cc77', marginBottom:'4px' }}>TRADING COMBINE VALIDÉ !</div>
-          <div style={{ fontSize:'13px', color:'#5868a0' }}>Profit target atteint · Consistency respectée · Demande ton compte Funded.</div>
+          <div style={{ fontSize:'13px', color:'#5868a0' }}>Profit target atteint · Consistency respectée · {minDays} jours tradés · Demande ton compte Funded.</div>
         </div>
       )}
     </div>

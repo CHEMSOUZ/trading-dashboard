@@ -403,13 +403,26 @@ function SyntheseTab({ trades, loading }) {
   });
 
   // Long vs Short
-  const longTrades  = trades.filter(t => t.direction === 'LONG');
-  const shortTrades = trades.filter(t => t.direction === 'SHORT');
   const dirStats = ['LONG','SHORT'].map(dir => {
-    const dt = dir==='LONG' ? longTrades : shortTrades;
+    const dt = trades.filter(t => t.direction === dir);
     const dp = dt.reduce((s,t) => s+(getNet(t)??0), 0);
-    const dw = dt.filter(t => (getNet(t)??0) > 0).length;
-    return { dir, n:dt.length, pnl:dp, wr:dt.length>0?Math.round((dw/dt.length)*100):0, avg:dt.length>0?dp/dt.length:0 };
+    const dw = dt.filter(t => (getNet(t)??0) > 0);
+    const dl = dt.filter(t => (getNet(t)??0) < 0);
+    const grossW = dw.reduce((s,t) => s+(getNet(t)??0), 0);
+    const grossL = Math.abs(dl.reduce((s,t) => s+(getNet(t)??0), 0));
+    const dpf = grossL > 0 ? grossW/grossL : dw.length > 0 ? 99 : 0;
+    const nets = dt.map(t => getNet(t)??0);
+    return {
+      dir, n:dt.length, pnl:dp,
+      wr:  dt.length>0 ? Math.round((dw.length/dt.length)*100) : 0,
+      avg: dt.length>0 ? dp/dt.length : 0,
+      wins:dw.length, losses:dl.length,
+      pf:  dpf,
+      avgWin:  dw.length>0 ? grossW/dw.length : 0,
+      avgLoss: dl.length>0 ? grossL/dl.length : 0,
+      bestT:   nets.length>0 ? Math.max(...nets) : 0,
+      worstT:  nets.length>0 ? Math.min(...nets) : 0,
+    };
   }).filter(d => d.n > 0);
 
   // Top pairs
@@ -447,29 +460,44 @@ function SyntheseTab({ trades, loading }) {
 
       {/* Long vs Short */}
       {dirStats.length > 0 && (
-        <div style={{ display:'grid', gridTemplateColumns:`repeat(${dirStats.length},1fr)`, gap:'10px' }}>
-          {dirStats.map(({ dir, n, pnl, wr, avg }) => {
-            const isLong = dir === 'LONG';
-            const col = pnlColor(pnl);
-            const dirCol = isLong ? '#00cc77' : '#ff3344';
-            return (
-              <div key={dir} style={{ background:`rgba(${isLong?'0,204,119':'255,51,68'},0.04)`, border:`1px solid rgba(${isLong?'0,204,119':'255,51,68'},0.15)`, borderRadius:'8px', padding:'14px 18px', display:'flex', alignItems:'center', gap:'16px' }}>
-                <div style={{ fontSize:'22px' }}>{isLong ? '↑' : '↓'}</div>
-                <div style={{ flex:1 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px' }}>
-                    <span style={{ fontSize:'13px', fontWeight:'700', color:dirCol, letterSpacing:'1px' }}>{dir}</span>
+        <>
+          <SectionTitle>LONG vs SHORT</SectionTitle>
+          <div style={{ display:'grid', gridTemplateColumns:`repeat(${dirStats.length},1fr)`, gap:'10px' }}>
+            {dirStats.map(({ dir, n, pnl, wr, avg, wins, losses, pf, avgWin, avgLoss, bestT, worstT }) => {
+              const isLong = dir === 'LONG';
+              const dirCol = isLong ? '#00cc77' : '#ff3344';
+              const dirRgb = isLong ? '0,204,119' : '255,51,68';
+              const metrics = [
+                { label:'P&L TOTAL',  value:fmt(pnl,true),                                color:pnlColor(pnl) },
+                { label:'MOY./TRADE', value:fmt(avg,true),                                color:pnlColor(avg) },
+                { label:'PF',         value:pf===99?'∞':pf.toFixed(2),                   color:pf>=1.5?'#00cc77':pf>=1?T.text1:'#ff3344' },
+                { label:'MOY. WIN',   value:avgWin>0?fmt(avgWin,true):'—',               color:'#00cc77' },
+                { label:'MOY. LOSS',  value:avgLoss>0?`-${avgLoss.toFixed(2)}$`:'—',     color:'#ff3344' },
+                { label:'MEILLEUR',   value:bestT>0?fmt(bestT,true):'—',                  color:'#00cc77' },
+                { label:'PIRE',       value:worstT<0?fmt(worstT,true):'—',               color:'#ff3344' },
+              ];
+              return (
+                <div key={dir} style={{ background:`rgba(${dirRgb},0.04)`, border:`1px solid rgba(${dirRgb},0.18)`, borderRadius:'8px', padding:'14px 16px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px' }}>
+                    <span style={{ fontSize:'22px', lineHeight:1 }}>{isLong ? '↑' : '↓'}</span>
+                    <span style={{ fontSize:'14px', fontWeight:'700', color:dirCol, letterSpacing:'2px' }}>{dir}</span>
                     <span style={{ fontSize:'12px', color:T.text3 }}>{n} trade{n>1?'s':''}</span>
-                    <span style={{ fontSize:'12px', fontWeight:'600', color:wr>=50?'#00cc77':'#ff3344' }}>{wr}% WR</span>
+                    <span style={{ marginLeft:'auto', fontSize:'13px', fontWeight:'700', color:wr>=50?'#00cc77':'#ff3344' }}>{wr}% WR</span>
+                    <span style={{ fontSize:'12px', color:T.text3 }}>{wins}W / {losses}L</span>
                   </div>
-                  <div style={{ display:'flex', gap:'20px' }}>
-                    <div><div style={{ fontSize:'11px', color:T.text4, marginBottom:'2px' }}>P&L TOTAL</div><div style={{ fontSize:'15px', fontWeight:'700', color:col }}>{fmt(pnl,true)}</div></div>
-                    <div><div style={{ fontSize:'11px', color:T.text4, marginBottom:'2px' }}>MOY./TRADE</div><div style={{ fontSize:'15px', fontWeight:'700', color:pnlColor(avg) }}>{fmt(avg,true)}</div></div>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))', gap:'6px' }}>
+                    {metrics.map(({ label, value, color }) => (
+                      <div key={label} style={{ background:`${T.bg}0.60)`, borderRadius:'5px', padding:'6px 8px' }}>
+                        <div style={{ fontSize:'10px', color:T.text4, letterSpacing:'1px', marginBottom:'2px' }}>{label}</div>
+                        <div style={{ fontSize:'13px', fontWeight:'700', color }}>{value}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* Stat cards */}
