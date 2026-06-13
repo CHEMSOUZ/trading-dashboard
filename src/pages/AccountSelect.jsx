@@ -726,7 +726,7 @@ export default function AccountSelect({ onSelect, onBack }) {
         </div>
       </div>
 
-      <div style={{ width: '100%', maxWidth: '920px' }}>
+      <div style={{ width: '100%' }}>
         {data.accounts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', border: '1px dashed #1e2c40', borderRadius: '10px', marginBottom: '20px' }}>
             <div style={{ fontSize: '40px', marginBottom: '16px' }}>📊</div>

@@ -228,6 +228,14 @@ function CTooltip({ active, payload, label }) {
 }
 
 // ── Calendar Heatmap ──────────────────────────────────────────
+function isoWeek(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+  const jan4 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - jan4) / 86400000 - 3 + (jan4.getDay() + 6) % 7) / 7);
+}
+
 function CalendarHeatmap({ trades }) {
   const now   = new Date();
   const year  = now.getFullYear();
@@ -244,10 +252,45 @@ function CalendarHeatmap({ trades }) {
   firstDay = firstDay === 0 ? 6 : firstDay - 1;
   const maxPnl = Math.max(...Object.values(dayMap).map(d => Math.abs(d.pnl)), 1);
   const todayStr = now.toISOString().slice(0, 10);
-  const cells = [];
-  for (let i = 0; i < firstDay; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  // Build flat cell list then chunk into rows of 7
+  const flatCells = [];
+  for (let i = 0; i < firstDay; i++) flatCells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) flatCells.push(d);
+  // Pad to multiple of 7
+  while (flatCells.length % 7 !== 0) flatCells.push(null);
+  const rows = [];
+  for (let i = 0; i < flatCells.length; i += 7) rows.push(flatCells.slice(i, i + 7));
+
   const monthLabel = now.toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
+
+  function renderDay(day, rowIdx, colIdx) {
+    const key = day
+      ? `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+      : `e${rowIdx}_${colIdx}`;
+    if (!day) return <div key={key} />;
+    const ds   = key;
+    const data = dayMap[ds];
+    const isToday = ds === todayStr;
+    let bg = `${T.bg}0.35)`, textColor = T.text3, pnlText = null;
+    if (data) {
+      const int = Math.min(Math.abs(data.pnl)/maxPnl, 1);
+      if (data.pnl > 0)      { bg=`rgba(0,204,119,${0.09+int*0.42})`; textColor='#00cc77'; }
+      else if (data.pnl < 0) { bg=`rgba(255,51,68,${0.09+int*0.42})`;  textColor='#ff4455'; }
+      else                   { bg='rgba(96,104,120,0.15)'; textColor='#606878'; }
+      pnlText = `${data.pnl>=0?'+':''}${Math.round(data.pnl)}$`;
+    }
+    return (
+      <div key={ds} title={data ? `${fmt(data.pnl,true)} · ${data.count}t` : ds}
+        style={{ minHeight:'52px', borderRadius:'5px', background:bg, border:`1px solid ${isToday?`${T.border}0.60)`:'transparent'}`, outline:isToday?`1px solid ${T.border}0.30)`:'none', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'3px', cursor:data?'pointer':'default', transition:'opacity 0.15s', padding:'4px 2px' }}
+        onMouseEnter={e => { if(data) e.currentTarget.style.opacity='0.75'; }}
+        onMouseLeave={e => e.currentTarget.style.opacity='1'}>
+        <span style={{ fontSize:'13px', color:textColor, fontWeight:data?'700':'400', lineHeight:1 }}>{day}</span>
+        {data && <span style={{ fontSize:'12px', color:textColor, opacity:0.90, lineHeight:1, fontWeight:'600' }}>{pnlText}</span>}
+        {data && <span style={{ fontSize:'11px', color:textColor, opacity:0.55, lineHeight:1 }}>{data.count}t</span>}
+      </div>
+    );
+  }
 
   return (
     <div style={{ background:`${T.bg}0.65)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'14px 16px' }}>
@@ -258,35 +301,41 @@ function CalendarHeatmap({ trades }) {
           <span style={{ display:'flex', alignItems:'center', gap:'3px' }}><span style={{ width:'8px', height:'8px', borderRadius:'2px', background:'rgba(255,51,68,0.4)', display:'inline-block' }} /> Perte</span>
         </div>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'4px', marginBottom:'4px' }}>
+      {/* Header row */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr) 36px', gap:'4px', marginBottom:'4px' }}>
         {['LUN','MAR','MER','JEU','VEN','SAM','DIM'].map((d,i) => <div key={i} style={{ textAlign:'center', fontSize:'12px', color:T.text3, fontWeight:'700', paddingBottom:'4px' }}>{d}</div>)}
+        <div style={{ textAlign:'center', fontSize:'10px', color:T.text4, paddingBottom:'4px' }}>S.</div>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'4px' }}>
-        {cells.map((day, i) => {
-          if (!day) return <div key={`e${i}`} />;
-          const ds   = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-          const data = dayMap[ds];
-          const isToday = ds === todayStr;
-          let bg = `${T.bg}0.35)`, textColor = T.text3, pnlText = null;
-          if (data) {
-            const int = Math.min(Math.abs(data.pnl)/maxPnl, 1);
-            if (data.pnl > 0)      { bg=`rgba(0,204,119,${0.09+int*0.42})`; textColor='#00cc77'; }
-            else if (data.pnl < 0) { bg=`rgba(255,51,68,${0.09+int*0.42})`;  textColor='#ff4455'; }
-            else                   { bg='rgba(96,104,120,0.15)'; textColor='#606878'; }
-            pnlText = `${data.pnl>=0?'+':''}${Math.round(data.pnl)}$`;
-          }
-          return (
-            <div key={ds} title={data ? `${fmt(data.pnl,true)} · ${data.count}t` : ds}
-              style={{ minHeight:'52px', borderRadius:'5px', background:bg, border:`1px solid ${isToday?`${T.border}0.60)`:'transparent'}`, outline:isToday?`1px solid ${T.border}0.30)`:'none', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'3px', cursor:data?'pointer':'default', transition:'opacity 0.15s', padding:'4px 2px' }}
-              onMouseEnter={e => { if(data) e.currentTarget.style.opacity='0.75'; }}
-              onMouseLeave={e => e.currentTarget.style.opacity='1'}>
-              <span style={{ fontSize:'13px', color:textColor, fontWeight:data?'700':'400', lineHeight:1 }}>{day}</span>
-              {data && <span style={{ fontSize:'12px', color:textColor, opacity:0.90, lineHeight:1, fontWeight:'600' }}>{pnlText}</span>}
-              {data && <span style={{ fontSize:'11px', color:textColor, opacity:0.55, lineHeight:1 }}>{data.count}t</span>}
+      {/* Calendar rows */}
+      {rows.map((row, ri) => {
+        // Find first non-null day to compute week number
+        const firstDayInRow = row.find(d => d != null);
+        let weekNum = null;
+        if (firstDayInRow) {
+          const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(firstDayInRow).padStart(2,'0')}`;
+          weekNum = isoWeek(ds);
+        }
+        // Compute row P&L for week label color
+        const rowPnl = row.reduce((s, day) => {
+          if (!day) return s;
+          const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+          return s + (dayMap[ds]?.pnl ?? 0);
+        }, 0);
+        const weekColor = rowPnl > 0 ? '#00cc77' : rowPnl < 0 ? '#ff4455' : T.text4;
+        return (
+          <div key={ri} style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr) 36px', gap:'4px', marginBottom:'4px' }}>
+            {row.map((day, ci) => renderDay(day, ri, ci))}
+            <div title={weekNum ? `Semaine ${weekNum}${rowPnl !== 0 ? ` · ${rowPnl >= 0 ? '+' : ''}${Math.round(rowPnl)}$` : ''}` : ''}
+              style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'2px', paddingLeft:'4px', borderLeft:`1px solid ${T.border}0.08)` }}>
+              {weekNum && <>
+                <span style={{ fontSize:'9px', color:T.text4, lineHeight:1 }}>S.</span>
+                <span style={{ fontSize:'11px', fontWeight:'700', color:rowPnl !== 0 ? weekColor : T.text4, lineHeight:1 }}>{weekNum}</span>
+                {rowPnl !== 0 && <span style={{ fontSize:'9px', color:weekColor, opacity:0.8, lineHeight:1 }}>{rowPnl >= 0 ? '+' : ''}{Math.round(rowPnl)}$</span>}
+              </>}
             </div>
-          );
-        })}
-      </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1032,6 +1081,359 @@ function GraphiquesTab({ trades, loading }) {
   );
 }
 
+// ── HEAT MAP + PATTERNS (fusionné) ───────────────────────────
+function HeatMapPatterns({ trades, loading }) {
+  if (loading || !trades.length) return null;
+
+  const HOURS  = Array.from({ length: 13 }, (_, i) => i + 7); // 7h..19h
+  const DOWS   = [1, 2, 3, 4, 5];
+  const DOW_L  = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven'];
+
+  // ── Heatmap cells: {dow}_{hour} ──────────────────────────
+  const cells = {};
+  trades.forEach(t => {
+    if (!t.entered_at) return;
+    const d = new Date(t.entered_at);
+    const dow = d.getDay(); const h = d.getHours();
+    if (!DOWS.includes(dow) || h < 7 || h > 19) return;
+    const key = `${dow}_${h}`;
+    if (!cells[key]) cells[key] = { pnl: 0, n: 0, w: 0 };
+    cells[key].pnl += getNet(t) ?? 0; cells[key].n++;
+    if ((getNet(t) ?? 0) > 0) cells[key].w++;
+  });
+  const maxAbs = Math.max(...Object.values(cells).map(c => Math.abs(c.pnl)), 1);
+
+  // Agrégats heure / jour
+  const hourAgg = {};
+  HOURS.forEach(h => {
+    let pnl = 0, n = 0;
+    DOWS.forEach(d => { const c = cells[`${d}_${h}`]; if (c) { pnl += c.pnl; n += c.n; } });
+    hourAgg[h] = { pnl, n, avg: n > 0 ? pnl / n : 0 };
+  });
+  const dowAgg = {};
+  DOWS.forEach(d => {
+    let pnl = 0, n = 0;
+    HOURS.forEach(h => { const c = cells[`${d}_${h}`]; if (c) { pnl += c.pnl; n += c.n; } });
+    dowAgg[d] = { pnl, n };
+  });
+
+  const withTrades = Object.entries(hourAgg).filter(([, d]) => d.n > 0);
+  const bestHour  = withTrades.length ? withTrades.reduce((a, b) => b[1].avg > a[1].avg ? b : a) : null;
+  const worstHour = withTrades.length ? withTrades.reduce((a, b) => b[1].avg < a[1].avg ? b : a) : null;
+  const bestDow   = DOWS.filter(d => dowAgg[d].n > 0).reduce((a, b) => dowAgg[b].pnl > dowAgg[a].pnl ? b : a, DOWS[0]);
+
+  // ── Patterns: pair × direction ────────────────────────────
+  const patMap = {};
+  trades.forEach(t => {
+    if (!t.pair || !t.direction) return;
+    const key = `${t.pair}|${t.direction}`;
+    if (!patMap[key]) patMap[key] = { pair: t.pair, dir: t.direction, pnl: 0, n: 0, w: 0 };
+    patMap[key].pnl += getNet(t) ?? 0; patMap[key].n++;
+    if ((getNet(t) ?? 0) > 0) patMap[key].w++;
+  });
+  const patterns = Object.values(patMap)
+    .filter(p => p.n >= 2)
+    .map(p => ({ ...p, avg: p.pnl / p.n, wr: Math.round((p.w / p.n) * 100) }))
+    .sort((a, b) => b.avg - a.avg);
+  const maxAvgAbs = Math.max(...patterns.map(p => Math.abs(p.avg)), 1);
+  const worstPats = [...patterns].sort((a, b) => a.avg - b.avg).filter(p => p.avg < -5);
+
+  return (
+    <div style={{ background: `${T.bg}0.55)`, border: `1px solid ${T.border}0.10)`, borderRadius: '10px', overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{ padding: '11px 18px', borderBottom: `1px solid ${T.border}0.08)`, display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span style={{ fontSize: '11px', color: T.text3, letterSpacing: '2.5px', fontWeight: '700' }}>HEAT MAP</span>
+        <div style={{ width: '1px', height: '12px', background: `${T.border}0.15)` }} />
+        <span style={{ fontSize: '11px', color: T.text3, letterSpacing: '2.5px', fontWeight: '700' }}>PATTERNS</span>
+        <span style={{ fontSize: '11px', color: T.text4 }}>· analyse horaire & setups récurrents</span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+
+        {/* ── LEFT: Heat Map ── */}
+        <div style={{ padding: '16px 18px', borderRight: `1px solid ${T.border}0.08)` }}>
+          <div style={{ fontSize: '10px', color: T.text3, letterSpacing: '2px', marginBottom: '10px', fontWeight: '600' }}>HEURE × JOUR DE SEMAINE</div>
+          {/* Col headers */}
+          <div style={{ display: 'grid', gridTemplateColumns: '22px repeat(5,1fr)', gap: '3px', marginBottom: '3px' }}>
+            <div />
+            {DOW_L.map((d, i) => {
+              const col = dowAgg[DOWS[i]]?.n > 0 ? (dowAgg[DOWS[i]].pnl >= 0 ? '#00cc77' : '#ff4455') : T.text4;
+              return <div key={i} style={{ textAlign: 'center', fontSize: '10px', color: col, fontWeight: '700' }}>{d}</div>;
+            })}
+          </div>
+          {/* Grid rows */}
+          {HOURS.map(h => {
+            const hd = hourAgg[h];
+            return (
+              <div key={h} style={{ display: 'grid', gridTemplateColumns: '22px repeat(5,1fr)', gap: '3px', marginBottom: '3px' }}>
+                <div style={{ fontSize: '9px', color: T.text3, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '3px', opacity: hd?.n > 0 ? 1 : 0.45 }}>{h}h</div>
+                {DOWS.map((dow, di) => {
+                  const c = cells[`${dow}_${h}`];
+                  let bg = `rgba(136,153,187,0.04)`;
+                  let title = `${DOW_L[di]} ${h}h — aucun trade`;
+                  if (c) {
+                    const int = Math.min(Math.abs(c.pnl) / maxAbs, 1);
+                    bg = c.pnl >= 0
+                      ? `rgba(0,204,119,${(0.10 + int * 0.52).toFixed(2)})`
+                      : `rgba(255,51,68,${(0.10 + int * 0.52).toFixed(2)})`;
+                    title = `${DOW_L[di]} ${h}h · ${fmt(c.pnl, true)} · ${c.n}t · ${Math.round((c.w/c.n)*100)}%WR`;
+                  }
+                  return (
+                    <div key={dow} title={title}
+                      style={{ height: '19px', borderRadius: '3px', background: bg, cursor: c ? 'default' : 'default', transition: 'opacity 0.12s' }}
+                      onMouseEnter={e => { if (c) e.currentTarget.style.opacity = '0.70'; }}
+                      onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                    />
+                  );
+                })}
+              </div>
+            );
+          })}
+          {/* Legend + insights */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', fontSize: '10px', color: T.text4 }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: 'rgba(0,204,119,0.5)', display: 'inline-block' }} /> Profit
+              <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: 'rgba(255,51,68,0.5)', display: 'inline-block', marginLeft: '4px' }} /> Perte
+            </div>
+            {bestHour && <span style={{ fontSize: '10px', color: T.text3 }}>✓ <span style={{ color: '#00cc77', fontWeight: '600' }}>{bestHour[0]}h</span></span>}
+            {worstHour && bestHour && bestHour[0] !== worstHour[0] && <span style={{ fontSize: '10px', color: T.text3 }}>✗ <span style={{ color: '#ff4455', fontWeight: '600' }}>{worstHour[0]}h</span></span>}
+            {bestDow && dowAgg[bestDow]?.n > 0 && <span style={{ fontSize: '10px', color: T.text3 }}>Jour top : <span style={{ color: '#00cc77', fontWeight: '600' }}>{DOW_L[DOWS.indexOf(bestDow)]}</span></span>}
+          </div>
+        </div>
+
+        {/* ── RIGHT: Patterns ── */}
+        <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ fontSize: '10px', color: T.text3, letterSpacing: '2px', marginBottom: '6px', fontWeight: '600' }}>SETUPS RÉCURRENTS</div>
+          {patterns.length === 0 ? (
+            <div style={{ color: T.text4, fontSize: '12px', padding: '32px 0', textAlign: 'center', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              Pas assez de données<br /><span style={{ fontSize: '11px', marginTop: '4px', display: 'block' }}>min. 2 trades par setup</span>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                {patterns.slice(0, 7).map(p => {
+                  const isLong = p.dir === 'LONG';
+                  const col    = pnlColor(p.avg);
+                  const barW   = Math.round((Math.abs(p.avg) / maxAvgAbs) * 100);
+                  return (
+                    <div key={p.pair + p.dir} style={{ position: 'relative', padding: '7px 10px', borderRadius: '5px', background: `rgba(${isLong ? '0,204,119' : '255,51,68'},0.04)`, border: `1px solid rgba(${isLong ? '0,204,119' : '255,51,68'},0.12)`, overflow: 'hidden' }}>
+                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${barW}%`, background: `${p.avg >= 0 ? 'rgba(0,204,119,' : 'rgba(255,51,68,'}0.07)`, zIndex: 0 }} />
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '700', color: T.text1, minWidth: '42px' }}>{p.pair}</span>
+                        <span style={{ fontSize: '10px', fontWeight: '700', color: isLong ? '#00cc77' : '#ff3344', background: `rgba(${isLong ? '0,204,119' : '255,51,68'},0.12)`, border: `1px solid rgba(${isLong ? '0,204,119' : '255,51,68'},0.22)`, padding: '1px 5px', borderRadius: '3px' }}>{p.dir}</span>
+                        <span style={{ fontSize: '11px', color: T.text3, flex: 1 }}>{p.n}x · <span style={{ color: p.wr >= 50 ? '#00cc77' : '#ff3344', fontWeight: '600' }}>{p.wr}%WR</span></span>
+                        <span style={{ fontSize: '12px', fontWeight: '700', color: col }}>{p.avg >= 0 ? '+' : ''}{p.avg.toFixed(0)}$<span style={{ fontSize: '10px', color: T.text4, fontWeight: '400' }}>/t</span></span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {worstPats.length > 0 && (
+                <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: `1px solid ${T.border}0.07)` }}>
+                  <div style={{ fontSize: '10px', color: '#ff7788', letterSpacing: '1.5px', marginBottom: '5px', opacity: 0.8 }}>⚠ À ÉVITER</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {worstPats.slice(0, 2).map(p => (
+                      <div key={p.pair + p.dir + 'w'} style={{ padding: '5px 10px', borderRadius: '4px', background: 'rgba(255,51,68,0.05)', border: '1px solid rgba(255,51,68,0.14)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '12px', color: T.text2 }}>{p.pair}</span>
+                        <span style={{ fontSize: '10px', fontWeight: '700', color: '#ff3344', background: 'rgba(255,51,68,0.10)', padding: '1px 5px', borderRadius: '3px' }}>{p.dir}</span>
+                        <span style={{ fontSize: '11px', color: T.text3 }}>{p.n}x</span>
+                        <span style={{ marginLeft: 'auto', fontSize: '12px', fontWeight: '700', color: '#ff3344' }}>{p.avg.toFixed(0)}$/t</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── RISK MANAGER ──────────────────────────────────────────────
+function RiskManager({ trades, account, loading }) {
+  const [settings, setSettings] = useState(() => {
+    try { const s = localStorage.getItem('rm_settings'); return s ? JSON.parse(s) : { dailyLimit: 500, riskPct: 1, targetRR: 2 }; }
+    catch { return { dailyLimit: 500, riskPct: 1, targetRR: 2 }; }
+  });
+  const [editing, setEditing] = useState(false);
+  const [draft,   setDraft]   = useState(settings);
+
+  function saveSettings() {
+    setSettings(draft);
+    localStorage.setItem('rm_settings', JSON.stringify(draft));
+    setEditing(false);
+  }
+
+  if (loading) return null;
+
+  const todayStr    = new Date().toISOString().slice(0, 10);
+  const todayTrades = trades.filter(t => t.date === todayStr);
+  const todayPnl    = todayTrades.reduce((s, t) => s + (getNet(t) ?? 0), 0);
+
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - (weekStart.getDay() || 7) + 1);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekStr    = weekStart.toISOString().slice(0, 10);
+  const weekTrades = trades.filter(t => t.date >= weekStr);
+  const weekPnl    = weekTrades.reduce((s, t) => s + (getNet(t) ?? 0), 0);
+  const weekWR     = weekTrades.length > 0 ? Math.round(weekTrades.filter(t => (getNet(t) ?? 0) > 0).length / weekTrades.length * 100) : 0;
+
+  // Consecutive losses (most recent trades first)
+  const sorted = [...trades].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || b.id - a.id);
+  let consLosses = 0;
+  for (const t of sorted) { if ((getNet(t) ?? 0) < 0) consLosses++; else break; }
+
+  // Daily risk status
+  const dailyLossUsed = Math.max(0, -todayPnl);
+  const dailyLossPct  = Math.min(100, (dailyLossUsed / settings.dailyLimit) * 100);
+  const shouldStop     = todayPnl <= -settings.dailyLimit;
+  const ddCol          = dailyLossPct >= 80 ? '#ff3344' : dailyLossPct >= 50 ? '#f59e0b' : '#00cc77';
+
+  // Sizing
+  const accountSize  = account?.typeInfo?.size ?? 50000;
+  const riskPerTrade = accountSize * (settings.riskPct / 100);
+
+  // Global stats
+  const wins   = trades.filter(t => (getNet(t) ?? 0) > 0);
+  const losses = trades.filter(t => (getNet(t) ?? 0) < 0);
+  const wr     = trades.length > 0 ? Math.round(wins.length / trades.length * 100) : 0;
+  const rrs    = trades.filter(t => t.rr && !isNaN(parseFloat(t.rr))).map(t => parseFloat(t.rr));
+  const avgRR  = rrs.length > 0 ? rrs.reduce((s, v) => s + v, 0) / rrs.length : null;
+
+  // Kelly criterion
+  const avgWin  = wins.length  > 0 ? wins.reduce((s, t)  => s + (getNet(t) ?? 0), 0) / wins.length   : 0;
+  const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + (getNet(t) ?? 0), 0)) / losses.length : 0;
+  const kellyPct = avgLoss > 0 && wins.length > 0
+    ? Math.max(0, Math.round(((wins.length / trades.length) - (losses.length / trades.length) / (avgWin / avgLoss)) * 100))
+    : 0;
+
+  return (
+    <div style={{ background: `${T.bg}0.55)`, border: `1px solid ${T.border}0.10)`, borderRadius: '10px', overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{ padding: '11px 18px', borderBottom: `1px solid ${T.border}0.08)`, display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span style={{ fontSize: '11px', color: T.text3, letterSpacing: '2.5px', fontWeight: '700' }}>RISK MANAGER</span>
+        <span style={{ fontSize: '11px', color: T.text4 }}>· gestion du risque & sizing</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', letterSpacing: '1px', background: shouldStop ? 'rgba(255,51,68,0.12)' : 'rgba(0,204,119,0.10)', border: `1px solid ${shouldStop ? 'rgba(255,51,68,0.35)' : 'rgba(0,204,119,0.30)'}`, color: shouldStop ? '#ff3344' : '#00cc77' }}>
+            {shouldStop ? '⛔ STOP TRADING' : '✓ CONTINUER'}
+          </div>
+          <button onClick={() => { setDraft(settings); setEditing(e => !e); }}
+            style={{ background: 'transparent', border: `1px solid ${T.border}0.18)`, color: T.text3, padding: '4px 9px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.color = T.text1; e.currentTarget.style.borderColor = `${T.border}0.35)`; }}
+            onMouseLeave={e => { e.currentTarget.style.color = T.text3; e.currentTarget.style.borderColor = `${T.border}0.18)`; }}>
+            ⚙ Réglages
+          </button>
+        </div>
+      </div>
+
+      {/* Settings panel */}
+      {editing && (
+        <div style={{ padding: '12px 18px', background: `rgba(136,153,187,0.04)`, borderBottom: `1px solid ${T.border}0.08)`, display: 'flex', gap: '18px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          {[
+            { key: 'dailyLimit', label: 'Limite perte/jour ($)', min: 50,  max: 10000, step: 50 },
+            { key: 'riskPct',    label: 'Risque/trade (%)',       min: 0.1, max: 5,     step: 0.1 },
+            { key: 'targetRR',   label: 'R:R cible',              min: 0.5, max: 5,     step: 0.5 },
+          ].map(({ key, label, min, max, step }) => (
+            <div key={key}>
+              <div style={{ fontSize: '10px', color: T.text3, letterSpacing: '1px', marginBottom: '4px' }}>{label}</div>
+              <input type="number" min={min} max={max} step={step} value={draft[key]}
+                onChange={e => setDraft(prev => ({ ...prev, [key]: parseFloat(e.target.value) || prev[key] }))}
+                style={{ width: '95px', background: 'rgba(14,15,22,0.8)', border: '1px solid rgba(136,153,187,0.25)', borderRadius: '4px', padding: '5px 8px', color: T.text1, fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}
+              />
+            </div>
+          ))}
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button onClick={saveSettings} style={{ padding: '6px 14px', background: 'rgba(0,204,119,0.12)', border: '1px solid rgba(0,204,119,0.30)', color: '#00cc77', borderRadius: '4px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer', fontWeight: '700' }}>✓ Sauvegarder</button>
+            <button onClick={() => setEditing(false)} style={{ padding: '6px 10px', background: 'transparent', border: `1px solid ${T.border}0.18)`, color: T.text3, borderRadius: '4px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>✕</button>
+          </div>
+        </div>
+      )}
+
+      {/* Cards grid */}
+      <div style={{ padding: '16px 18px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(195px, 1fr))', gap: '12px' }}>
+
+        {/* Daily risk card */}
+        <div style={{ background: `rgba(${shouldStop ? '255,51,68' : '136,153,187'},0.05)`, border: `1px solid rgba(${shouldStop ? '255,51,68' : '136,153,187'},0.13)`, borderRadius: '8px', padding: '14px' }}>
+          <div style={{ fontSize: '10px', color: T.text3, letterSpacing: '1.8px', marginBottom: '8px' }}>RISQUE JOURNALIER</div>
+          <div style={{ fontSize: '22px', fontWeight: '700', color: pnlColor(todayPnl), lineHeight: 1, marginBottom: '6px', letterSpacing: '-0.5px' }}>
+            {todayPnl >= 0 ? '+' : ''}{todayPnl.toFixed(2)}<span style={{ fontSize: '13px' }}>$</span>
+          </div>
+          <div style={{ fontSize: '11px', color: T.text3, marginBottom: '7px' }}>
+            Limite : <span style={{ color: '#8899bb' }}>-{settings.dailyLimit}$</span>
+            {dailyLossUsed > 0 && <span style={{ color: ddCol, marginLeft: '6px', fontWeight: '600' }}>{dailyLossPct.toFixed(0)}% utilisé</span>}
+          </div>
+          <div style={{ height: '4px', background: 'rgba(136,153,187,0.10)', borderRadius: '2px', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${dailyLossPct}%`, background: ddCol, borderRadius: '2px', transition: 'width 0.6s ease', boxShadow: `0 0 5px ${ddCol}50` }} />
+          </div>
+          <div style={{ fontSize: '11px', color: T.text4, marginTop: '6px' }}>
+            {todayTrades.length} trade{todayTrades.length !== 1 ? 's' : ''} aujourd'hui
+          </div>
+        </div>
+
+        {/* Position sizing */}
+        <div style={{ background: `${T.bg}0.40)`, border: `1px solid ${T.border}0.10)`, borderRadius: '8px', padding: '14px' }}>
+          <div style={{ fontSize: '10px', color: T.text3, letterSpacing: '1.8px', marginBottom: '8px' }}>POSITION SIZING</div>
+          <div style={{ fontSize: '22px', fontWeight: '700', color: '#8899bb', lineHeight: 1, marginBottom: '4px', letterSpacing: '-0.5px' }}>
+            {riskPerTrade.toFixed(0)}<span style={{ fontSize: '13px' }}>$</span>
+          </div>
+          <div style={{ fontSize: '11px', color: T.text3, marginBottom: '10px' }}>
+            risque max/trade · {settings.riskPct}% du compte
+          </div>
+          {kellyPct > 0 && (
+            <div style={{ fontSize: '11px', color: T.text3, padding: '5px 8px', background: 'rgba(136,153,187,0.06)', borderRadius: '4px', border: `1px solid ${T.border}0.08)` }}>
+              Kelly : <span style={{ color: T.accentL, fontWeight: '600' }}>{Math.min(kellyPct, 25)}%</span>
+              <span style={{ color: T.text4, fontSize: '10px' }}> (plafonné 25%)</span>
+            </div>
+          )}
+        </div>
+
+        {/* Performance globale */}
+        <div style={{ background: `${T.bg}0.40)`, border: `1px solid ${T.border}0.10)`, borderRadius: '8px', padding: '14px' }}>
+          <div style={{ fontSize: '10px', color: T.text3, letterSpacing: '1.8px', marginBottom: '8px' }}>PERFORMANCE GLOBALE</div>
+          <div style={{ display: 'flex', gap: '14px', marginBottom: '10px' }}>
+            <div>
+              <div style={{ fontSize: '10px', color: T.text4, marginBottom: '2px' }}>WIN RATE</div>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: wr >= 50 ? '#00cc77' : '#ff3344', lineHeight: 1 }}>{wr}%</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '10px', color: T.text4, marginBottom: '2px' }}>R:R MOY.</div>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: avgRR != null ? (avgRR >= settings.targetRR ? '#00cc77' : '#f59e0b') : T.text3, lineHeight: 1 }}>
+                {avgRR != null ? avgRR.toFixed(2) : '—'}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: '10px', color: T.text4, marginBottom: '2px' }}>CIBLE</div>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: T.text3, lineHeight: 1 }}>{settings.targetRR}</div>
+            </div>
+          </div>
+          {consLosses >= 2 && (
+            <div style={{ padding: '5px 8px', background: 'rgba(255,51,68,0.07)', border: '1px solid rgba(255,51,68,0.18)', borderRadius: '4px', fontSize: '11px', color: '#ff7788' }}>
+              ⚠ {consLosses} pertes consécutives
+            </div>
+          )}
+        </div>
+
+        {/* Semaine */}
+        <div style={{ background: `${T.bg}0.40)`, border: `1px solid ${T.border}0.10)`, borderRadius: '8px', padding: '14px' }}>
+          <div style={{ fontSize: '10px', color: T.text3, letterSpacing: '1.8px', marginBottom: '8px' }}>SEMAINE EN COURS</div>
+          <div style={{ fontSize: '22px', fontWeight: '700', color: pnlColor(weekPnl), lineHeight: 1, marginBottom: '4px', letterSpacing: '-0.5px' }}>
+            {weekPnl >= 0 ? '+' : ''}{weekPnl.toFixed(2)}<span style={{ fontSize: '13px' }}>$</span>
+          </div>
+          <div style={{ fontSize: '11px', color: T.text3, marginBottom: '6px' }}>
+            {weekTrades.length} trade{weekTrades.length !== 1 ? 's' : ''} cette semaine
+          </div>
+          {weekTrades.length > 0 && (
+            <div style={{ fontSize: '11px', color: T.text3 }}>
+              WR semaine : <span style={{ color: weekWR >= 50 ? '#00cc77' : '#ff3344', fontWeight: '600' }}>{weekWR}%</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────
 const PF_TARGETS  = { topstep_50k:3000, topstep_100k:6000, topstep_150k:9000, lucid_eval_25k:1250, lucid_eval_50k:3000, lucid_eval_100k:6000, lucid_eval_150k:9000, tradovate_live:3000 };
 const PF_MAXLOSS  = { topstep_50k:2000, topstep_100k:3000, topstep_150k:4500, lucid_eval_25k:1000, lucid_eval_50k:2000, lucid_eval_100k:3000, lucid_eval_150k:4500, tradovate_live:2000 };
@@ -1081,12 +1483,20 @@ export default function Journal() {
           <div style={{ fontSize:'12px', color:T.text3, letterSpacing:'3px', marginBottom:'5px' }}>HUB TRADING</div>
           <h1 style={{ fontSize:'22px', fontWeight:'700', color:T.text1, margin:0, letterSpacing:'-0.5px' }}>Journal</h1>
         </div>
-        <button
-          onClick={() => navigate('/journal/new')}
-          style={{ background:`${T.border}0.12)`, border:`1px solid ${T.border}0.35)`, color:T.accentL, padding:'9px 18px', borderRadius:'6px', fontSize:'12px', fontFamily:'inherit', letterSpacing:'1.5px', cursor:'pointer', fontWeight:'700', transition:'all 0.2s' }}
-          onMouseEnter={e => { e.currentTarget.style.background=`${T.border}0.22)`; e.currentTarget.style.boxShadow='0 0 16px rgba(136,153,187,0.15)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background=`${T.border}0.12)`; e.currentTarget.style.boxShadow='none'; }}
-        >+ NOUVEAU TRADE</button>
+        <div style={{ display:'flex', gap:'8px' }}>
+          <button
+            onClick={() => navigate('/import')}
+            style={{ background:'transparent', border:`1px solid ${T.border}0.20)`, color:T.text3, padding:'9px 14px', borderRadius:'6px', fontSize:'12px', fontFamily:'inherit', letterSpacing:'1.5px', cursor:'pointer', fontWeight:'700', transition:'all 0.2s', display:'flex', alignItems:'center', gap:'6px' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor=`${T.border}0.40)`; e.currentTarget.style.color=T.text1; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor=`${T.border}0.20)`; e.currentTarget.style.color=T.text3; }}
+          >↑ IMPORT CSV</button>
+          <button
+            onClick={() => navigate('/journal/new')}
+            style={{ background:`${T.border}0.12)`, border:`1px solid ${T.border}0.35)`, color:T.accentL, padding:'9px 18px', borderRadius:'6px', fontSize:'12px', fontFamily:'inherit', letterSpacing:'1.5px', cursor:'pointer', fontWeight:'700', transition:'all 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.background=`${T.border}0.22)`; e.currentTarget.style.boxShadow='0 0 16px rgba(136,153,187,0.15)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background=`${T.border}0.12)`; e.currentTarget.style.boxShadow='none'; }}
+          >+ NOUVEAU TRADE</button>
+        </div>
       </div>
 
       {/* PropFirm progress (challenge accounts only) */}
@@ -1168,6 +1578,14 @@ export default function Journal() {
       {/* Synthèse — stats + equity + calendar */}
       <SyntheseTab trades={trades} loading={loading} />
 
+      {/* Séparateur Patterns & Heat Map */}
+      <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'28px 0 16px' }}>
+        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+        <span style={{ fontSize:'12px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>PATTERNS & HEAT MAP</span>
+        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+      </div>
+      <HeatMapPatterns trades={trades} loading={loading} />
+
       {/* Séparateur Trades */}
       <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'28px 0 16px' }}>
         <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
@@ -1183,6 +1601,14 @@ export default function Journal() {
         <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
       </div>
       <GraphiquesTab trades={trades} loading={loading} />
+
+      {/* Séparateur Risk Manager */}
+      <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'28px 0 16px' }}>
+        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+        <span style={{ fontSize:'12px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>RISK MANAGER</span>
+        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+      </div>
+      <RiskManager trades={trades} account={account} loading={loading} />
     </div>
     {replayTrade && <TradeReplay trade={replayTrade} onClose={() => setReplayTrade(null)} />}
     </>

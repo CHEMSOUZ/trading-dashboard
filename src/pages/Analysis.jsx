@@ -547,7 +547,7 @@ export default function Analysis() {
   const currentList = mode === 'daily' ? dailyList : weeklyList;
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '1000px' }}>
+    <div style={{ padding: '24px 28px', maxWidth: 'none', width: '100%', boxSizing: 'border-box' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>

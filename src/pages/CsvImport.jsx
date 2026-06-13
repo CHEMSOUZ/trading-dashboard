@@ -782,7 +782,7 @@ export default function CsvImport() {
 
   // ── Render ────────────────────────────────────────────────────
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '1000px' }}>
+    <div style={{ padding: '24px 28px', maxWidth: 'none', width: '100%', boxSizing: 'border-box' }}>
 
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>

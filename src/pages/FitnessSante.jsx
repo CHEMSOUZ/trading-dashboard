@@ -248,7 +248,7 @@ export default function FitnessSante() {
   const weeks2     = prog?.weeks2     ?? 34;
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1200 }}>
+    <div style={{ padding: '24px 28px', maxWidth: 'none', width: '100%', boxSizing: 'border-box' }}>
 
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>

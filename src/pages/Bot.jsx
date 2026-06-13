@@ -2398,7 +2398,7 @@ export default function Bot() {
   const inp = { background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.18)', borderRadius: '5px', padding: '7px 10px', color: '#dde4ef', fontSize:'13px', fontFamily: 'inherit', outline: 'none', width: '80px', boxSizing: 'border-box' };
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '960px' }} ref={flashRef}>
+    <div style={{ padding: '24px 28px', maxWidth: 'none', width: '100%', boxSizing: 'border-box' }} ref={flashRef}>
 
       {/* Header */}
       <div style={{ marginBottom: '20px' }}>

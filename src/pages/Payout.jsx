@@ -249,7 +249,7 @@ export default function Payout() {
   }
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '820px', fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>
+    <div style={{ padding: '24px 28px', maxWidth: 'none', width: '100%', boxSizing: 'border-box', fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>
 
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
