@@ -1042,28 +1042,6 @@ export default function GlobalView() {
             </Section>
           </div>
 
-          {/* By account */}
-          {byAccount.length > 1 && (
-            <div style={{ marginTop: '16px' }}>
-              <Section title="🏦 PERFORMANCE PAR COMPTE">
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: '10px' }}>
-                  {byAccount.map(acc => (
-                    <div key={acc.name} style={{ background: acc.isBlown?'rgba(255,68,85,0.06)':'rgba(14,15,22,0.5)', border: `1px solid ${acc.isBlown?'rgba(255,68,85,0.3)':acc.color+'25'}`, borderLeft: `3px solid ${acc.isBlown?'#ff4455':acc.color}`, borderRadius: '6px', padding: '12px 14px', position: 'relative', opacity: acc.isBlown?0.75:1 }}>
-                      {acc.isBlown && <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,68,85,0.15)', border: '1px solid rgba(255,68,85,0.4)', borderRadius: '3px', padding: '2px 6px', fontSize:'12px', color: '#ff4455', fontWeight: '700', letterSpacing: '1px' }}>💀 CRAMÉ</div>}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: acc.isBlown?'#ff4455':acc.color }} />
-                        <span style={{ fontSize: '13px', color: acc.isBlown?'#8a5a5a':'#dde4ef', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{acc.name}</span>
-                      </div>
-                      <div style={{ fontSize: '18px', fontWeight: '700', color: acc.isBlown?'#ff4455':pnlColor(acc.pnl), marginBottom: '4px' }}>{fmt(acc.pnl, true)}</div>
-                      <div style={{ fontSize:'13px', color: acc.isBlown?'#5a6a82':(acc.wr>=50?'#8899bb':'#ff4455') }}>{acc.wr.toFixed(1)}% WR · {acc.total}T</div>
-                      {acc.isBlown && <div style={{ fontSize:'13px', color: '#ff4455', marginTop: '4px' }}>⚠️ Floor {acc.floor}$ franchi</div>}
-                    </div>
-                  ))}
-                </div>
-              </Section>
-            </div>
-          )}
-
           {/* ── CALENDAR ── */}
           <div style={{ marginTop: '16px' }}>
             <TradingCalendar
