@@ -88,8 +88,6 @@ function buildChart(container, candles, zones, isDefaultTf) {
     PWL: { color: '#51cf66', lineWidth: 2, lineStyle: 0 },
     PDH: { color: '#ffa94d', lineWidth: 1, lineStyle: 2 },
     PDL: { color: '#a9e34b', lineWidth: 1, lineStyle: 2 },
-    BSL: { color: '#26a69a', lineWidth: 2, lineStyle: 2 },
-    SSL: { color: '#ef5350', lineWidth: 2, lineStyle: 2 },
   };
   const firstTs = sorted[0]?.ts;
   const lastTs  = sorted[sorted.length - 1]?.ts;
@@ -229,8 +227,6 @@ export default function NQChart({ candles, zones, label, defaultTf, dateRange })
             <span>PWL <span style={{ color: '#51cf66' }}>━</span></span>
             <span>PDH <span style={{ color: '#ffa94d' }}>╌</span></span>
             <span>PDL <span style={{ color: '#a9e34b' }}>╌</span></span>
-            <span>BSL <span style={{ color: '#26a69a' }}>╌</span></span>
-            <span>SSL <span style={{ color: '#ef5350' }}>╌</span></span>
             <span style={{ color: '#3a4a5a' }}>{displayCandles.length} bougies</span>
           </span>
         </div>

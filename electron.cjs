@@ -229,7 +229,7 @@ async function generateIctAnalysis(type, date) {
     const { high: pwh, low: pwl } = calcHighLow(prevWkD1);
     if (pwh && prevWkD1.length) fixedLevels.push({ price: pwh, type: 'PWH', label: 'PWH', ts: sortedD[0]?.ts });
     if (pwl && prevWkD1.length) fixedLevels.push({ price: pwl, type: 'PWL', label: 'PWL', ts: sortedD[0]?.ts });
-    const aiLiqDaily = (zones.liquidity ?? []).filter(l => ['BSL','SSL'].includes(l.type)).slice(0, 4);
+    const aiLiqDaily = [];
     zones.liquidity = [...fixedLevels, ...aiLiqDaily];
 
     return { content, candles, zones,
@@ -286,7 +286,7 @@ async function generateIctAnalysis(type, date) {
     const { high: pwhWk, highTs: pwhWkTs, low: pwlWk, lowTs: pwlWkTs } = calcHighLow(ctxCandles);
     if (pwhWk) fixedLevelsWk.push({ price: pwhWk, type: 'PWH', label: 'PWH', ts: pwhWkTs });
     if (pwlWk) fixedLevelsWk.push({ price: pwlWk, type: 'PWL', label: 'PWL', ts: pwlWkTs });
-    const aiLiqWk = (zones.liquidity ?? []).filter(l => ['BSL','SSL'].includes(l.type)).slice(0, 4);
+    const aiLiqWk = [];
     zones.liquidity = [...fixedLevelsWk, ...aiLiqWk];
 
     return { content, candles, zones,
@@ -342,7 +342,7 @@ async function generateIctAnalysis(type, date) {
     const { high: pwhNW, highTs: pwhNWTs, low: pwlNW, lowTs: pwlNWTs } = calcHighLow(lastWkCandles);
     if (pwhNW) fixedLevelsNW.push({ price: pwhNW, type: 'PWH', label: 'PWH (sem. passée)', ts: pwhNWTs });
     if (pwlNW) fixedLevelsNW.push({ price: pwlNW, type: 'PWL', label: 'PWL (sem. passée)', ts: pwlNWTs });
-    const aiLiqNW = (zones.liquidity ?? []).filter(l => ['BSL','SSL'].includes(l.type)).slice(0, 4);
+    const aiLiqNW = [];
     zones.liquidity = [...fixedLevelsNW, ...aiLiqNW];
 
     return { content, candles, zones,
