@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { createChart, createSeriesMarkers } from 'lightweight-charts';
+import { createChart, CandlestickSeries, createSeriesMarkers } from 'lightweight-charts';
 
 export default function NQChart({ candles, zones, label }) {
   const containerRef = useRef(null);
@@ -28,7 +28,8 @@ export default function NQChart({ candles, zones, label }) {
       crosshair: { mode: 1 },
     });
 
-    const series = chart.addCandlestickSeries({
+    // v5 API: chart.addSeries(CandlestickSeries, options)
+    const series = chart.addSeries(CandlestickSeries, {
       upColor:       '#26a69a',
       downColor:     '#ef5350',
       borderVisible: false,
@@ -36,32 +37,38 @@ export default function NQChart({ candles, zones, label }) {
       wickDownColor: '#ef5350',
     });
 
-    const sorted = [...candles].sort((a, b) => a.ts - b.ts);
+    // Filter out any candle with null/NaN prices before passing to the chart
+    const sorted = [...candles]
+      .filter(c => c.ts != null && c.open != null && c.high != null && c.low != null && c.close != null)
+      .sort((a, b) => a.ts - b.ts);
+
     series.setData(sorted.map(c => ({
       time:  c.ts,
-      open:  c.open,
-      high:  c.high,
-      low:   c.low,
-      close: c.close,
+      open:  Number(c.open),
+      high:  Number(c.high),
+      low:   Number(c.low),
+      close: Number(c.close),
     })));
 
     // FVG price lines (two lines per FVG — high and low)
     for (const fvg of zones?.fvgs ?? []) {
+      if (!fvg.high || !fvg.low) continue;
       const color = fvg.type === 'bullish' ? 'rgba(38,166,154,0.75)' : 'rgba(239,83,80,0.75)';
       const tag   = fvg.type === 'bullish' ? 'FVG▲' : 'FVG▼';
-      series.createPriceLine({ price: fvg.high, color, lineWidth: 1, lineStyle: 3, title: `${tag} H`, axisLabelVisible: false });
-      series.createPriceLine({ price: fvg.low,  color, lineWidth: 1, lineStyle: 3, title: `${tag} L`, axisLabelVisible: false });
+      series.createPriceLine({ price: Number(fvg.high), color, lineWidth: 1, lineStyle: 3, title: `${tag} H`, axisLabelVisible: false });
+      series.createPriceLine({ price: Number(fvg.low),  color, lineWidth: 1, lineStyle: 3, title: `${tag} L`, axisLabelVisible: false });
     }
 
     // Liquidity price lines
     for (const l of zones?.liquidity ?? []) {
+      if (!l.price) continue;
       const color = l.type === 'BSL' ? '#26a69a' : '#ef5350';
-      series.createPriceLine({ price: l.price, color, lineWidth: 2, lineStyle: 2, title: l.label ?? l.type });
+      series.createPriceLine({ price: Number(l.price), color, lineWidth: 2, lineStyle: 2, title: l.label ?? l.type });
     }
 
     // Swing markers via createSeriesMarkers (v5 API)
     const swings = zones?.swings ?? [];
-    if (swings.length > 0) {
+    if (swings.length > 0 && sorted.length > 0) {
       const markers = swings
         .map(sw => {
           const candle = sorted[sw.idx] ?? sorted[sorted.length - 1];
