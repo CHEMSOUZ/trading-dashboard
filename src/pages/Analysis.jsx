@@ -175,7 +175,13 @@ function AnalysisCard({ analysis, onRegenerate, onDelete, generating, chartLabel
       </div>
       {/* Chart */}
       {marketData.candles?.length > 0 && (
-        <NQChart candles={marketData.candles} zones={marketData.zones} label={chartLabel} />
+        <NQChart
+          candles={marketData.candles}
+          zones={marketData.zones}
+          label={chartLabel}
+          defaultTf={marketData.meta?.defaultTf}
+          dateRange={marketData.meta ? { from: marketData.meta.from, to: marketData.meta.to } : null}
+        />
       )}
       {/* Content */}
       <div style={{ lineHeight:'1.7' }}>
@@ -382,7 +388,7 @@ export default function Analysis() {
           <AnalysisCard
             analysis={curDaily}
             generating={isGenDaily ? 'Analyse ICT de la journée en cours…' : null}
-            chartLabel="1H · ICT SESSIONS"
+            chartLabel="M15 · ICT SESSIONS"
             onRegenerate={() => {
               const d = selDaily ?? getLastTradeDay();
               generate('daily', d);
@@ -416,7 +422,7 @@ export default function Analysis() {
           <AnalysisCard
             analysis={curWeekly}
             generating={isGenWeekly ? 'Bilan hebdomadaire ICT en cours…' : null}
-            chartLabel="1D · BILAN HEBDO"
+            chartLabel="H1 · BILAN HEBDO"
             onRegenerate={() => {
               const d = selWeekly ?? getLastMonday();
               generate('weekly', d);
@@ -449,7 +455,7 @@ export default function Analysis() {
           <AnalysisCard
             analysis={curNextWeek}
             generating={isGenNextWeek ? 'Plan ICT semaine suivante en cours…' : null}
-            chartLabel="1D · PLAN SEMAINE"
+            chartLabel="H1 · PLAN SEMAINE"
             onRegenerate={() => {
               const d = selNextWeek ?? getNextMonday();
               generate('next_week', d);
@@ -468,7 +474,7 @@ export default function Analysis() {
           ⏱ Bilan hebdo + plan : Samedi à 08h00 (Paris)
         </div>
         <div style={{ fontSize:'10px', color:'#2a3a4a', letterSpacing:'1px' }}>
-          📡 Données : Yahoo Finance (NQ=F · 15 min délai)
+          📡 Données : Yahoo Finance (MNQ=F · 15 min délai)
         </div>
       </div>
     </div>

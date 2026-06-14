@@ -1,72 +1,76 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { createChart, CandlestickSeries, createSeriesMarkers } from 'lightweight-charts';
 
-export default function NQChart({ candles, zones, label }) {
-  const containerRef = useRef(null);
+const TF_LIST = [
+  { tf: '1m',  label: 'M1'  },
+  { tf: '5m',  label: 'M5'  },
+  { tf: '15m', label: 'M15' },
+  { tf: '30m', label: 'M30' },
+  { tf: '1h',  label: 'H1'  },
+  { tf: '4h',  label: 'H4'  },
+  { tf: '1d',  label: 'D1'  },
+];
 
-  useEffect(() => {
-    if (!containerRef.current || !candles?.length) return;
+function buildChart(container, candles, zones, isDefaultTf) {
+  const chart = createChart(container, {
+    width:  container.clientWidth,
+    height: 340,
+    layout: {
+      background: { color: '#0a0e14' },
+      textColor:  '#8899bb',
+    },
+    grid: {
+      vertLines: { color: 'rgba(136,153,187,0.06)' },
+      horzLines: { color: 'rgba(136,153,187,0.06)' },
+    },
+    timeScale: {
+      borderColor: 'rgba(136,153,187,0.15)',
+      timeVisible: true,
+    },
+    rightPriceScale: {
+      borderColor: 'rgba(136,153,187,0.15)',
+    },
+    crosshair: { mode: 1 },
+  });
 
-    const chart = createChart(containerRef.current, {
-      width: containerRef.current.clientWidth,
-      height: 320,
-      layout: {
-        background: { color: '#0a0e14' },
-        textColor: '#8899bb',
-      },
-      grid: {
-        vertLines: { color: 'rgba(136,153,187,0.06)' },
-        horzLines: { color: 'rgba(136,153,187,0.06)' },
-      },
-      timeScale: {
-        borderColor: 'rgba(136,153,187,0.15)',
-        timeVisible: true,
-      },
-      rightPriceScale: {
-        borderColor: 'rgba(136,153,187,0.15)',
-      },
-      crosshair: { mode: 1 },
-    });
+  const series = chart.addSeries(CandlestickSeries, {
+    upColor:       '#26a69a',
+    downColor:     '#ef5350',
+    borderVisible: false,
+    wickUpColor:   '#26a69a',
+    wickDownColor: '#ef5350',
+  });
 
-    // v5 API: chart.addSeries(CandlestickSeries, options)
-    const series = chart.addSeries(CandlestickSeries, {
-      upColor:       '#26a69a',
-      downColor:     '#ef5350',
-      borderVisible: false,
-      wickUpColor:   '#26a69a',
-      wickDownColor: '#ef5350',
-    });
+  const sorted = [...candles]
+    .filter(c => c.ts != null && c.open != null && c.high != null && c.low != null && c.close != null)
+    .sort((a, b) => a.ts - b.ts);
 
-    // Filter out any candle with null/NaN prices before passing to the chart
-    const sorted = [...candles]
-      .filter(c => c.ts != null && c.open != null && c.high != null && c.low != null && c.close != null)
-      .sort((a, b) => a.ts - b.ts);
+  series.setData(sorted.map(c => ({
+    time:  c.ts,
+    open:  Number(c.open),
+    high:  Number(c.high),
+    low:   Number(c.low),
+    close: Number(c.close),
+  })));
 
-    series.setData(sorted.map(c => ({
-      time:  c.ts,
-      open:  Number(c.open),
-      high:  Number(c.high),
-      low:   Number(c.low),
-      close: Number(c.close),
-    })));
+  // FVG price lines
+  for (const fvg of zones?.fvgs ?? []) {
+    if (!fvg.high || !fvg.low) continue;
+    const color = fvg.type === 'bullish' ? 'rgba(38,166,154,0.75)' : 'rgba(239,83,80,0.75)';
+    const tag   = fvg.type === 'bullish' ? 'FVG▲' : 'FVG▼';
+    series.createPriceLine({ price: Number(fvg.high), color, lineWidth: 1, lineStyle: 3, title: `${tag} H`, axisLabelVisible: false });
+    series.createPriceLine({ price: Number(fvg.low),  color, lineWidth: 1, lineStyle: 3, title: `${tag} L`, axisLabelVisible: false });
+  }
 
-    // FVG price lines (two lines per FVG — high and low)
-    for (const fvg of zones?.fvgs ?? []) {
-      if (!fvg.high || !fvg.low) continue;
-      const color = fvg.type === 'bullish' ? 'rgba(38,166,154,0.75)' : 'rgba(239,83,80,0.75)';
-      const tag   = fvg.type === 'bullish' ? 'FVG▲' : 'FVG▼';
-      series.createPriceLine({ price: Number(fvg.high), color, lineWidth: 1, lineStyle: 3, title: `${tag} H`, axisLabelVisible: false });
-      series.createPriceLine({ price: Number(fvg.low),  color, lineWidth: 1, lineStyle: 3, title: `${tag} L`, axisLabelVisible: false });
-    }
+  // Liquidity price lines
+  for (const l of zones?.liquidity ?? []) {
+    if (!l.price) continue;
+    const color = l.type === 'BSL' ? '#26a69a' : '#ef5350';
+    series.createPriceLine({ price: Number(l.price), color, lineWidth: 2, lineStyle: 2, title: l.label ?? l.type });
+  }
 
-    // Liquidity price lines
-    for (const l of zones?.liquidity ?? []) {
-      if (!l.price) continue;
-      const color = l.type === 'BSL' ? '#26a69a' : '#ef5350';
-      series.createPriceLine({ price: Number(l.price), color, lineWidth: 2, lineStyle: 2, title: l.label ?? l.type });
-    }
-
-    // Swing markers via createSeriesMarkers (v5 API)
+  // Swing markers — only shown on the original TF (idx is TF-dependent)
+  if (isDefaultTf) {
     const swings = zones?.swings ?? [];
     if (swings.length > 0 && sorted.length > 0) {
       const markers = swings
@@ -85,30 +89,106 @@ export default function NQChart({ candles, zones, label }) {
         .sort((a, b) => a.time - b.time);
       try { createSeriesMarkers(series, markers); } catch(_) {}
     }
+  }
 
-    chart.timeScale().fitContent();
+  chart.timeScale().fitContent();
+  return chart;
+}
+
+export default function NQChart({ candles, zones, label, defaultTf, dateRange }) {
+  const containerRef                 = useRef(null);
+  const chartRef                     = useRef(null);
+  const [activeTf, setActiveTf]      = useState(defaultTf ?? '15m');
+  const [displayCandles, setDisplay] = useState(candles ?? []);
+  const [loading, setLoading]        = useState(false);
+
+  // Rebuild chart whenever displayCandles or zones change
+  useEffect(() => {
+    if (!containerRef.current || !displayCandles?.length) return;
+
+    if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; }
+
+    chartRef.current = buildChart(
+      containerRef.current,
+      displayCandles,
+      zones,
+      activeTf === (defaultTf ?? '15m'),
+    );
 
     const ro = new ResizeObserver(() => {
-      if (containerRef.current) chart.resize(containerRef.current.clientWidth, 320);
+      if (containerRef.current && chartRef.current) {
+        chartRef.current.resize(containerRef.current.clientWidth, 340);
+      }
     });
     ro.observe(containerRef.current);
 
-    return () => { ro.disconnect(); chart.remove(); };
-  }, [candles, zones]);
+    return () => {
+      ro.disconnect();
+      if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayCandles, zones]);
+
+  // On TF change: fetch new candles if range is known, else keep stored
+  const switchTf = useCallback(async (tf) => {
+    if (tf === activeTf) return;
+    setActiveTf(tf);
+    if (tf === (defaultTf ?? '15m') && candles?.length) {
+      setDisplay(candles);
+      return;
+    }
+    if (!dateRange?.from || !window.market?.getCandles) return;
+    setLoading(true);
+    try {
+      const res = await window.market.getCandles(dateRange.from, dateRange.to, tf);
+      if (res.ok && res.data?.length) setDisplay(res.data);
+    } catch(_) {}
+    setLoading(false);
+  }, [activeTf, defaultTf, candles, dateRange]);
 
   if (!candles?.length) return null;
 
   return (
     <div style={{ marginBottom: '24px', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(136,153,187,0.12)', background: '#0a0e14' }}>
-      <div style={{ padding: '8px 14px', fontSize: '10px', color: '#3a4a5a', letterSpacing: '1px', borderBottom: '1px solid rgba(136,153,187,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span>NQ FUTURES · {label ?? 'ICT ZONES'}</span>
-        <span style={{ display: 'flex', gap: '14px' }}>
-          <span>FVG <span style={{ color: 'rgba(38,166,154,0.75)' }}>▲</span><span style={{ color: 'rgba(239,83,80,0.75)' }}>▼</span></span>
-          <span>BSL <span style={{ color: '#26a69a' }}>━</span></span>
-          <span>SSL <span style={{ color: '#ef5350' }}>━</span></span>
-          <span style={{ color: '#3a4a5a' }}>{candles.length} bougies</span>
-        </span>
+      {/* Header */}
+      <div style={{ padding: '8px 14px', fontSize: '10px', color: '#3a4a5a', letterSpacing: '1px', borderBottom: '1px solid rgba(136,153,187,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+        <span style={{ color: '#5a6a82' }}>MNQ1! · {label ?? 'ICT ZONES'}</span>
+
+        {/* TF selector */}
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          {loading && <span style={{ fontSize: '9px', color: '#3a4a5a', marginRight: '6px' }}>chargement…</span>}
+          {TF_LIST.map(({ tf, label: tlabel }) => {
+            const isActive = tf === activeTf;
+            const isDefault = tf === (defaultTf ?? '15m');
+            return (
+              <button key={tf} onClick={() => switchTf(tf)}
+                style={{
+                  padding: '3px 7px',
+                  background:   isActive ? 'rgba(136,153,187,0.15)' : 'transparent',
+                  border:       isActive ? '1px solid rgba(136,153,187,0.35)' : '1px solid transparent',
+                  borderRadius: '4px',
+                  color:        isActive ? '#8899bb' : isDefault ? '#5a6a82' : '#3a4a5a',
+                  fontSize:     '10px',
+                  fontFamily:   'inherit',
+                  cursor:       'pointer',
+                  fontWeight:   isActive ? '700' : '400',
+                  letterSpacing: '0.5px',
+                }}>
+                {tlabel}
+              </button>
+            );
+          })}
+
+          {/* Legend */}
+          <span style={{ marginLeft: '8px', display: 'flex', gap: '10px', borderLeft: '1px solid rgba(136,153,187,0.10)', paddingLeft: '10px' }}>
+            <span>FVG <span style={{ color: 'rgba(38,166,154,0.75)' }}>▲</span><span style={{ color: 'rgba(239,83,80,0.75)' }}>▼</span></span>
+            <span>BSL <span style={{ color: '#26a69a' }}>━</span> SSL <span style={{ color: '#ef5350' }}>━</span></span>
+            <span style={{ color: '#3a4a5a' }}>{displayCandles.length} bougies</span>
+          </span>
+        </div>
       </div>
+
+      {/* Chart container */}
       <div ref={containerRef} style={{ width: '100%' }} />
     </div>
   );

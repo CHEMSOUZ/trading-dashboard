@@ -53,6 +53,7 @@ contextBridge.exposeInMainWorld('ai', {
 
 contextBridge.exposeInMainWorld('market', {
   getOHLCV:            (pair, date, tf) => ipcRenderer.invoke('market:getOHLCV', pair, date, tf),
+  getCandles:          (from, to, tf)   => ipcRenderer.invoke('market:getCandles', from, to, tf),
   getAiAnalyses:       ()               => ipcRenderer.invoke('market:getAiAnalyses'),
   generateAiAnalysis:  (type, date)     => ipcRenderer.invoke('market:generateAiAnalysis', type, date),
   deleteAiAnalysis:    (id)             => ipcRenderer.invoke('market:deleteAiAnalysis', id),
