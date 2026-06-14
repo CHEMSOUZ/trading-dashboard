@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+﻿const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path  = require('path');
 const fs    = require('fs');
 const http  = require('http');
@@ -139,13 +139,25 @@ function parseChartZones(raw) {
 
 const ZONES_INSTRUCTION = `
 
----INSTRUCTION GRAPHIQUE---
-À la toute fin de ta réponse, émets uniquement ce bloc JSON (remplace les valeurs par les vraies données de ton analyse) :
+---INSTRUCTION GRAPHIQUE (OBLIGATOIRE)---
+Après ton analyse, émets EXACTEMENT ce bloc JSON avec les vrais prix tirés des données OHLCV :
 ---CHART_ZONES---
-{"fvgs":[{"idx":0,"high":0,"low":0,"type":"bullish"}],"swings":[{"idx":0,"price":0,"type":"high","label":"SSH"}],"liquidity":[{"price":0,"type":"BSL","label":"Equal Highs"}]}
+{"fvgs":[{"idx":0,"high":0,"low":0,"type":"bullish"}],"swings":[{"idx":0,"price":0,"type":"high","label":"HH"}],"liquidity":[{"price":0,"type":"PWH","label":"PWH"},{"price":0,"type":"PWL","label":"PWL"},{"price":0,"type":"PDH","label":"PDH"},{"price":0,"type":"PDL","label":"PDL"},{"price":0,"type":"BSL","label":"Equal Highs"},{"price":0,"type":"SSL","label":"Equal Lows"}]}
 ---END_CHART_ZONES---
-Règles : idx = index 0-basé de la bougie dans les données OHLCV. Max 3 FVGs, 4 swings (SSH/SSL/HH/HL/LH/LL), 3 liquidités (BSL/SSL). Si absences réelles, mets des tableaux vides []. Ne mets rien après le bloc ---END_CHART_ZONES---.`;
-
+RÈGLES STRICTES :
+- idx = numéro [N] de la bougie exacte dans les données OHLCV fournies
+- fvgs : max 3, seulement si clairement identifiés (sinon [])
+- swings : max 4, labels : HH / HL / LH / LL (sinon [])
+- liquidity : INCLURE TOUS LES NIVEAUX IDENTIFIABLES parmi :
+    PWH = Previous Week High  |  PWL = Previous Week Low
+    PDH = Previous Day High   |  PDL = Previous Day Low
+    ONH = Overnight High      |  ONL = Overnight Low
+    BSL = Buy Side Liquidity (equal highs, swing high, session high notable)
+    SSL = Sell Side Liquidity (equal lows, swing low, session low notable)
+    EQH = Equal Highs         |  EQL = Equal Lows
+  MAX 10 niveaux. Prix = valeurs H ou L exactes d une bougie des données.
+  Ne pas inventer de prix. Ne pas inclure un niveau non identifiable.
+- Tous les prix = entiers. Rien après ---END_CHART_ZONES---.`;
 // ── ICT analysis generation ───────────────────────────────────
 async function generateIctAnalysis(type, date) {
 
