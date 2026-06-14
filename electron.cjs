@@ -99,6 +99,14 @@ function addDays(dateStr, n) {
   return d.toISOString().slice(0, 10);
 }
 
+function calcHighLow(candles) {
+  if (!candles.length) return { high: null, low: null };
+  return {
+    high: Math.round(Math.max(...candles.map(c => c.high ?? 0))),
+    low:  Math.round(Math.min(...candles.map(c => c.low ?? Infinity))),
+  };
+}
+
 async function fetchNQRange(fromDate, toDate, interval, symbol) {
   const sym = symbol ?? 'MNQ%3DF'; // default MNQ=F
   const p1 = Math.floor(new Date(fromDate + 'T00:00:00Z').getTime() / 1000);
@@ -140,24 +148,20 @@ function parseChartZones(raw) {
 const ZONES_INSTRUCTION = `
 
 ---INSTRUCTION GRAPHIQUE (OBLIGATOIRE)---
-Après ton analyse, émets EXACTEMENT ce bloc JSON avec les vrais prix tirés des données OHLCV :
+Après ton analyse, émets EXACTEMENT ce bloc JSON — FVGs, swings et niveaux de liquidité ICT :
 ---CHART_ZONES---
-{"fvgs":[{"idx":0,"high":0,"low":0,"type":"bullish"}],"swings":[{"idx":0,"price":0,"type":"high","label":"HH"}],"liquidity":[{"price":0,"type":"PWH","label":"PWH"},{"price":0,"type":"PWL","label":"PWL"},{"price":0,"type":"PDH","label":"PDH"},{"price":0,"type":"PDL","label":"PDL"},{"price":0,"type":"BSL","label":"Equal Highs"},{"price":0,"type":"SSL","label":"Equal Lows"}]}
+{"fvgs":[{"idx":0,"high":0,"low":0,"type":"bullish"}],"swings":[{"idx":0,"price":0,"type":"high","label":"HH"}],"liquidity":[{"price":0,"type":"BSL","label":"BSL"},{"price":0,"type":"SSL","label":"SSL"},{"price":0,"type":"EQH","label":"EQH"},{"price":0,"type":"EQL","label":"EQL"}]}
 ---END_CHART_ZONES---
-RÈGLES STRICTES :
-- idx = numéro [N] de la bougie exacte dans les données OHLCV fournies
-- fvgs : max 3, seulement si clairement identifiés (sinon [])
-- swings : max 4, labels : HH / HL / LH / LL (sinon [])
-- liquidity : INCLURE TOUS LES NIVEAUX IDENTIFIABLES parmi :
-    PWH = Previous Week High  |  PWL = Previous Week Low
-    PDH = Previous Day High   |  PDL = Previous Day Low
-    ONH = Overnight High      |  ONL = Overnight Low
-    BSL = Buy Side Liquidity (equal highs, swing high, session high notable)
-    SSL = Sell Side Liquidity (equal lows, swing low, session low notable)
-    EQH = Equal Highs         |  EQL = Equal Lows
-  MAX 10 niveaux. Prix = valeurs H ou L exactes d une bougie des données.
-  Ne pas inventer de prix. Ne pas inclure un niveau non identifiable.
-- Tous les prix = entiers. Rien après ---END_CHART_ZONES---.`;
+RÈGLES :
+- idx = numéro [N] de la bougie exacte dans les données OHLCV
+- fvgs : max 3 FVGs bullish ou bearish clairement identifiés ([] si aucun)
+- swings : max 4 points de structure HH/HL/LH/LL ([] si peu clairs)
+- liquidity : BSL, SSL, EQH et EQL uniquement — jamais PDH/PDL/PWH/PWL (calculés séparément)
+  BSL/SSL = liquidité resting ICT (equal highs/lows, resting stops) NON encore liquidés
+  EQH = Equal Highs NON encore liquidés (double/triple top, prix n a pas encore cassé au-dessus)
+  EQL = Equal Lows NON encore liquidés (double/triple bottom, prix n a pas encore cassé en-dessous)
+  MAX 6 niveaux. Prix = valeurs H ou L exactes d une bougie des données. Ne pas inventer.
+- Tous prix = entiers. Rien après ---END_CHART_ZONES---.`
 // ── ICT analysis generation ───────────────────────────────────
 async function generateIctAnalysis(type, date) {
 
@@ -201,6 +205,30 @@ async function generateIctAnalysis(type, date) {
     }],
     `Tu es un analyste expert ICT (Inner Circle Trader) sur le MNQ (Micro NASDAQ-100 Futures). Tu analyses les marchés en M15 pour des traders français (horaires CET/Paris). Sois précis, structuré et opérationnel.`);
     const { content, zones } = parseChartZones(raw);
+
+    // --- Niveaux deterministes PDH/PDL + PWH/PWL ---
+    const fixedLevels = [];
+    const ctxDates = [...new Set(ctxCandles.map(c => new Date(c.ts*1000).toISOString().slice(0,10)))].sort().reverse();
+    if (ctxDates[0]) {
+      const pdCandles = ctxCandles.filter(c => new Date(c.ts*1000).toISOString().slice(0,10) === ctxDates[0]);
+      const { high: pdh, low: pdl } = calcHighLow(pdCandles);
+      if (pdh) fixedLevels.push({ price: pdh, type: 'PDH', label: 'PDH' });
+      if (pdl) fixedLevels.push({ price: pdl, type: 'PDL', label: 'PDL' });
+    }
+    const analysisDay = new Date(date + 'T12:00:00Z');
+    const dow         = analysisDay.getUTCDay();
+    const daysToMon   = dow === 0 ? 6 : dow - 1;
+    const thisMonday  = addDays(date, -daysToMon);
+    const prevWkMon   = addDays(thisMonday, -7);
+    const prevWkFri   = addDays(thisMonday, -3);
+    let prevWkD1 = [];
+    try { prevWkD1 = await fetchNQRange(prevWkMon, prevWkFri, '1d'); } catch(_) {}
+    const { high: pwh, low: pwl } = calcHighLow(prevWkD1);
+    if (pwh) fixedLevels.push({ price: pwh, type: 'PWH', label: 'PWH' });
+    if (pwl) fixedLevels.push({ price: pwl, type: 'PWL', label: 'PWL' });
+    const aiLiqDaily = (zones.liquidity ?? []).filter(l => ['BSL','SSL','EQH','EQL'].includes(l.type)).slice(0, 4);
+    zones.liquidity = [...fixedLevels, ...aiLiqDaily];
+
     return { content, candles, zones,
       meta: { symbol: 'MNQ=F', from: ctxFrom, to: date, defaultTf: '15m' } };
   }
@@ -245,6 +273,15 @@ async function generateIctAnalysis(type, date) {
     }],
     `Tu es un analyste expert ICT sur le MNQ (Micro NASDAQ-100 Futures). Tu rédiges des bilans hebdomadaires en H1 pour des traders français.`);
     const { content, zones } = parseChartZones(raw);
+
+    // PWH/PWL : semaine precedente = ctxCandles
+    const fixedLevelsWk = [];
+    const { high: pwhWk, low: pwlWk } = calcHighLow(ctxCandles);
+    if (pwhWk) fixedLevelsWk.push({ price: pwhWk, type: 'PWH', label: 'PWH' });
+    if (pwlWk) fixedLevelsWk.push({ price: pwlWk, type: 'PWL', label: 'PWL' });
+    const aiLiqWk = (zones.liquidity ?? []).filter(l => ['BSL','SSL','EQH','EQL'].includes(l.type)).slice(0, 4);
+    zones.liquidity = [...fixedLevelsWk, ...aiLiqWk];
+
     return { content, candles, zones,
       meta: { symbol: 'MNQ=F', from: ctxFrom, to: fridayStr, defaultTf: '1h' } };
   }
@@ -285,6 +322,17 @@ async function generateIctAnalysis(type, date) {
     }],
     `Tu es un analyste expert ICT sur le MNQ (Micro NASDAQ-100 Futures). Tu prépares des plans de trading hebdomadaires en H1 pour des traders français.`);
     const { content, zones } = parseChartZones(raw);
+
+    // PWH/PWL : derniere semaine des candles de contexte
+    const fixedLevelsNW = [];
+    const lastWkStart = new Date(addDays(date, -7) + 'T00:00:00Z').getTime() / 1000;
+    const lastWkCandles = candles.filter(c => c.ts >= lastWkStart);
+    const { high: pwhNW, low: pwlNW } = calcHighLow(lastWkCandles);
+    if (pwhNW) fixedLevelsNW.push({ price: pwhNW, type: 'PWH', label: 'PWH (sem. passée)' });
+    if (pwlNW) fixedLevelsNW.push({ price: pwlNW, type: 'PWL', label: 'PWL (sem. passée)' });
+    const aiLiqNW = (zones.liquidity ?? []).filter(l => ['BSL','SSL','EQH','EQL'].includes(l.type)).slice(0, 4);
+    zones.liquidity = [...fixedLevelsNW, ...aiLiqNW];
+
     return { content, candles, zones,
       meta: { symbol: 'MNQ=F', from: ctxFrom, to: lastFri, defaultTf: '1h' } };
   }
