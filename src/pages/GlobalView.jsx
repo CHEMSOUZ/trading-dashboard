@@ -594,15 +594,11 @@ export default function GlobalView() {
       if (!accRes.ok) return;
       const accs = accRes.data.accounts;
       setAccounts(accs);
-      const activeRes = await window.accounts.getActive();
-      const currentId = activeRes.ok ? activeRes.data?.id : null;
       const allT = [];
       for (const acc of accs) {
-        await window.accounts.setActive(acc.id);
-        const tRes = await window.db.getAllTrades();
+        const tRes = await window.db.getTradesForPath(acc.dbPath);
         if (tRes.ok) tRes.data.forEach(t => allT.push({ ...t, _accountId: acc.id, _accountName: acc.name, _accountColor: acc.color }));
       }
-      if (currentId) await window.accounts.setActive(currentId);
       setAllTrades(allT);
     } catch(e) { console.error('GlobalView:', e); }
     setLoading(false);

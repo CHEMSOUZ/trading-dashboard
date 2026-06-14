@@ -1,13 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-function RouteTracker() {
-  const location = useLocation();
-  useEffect(() => {
-    if (location.pathname !== '/') localStorage.setItem('lastRoute', location.pathname);
-  }, [location.pathname]);
-  return null;
-}
 function PageLoader() {
   return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3a4a5a', fontSize: '11px', letterSpacing: '2px' }}>...</div>;
 }
@@ -149,7 +142,6 @@ export default function App() {
 
   return (
     <Router>
-      <RouteTracker />
       {updateReady && (
         <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999, background: '#101018', border: '1px solid rgba(136,153,187,0.40)', borderRadius: '8px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 4px 24px rgba(0,0,0,0.7)' }}>
           <div>
@@ -178,7 +170,7 @@ export default function App() {
         <main key={reloadKey} style={{ flex: 1, overflowY: 'auto', background: '#0c0d16', backgroundImage: 'radial-gradient(ellipse 60% 40% at 80% 0%,rgba(18,20,32,0.35) 0%,transparent 60%)' }}>
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/"              element={<Navigate to={localStorage.getItem('lastRoute') || '/journal'} replace />} />
+              <Route path="/"              element={<Navigate to="/journal" replace />} />
               <Route path="/dashboard"     element={<Navigate to="/journal" replace />} />
               <Route path="/dashboard/new" element={<NewTrade />} />
               <Route path="/dashboard/:id" element={<NewTrade />} />

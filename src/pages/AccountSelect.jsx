@@ -138,7 +138,7 @@ function PlatformLogo({ platform, size = 28 }) {
 }
 
 // ── Status computation ────────────────────────────────────────
-async function computeAccountStatus(acc, currentActiveId) {
+async function computeAccountStatus(acc) {
   const rules = ACCOUNT_RULES[acc.type];
   const isExpressFunded = EXPRESS_FUNDED_TYPES.has(acc.type);
   const manuallyBlown = acc.blown ?? false;
@@ -147,15 +147,12 @@ async function computeAccountStatus(acc, currentActiveId) {
     return { pnl: null, isBlown: manuallyBlown, manuallyBlown, floor: null, tradeCount: 0, winrate: 0, isValidated: false, isExpressFunded };
   }
   try {
-    await window.accounts.setActive(acc.id);
-    const res = await window.db.getAllTrades();
-    if (currentActiveId) await window.accounts.setActive(currentActiveId);
+    const res = await window.db.getTradesForPath(acc.dbPath);
     if (!res.ok) return { pnl: null, isBlown: manuallyBlown, manuallyBlown, floor: null, tradeCount: 0, winrate: 0, isValidated: false, isExpressFunded };
     const trades = res.data;
     const sorted = [...trades]
       .filter(t => (t.result_net ?? t.result) != null)
       .sort((a, b) => (a.entered_at || a.date || '').localeCompare(b.entered_at || b.date || ''));
-    // Floor capped at account size (same trailing DD logic as Lucid/Topstep pages)
     let hwm = rules.size, floor = rules.size - rules.maxLoss, bal = rules.size;
     for (const t of sorted) {
       bal += t.result_net ?? t.result ?? 0;
@@ -181,7 +178,6 @@ async function computeAccountStatus(acc, currentActiveId) {
       isExpressFunded,
     };
   } catch {
-    if (currentActiveId) { try { await window.accounts.setActive(currentActiveId); } catch {} }
     return { pnl: null, isBlown: manuallyBlown, manuallyBlown, floor: null, tradeCount: 0, winrate: 0, isValidated: false, isExpressFunded };
   }
 }
@@ -511,7 +507,7 @@ function AccountCard({ acc, isActive, status, onSelect, onEdit, onDelete, onMark
           <div style={{ background: 'rgba(0,170,255,0.1)', border: '1px solid rgba(0,170,255,0.3)', borderRadius: '4px', padding: '2px 7px', fontSize:'11px', color: '#4a8aaa', letterSpacing: '1px', fontWeight: '700' }}>DEMO</div>
         )}
         {!isBlown && isChallenge && (
-          <div style={{ background: 'rgba(136,153,187,0.14)', border: '1px solid rgba(136,153,187,0.35)', borderRadius: '4px', padding: '2px 7px', fontSize:'11px', color: '#8899bb', letterSpacing: '1px', fontWeight: '700' }}>CHALLENGE</div>
+          <div style={{ background: 'rgba(255,140,66,0.18)', border: '1px solid rgba(255,140,66,0.45)', borderRadius: '4px', padding: '2px 7px', fontSize:'11px', color: '#ff8c42', letterSpacing: '1px', fontWeight: '700' }}>⚡ CHALLENGE</div>
         )}
         {!isBlown && status?.isValidated && (
           <div style={{ background: 'rgba(136,153,187,0.22)', border: '1px solid rgba(136,153,187,0.55)', borderRadius: '4px', padding: '2px 7px', fontSize:'11px', color: '#8899bb', letterSpacing: '1px', fontWeight: '700' }}>✅ VALIDÉ</div>
@@ -617,9 +613,8 @@ export default function AccountSelect({ onSelect, onBack }) {
     setLoadingStats(true);
     const results = {};
     for (const acc of accounts) {
-      results[acc.id] = await computeAccountStatus(acc, activeId);
+      results[acc.id] = await computeAccountStatus(acc);
     }
-    if (activeId) { try { await window.accounts.setActive(activeId); } catch {} }
     setStatuses(results);
     setLoadingStats(false);
   }
@@ -654,35 +649,27 @@ export default function AccountSelect({ onSelect, onBack }) {
   );
 
   // ── Section ordering (top → bottom) ──────────────────────────
-  // 0. ACTIF    : compte actuellement sélectionné (épinglé en tête)
-  // 1. LIVE     : Lucid Live + Tradovate Live
-  // 2. FUNDED   : Express Funded Topstep + Lucid Funded
-  // 3. CHALLENGE: Topstep Combine + Lucid Eval non validés
-  // 4. VALIDÉ   : challenges réussis
-  // 5. CRAMÉS   : blown (hors comptes démo)
-  // 6. AUTRES   : comptes démo / perso uniquement
-  const activeAcc = data.accounts.find(a => a.id === data.activeId && !statuses[a.id]?.isBlown);
-  const isNotActive = a => a.id !== data.activeId;
+  // 1. COMPTES ACTIFS : selected + live + funded + challenge en cours (non blown, non validé, non démo)
+  // 2. VALIDÉ         : challenges dont le profit target est atteint
+  // 3. CRAMÉS         : blown (hors comptes démo)
+  // 4. DÉMO           : comptes démo / perso
 
-  const blownAccounts     = data.accounts.filter(a => statuses[a.id]?.isBlown && !DEMO_TYPES.has(a.type));
-  const liveAccounts      = data.accounts.filter(a =>
-    !statuses[a.id]?.isBlown && isNotActive(a) && LIVE_TYPES.has(a.type)
-  );
-  const fundedAccounts    = data.accounts.filter(a =>
-    !statuses[a.id]?.isBlown && isNotActive(a) &&
-    (statuses[a.id]?.isExpressFunded || EXPRESS_FUNDED_TYPES.has(a.type)) && !LIVE_TYPES.has(a.type)
-  );
-  const challengeAccounts = data.accounts.filter(a =>
-    !statuses[a.id]?.isBlown && isNotActive(a) &&
-    !LIVE_TYPES.has(a.type) && !EXPRESS_FUNDED_TYPES.has(a.type) &&
-    !statuses[a.id]?.isValidated && CHALLENGE_TYPES.has(a.type)
-  );
+  function activeSortKey(a) {
+    if (a.id === data.activeId) return 0;
+    if (LIVE_TYPES.has(a.type)) return 1;
+    if (EXPRESS_FUNDED_TYPES.has(a.type) || statuses[a.id]?.isExpressFunded) return 2;
+    return 3;
+  }
+
+  const selectedAcc       = data.accounts.find(a => a.id === data.activeId);
+  const activeAccounts    = data.accounts
+    .filter(a => !statuses[a.id]?.isBlown && !statuses[a.id]?.isValidated && !DEMO_TYPES.has(a.type))
+    .sort((a, b) => activeSortKey(a) - activeSortKey(b));
   const validatedAccounts = data.accounts.filter(a =>
-    !statuses[a.id]?.isBlown && isNotActive(a) &&
-    !LIVE_TYPES.has(a.type) && !EXPRESS_FUNDED_TYPES.has(a.type) &&
-    statuses[a.id]?.isValidated
+    !statuses[a.id]?.isBlown && statuses[a.id]?.isValidated && !DEMO_TYPES.has(a.type)
   );
-  const otherAccounts = data.accounts.filter(a => isNotActive(a) && DEMO_TYPES.has(a.type));
+  const blownAccounts     = data.accounts.filter(a => statuses[a.id]?.isBlown && !DEMO_TYPES.has(a.type));
+  const demoAccounts      = data.accounts.filter(a => DEMO_TYPES.has(a.type));
 
   function renderSection(accounts, header) {
     return (
@@ -735,57 +722,25 @@ export default function AccountSelect({ onSelect, onBack }) {
           </div>
         ) : (
           <>
-            {/* ── 0. COMPTE ACTIF (épinglé en tête) ── */}
-            {activeAcc && (
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: activeAcc.color, boxShadow: `0 0 12px ${activeAcc.color}` }} />
-                  <span style={{ fontSize:'12px', color: activeAcc.color, letterSpacing: '2px', fontWeight: '700' }}>COMPTE ACTIF</span>
-                  <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1px' }}>En cours de trading</span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: '10px' }}>
-                  <AccountCard acc={activeAcc} isActive={true} status={statuses[activeAcc.id]} onSelect={handleSelect} onEdit={setEditingAcc} onDelete={handleDelete} onMarkBlown={handleMarkBlown} onRestoreBlown={handleRestoreBlown} />
-                </div>
-              </div>
-            )}
-
-            {/* ── 1. LIVE : Lucid Live + Tradovate Live ── */}
-            {liveAccounts.length > 0 && renderSection(liveAccounts, (
+            {/* ── 1. COMPTES ACTIFS : selected + live + funded + challenge en cours ── */}
+            {activeAccounts.length > 0 && renderSection(activeAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#00ddff', boxShadow: '0 0 10px #00ddff' }} />
-                <span style={{ fontSize:'12px', color: '#00ddff', letterSpacing: '2px', fontWeight: '700' }}>LIVE — {liveAccounts.length}</span>
-                <span style={{ fontSize:'12px', color: '#2a7a8a', letterSpacing: '1px' }}>Compte live réel</span>
+                <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: selectedAcc?.color ?? '#8899bb', boxShadow: `0 0 12px ${selectedAcc?.color ?? '#8899bb'}` }} />
+                <span style={{ fontSize:'12px', color: selectedAcc?.color ?? '#8899bb', letterSpacing: '2px', fontWeight: '700' }}>COMPTES ACTIFS — {activeAccounts.length}</span>
+                <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1px' }}>Live · Funded · Challenge en cours</span>
               </div>
             ))}
 
-            {/* ── 2. FUNDED : Express Funded Topstep + Lucid Funded ── */}
-            {fundedAccounts.length > 0 && renderSection(fundedAccounts, (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f0c020', boxShadow: '0 0 10px #f0c020' }} />
-                <span style={{ fontSize:'12px', color: '#f0c020', letterSpacing: '2px', fontWeight: '700' }}>FUNDED — {fundedAccounts.length}</span>
-                <span style={{ fontSize:'12px', color: '#8a7a30', letterSpacing: '1px' }}>Express Funded · Lucid Funded</span>
-              </div>
-            ))}
-
-            {/* ── 3. CHALLENGE : Topstep Combine + Lucid Eval non validés ── */}
-            {challengeAccounts.length > 0 && renderSection(challengeAccounts, (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#8899bb', boxShadow: '0 0 8px #8899bb' }} />
-                <span style={{ fontSize:'12px', color: '#8899bb', letterSpacing: '2px', fontWeight: '700' }}>CHALLENGE — {challengeAccounts.length}</span>
-                <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1px' }}>En cours</span>
-              </div>
-            ))}
-
-            {/* ── 4. VALIDÉ : challenges réussis ── */}
+            {/* ── 2. VALIDÉ ── */}
             {validatedAccounts.length > 0 && renderSection(validatedAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#8899bb', boxShadow: '0 0 8px #8899bb' }} />
-                <span style={{ fontSize:'12px', color: '#8899bb', letterSpacing: '2px', fontWeight: '700' }}>VALIDÉ — {validatedAccounts.length}</span>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#00cc77', boxShadow: '0 0 8px #00cc77' }} />
+                <span style={{ fontSize:'12px', color: '#00cc77', letterSpacing: '2px', fontWeight: '700' }}>VALIDÉ — {validatedAccounts.length}</span>
                 <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '1px' }}>Challenge réussi ✓</span>
               </div>
             ))}
 
-            {/* ── 5. CRAMÉS ── */}
+            {/* ── 3. CRAMÉS ── */}
             {blownAccounts.length > 0 && renderSection(blownAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#ff4455', boxShadow: '0 0 8px #ff4455' }} />
@@ -794,11 +749,11 @@ export default function AccountSelect({ onSelect, onBack }) {
               </div>
             ))}
 
-            {/* ── 6. AUTRES (démo, perso uniquement) ── */}
-            {otherAccounts.length > 0 && renderSection(otherAccounts, (
+            {/* ── 4. DÉMO ── */}
+            {demoAccounts.length > 0 && renderSection(demoAccounts, (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#5a6a82' }} />
-                <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>AUTRES — {otherAccounts.length}</span>
+                <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>DÉMO — {demoAccounts.length}</span>
                 <span style={{ fontSize:'12px', color: '#4a5a72', letterSpacing: '1px' }}>Démo · Perso</span>
               </div>
             ))}

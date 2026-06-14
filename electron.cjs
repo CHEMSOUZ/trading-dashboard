@@ -376,6 +376,12 @@ function registerHandlers() {
   };
 
   dbHandle('db:getAllTrades',           (db) => dbModule.getAllTrades(db));
+  ipcMain.handle('db:getTradesForPath', async (_, dbPath) => {
+    try {
+      const db = await dbModule.getDb(dbPath);
+      return { ok: true, data: dbModule.getAllTrades(db) };
+    } catch(e) { return { ok: false, error: e.message }; }
+  });
   dbHandle('db:getTradeById',           (db, _, id) => dbModule.getTradeById(db, id));
   dbHandle('db:insertTrade',            (db, dbp, t) => dbModule.insertTrade(db, dbp, t));
   dbHandle('db:updateTrade',            (db, dbp, id, t) => dbModule.updateTrade(db, dbp, id, t));

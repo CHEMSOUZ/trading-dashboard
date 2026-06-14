@@ -74,15 +74,13 @@ const LIVE_TYPES = new Set([
   'topstep_live_50k','topstep_live_100k','topstep_live_150k',
 ]);
 
-async function computeBlownStatus(acc, currentActiveId) {
+async function computeBlownStatus(acc) {
   const rules = ACCOUNT_RULES[acc.type];
   const isExpressFunded = EXPRESS_FUNDED_TYPES.has(acc.type);
   const hasAnyRule = rules?.size || rules?.maxLoss || rules?.dailyLoss;
   if (!hasAnyRule) return { isBlown: false, pnl: null, isValidated: false, isExpressFunded };
   try {
-    await window.accounts.setActive(acc.id);
-    const res = await window.db.getAllTrades();
-    if (currentActiveId) await window.accounts.setActive(currentActiveId);
+    const res = await window.db.getTradesForPath(acc.dbPath);
     if (!res.ok) return { isBlown: false, pnl: null, isValidated: false, isExpressFunded };
     const trades = res.data;
     const sorted = [...trades]
@@ -140,7 +138,6 @@ async function computeBlownStatus(acc, currentActiveId) {
       isExpressFunded,
     };
   } catch {
-    if (currentActiveId) { try { await window.accounts.setActive(currentActiveId); } catch {} }
     return { isBlown: false, pnl: null, isValidated: false, isExpressFunded };
   }
 }
@@ -172,13 +169,10 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
     if (!res.ok) return;
     const accs = res.data.accounts;
     setAccounts(accs);
-    const activeRes = await window.accounts.getActive();
-    const currentId = activeRes.ok ? activeRes.data?.id : null;
     const statuses = {};
     for (const acc of accs) {
-      statuses[acc.id] = await computeBlownStatus(acc, currentId);
+      statuses[acc.id] = await computeBlownStatus(acc);
     }
-    if (currentId) { try { await window.accounts.setActive(currentId); } catch {} }
     setAccountStatuses(statuses);
   }
 
@@ -340,7 +334,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         LIVE
                       </div>
                       {liveAccts.map(renderAccItem)}
-                      {hasMore(liveAccts, fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '2px 0 4px' }} />}
+                      {hasMore(liveAccts, fundedAccts, challengeAccts) && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '2px 0 4px' }} />}
                     </>
                   )}
 
@@ -351,7 +345,7 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         FUNDED
                       </div>
                       {fundedAccts.map(renderAccItem)}
-                      {hasMore(fundedAccts, challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '2px 0 4px' }} />}
+                      {hasMore(fundedAccts, challengeAccts) && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '2px 0 4px' }} />}
                     </>
                   )}
 
@@ -362,25 +356,6 @@ export default function Sidebar({ activeAccount, onSwitchAccount, onAccountUpdat
                         CHALLENGE
                       </div>
                       {challengeAccts.map(renderAccItem)}
-                      {hasMore(challengeAccts, validatedAccts, blownAccts) && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '2px 0 4px' }} />}
-                    </>
-                  )}
-
-                  {validatedAccts.length > 0 && (
-                    <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#00cc77', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px' }}>
-                        <span style={{ fontSize: '9px' }}>✅</span>
-                        VALIDÉ
-                      </div>
-                      {validatedAccts.map(renderAccItem)}
-                      {blownAccts.length > 0 && <div style={{ borderTop: '1px solid rgba(136,153,187,0.08)', margin: '2px 0 4px' }} />}
-                    </>
-                  )}
-
-                  {blownAccts.length > 0 && (
-                    <>
-                      <div style={{ fontSize: '10px', color: '#ff4455', letterSpacing: '2px', padding: '4px 8px', marginBottom: '2px', opacity: 0.8 }}>CRAMÉS</div>
-                      {blownAccts.map(renderAccItem)}
                     </>
                   )}
                 </>

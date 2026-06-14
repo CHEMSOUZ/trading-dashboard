@@ -1,7 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('db', {
-  getAllTrades:            ()        => ipcRenderer.invoke('db:getAllTrades'),
+  getAllTrades:            ()           => ipcRenderer.invoke('db:getAllTrades'),
+  getTradesForPath:       (dbPath)     => ipcRenderer.invoke('db:getTradesForPath', dbPath),
   getTradeById:           (id)      => ipcRenderer.invoke('db:getTradeById', id),
   insertTrade:            (t)       => ipcRenderer.invoke('db:insertTrade', t),
   updateTrade:            (id, t)   => ipcRenderer.invoke('db:updateTrade', id, t),
