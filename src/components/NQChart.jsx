@@ -76,14 +76,6 @@ function buildChart(container, candles, zones, isDefaultTf) {
     close: Number(c.close),
   })));
 
-  // FVG price lines
-  for (const fvg of zones?.fvgs ?? []) {
-    if (!fvg.high || !fvg.low) continue;
-    const color = fvg.type === 'bullish' ? 'rgba(38,166,154,0.75)' : 'rgba(239,83,80,0.75)';
-    const tag   = fvg.type === 'bullish' ? 'FVG▲' : 'FVG▼';
-    series.createPriceLine({ price: Number(fvg.high), color, lineWidth: 1, lineStyle: 3, title: `${tag} H`, axisLabelVisible: false });
-    series.createPriceLine({ price: Number(fvg.low),  color, lineWidth: 1, lineStyle: 3, title: `${tag} L`, axisLabelVisible: false });
-  }
 
   // Key levels — drawn as LineSeries starting from the origin candle
   const LEVEL_STYLE = {
@@ -225,7 +217,6 @@ export default function NQChart({ candles, zones, label, defaultTf, dateRange })
 
           {/* Legend */}
           <span style={{ marginLeft: '8px', display: 'flex', gap: '8px', borderLeft: '1px solid rgba(136,153,187,0.10)', paddingLeft: '10px', flexWrap: 'wrap' }}>
-            <span>FVG <span style={{ color: 'rgba(38,166,154,0.75)' }}>▲</span><span style={{ color: 'rgba(239,83,80,0.75)' }}>▼</span></span>
             <span>PWH <span style={{ color: '#ff6b6b' }}>━</span></span>
             <span>PWL <span style={{ color: '#51cf66' }}>━</span></span>
             <span>PDH <span style={{ color: '#ffa94d' }}>╌</span></span>
