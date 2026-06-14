@@ -201,7 +201,8 @@ async function generateIctAnalysis(type, date) {
       `### 💧 LIQUIDITÉ & ICT\n- Liquidité prise: ...\n- FVG identifiés (M15): ...\n- Displacement: ...\n- Draw On Liquidity (DOL): ...\n\n` +
       `### 🔭 NIVEAUX POUR DEMAIN\n- Résistances: ...\n- Supports: ...\n- Imbalances M15 à surveiller: ...\n\n` +
       `### ✅ BILAN ICT\n[2–3 phrases de synthèse ICT]` +
-      ZONES_INSTRUCTION
+      ZONES_INSTRUCTION +
+      '\n  RESTRICTION DAILY : les idx BSL/SSL/EQH/EQL doivent tous être >= ' + ctxOffset + ' (journée analysée). Pas de zones de liquidité sur le contexte précédent (idx < ctxOffset).'
     }],
     `Tu es un analyste expert ICT (Inner Circle Trader) sur le MNQ (Micro NASDAQ-100 Futures). Tu analyses les marchés en M15 pour des traders français (horaires CET/Paris). Sois précis, structuré et opérationnel.`);
     const { content, zones } = parseChartZones(raw);

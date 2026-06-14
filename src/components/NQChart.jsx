@@ -23,9 +23,29 @@ function buildChart(container, candles, zones, isDefaultTf) {
       vertLines: { color: 'rgba(136,153,187,0.06)' },
       horzLines: { color: 'rgba(136,153,187,0.06)' },
     },
+    localization: {
+      locale: 'fr-FR',
+      timeFormatter: (ts) => {
+        const d = new Date(ts * 1000);
+        return d.toLocaleString('fr-FR', {
+          timeZone: 'Europe/Paris',
+          day: '2-digit', month: '2-digit',
+          hour: '2-digit', minute: '2-digit',
+          hour12: false,
+        });
+      },
+    },
     timeScale: {
       borderColor: 'rgba(136,153,187,0.15)',
       timeVisible: true,
+      tickMarkFormatter: (ts, tickMarkType) => {
+        const d = new Date(ts * 1000);
+        const tz = 'Europe/Paris';
+        if (tickMarkType === 0) return d.toLocaleDateString('fr-FR', { timeZone: tz, year: 'numeric' });
+        if (tickMarkType === 1) return d.toLocaleDateString('fr-FR', { timeZone: tz, month: 'short', year: 'numeric' });
+        if (tickMarkType === 2) return d.toLocaleDateString('fr-FR', { timeZone: tz, day: '2-digit', month: '2-digit' });
+        return d.toLocaleTimeString('fr-FR', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
+      },
     },
     rightPriceScale: {
       borderColor: 'rgba(136,153,187,0.15)',
