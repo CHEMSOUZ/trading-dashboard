@@ -207,14 +207,18 @@ async function generateIctAnalysis(type, date) {
     `Tu es un analyste expert ICT (Inner Circle Trader) sur le MNQ (Micro NASDAQ-100 Futures). Tu analyses les marchés en M15 pour des traders français (horaires CET/Paris). Sois précis, structuré et opérationnel.`);
     const { content, zones } = parseChartZones(raw);
 
+    // Resoudre idx->ts pour zones IA (liquidity)
+    const sortedD = [...candles].sort((a,b) => a.ts - b.ts);
+    (zones.liquidity ?? []).forEach(l => { if (l.idx != null && l.ts == null) l.ts = sortedD[l.idx]?.ts; });
+
     // --- Niveaux deterministes PDH/PDL + PWH/PWL ---
     const fixedLevels = [];
     const ctxDates = [...new Set(ctxCandles.map(c => new Date(c.ts*1000).toISOString().slice(0,10)))].sort().reverse();
     if (ctxDates[0]) {
       const pdCandles = ctxCandles.filter(c => new Date(c.ts*1000).toISOString().slice(0,10) === ctxDates[0]);
-      const { high: pdh, low: pdl } = calcHighLow(pdCandles);
-      if (pdh) fixedLevels.push({ price: pdh, type: 'PDH', label: 'PDH' });
-      if (pdl) fixedLevels.push({ price: pdl, type: 'PDL', label: 'PDL' });
+      const { high: pdh, highTs: pdhTs, low: pdl, lowTs: pdlTs } = calcHighLow(pdCandles);
+      if (pdh) fixedLevels.push({ price: pdh, type: 'PDH', label: 'PDH', ts: pdhTs });
+      if (pdl) fixedLevels.push({ price: pdl, type: 'PDL', label: 'PDL', ts: pdlTs });
     }
     const analysisDay = new Date(date + 'T12:00:00Z');
     const dow         = analysisDay.getUTCDay();
@@ -225,8 +229,8 @@ async function generateIctAnalysis(type, date) {
     let prevWkD1 = [];
     try { prevWkD1 = await fetchNQRange(prevWkMon, prevWkFri, '1d'); } catch(_) {}
     const { high: pwh, low: pwl } = calcHighLow(prevWkD1);
-    if (pwh) fixedLevels.push({ price: pwh, type: 'PWH', label: 'PWH' });
-    if (pwl) fixedLevels.push({ price: pwl, type: 'PWL', label: 'PWL' });
+    if (pwh && prevWkD1.length) fixedLevels.push({ price: pwh, type: 'PWH', label: 'PWH', ts: sortedD[0]?.ts });
+    if (pwl && prevWkD1.length) fixedLevels.push({ price: pwl, type: 'PWL', label: 'PWL', ts: sortedD[0]?.ts });
     const aiLiqDaily = (zones.liquidity ?? []).filter(l => ['BSL','SSL','EQH','EQL'].includes(l.type)).slice(0, 4);
     zones.liquidity = [...fixedLevels, ...aiLiqDaily];
 
@@ -275,11 +279,15 @@ async function generateIctAnalysis(type, date) {
     `Tu es un analyste expert ICT sur le MNQ (Micro NASDAQ-100 Futures). Tu rédiges des bilans hebdomadaires en H1 pour des traders français.`);
     const { content, zones } = parseChartZones(raw);
 
+    // Resoudre idx->ts pour zones IA
+    const sortedW = [...candles].sort((a,b) => a.ts - b.ts);
+    (zones.liquidity ?? []).forEach(l => { if (l.idx != null && l.ts == null) l.ts = sortedW[l.idx]?.ts; });
+
     // PWH/PWL : semaine precedente = ctxCandles
     const fixedLevelsWk = [];
-    const { high: pwhWk, low: pwlWk } = calcHighLow(ctxCandles);
-    if (pwhWk) fixedLevelsWk.push({ price: pwhWk, type: 'PWH', label: 'PWH' });
-    if (pwlWk) fixedLevelsWk.push({ price: pwlWk, type: 'PWL', label: 'PWL' });
+    const { high: pwhWk, highTs: pwhWkTs, low: pwlWk, lowTs: pwlWkTs } = calcHighLow(ctxCandles);
+    if (pwhWk) fixedLevelsWk.push({ price: pwhWk, type: 'PWH', label: 'PWH', ts: pwhWkTs });
+    if (pwlWk) fixedLevelsWk.push({ price: pwlWk, type: 'PWL', label: 'PWL', ts: pwlWkTs });
     const aiLiqWk = (zones.liquidity ?? []).filter(l => ['BSL','SSL','EQH','EQL'].includes(l.type)).slice(0, 4);
     zones.liquidity = [...fixedLevelsWk, ...aiLiqWk];
 
@@ -319,18 +327,23 @@ async function generateIctAnalysis(type, date) {
       `### 📅 PLAN JOUR PAR JOUR\n- **Lundi**: ...\n- **Mardi**: ...\n- **Mercredi** (pivot ICT): ...\n- **Jeudi**: ...\n- **Vendredi**: ...\n\n` +
       `### ⚠️ POINTS DE VIGILANCE\n[News macro, FOMC, NFP ou événements importants cette semaine]\n\n` +
       `### 🎯 SESSIONS PRIORITAIRES\n[Silver Bullet windows et moments clés à privilégier]` +
-      ZONES_INSTRUCTION
+      ZONES_INSTRUCTION +
+      '\n  RESTRICTION NEXT_WEEK : BSL/SSL/EQH/EQL uniquement si NON liquides par les ${candles.length-1} bougies de contexte disponibles. Seuls les niveaux vierges/non touchés sont pertinents. idx obligatoire.'
     }],
     `Tu es un analyste expert ICT sur le MNQ (Micro NASDAQ-100 Futures). Tu prépares des plans de trading hebdomadaires en H1 pour des traders français.`);
     const { content, zones } = parseChartZones(raw);
+
+    // Resoudre idx->ts pour zones IA
+    const sortedNW = [...candles].sort((a,b) => a.ts - b.ts);
+    (zones.liquidity ?? []).forEach(l => { if (l.idx != null && l.ts == null) l.ts = sortedNW[l.idx]?.ts; });
 
     // PWH/PWL : derniere semaine des candles de contexte
     const fixedLevelsNW = [];
     const lastWkStart = new Date(addDays(date, -7) + 'T00:00:00Z').getTime() / 1000;
     const lastWkCandles = candles.filter(c => c.ts >= lastWkStart);
-    const { high: pwhNW, low: pwlNW } = calcHighLow(lastWkCandles);
-    if (pwhNW) fixedLevelsNW.push({ price: pwhNW, type: 'PWH', label: 'PWH (sem. passée)' });
-    if (pwlNW) fixedLevelsNW.push({ price: pwlNW, type: 'PWL', label: 'PWL (sem. passée)' });
+    const { high: pwhNW, highTs: pwhNWTs, low: pwlNW, lowTs: pwlNWTs } = calcHighLow(lastWkCandles);
+    if (pwhNW) fixedLevelsNW.push({ price: pwhNW, type: 'PWH', label: 'PWH (sem. passée)', ts: pwhNWTs });
+    if (pwlNW) fixedLevelsNW.push({ price: pwlNW, type: 'PWL', label: 'PWL (sem. passée)', ts: pwlNWTs });
     const aiLiqNW = (zones.liquidity ?? []).filter(l => ['BSL','SSL','EQH','EQL'].includes(l.type)).slice(0, 4);
     zones.liquidity = [...fixedLevelsNW, ...aiLiqNW];
 

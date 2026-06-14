@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef, useState, useCallback } from 'react';
-import { createChart, CandlestickSeries, createSeriesMarkers } from 'lightweight-charts';
+import { createChart, CandlestickSeries, LineSeries, createSeriesMarkers } from 'lightweight-charts';
 
 const TF_LIST = [
   { tf: '1m',  label: 'M1'  },
@@ -82,7 +82,7 @@ function buildChart(container, candles, zones, isDefaultTf) {
     series.createPriceLine({ price: Number(fvg.low),  color, lineWidth: 1, lineStyle: 3, title: `${tag} L`, axisLabelVisible: false });
   }
 
-  // Key levels — colors and styles per type
+  // Key levels — drawn as LineSeries starting from the origin candle
   const LEVEL_STYLE = {
     PWH: { color: '#ff6b6b', lineWidth: 2, lineStyle: 0 },
     PWL: { color: '#51cf66', lineWidth: 2, lineStyle: 0 },
@@ -93,10 +93,25 @@ function buildChart(container, candles, zones, isDefaultTf) {
     EQH: { color: '#ff6b6b', lineWidth: 1, lineStyle: 1 },
     EQL: { color: '#51cf66', lineWidth: 1, lineStyle: 1 },
   };
+  const firstTs = sorted[0]?.ts;
+  const lastTs  = sorted[sorted.length - 1]?.ts;
   for (const l of zones?.liquidity ?? []) {
-    if (!l.price) continue;
+    if (!l.price || !firstTs || !lastTs) continue;
     const s = LEVEL_STYLE[l.type] ?? { color: '#8899bb', lineWidth: 1, lineStyle: 2 };
-    series.createPriceLine({ price: Number(l.price), ...s, title: l.label ?? l.type });
+    const startTs = (l.ts && l.ts >= firstTs) ? l.ts : firstTs;
+    const lvl = chart.addSeries(LineSeries, {
+      color: s.color,
+      lineWidth: s.lineWidth,
+      lineStyle: s.lineStyle,
+      priceLineVisible: false,
+      lastValueVisible: true,
+      crosshairMarkerVisible: false,
+      title: l.label ?? l.type,
+    });
+    lvl.setData([
+      { time: startTs, value: Number(l.price) },
+      { time: lastTs,  value: Number(l.price) },
+    ]);
   }
 
   // Swing markers — only shown on the original TF (idx is TF-dependent)
