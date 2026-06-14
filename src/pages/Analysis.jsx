@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import NQChart from '../components/NQChart';
 
 // ── Helpers ───────────────────────────────────────────────────
 function getWeekStart(date) {
@@ -128,8 +129,13 @@ function GeneratingCard({ label }) {
 }
 
 // ── Single analysis card ──────────────────────────────────────
-function AnalysisCard({ analysis, onRegenerate, onDelete, generating }) {
+function AnalysisCard({ analysis, onRegenerate, onDelete, generating, chartLabel }) {
   const [confirmDel, setConfirmDel] = useState(false);
+
+  const marketData = useMemo(() => {
+    if (!analysis?.market_data) return {};
+    try { return JSON.parse(analysis.market_data); } catch(_) { return {}; }
+  }, [analysis?.market_data]);
 
   if (generating) return <GeneratingCard label={generating} />;
   if (!analysis) return (
@@ -167,6 +173,10 @@ function AnalysisCard({ analysis, onRegenerate, onDelete, generating }) {
           )}
         </div>
       </div>
+      {/* Chart */}
+      {marketData.candles?.length > 0 && (
+        <NQChart candles={marketData.candles} zones={marketData.zones} label={chartLabel} />
+      )}
       {/* Content */}
       <div style={{ lineHeight:'1.7' }}>
         <MarkdownContent content={analysis.content} />
@@ -372,6 +382,7 @@ export default function Analysis() {
           <AnalysisCard
             analysis={curDaily}
             generating={isGenDaily ? 'Analyse ICT de la journée en cours…' : null}
+            chartLabel="1H · ICT SESSIONS"
             onRegenerate={() => {
               const d = selDaily ?? getLastTradeDay();
               generate('daily', d);
@@ -405,6 +416,7 @@ export default function Analysis() {
           <AnalysisCard
             analysis={curWeekly}
             generating={isGenWeekly ? 'Bilan hebdomadaire ICT en cours…' : null}
+            chartLabel="1D · BILAN HEBDO"
             onRegenerate={() => {
               const d = selWeekly ?? getLastMonday();
               generate('weekly', d);
@@ -437,6 +449,7 @@ export default function Analysis() {
           <AnalysisCard
             analysis={curNextWeek}
             generating={isGenNextWeek ? 'Plan ICT semaine suivante en cours…' : null}
+            chartLabel="1D · PLAN SEMAINE"
             onRegenerate={() => {
               const d = selNextWeek ?? getNextMonday();
               generate('next_week', d);

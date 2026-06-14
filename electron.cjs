@@ -118,23 +118,44 @@ async function fetchNQRange(fromDate, toDate, interval) {
   })).filter(c => c.open != null && c.close != null);
 }
 
+// ── Parse AI response: split text from chart zones JSON ──────
+function parseChartZones(raw) {
+  const m = raw.match(/---CHART_ZONES---\s*([\s\S]*?)\s*---END_CHART_ZONES---/);
+  let zones   = { fvgs: [], swings: [], liquidity: [] };
+  let content = raw;
+  if (m) {
+    try { zones = JSON.parse(m[1]); } catch(_) {}
+    content = raw.replace(/---CHART_ZONES---[\s\S]*?---END_CHART_ZONES---/, '').trim();
+  }
+  return { content, zones };
+}
+
+const ZONES_INSTRUCTION = `
+
+---INSTRUCTION GRAPHIQUE---
+À la toute fin de ta réponse, émets uniquement ce bloc JSON (remplace les valeurs par les vraies données de ton analyse) :
+---CHART_ZONES---
+{"fvgs":[{"idx":0,"high":0,"low":0,"type":"bullish"}],"swings":[{"idx":0,"price":0,"type":"high","label":"SSH"}],"liquidity":[{"price":0,"type":"BSL","label":"Equal Highs"}]}
+---END_CHART_ZONES---
+Règles : idx = index 0-basé de la bougie dans les données OHLCV. Max 3 FVGs, 4 swings (SSH/SSL/HH/HL/LH/LL), 3 liquidités (BSL/SSL). Si absences réelles, mets des tableaux vides []. Ne mets rien après le bloc ---END_CHART_ZONES---.`;
+
 // ── ICT analysis generation ───────────────────────────────────
 async function generateIctAnalysis(type, date) {
   let candles = [];
 
   if (type === 'daily') {
     try { candles = await fetchNQRange(date, date, '1h'); } catch(_) {}
-    const rows = candles.map(c => {
+    const rows = candles.map((c, i) => {
       const d = new Date(c.ts * 1000);
       const hh = String(d.getUTCHours()).padStart(2,'0');
       const mm = String(d.getUTCMinutes()).padStart(2,'0');
-      return `${hh}:${mm}UTC  O:${c.open?.toFixed(0)} H:${c.high?.toFixed(0)} L:${c.low?.toFixed(0)} C:${c.close?.toFixed(0)}`;
+      return `[${i}] ${hh}:${mm}UTC  O:${c.open?.toFixed(0)} H:${c.high?.toFixed(0)} L:${c.low?.toFixed(0)} C:${c.close?.toFixed(0)}`;
     }).join('\n') || 'Données non disponibles pour ce jour.';
     const dayLabel = new Date(date + 'T12:00:00Z').toLocaleDateString('fr-FR',
       { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
-    const content = await callAnthropicApiLong([{ role:'user', content:
-      `Génère un résumé de journée ICT complet pour le NQ le ${date}.\n\nDONNÉES OHLCV NQ (1H UTC):\n${rows}\n\n` +
+    const raw = await callAnthropicApiLong([{ role:'user', content:
+      `Génère un résumé de journée ICT complet pour le NQ le ${date}.\n\nDONNÉES OHLCV NQ (1H UTC, index entre crochets):\n${rows}\n\n` +
       `Rédige l'analyse en Markdown structurée ainsi :\n\n` +
       `## 📊 RÉSUMÉ JOURNALIER — ${dayLabel}\n\n` +
       `### 🎯 BIAIS DU JOUR\n[Haussier/Baissier/Neutre avec justification]\n\n` +
@@ -145,10 +166,12 @@ async function generateIctAnalysis(type, date) {
       `**NY Lunch (18h00–19h30):** ...\n\n**NY PM / Silver Bullet (19h30–21h00):** ...\n\n` +
       `### 💧 LIQUIDITÉ & ICT\n- Liquidité prise: ...\n- FVG identifiés: ...\n- Displacement: ...\n- Draw On Liquidity (DOL): ...\n\n` +
       `### 🔭 NIVEAUX POUR DEMAIN\n- Résistances: ...\n- Supports: ...\n- Imbalances à surveiller: ...\n\n` +
-      `### ✅ BILAN ICT\n[2–3 phrases de synthèse ICT]`
+      `### ✅ BILAN ICT\n[2–3 phrases de synthèse ICT]` +
+      ZONES_INSTRUCTION
     }],
     `Tu es un analyste expert ICT (Inner Circle Trader) sur le NQ/MNQ (NASDAQ 100 Futures). Tu analyses les marchés pour des traders français avec des horaires CET. Sois précis, structuré et opérationnel.`);
-    return { content, candles };
+    const { content, zones } = parseChartZones(raw);
+    return { content, candles, zones };
   }
 
   if (type === 'weekly') {
@@ -156,28 +179,30 @@ async function generateIctAnalysis(type, date) {
     friday.setUTCDate(friday.getUTCDate() + 4);
     const fridayStr = friday.toISOString().slice(0,10);
     try { candles = await fetchNQRange(date, fridayStr, '1d'); } catch(_) {}
-    const rows = candles.map(c => {
+    const rows = candles.map((c, i) => {
       const d = new Date(c.ts * 1000);
       const day = d.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'short', timeZone:'UTC' });
       const pct = c.open ? ((c.close - c.open) / c.open * 100).toFixed(2) : '?';
-      return `${day}  O:${c.open?.toFixed(0)} H:${c.high?.toFixed(0)} L:${c.low?.toFixed(0)} C:${c.close?.toFixed(0)}  ${pct}%  Vol:${c.vol?.toLocaleString()}`;
+      return `[${i}] ${day}  O:${c.open?.toFixed(0)} H:${c.high?.toFixed(0)} L:${c.low?.toFixed(0)} C:${c.close?.toFixed(0)}  ${pct}%  Vol:${c.vol?.toLocaleString()}`;
     }).join('\n') || 'Données non disponibles.';
     const d0 = new Date(date + 'T12:00:00Z');
     const d1 = new Date(fridayStr + 'T12:00:00Z');
     const wLabel = `${d0.toLocaleDateString('fr-FR',{day:'numeric',month:'long'})} – ${d1.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}`;
 
-    const content = await callAnthropicApiLong([{ role:'user', content:
-      `Génère un bilan hebdomadaire ICT pour le NQ. Semaine du ${wLabel}.\n\nDONNÉES OHLCV NQ (1J):\n${rows}\n\n` +
+    const raw = await callAnthropicApiLong([{ role:'user', content:
+      `Génère un bilan hebdomadaire ICT pour le NQ. Semaine du ${wLabel}.\n\nDONNÉES OHLCV NQ (1J, index entre crochets):\n${rows}\n\n` +
       `Rédige en Markdown :\n\n## 📈 BILAN HEBDOMADAIRE — ${wLabel}\n\n` +
       `### 🎯 BIAIS DE SEMAINE\n[Direction + variation totale en pts et %]\n\n` +
       `### 📊 ANALYSE JOUR PAR JOUR\n[Pour chaque jour: move principal, liquidité prise, FVG notable]\n\n` +
       `### 💧 LIQUIDITÉ DE LA SEMAINE\n- Début de semaine (lundi): ...\n- Mercredi (pivot ICT): ...\n- Fin de semaine (vendredi): ...\n\n` +
       `### 🔑 STRUCTURE DE MARCHÉ\n- Tendance (HH+HL / LH+LL): ...\n- BOS / CHOCH identifiés: ...\n- FVGs majeurs hebdo: ...\n\n` +
       `### 📌 NIVEAUX IMPORTANTS À RETENIR\n- Résistances majeures: ...\n- Supports majeurs: ...\n- Imbalances non comblées: ...\n\n` +
-      `### ✅ BILAN ICT DE LA SEMAINE\n[Synthèse en 2-3 phrases]`
+      `### ✅ BILAN ICT DE LA SEMAINE\n[Synthèse en 2-3 phrases]` +
+      ZONES_INSTRUCTION
     }],
     `Tu es un analyste expert ICT sur le NQ/MNQ. Tu rédiges des bilans hebdomadaires professionnels pour des traders français.`);
-    return { content, candles };
+    const { content, zones } = parseChartZones(raw);
+    return { content, candles, zones };
   }
 
   if (type === 'next_week') {
@@ -189,17 +214,17 @@ async function generateIctAnalysis(type, date) {
     const lastFriday = new Date(date + 'T12:00:00Z');
     lastFriday.setUTCDate(lastFriday.getUTCDate() - 3);
     try { candles = await fetchNQRange(twoWeeksAgo.toISOString().slice(0,10), lastFriday.toISOString().slice(0,10), '1d'); } catch(_) {}
-    const rows = candles.map(c => {
+    const rows = candles.map((c, i) => {
       const d = new Date(c.ts * 1000);
       const day = d.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'short', timeZone:'UTC' });
-      return `${day}  O:${c.open?.toFixed(0)} H:${c.high?.toFixed(0)} L:${c.low?.toFixed(0)} C:${c.close?.toFixed(0)}`;
+      return `[${i}] ${day}  O:${c.open?.toFixed(0)} H:${c.high?.toFixed(0)} L:${c.low?.toFixed(0)} C:${c.close?.toFixed(0)}`;
     }).join('\n') || 'Données non disponibles.';
     const d0 = new Date(date + 'T12:00:00Z');
     const d1 = new Date(fridayStr + 'T12:00:00Z');
     const wLabel = `${d0.toLocaleDateString('fr-FR',{day:'numeric',month:'long'})} – ${d1.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}`;
 
-    const content = await callAnthropicApiLong([{ role:'user', content:
-      `Génère un plan de trading ICT pour la semaine prochaine du NQ (${wLabel}).\n\nCONTEXTE — NQ récent (2 dernières semaines, 1J):\n${rows}\n\n` +
+    const raw = await callAnthropicApiLong([{ role:'user', content:
+      `Génère un plan de trading ICT pour la semaine prochaine du NQ (${wLabel}).\n\nCONTEXTE — NQ récent (2 dernières semaines, 1J, index entre crochets):\n${rows}\n\n` +
       `Rédige en Markdown :\n\n## 🔭 PLAN ICT — Semaine du ${wLabel}\n\n` +
       `### 📊 CONTEXTE MACRO\n[Structure actuelle, tendance en cours, niveaux hebdo importants]\n\n` +
       `### 💧 LIQUIDITÉ À SURVEILLER\n- BSL (Buy Side): Equal Highs, PWH, Swing Highs\n- SSL (Sell Side): Equal Lows, PWL, Swing Lows\n\n` +
@@ -208,10 +233,12 @@ async function generateIctAnalysis(type, date) {
       `### 📉 SCÉNARIO BAISSIER\n[Conditions d'activation, niveaux entrée, cibles, invalidation]\n\n` +
       `### 📅 PLAN JOUR PAR JOUR\n- **Lundi**: ...\n- **Mardi**: ...\n- **Mercredi** (pivot ICT): ...\n- **Jeudi**: ...\n- **Vendredi**: ...\n\n` +
       `### ⚠️ POINTS DE VIGILANCE\n[News macro, FOMC, NFP ou événements importants cette semaine]\n\n` +
-      `### 🎯 SESSIONS PRIORITAIRES\n[Silver Bullet windows et moments clés à privilégier]`
+      `### 🎯 SESSIONS PRIORITAIRES\n[Silver Bullet windows et moments clés à privilégier]` +
+      ZONES_INSTRUCTION
     }],
     `Tu es un analyste expert ICT sur le NQ/MNQ. Tu prépares des plans de trading hebdomadaires professionnels pour des traders français.`);
-    return { content, candles };
+    const { content, zones } = parseChartZones(raw);
+    return { content, candles, zones };
   }
 
   throw new Error(`Type inconnu: ${type}`);
@@ -465,8 +492,8 @@ app.whenReady().then(async () => {
       // Lun-Ven après 20h UTC (22h Paris) → résumé journalier
       if (day >= 1 && day <= 5 && utcH >= 20) {
         if (!marketDbMod.getOne('daily', todayStr)) {
-          const { content, candles } = await generateIctAnalysis('daily', todayStr);
-          marketDbMod.upsert('daily', todayStr, content, { candleCount: candles.length });
+          const { content, candles, zones } = await generateIctAnalysis('daily', todayStr);
+          marketDbMod.upsert('daily', todayStr, content, { candles, zones });
           mainWindow?.webContents.send('market:analysisGenerated', { type:'daily', date:todayStr });
         }
       }
@@ -477,13 +504,13 @@ app.whenReady().then(async () => {
         const nextMon = new Date(now); nextMon.setUTCDate(now.getUTCDate() + 2);
         const nextMonStr = nextMon.toISOString().slice(0,10);
         if (!marketDbMod.getOne('weekly', lastMonStr)) {
-          const { content, candles } = await generateIctAnalysis('weekly', lastMonStr);
-          marketDbMod.upsert('weekly', lastMonStr, content, { candleCount: candles.length });
+          const { content, candles, zones } = await generateIctAnalysis('weekly', lastMonStr);
+          marketDbMod.upsert('weekly', lastMonStr, content, { candles, zones });
           mainWindow?.webContents.send('market:analysisGenerated', { type:'weekly', date:lastMonStr });
         }
         if (!marketDbMod.getOne('next_week', nextMonStr)) {
-          const { content, candles } = await generateIctAnalysis('next_week', nextMonStr);
-          marketDbMod.upsert('next_week', nextMonStr, content, { candleCount: candles.length });
+          const { content, candles, zones } = await generateIctAnalysis('next_week', nextMonStr);
+          marketDbMod.upsert('next_week', nextMonStr, content, { candles, zones });
           mainWindow?.webContents.send('market:analysisGenerated', { type:'next_week', date:nextMonStr });
         }
       }
@@ -635,8 +662,8 @@ function registerHandlers() {
 
   ipcMain.handle('market:generateAiAnalysis', async (_, type, date) => {
     try {
-      const { content, candles } = await generateIctAnalysis(type, date);
-      const row = marketDbMod.upsert(type, date, content, { candleCount: candles.length });
+      const { content, candles, zones } = await generateIctAnalysis(type, date);
+      const row = marketDbMod.upsert(type, date, content, { candles, zones });
       return { ok: true, data: row };
     } catch(e) {
       if (e.message === 'NO_API_KEY') return { ok: false, error: 'no_api_key' };
