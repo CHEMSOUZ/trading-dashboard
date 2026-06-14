@@ -52,7 +52,11 @@ contextBridge.exposeInMainWorld('ai', {
 });
 
 contextBridge.exposeInMainWorld('market', {
-  getOHLCV: (pair, date, tf) => ipcRenderer.invoke('market:getOHLCV', pair, date, tf),
+  getOHLCV:            (pair, date, tf) => ipcRenderer.invoke('market:getOHLCV', pair, date, tf),
+  getAiAnalyses:       ()               => ipcRenderer.invoke('market:getAiAnalyses'),
+  generateAiAnalysis:  (type, date)     => ipcRenderer.invoke('market:generateAiAnalysis', type, date),
+  deleteAiAnalysis:    (id)             => ipcRenderer.invoke('market:deleteAiAnalysis', id),
+  onAnalysisGenerated: (cb)             => ipcRenderer.on('market:analysisGenerated', (_, d) => cb(d)),
 });
 
 contextBridge.exposeInMainWorld('bot', {

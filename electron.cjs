@@ -62,9 +62,165 @@ function callAnthropicApi(messages, systemPrompt) {
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 
+// ── Anthropic long call (4096 tokens) ────────────────────────
+function callAnthropicApiLong(messages, systemPrompt) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return Promise.reject(new Error('NO_API_KEY'));
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      model: 'claude-sonnet-4-6', max_tokens: 4096,
+      system: systemPrompt,
+      messages: messages.map(m => ({ role: m.role, content: m.content })),
+    });
+    const req = https.request({
+      hostname: 'api.anthropic.com', port: 443, path: '/v1/messages', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01', 'Content-Length': Buffer.byteLength(body) },
+    }, res => {
+      let data = '';
+      res.on('data', c => { data += c; });
+      res.on('end', () => {
+        try {
+          const p = JSON.parse(data);
+          if (p.error) return reject(new Error(p.error.message));
+          resolve(p.content?.[0]?.text ?? '');
+        } catch(e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.write(body); req.end();
+  });
+}
+
+// ── NQ multi-day OHLCV fetch ──────────────────────────────────
+async function fetchNQRange(fromDate, toDate, interval) {
+  const p1 = Math.floor(new Date(fromDate + 'T00:00:00Z').getTime() / 1000);
+  const p2 = Math.floor(new Date(toDate   + 'T23:59:59Z').getTime() / 1000);
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/NQ%3DF?interval=${interval}&period1=${p1}&period2=${p2}&events=`;
+  const raw = await new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } }, res => {
+      let body = ''; res.on('data', c => body += c);
+      res.on('end', () => { try { resolve(JSON.parse(body)); } catch(e) { reject(e); } });
+    });
+    req.on('error', reject);
+    req.setTimeout(15000, () => { req.destroy(); reject(new Error('Timeout')); });
+  });
+  const result = raw?.chart?.result?.[0];
+  if (!result) throw new Error('Pas de données NQ');
+  const ts = result.timestamp ?? [];
+  const q  = result.indicators?.quote?.[0] ?? {};
+  return ts.map((t, i) => ({
+    ts: t,
+    iso: new Date(t * 1000).toISOString(),
+    open:  q.open?.[i], high: q.high?.[i],
+    low:   q.low?.[i],  close: q.close?.[i],
+    vol:   q.volume?.[i],
+  })).filter(c => c.open != null && c.close != null);
+}
+
+// ── ICT analysis generation ───────────────────────────────────
+async function generateIctAnalysis(type, date) {
+  let candles = [];
+
+  if (type === 'daily') {
+    try { candles = await fetchNQRange(date, date, '1h'); } catch(_) {}
+    const rows = candles.map(c => {
+      const d = new Date(c.ts * 1000);
+      const hh = String(d.getUTCHours()).padStart(2,'0');
+      const mm = String(d.getUTCMinutes()).padStart(2,'0');
+      return `${hh}:${mm}UTC  O:${c.open?.toFixed(0)} H:${c.high?.toFixed(0)} L:${c.low?.toFixed(0)} C:${c.close?.toFixed(0)}`;
+    }).join('\n') || 'Données non disponibles pour ce jour.';
+    const dayLabel = new Date(date + 'T12:00:00Z').toLocaleDateString('fr-FR',
+      { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+    const content = await callAnthropicApiLong([{ role:'user', content:
+      `Génère un résumé de journée ICT complet pour le NQ le ${date}.\n\nDONNÉES OHLCV NQ (1H UTC):\n${rows}\n\n` +
+      `Rédige l'analyse en Markdown structurée ainsi :\n\n` +
+      `## 📊 RÉSUMÉ JOURNALIER — ${dayLabel}\n\n` +
+      `### 🎯 BIAIS DU JOUR\n[Haussier/Baissier/Neutre avec justification]\n\n` +
+      `### 📈 NIVEAUX CLÉS\n- Open: ...\n- High: ...\n- Low: ...\n- Close: ...\n- Variation: ...\n\n` +
+      `### 🕐 ANALYSE PAR SESSION (heure Paris = UTC+2)\n\n` +
+      `**Pre-Market (13h00–15h30):** ...\n\n**Opening Drive / Judas Swing (15h30–16h00):** ...\n\n` +
+      `**Silver Bullet NY AM (16h00–17h00):** ...\n\n**Continuation (17h00–18h00):** ...\n\n` +
+      `**NY Lunch (18h00–19h30):** ...\n\n**NY PM / Silver Bullet (19h30–21h00):** ...\n\n` +
+      `### 💧 LIQUIDITÉ & ICT\n- Liquidité prise: ...\n- FVG identifiés: ...\n- Displacement: ...\n- Draw On Liquidity (DOL): ...\n\n` +
+      `### 🔭 NIVEAUX POUR DEMAIN\n- Résistances: ...\n- Supports: ...\n- Imbalances à surveiller: ...\n\n` +
+      `### ✅ BILAN ICT\n[2–3 phrases de synthèse ICT]`
+    }],
+    `Tu es un analyste expert ICT (Inner Circle Trader) sur le NQ/MNQ (NASDAQ 100 Futures). Tu analyses les marchés pour des traders français avec des horaires CET. Sois précis, structuré et opérationnel.`);
+    return { content, candles };
+  }
+
+  if (type === 'weekly') {
+    const friday = new Date(date + 'T12:00:00Z');
+    friday.setUTCDate(friday.getUTCDate() + 4);
+    const fridayStr = friday.toISOString().slice(0,10);
+    try { candles = await fetchNQRange(date, fridayStr, '1d'); } catch(_) {}
+    const rows = candles.map(c => {
+      const d = new Date(c.ts * 1000);
+      const day = d.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'short', timeZone:'UTC' });
+      const pct = c.open ? ((c.close - c.open) / c.open * 100).toFixed(2) : '?';
+      return `${day}  O:${c.open?.toFixed(0)} H:${c.high?.toFixed(0)} L:${c.low?.toFixed(0)} C:${c.close?.toFixed(0)}  ${pct}%  Vol:${c.vol?.toLocaleString()}`;
+    }).join('\n') || 'Données non disponibles.';
+    const d0 = new Date(date + 'T12:00:00Z');
+    const d1 = new Date(fridayStr + 'T12:00:00Z');
+    const wLabel = `${d0.toLocaleDateString('fr-FR',{day:'numeric',month:'long'})} – ${d1.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}`;
+
+    const content = await callAnthropicApiLong([{ role:'user', content:
+      `Génère un bilan hebdomadaire ICT pour le NQ. Semaine du ${wLabel}.\n\nDONNÉES OHLCV NQ (1J):\n${rows}\n\n` +
+      `Rédige en Markdown :\n\n## 📈 BILAN HEBDOMADAIRE — ${wLabel}\n\n` +
+      `### 🎯 BIAIS DE SEMAINE\n[Direction + variation totale en pts et %]\n\n` +
+      `### 📊 ANALYSE JOUR PAR JOUR\n[Pour chaque jour: move principal, liquidité prise, FVG notable]\n\n` +
+      `### 💧 LIQUIDITÉ DE LA SEMAINE\n- Début de semaine (lundi): ...\n- Mercredi (pivot ICT): ...\n- Fin de semaine (vendredi): ...\n\n` +
+      `### 🔑 STRUCTURE DE MARCHÉ\n- Tendance (HH+HL / LH+LL): ...\n- BOS / CHOCH identifiés: ...\n- FVGs majeurs hebdo: ...\n\n` +
+      `### 📌 NIVEAUX IMPORTANTS À RETENIR\n- Résistances majeures: ...\n- Supports majeurs: ...\n- Imbalances non comblées: ...\n\n` +
+      `### ✅ BILAN ICT DE LA SEMAINE\n[Synthèse en 2-3 phrases]`
+    }],
+    `Tu es un analyste expert ICT sur le NQ/MNQ. Tu rédiges des bilans hebdomadaires professionnels pour des traders français.`);
+    return { content, candles };
+  }
+
+  if (type === 'next_week') {
+    const friday = new Date(date + 'T12:00:00Z');
+    friday.setUTCDate(friday.getUTCDate() + 4);
+    const fridayStr = friday.toISOString().slice(0,10);
+    const twoWeeksAgo = new Date(date + 'T12:00:00Z');
+    twoWeeksAgo.setUTCDate(twoWeeksAgo.getUTCDate() - 14);
+    const lastFriday = new Date(date + 'T12:00:00Z');
+    lastFriday.setUTCDate(lastFriday.getUTCDate() - 3);
+    try { candles = await fetchNQRange(twoWeeksAgo.toISOString().slice(0,10), lastFriday.toISOString().slice(0,10), '1d'); } catch(_) {}
+    const rows = candles.map(c => {
+      const d = new Date(c.ts * 1000);
+      const day = d.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'short', timeZone:'UTC' });
+      return `${day}  O:${c.open?.toFixed(0)} H:${c.high?.toFixed(0)} L:${c.low?.toFixed(0)} C:${c.close?.toFixed(0)}`;
+    }).join('\n') || 'Données non disponibles.';
+    const d0 = new Date(date + 'T12:00:00Z');
+    const d1 = new Date(fridayStr + 'T12:00:00Z');
+    const wLabel = `${d0.toLocaleDateString('fr-FR',{day:'numeric',month:'long'})} – ${d1.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}`;
+
+    const content = await callAnthropicApiLong([{ role:'user', content:
+      `Génère un plan de trading ICT pour la semaine prochaine du NQ (${wLabel}).\n\nCONTEXTE — NQ récent (2 dernières semaines, 1J):\n${rows}\n\n` +
+      `Rédige en Markdown :\n\n## 🔭 PLAN ICT — Semaine du ${wLabel}\n\n` +
+      `### 📊 CONTEXTE MACRO\n[Structure actuelle, tendance en cours, niveaux hebdo importants]\n\n` +
+      `### 💧 LIQUIDITÉ À SURVEILLER\n- BSL (Buy Side): Equal Highs, PWH, Swing Highs\n- SSL (Sell Side): Equal Lows, PWL, Swing Lows\n\n` +
+      `### 📐 FVGs & IMBALANCES\n[FVGs importants non comblés qui serviront de cibles ou d'entrées]\n\n` +
+      `### 📈 SCÉNARIO HAUSSIER\n[Conditions d'activation, niveaux entrée, cibles, invalidation]\n\n` +
+      `### 📉 SCÉNARIO BAISSIER\n[Conditions d'activation, niveaux entrée, cibles, invalidation]\n\n` +
+      `### 📅 PLAN JOUR PAR JOUR\n- **Lundi**: ...\n- **Mardi**: ...\n- **Mercredi** (pivot ICT): ...\n- **Jeudi**: ...\n- **Vendredi**: ...\n\n` +
+      `### ⚠️ POINTS DE VIGILANCE\n[News macro, FOMC, NFP ou événements importants cette semaine]\n\n` +
+      `### 🎯 SESSIONS PRIORITAIRES\n[Silver Bullet windows et moments clés à privilégier]`
+    }],
+    `Tu es un analyste expert ICT sur le NQ/MNQ. Tu prépares des plans de trading hebdomadaires professionnels pour des traders français.`);
+    return { content, candles };
+  }
+
+  throw new Error(`Type inconnu: ${type}`);
+}
+
 let mainWindow;
 let accounts;
 let dbModule;
+let marketDbMod;
 let activeDb     = null;
 let activeDbPath = null;
 let globalDb     = null;
@@ -220,8 +376,9 @@ function startBotServer(port) {
 }
 
 async function init() {
-  accounts = require('./accounts.cjs');
-  dbModule = require('./database.cjs');
+  accounts    = require('./accounts.cjs');
+  dbModule    = require('./database.cjs');
+  marketDbMod = require('./market_db.cjs');
 }
 
 async function loadActiveDb() {
@@ -285,6 +442,7 @@ app.whenReady().then(async () => {
   await init();
   await loadActiveDb();
   await loadGlobalDb();
+  await marketDbMod.init(app.getPath('userData'));
   registerHandlers();
   botSignalsFile = path.join(app.getPath('userData'), 'bot_signals.json');
   botSignals     = loadBotSignalsFromFile();
@@ -297,6 +455,40 @@ app.whenReady().then(async () => {
     });
   }
 
+  // ── Scheduler analyses marché (toutes les 5 min) ──────────────
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      const utcH = now.getUTCHours();
+      const day  = now.getUTCDay();
+      const todayStr = now.toISOString().slice(0,10);
+      // Lun-Ven après 20h UTC (22h Paris) → résumé journalier
+      if (day >= 1 && day <= 5 && utcH >= 20) {
+        if (!marketDbMod.getOne('daily', todayStr)) {
+          const { content, candles } = await generateIctAnalysis('daily', todayStr);
+          marketDbMod.upsert('daily', todayStr, content, { candleCount: candles.length });
+          mainWindow?.webContents.send('market:analysisGenerated', { type:'daily', date:todayStr });
+        }
+      }
+      // Samedi après 6h UTC (8h Paris) → bilan semaine + preview suivante
+      if (day === 6 && utcH >= 6) {
+        const lastMon = new Date(now); lastMon.setUTCDate(now.getUTCDate() - 5);
+        const lastMonStr = lastMon.toISOString().slice(0,10);
+        const nextMon = new Date(now); nextMon.setUTCDate(now.getUTCDate() + 2);
+        const nextMonStr = nextMon.toISOString().slice(0,10);
+        if (!marketDbMod.getOne('weekly', lastMonStr)) {
+          const { content, candles } = await generateIctAnalysis('weekly', lastMonStr);
+          marketDbMod.upsert('weekly', lastMonStr, content, { candleCount: candles.length });
+          mainWindow?.webContents.send('market:analysisGenerated', { type:'weekly', date:lastMonStr });
+        }
+        if (!marketDbMod.getOne('next_week', nextMonStr)) {
+          const { content, candles } = await generateIctAnalysis('next_week', nextMonStr);
+          marketDbMod.upsert('next_week', nextMonStr, content, { candleCount: candles.length });
+          mainWindow?.webContents.send('market:analysisGenerated', { type:'next_week', date:nextMonStr });
+        }
+      }
+    } catch(e) { console.error('[Market scheduler]', e.message); }
+  }, 5 * 60 * 1000);
 });
 
 app.on('window-all-closed', () => {
@@ -434,6 +626,28 @@ function registerHandlers() {
   dbHandle('ai:getMessages',  (db) => dbModule.getAiMessages(db));
   dbHandle('ai:addMessage',   (db, dbp, msg) => dbModule.insertAiMessage(db, dbp, msg));
   dbHandle('ai:clearHistory', (db, dbp) => dbModule.clearAiConversations(db, dbp));
+
+  // ── Market AI Analyses ────────────────────────────────────
+  ipcMain.handle('market:getAiAnalyses', () => {
+    try { return { ok: true, data: marketDbMod.getAll() }; }
+    catch(e) { return { ok: false, error: e.message }; }
+  });
+
+  ipcMain.handle('market:generateAiAnalysis', async (_, type, date) => {
+    try {
+      const { content, candles } = await generateIctAnalysis(type, date);
+      const row = marketDbMod.upsert(type, date, content, { candleCount: candles.length });
+      return { ok: true, data: row };
+    } catch(e) {
+      if (e.message === 'NO_API_KEY') return { ok: false, error: 'no_api_key' };
+      return { ok: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('market:deleteAiAnalysis', (_, id) => {
+    try { marketDbMod.deleteById(id); return { ok: true }; }
+    catch(e) { return { ok: false, error: e.message }; }
+  });
 
   // ── Market Data ───────────────────────────────────────────
   ipcMain.handle('market:getOHLCV', async (_, pair, date, interval) => {

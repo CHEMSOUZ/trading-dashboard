@@ -1,660 +1,463 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-
-// ── Default instruments ───────────────────────────────────────
-const DEFAULT_INSTRUMENTS = ['MNQ','NQ','MES','ES','MGC','GC','MCL','CL','M2K','RTY','EUR/USD','GBP/USD','USD/JPY','BTC/USD'];
-
-const TIMEFRAMES = ['1M','5M','15M','30M','1H','4H','D','W'];
-const BIAS_OPTIONS = ['Haussier 📈','Baissier 📉','Neutre ➡️','Indécis 🤔'];
+import { useState, useEffect, useMemo } from 'react';
 
 // ── Helpers ───────────────────────────────────────────────────
 function getWeekStart(date) {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  return d.toISOString().slice(0,10);
+  const d = new Date(date + 'T12:00:00Z');
+  const day = d.getUTCDay();
+  d.setUTCDate(d.getUTCDate() - (day === 0 ? 6 : day - 1));
+  return d.toISOString().slice(0, 10);
 }
 
-function getWeekLabel(weekStart) {
-  const start = new Date(weekStart + 'T12:00');
-  const end   = new Date(start); end.setDate(end.getDate() + 6);
-  return `${start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+function getNextMonday() {
+  const d = new Date();
+  const day = d.getUTCDay();
+  const diff = day === 0 ? 1 : 8 - day;
+  d.setUTCDate(d.getUTCDate() + diff);
+  return d.toISOString().slice(0, 10);
 }
 
-function loadCustomInstruments() {
-  try { return JSON.parse(localStorage.getItem('analysis_instruments') ?? 'null') ?? DEFAULT_INSTRUMENTS; }
-  catch { return DEFAULT_INSTRUMENTS; }
-}
-function saveCustomInstruments(list) { localStorage.setItem('analysis_instruments', JSON.stringify(list)); }
-
-// ── Lightbox ──────────────────────────────────────────────────
-function Lightbox({ src, onClose }) {
-  useEffect(() => {
-    function onKey(e) { if (e.key === 'Escape') onClose(); }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <img src={src} alt="Screenshot" onClick={e => e.stopPropagation()}
-        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '4px', boxShadow: '0 0 40px rgba(136,153,187,0.18)' }} />
-      <button onClick={onClose} style={{ position: 'absolute', top: '20px', right: '24px', background: 'rgba(14,15,22,0.8)', border: '1px solid rgba(136,153,187,0.35)', color: '#8899bb', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px' }}>×</button>
-    </div>
-  );
+function getLastTradeDay() {
+  const d = new Date();
+  const day = d.getUTCDay();
+  if (day === 0) d.setUTCDate(d.getUTCDate() - 2);
+  else if (day === 6) d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
 }
 
-// ── Screenshot zone ───────────────────────────────────────────
-function ScreenshotZone({ screenshots, onChange }) {
-  const [dragOver, setDragOver] = useState(false);
-  const [lightbox, setLightbox] = useState(null);
-  const zoneRef = useRef(null);
+function getLastMonday() {
+  const d = new Date();
+  const day = d.getUTCDay();
+  if (day === 6) d.setUTCDate(d.getUTCDate() - 5);
+  else if (day === 0) d.setUTCDate(d.getUTCDate() - 6);
+  else d.setUTCDate(d.getUTCDate() - (day - 1));
+  return d.toISOString().slice(0, 10);
+}
 
-  // Ctrl+V paste
-  useEffect(() => {
-    function onPaste(e) {
-      if (!zoneRef.current) return;
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      for (const item of items) {
-        if (item.type.startsWith('image/')) {
-          const blob = item.getAsFile();
-          readFile(blob);
-        }
-      }
+function fmtDate(dateStr) {
+  return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('fr-FR',
+    { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function fmtWeek(mondayStr) {
+  const d0 = new Date(mondayStr + 'T12:00:00Z');
+  const d1 = new Date(mondayStr + 'T12:00:00Z');
+  d1.setUTCDate(d1.getUTCDate() + 4);
+  return `${d0.toLocaleDateString('fr-FR',{day:'numeric',month:'long'})} – ${d1.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}`;
+}
+
+function fmtTs(ts) {
+  if (!ts) return '';
+  return new Date(ts).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+// ── Markdown renderer ─────────────────────────────────────────
+function MdLine({ text }) {
+  const html = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+function MarkdownContent({ content }) {
+  if (!content) return null;
+  const lines = content.split('\n');
+  const els = [];
+  let key = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith('## ')) {
+      els.push(
+        <h2 key={key++} style={{ fontSize:'17px', fontWeight:'700', color:'#e8edf8', margin:'28px 0 10px', borderBottom:'1px solid rgba(136,153,187,0.15)', paddingBottom:'8px', letterSpacing:'0.5px' }}>
+          {line.slice(3)}
+        </h2>
+      );
+    } else if (line.startsWith('### ')) {
+      els.push(
+        <h3 key={key++} style={{ fontSize:'13px', fontWeight:'700', color:'#8899bb', margin:'18px 0 6px', letterSpacing:'1px', textTransform:'uppercase' }}>
+          {line.slice(4)}
+        </h3>
+      );
+    } else if (line.startsWith('#### ')) {
+      els.push(
+        <h4 key={key++} style={{ fontSize:'12px', fontWeight:'700', color:'#6677aa', margin:'10px 0 4px' }}>
+          {line.slice(5)}
+        </h4>
+      );
+    } else if (/^\*\*.*\*\*:?$/.test(line.trim())) {
+      els.push(
+        <p key={key++} style={{ margin:'10px 0 4px', fontWeight:'700', color:'#c0cadd', fontSize:'13px' }}>
+          <MdLine text={line.trim()} />
+        </p>
+      );
+    } else if (line.startsWith('- ') || line.startsWith('* ')) {
+      els.push(
+        <div key={key++} style={{ display:'flex', gap:'8px', margin:'3px 0 3px 8px', color:'#8899bb', fontSize:'13px', lineHeight:'1.6' }}>
+          <span style={{ color:'#3a5a72', flexShrink:0, marginTop:'1px' }}>▸</span>
+          <span><MdLine text={line.slice(2)} /></span>
+        </div>
+      );
+    } else if (line.trim() === '---') {
+      els.push(<hr key={key++} style={{ border:'none', borderTop:'1px solid rgba(136,153,187,0.12)', margin:'14px 0' }} />);
+    } else if (line.trim() === '') {
+      els.push(<div key={key++} style={{ height:'6px' }} />);
+    } else {
+      els.push(
+        <p key={key++} style={{ margin:'3px 0', color:'#8899bb', fontSize:'13px', lineHeight:'1.7' }}>
+          <MdLine text={line} />
+        </p>
+      );
     }
-    window.addEventListener('paste', onPaste);
-    return () => window.removeEventListener('paste', onPaste);
-  }, [screenshots, onChange]);
-
-  function readFile(file) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const dataUrl = e.target.result;
-      const name    = file.name || `screenshot_${Date.now()}.png`;
-      onChange([...screenshots, { dataUrl, name, id: Date.now() + Math.random() }]);
-    };
-    reader.readAsDataURL(file);
   }
+  return <>{els}</>;
+}
 
-  function handleDrop(e) {
-    e.preventDefault(); setDragOver(false);
-    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-    files.forEach(readFile);
-  }
-
-  async function handleClick() {
-    const res = await window.electron.openImagesDialog();
-    if (!res.ok || res.canceled) return;
-    const newScreens = res.images.map(img => ({ dataUrl: img.dataUrl, name: img.name, id: Date.now() + Math.random() }));
-    onChange([...screenshots, ...newScreens]);
-  }
-
-  function removeScreenshot(id) {
-    onChange(screenshots.filter(s => s.id !== id));
-  }
-
+// ── Generating spinner ────────────────────────────────────────
+function GeneratingCard({ label }) {
+  const [dots, setDots] = useState('.');
+  useEffect(() => {
+    const t = setInterval(() => setDots(d => d.length >= 3 ? '.' : d + '.'), 500);
+    return () => clearInterval(t);
+  }, []);
   return (
-    <div ref={zoneRef}>
-      {/* Drop zone */}
-      <div
-        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-        onClick={handleClick}
-        style={{
-          border: `2px dashed ${dragOver ? '#8899bb' : '#1a4a2a'}`,
-          borderRadius: '8px', padding: '20px',
-          textAlign: 'center', cursor: 'pointer',
-          background: dragOver ? 'rgba(136,153,187,0.06)' : 'rgba(14,15,22,0.3)',
-          transition: 'all 0.2s', marginBottom: screenshots.length > 0 ? '12px' : '0',
-        }}
-      >
-        <div style={{ fontSize: '24px', marginBottom: '6px' }}>📸</div>
-        <div style={{ fontSize: '13px', color: '#dde4ef', marginBottom: '3px' }}>
-          Glisse tes screenshots ici · Clique pour sélectionner
-        </div>
-        <div style={{ fontSize:'13px', color: '#5a6a82' }}>
-          ou <kbd style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.22)', padding: '1px 5px', borderRadius: '3px', fontSize:'13px', color: '#8899bb' }}>Ctrl+V</kbd> pour coller depuis le presse-papier
-        </div>
-      </div>
-
-      {/* Thumbnails grid */}
-      {screenshots.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' }}>
-          {screenshots.map(sc => (
-            <div key={sc.id} style={{ position: 'relative', borderRadius: '6px', overflow: 'hidden', background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.12)', aspectRatio: '16/10' }}>
-              <img
-                src={sc.dataUrl}
-                alt={sc.name}
-                onClick={() => setLightbox(sc.dataUrl)}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in', display: 'block' }}
-              />
-              {/* Delete btn */}
-              <button
-                onClick={e => { e.stopPropagation(); removeScreenshot(sc.id); }}
-                style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,68,85,0.4)', color: '#ff4455', width: '22px', height: '22px', borderRadius: '50%', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
-              >×</button>
-              {/* Name tooltip */}
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', padding: '3px 6px', fontSize:'12px', color: '#7888a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {sc.name}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
+    <div style={{ padding:'40px 24px', textAlign:'center', border:'1px solid rgba(136,153,187,0.12)', borderRadius:'10px', background:'rgba(14,15,22,0.5)' }}>
+      <div style={{ fontSize:'28px', marginBottom:'14px', opacity:0.8 }}>⚡</div>
+      <div style={{ fontSize:'13px', color:'#8899bb', letterSpacing:'2px', marginBottom:'6px' }}>GÉNÉRATION EN COURS{dots}</div>
+      <div style={{ fontSize:'11px', color:'#3a4a5a' }}>{label}</div>
+      <div style={{ marginTop:'18px', fontSize:'11px', color:'#3a4a5a' }}>Analyse ICT par Claude AI · 15–30 secondes</div>
     </div>
   );
 }
 
-// ── Textarea ──────────────────────────────────────────────────
-function Textarea({ label, value, onChange, placeholder, rows = 4 }) {
+// ── Single analysis card ──────────────────────────────────────
+function AnalysisCard({ analysis, onRegenerate, onDelete, generating }) {
+  const [confirmDel, setConfirmDel] = useState(false);
+
+  if (generating) return <GeneratingCard label={generating} />;
+  if (!analysis) return (
+    <div style={{ padding:'40px 24px', textAlign:'center', border:'1px dashed rgba(136,153,187,0.15)', borderRadius:'10px' }}>
+      <div style={{ fontSize:'11px', color:'#3a4a5a', letterSpacing:'2px', marginBottom:'16px' }}>AUCUNE ANALYSE DISPONIBLE</div>
+      <button onClick={onRegenerate}
+        style={{ padding:'9px 20px', background:'rgba(136,153,187,0.10)', border:'1px solid rgba(136,153,187,0.30)', borderRadius:'6px', color:'#8899bb', fontSize:'12px', fontFamily:'inherit', cursor:'pointer', letterSpacing:'1px', fontWeight:'700' }}>
+        ⚡ GÉNÉRER L'ANALYSE
+      </button>
+    </div>
+  );
+
   return (
     <div>
-      {label && <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1.5px', marginBottom: '6px' }}>{label}</div>}
-      <textarea
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={rows}
-        style={{ width: '100%', background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.14)', borderRadius: '5px', padding: '10px 12px', color: '#dde4ef', fontSize: '13px', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box', lineHeight: '1.6', caretColor: '#8899bb' }}
-      />
-    </div>
-  );
-}
-
-// ── Section card ──────────────────────────────────────────────
-function Section({ title, children }) {
-  return (
-    <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '8px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>{title}</div>
-      {children}
-    </div>
-  );
-}
-
-// ── DAILY EDITOR ─────────────────────────────────────────────
-function DailyEditor({ date, instrument, onBack, onSaved }) {
-  const [form, setForm] = useState({
-    bias: '', timeframes: [], notes: '', key_levels: '',
-    screenshots: [], positives: '', negatives: '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved]   = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      const res = await window.db.getDailyAnalyses();
-      if (res.ok) {
-        const existing = res.data.find(a => a.date === date && a.instrument === instrument);
-        if (existing) {
-          setForm({
-            bias:        existing.bias        ?? '',
-            timeframes:  JSON.parse(existing.timeframes  ?? '[]'),
-            notes:       existing.notes       ?? '',
-            key_levels:  existing.key_levels  ?? '',
-            screenshots: JSON.parse(existing.screenshots ?? '[]'),
-            positives:   existing.positives   ?? '',
-            negatives:   existing.negatives   ?? '',
-          });
-        }
-      }
-    })();
-  }, [date, instrument]);
-
-  async function save() {
-    setSaving(true);
-    await window.db.upsertDailyAnalysis({
-      date, instrument,
-      bias:        form.bias,
-      timeframes:  JSON.stringify(form.timeframes),
-      notes:       form.notes,
-      key_levels:  form.key_levels,
-      screenshots: JSON.stringify(form.screenshots),
-      positives:   form.positives,
-      negatives:   form.negatives,
-    });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-    onSaved?.();
-  }
-
-  function toggleTF(tf) {
-    setForm(p => ({
-      ...p,
-      timeframes: p.timeframes.includes(tf)
-        ? p.timeframes.filter(t => t !== tf)
-        : [...p.timeframes, tf],
-    }));
-  }
-
-  const inp = { background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.14)', borderRadius: '5px', padding: '8px 12px', color: '#dde4ef', fontSize: '13px', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={onBack} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>← Retour</button>
-          <div>
-            <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '2px' }}>ANALYSE JOURNALIÈRE</div>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#e8edf8' }}>
-              {instrument} · {new Date(date + 'T12:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            </div>
-          </div>
+      {/* Header bar */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'18px', paddingBottom:'12px', borderBottom:'1px solid rgba(136,153,187,0.10)' }}>
+        <div style={{ fontSize:'11px', color:'#3a4a5a', letterSpacing:'1px' }}>
+          Généré le {fmtTs(analysis.generated_at)} · NQ/MNQ
         </div>
-        <button onClick={save} disabled={saving} style={{ background: saved ? 'rgba(136,153,187,0.22)' : 'rgba(136,153,187,0.12)', border: `1px solid rgba(136,153,187,${saved?'0.50':'0.30'})`, color: '#8899bb', padding: '10px 22px', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', letterSpacing: '1px' }}>
-          {saved ? '✅ SAUVEGARDÉ' : saving ? 'SAUVEGARDE...' : '💾 SAUVEGARDER'}
-        </button>
+        <div style={{ display:'flex', gap:'8px' }}>
+          <button onClick={onRegenerate}
+            style={{ padding:'5px 12px', background:'rgba(136,153,187,0.08)', border:'1px solid rgba(136,153,187,0.20)', borderRadius:'5px', color:'#5a6a82', fontSize:'11px', fontFamily:'inherit', cursor:'pointer', letterSpacing:'1px' }}>
+            ↻ Régénérer
+          </button>
+          {!confirmDel ? (
+            <button onClick={() => setConfirmDel(true)}
+              style={{ padding:'5px 12px', background:'rgba(255,68,85,0.07)', border:'1px solid rgba(255,68,85,0.18)', borderRadius:'5px', color:'#884455', fontSize:'11px', fontFamily:'inherit', cursor:'pointer' }}>
+              ✕
+            </button>
+          ) : (
+            <button onClick={() => { setConfirmDel(false); onDelete(); }}
+              style={{ padding:'5px 12px', background:'rgba(255,68,85,0.15)', border:'1px solid rgba(255,68,85,0.40)', borderRadius:'5px', color:'#ff4455', fontSize:'11px', fontFamily:'inherit', cursor:'pointer', fontWeight:'700' }}>
+              CONFIRMER
+            </button>
+          )}
+        </div>
       </div>
-
-      {/* Bias */}
-      <Section title="📊 BIAIS DU JOUR">
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {BIAS_OPTIONS.map(b => (
-            <button key={b} onClick={() => setForm(p => ({ ...p, bias: p.bias === b ? '' : b }))} style={{ padding: '8px 16px', borderRadius: '5px', border: `1px solid ${form.bias===b?'rgba(136,153,187,0.45)':'rgba(136,153,187,0.12)'}`, background: form.bias===b?'rgba(136,153,187,0.14)':'rgba(14,15,22,0.5)', color: form.bias===b?'#8899bb':'#7888a0', fontSize: '13px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s' }}>{b}</button>
-          ))}
-        </div>
-      </Section>
-
-      {/* Timeframes */}
-      <Section title="⏱ TIMEFRAMES ANALYSÉS">
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {TIMEFRAMES.map(tf => (
-            <button key={tf} onClick={() => toggleTF(tf)} style={{ padding: '7px 14px', borderRadius: '5px', border: `1px solid ${form.timeframes.includes(tf)?'rgba(136,153,187,0.45)':'rgba(136,153,187,0.12)'}`, background: form.timeframes.includes(tf)?'rgba(136,153,187,0.14)':'rgba(14,15,22,0.5)', color: form.timeframes.includes(tf)?'#8899bb':'#7888a0', fontSize: '13px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s', fontWeight: form.timeframes.includes(tf)?'700':'400' }}>{tf}</button>
-          ))}
-        </div>
-      </Section>
-
-      {/* Notes */}
-      <Section title="📝 NOTES D'ANALYSE">
-        <Textarea value={form.notes} onChange={v => setForm(p => ({ ...p, notes: v }))} placeholder="Contexte macro, structure de marché, zones importantes, catalyseurs du jour..." rows={5} />
-      </Section>
-
-      {/* Key levels */}
-      <Section title="🎯 NIVEAUX CLÉS">
-        <Textarea value={form.key_levels} onChange={v => setForm(p => ({ ...p, key_levels: v }))} placeholder="Support: 28 500&#10;Résistance: 29 200&#10;Zone de liquidité: 28 800..." rows={4} />
-      </Section>
-
-      {/* Screenshots */}
-      <Section title="📸 SCREENSHOTS">
-        <ScreenshotZone screenshots={form.screenshots} onChange={ss => setForm(p => ({ ...p, screenshots: ss }))} />
-      </Section>
-
-      {/* Review */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-        <Section title="✅ POINTS POSITIFS">
-          <Textarea value={form.positives} onChange={v => setForm(p => ({ ...p, positives: v }))} placeholder="Ce qui s'est bien passé, bonnes décisions, respect du plan..." rows={4} />
-        </Section>
-        <Section title="❌ POINTS À AMÉLIORER">
-          <Textarea value={form.negatives} onChange={v => setForm(p => ({ ...p, negatives: v }))} placeholder="Erreurs commises, biais cognitifs, règles non respectées..." rows={4} />
-        </Section>
+      {/* Content */}
+      <div style={{ lineHeight:'1.7' }}>
+        <MarkdownContent content={analysis.content} />
       </div>
     </div>
   );
 }
 
-// ── WEEKLY EDITOR ─────────────────────────────────────────────
-function WeeklyEditor({ weekStart, instrument, onBack, onSaved }) {
-  const [form, setForm] = useState({
-    macro_bias: '', notes: '', key_levels: '',
-    screenshots: [], positives: '', negatives: '', plan: '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved]   = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      const res = await window.db.getWeeklyAnalyses();
-      if (res.ok) {
-        const existing = res.data.find(a => a.week_start === weekStart && a.instrument === instrument);
-        if (existing) {
-          setForm({
-            macro_bias:  existing.macro_bias  ?? '',
-            notes:       existing.notes       ?? '',
-            key_levels:  existing.key_levels  ?? '',
-            screenshots: JSON.parse(existing.screenshots ?? '[]'),
-            positives:   existing.positives   ?? '',
-            negatives:   existing.negatives   ?? '',
-            plan:        existing.plan        ?? '',
-          });
-        }
-      }
-    })();
-  }, [weekStart, instrument]);
-
-  async function save() {
-    setSaving(true);
-    await window.db.upsertWeeklyAnalysis({
-      week_start: weekStart, instrument,
-      macro_bias:  form.macro_bias,
-      notes:       form.notes,
-      key_levels:  form.key_levels,
-      screenshots: JSON.stringify(form.screenshots),
-      positives:   form.positives,
-      negatives:   form.negatives,
-      plan:        form.plan,
-    });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-    onSaved?.();
-  }
-
+// ── Date selector for archive ─────────────────────────────────
+function DateSelector({ analyses, type, selected, onSelect }) {
+  const options = analyses.filter(a => a.type === type);
+  if (options.length <= 1) return null;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={onBack} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>← Retour</button>
-          <div>
-            <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '2px' }}>ANALYSE HEBDOMADAIRE</div>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#e8edf8' }}>{instrument} · {getWeekLabel(weekStart)}</div>
-          </div>
-        </div>
-        <button onClick={save} disabled={saving} style={{ background: saved?'rgba(136,153,187,0.22)':'rgba(136,153,187,0.12)', border:`1px solid rgba(136,153,187,${saved?'0.50':'0.30'})`, color: '#8899bb', padding: '10px 22px', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', letterSpacing: '1px' }}>
-          {saved ? '✅ SAUVEGARDÉ' : saving ? 'SAUVEGARDE...' : '💾 SAUVEGARDER'}
-        </button>
-      </div>
-
-      {/* Macro bias */}
-      <Section title="🌍 BIAIS MACRO DE LA SEMAINE">
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {BIAS_OPTIONS.map(b => (
-            <button key={b} onClick={() => setForm(p => ({ ...p, macro_bias: p.macro_bias === b ? '' : b }))} style={{ padding: '8px 16px', borderRadius: '5px', border: `1px solid ${form.macro_bias===b?'rgba(136,153,187,0.45)':'rgba(136,153,187,0.12)'}`, background: form.macro_bias===b?'rgba(136,153,187,0.14)':'rgba(14,15,22,0.5)', color: form.macro_bias===b?'#8899bb':'#7888a0', fontSize: '13px', fontFamily: 'inherit', cursor: 'pointer' }}>{b}</button>
-          ))}
-        </div>
-      </Section>
-
-      <Section title="📝 ANALYSE DE LA SEMAINE">
-        <Textarea value={form.notes} onChange={v => setForm(p => ({ ...p, notes: v }))} placeholder="Contexte macro semaine, événements importants (NFP, FOMC...), structure HTF..." rows={5} />
-      </Section>
-
-      <Section title="🎯 NIVEAUX CLÉS SEMAINE">
-        <Textarea value={form.key_levels} onChange={v => setForm(p => ({ ...p, key_levels: v }))} placeholder="Niveaux hebdomadaires, zones de liquidité H4/D/W..." rows={4} />
-      </Section>
-
-      <Section title="📋 PLAN POUR LA SEMAINE À VENIR">
-        <Textarea value={form.plan} onChange={v => setForm(p => ({ ...p, plan: v }))} placeholder="Scénarios attendus, setups à surveiller, règles de risk management cette semaine..." rows={5} />
-      </Section>
-
-      <Section title="📸 SCREENSHOTS (Multi-timeframe)">
-        <ScreenshotZone screenshots={form.screenshots} onChange={ss => setForm(p => ({ ...p, screenshots: ss }))} />
-      </Section>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-        <Section title="✅ POINTS POSITIFS SEMAINE">
-          <Textarea value={form.positives} onChange={v => setForm(p => ({ ...p, positives: v }))} placeholder="Bonnes décisions, respect du plan, progrès..." rows={4} />
-        </Section>
-        <Section title="❌ AXES D'AMÉLIORATION">
-          <Textarea value={form.negatives} onChange={v => setForm(p => ({ ...p, negatives: v }))} placeholder="Erreurs répétées, manque de discipline, trades ratés..." rows={4} />
-        </Section>
-      </div>
+    <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', marginBottom:'18px' }}>
+      {options.map(a => {
+        const label = type === 'daily' ? new Date(a.date + 'T12:00:00Z').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : `Sem. ${new Date(a.date+'T12:00:00Z').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}`;
+        const isActive = a.date === selected;
+        return (
+          <button key={a.date} onClick={() => onSelect(a.date)}
+            style={{ padding:'4px 10px', background: isActive ? 'rgba(136,153,187,0.15)' : 'transparent', border:`1px solid ${isActive?'rgba(136,153,187,0.40)':'rgba(136,153,187,0.12)'}`, borderRadius:'5px', color: isActive ? '#8899bb' : '#3a4a5a', fontSize:'11px', fontFamily:'inherit', cursor:'pointer', letterSpacing:'0.5px' }}>
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-// ── ANALYSIS LIST (home) ──────────────────────────────────────
-function AnalysisList({ mode, analyses, instruments, onSelect, onNew, onDelete }) {
-  const isDaily  = mode === 'daily';
-  const empty    = analyses.length === 0;
-
-  function getBiasColor(bias) {
-    if (!bias) return '#5a6a82';
-    if (bias.includes('Hauss')) return '#00cc77';
-    if (bias.includes('Baiss')) return '#ff3344';
-    return '#f0a020';
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      {empty ? (
-        <div style={{ padding: '48px', textAlign: 'center', border: '1px dashed #1e2c40', borderRadius: '8px', color: '#3a1818', fontSize: '13px' }}>
-          Aucune analyse — créez votre première analyse {isDaily ? 'journalière' : 'hebdomadaire'}
-        </div>
-      ) : (
-        analyses.map(a => {
-          const bias    = isDaily ? a.bias : a.macro_bias;
-          const screens = JSON.parse(a.screenshots ?? '[]');
-          const label   = isDaily
-            ? new Date(a.date + 'T12:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-            : getWeekLabel(a.week_start);
-          return (
-            <div key={a.id}
-              onClick={() => onSelect(a)}
-              style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '8px', padding: '16px 18px', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'flex-start', gap: '14px' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(136,153,187,0.05)'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.18)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(14,15,22,0.4)'; e.currentTarget.style.borderColor = 'rgba(136,153,187,0.10)'; }}
-            >
-              {/* Thumbnail */}
-              {screens.length > 0 ? (
-                <img src={screens[0].dataUrl} alt="" style={{ width: '80px', height: '50px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0, border: '1px solid rgba(136,153,187,0.12)' }} />
-              ) : (
-                <div style={{ width: '80px', height: '50px', borderRadius: '4px', background: 'rgba(14,15,22,0.6)', border: '1px dashed #1e2c40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>📊</div>
-              )}
-
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '15px', fontWeight: '700', color: '#e8edf8' }}>{a.instrument}</span>
-                  <span style={{ fontSize:'13px', color: '#5868a0' }}>{label}</span>
-                  {bias && <span style={{ fontSize:'13px', color: getBiasColor(bias), background: `rgba(${getBiasColor(bias)==='#00cc77'?'0,204,119':getBiasColor(bias)==='#ff3344'?'255,51,68':'240,160,32'},0.12)`, padding: '2px 8px', borderRadius: '3px' }}>{bias}</span>}
-                  {screens.length > 0 && <span style={{ fontSize:'13px', color: '#5a6a82' }}>📸 {screens.length}</span>}
-                </div>
-                {a.notes && <div style={{ fontSize:'13px', color: '#5868a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.notes}</div>}
-                {(a.positives || a.negatives) && (
-                  <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
-                    {a.positives && <span style={{ fontSize:'13px', color: '#00cc66' }}>✅ {a.positives.split('\n')[0]}</span>}
-                    {a.negatives && <span style={{ fontSize:'13px', color: '#cc4444' }}>❌ {a.negatives.split('\n')[0]}</span>}
-                  </div>
-                )}
-              </div>
-
-              <button onClick={e => { e.stopPropagation(); if (window.confirm('Supprimer cette analyse ?')) onDelete(a.id); }}
-                style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '18px', padding: '0', flexShrink: 0, transition: 'color 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#ff4455'}
-                onMouseLeave={e => e.currentTarget.style.color = '#1a3a20'}
-              >×</button>
-            </div>
-          );
-        })
-      )}
-    </div>
-  );
-}
-
-// ── MAIN ──────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────
 export default function Analysis() {
-  const [mode, setMode]               = useState('daily'); // 'daily' | 'weekly'
-  const [editing, setEditing]         = useState(null);    // { date/weekStart, instrument }
-  const [dailyList, setDailyList]     = useState([]);
-  const [weeklyList, setWeeklyList]   = useState([]);
-  const [instruments, setInstruments] = useState(loadCustomInstruments);
-  const [showNewForm, setShowNewForm] = useState(false);
-  const [newDate, setNewDate]         = useState(new Date().toISOString().slice(0,10));
-  const [newInstrument, setNewInstrument] = useState('MNQ');
-  const [newCustomInst, setNewCustomInst] = useState('');
-  const [showAddInst, setShowAddInst] = useState(false);
-  const [loading, setLoading]         = useState(true);
+  const [tab, setTab]             = useState('daily');
+  const [analyses, setAnalyses]   = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [generating, setGenerating] = useState({}); // { 'daily:2026-06-12': true, ... }
+  const [selectedDates, setSelectedDates] = useState({});
+  const [noKey, setNoKey]         = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const [dRes, wRes] = await Promise.all([window.db.getDailyAnalyses(), window.db.getWeeklyAnalyses()]);
-    if (dRes.ok) setDailyList(dRes.data);
-    if (wRes.ok) setWeeklyList(wRes.data);
-    setLoading(false);
+  useEffect(() => {
+    loadAndAutoGenerate();
+    if (window.market?.onAnalysisGenerated) {
+      window.market.onAnalysisGenerated(({ type, date }) => {
+        refreshAnalyses();
+        setGenerating(g => { const n = {...g}; delete n[`${type}:${date}`]; return n; });
+      });
+    }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
-
-  function addInstrument() {
-    const inst = newCustomInst.trim().toUpperCase();
-    if (!inst || instruments.includes(inst)) return;
-    const updated = [...instruments, inst];
-    setInstruments(updated);
-    saveCustomInstruments(updated);
-    setNewCustomInst('');
-    setShowAddInst(false);
+  async function refreshAnalyses() {
+    const res = await window.market.getAiAnalyses();
+    if (res.ok) setAnalyses(res.data);
   }
 
-  function removeInstrument(inst) {
-    const updated = instruments.filter(i => i !== inst);
-    setInstruments(updated);
-    saveCustomInstruments(updated);
-  }
+  async function loadAndAutoGenerate() {
+    setLoading(true);
+    const res = await window.market.getAiAnalyses();
+    const existing = res.ok ? res.data : [];
+    setAnalyses(existing);
+    setLoading(false);
 
-  async function deleteAnalysis(id) {
-    if (mode === 'daily') {
-      await window.db.deleteDailyAnalysis(id);
-      setDailyList(prev => prev.filter(a => a.id !== id));
-    } else {
-      await window.db.deleteWeeklyAnalysis(id);
-      setWeeklyList(prev => prev.filter(a => a.id !== id));
+    const today = new Date();
+    const todayUtcDay = today.getUTCDay(); // 0=Sun,6=Sat
+
+    // Auto-generate: June 12 daily (user request)
+    const key12 = '2026-06-12';
+    if (!existing.some(a => a.type === 'daily' && a.date === key12)) {
+      generate('daily', key12);
+    }
+
+    // Auto-generate: week of June 8 (user request)
+    const keyW8 = '2026-06-08';
+    if (!existing.some(a => a.type === 'weekly' && a.date === keyW8)) {
+      generate('weekly', keyW8);
+    }
+
+    // Auto-generate: next week June 15 (user request)
+    const keyNW = '2026-06-15';
+    if (!existing.some(a => a.type === 'next_week' && a.date === keyNW)) {
+      generate('next_week', keyNW);
+    }
+
+    // Auto-generate: last trading day if Sat or Sun
+    if (todayUtcDay === 6 || todayUtcDay === 0) {
+      const lastTrade = getLastTradeDay();
+      if (!existing.some(a => a.type === 'daily' && a.date === lastTrade) && lastTrade !== key12) {
+        generate('daily', lastTrade);
+      }
     }
   }
 
-  function startNew() {
-    const instrument = newInstrument;
-    if (mode === 'daily') {
-      setEditing({ date: newDate, instrument });
-    } else {
-      setEditing({ weekStart: getWeekStart(newDate), instrument });
+  async function generate(type, date) {
+    const gKey = `${type}:${date}`;
+    setGenerating(g => ({ ...g, [gKey]: true }));
+    const res = await window.market.generateAiAnalysis(type, date);
+    setGenerating(g => { const n = {...g}; delete n[gKey]; return n; });
+    if (!res.ok) {
+      if (res.error === 'no_api_key') setNoKey(true);
+      return;
     }
-    setShowNewForm(false);
+    setAnalyses(prev => {
+      const filtered = prev.filter(a => !(a.type === type && a.date === date));
+      return [res.data, ...filtered];
+    });
   }
 
-  const inp = { background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.14)', borderRadius: '5px', padding: '8px 12px', color: '#dde4ef', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' };
-
-  // ── If editing ────────────────────────────────────────────
-  if (editing) {
-    if (mode === 'daily') {
-      return (
-        <div style={{ padding: '24px 28px', maxWidth: 'none' }}>
-          <DailyEditor date={editing.date} instrument={editing.instrument} onBack={() => { setEditing(null); load(); }} onSaved={load} />
-        </div>
-      );
-    } else {
-      return (
-        <div style={{ padding: '24px 28px', maxWidth: 'none' }}>
-          <WeeklyEditor weekStart={editing.weekStart} instrument={editing.instrument} onBack={() => { setEditing(null); load(); }} onSaved={load} />
-        </div>
-      );
-    }
+  async function deleteAnalysis(id, type, date) {
+    await window.market.deleteAiAnalysis(id);
+    setAnalyses(prev => prev.filter(a => a.id !== id));
   }
 
-  // ── List view ─────────────────────────────────────────────
-  const currentList = mode === 'daily' ? dailyList : weeklyList;
+  // Derive what to show for each tab
+  const dailyAnalyses    = useMemo(() => analyses.filter(a => a.type === 'daily').sort((a,b) => b.date.localeCompare(a.date)), [analyses]);
+  const weeklyAnalyses   = useMemo(() => analyses.filter(a => a.type === 'weekly').sort((a,b) => b.date.localeCompare(a.date)), [analyses]);
+  const nextWeekAnalyses = useMemo(() => analyses.filter(a => a.type === 'next_week').sort((a,b) => b.date.localeCompare(a.date)), [analyses]);
+
+  const selDaily    = selectedDates.daily    ?? dailyAnalyses[0]?.date;
+  const selWeekly   = selectedDates.weekly   ?? weeklyAnalyses[0]?.date;
+  const selNextWeek = selectedDates.next_week ?? nextWeekAnalyses[0]?.date;
+
+  const curDaily    = dailyAnalyses.find(a => a.date === selDaily) ?? null;
+  const curWeekly   = weeklyAnalyses.find(a => a.date === selWeekly) ?? null;
+  const curNextWeek = nextWeekAnalyses.find(a => a.date === selNextWeek) ?? null;
+
+  // Keys for generating state
+  const genKeyDaily    = selDaily    ? `daily:${selDaily}`         : null;
+  const genKeyWeekly   = selWeekly   ? `weekly:${selWeekly}`       : null;
+  const genKeyNextWeek = selNextWeek ? `next_week:${selNextWeek}`  : null;
+  const anyDaily       = Object.keys(generating).some(k => k.startsWith('daily:'));
+  const anyWeekly      = Object.keys(generating).some(k => k.startsWith('weekly:'));
+  const anyNextWeek    = Object.keys(generating).some(k => k.startsWith('next_week:'));
+  const isGenDaily     = genKeyDaily    ? !!generating[genKeyDaily]    : anyDaily;
+  const isGenWeekly    = genKeyWeekly   ? !!generating[genKeyWeekly]   : anyWeekly;
+  const isGenNextWeek  = genKeyNextWeek ? !!generating[genKeyNextWeek] : anyNextWeek;
+
+  const TABS = [
+    { id:'daily',     label:'📊 Journalier',      sub:'Résumé ICT du jour' },
+    { id:'weekly',    label:'📈 Bilan Semaine',    sub:'Analyse hebdomadaire' },
+    { id:'next_week', label:'🔭 Semaine Suivante', sub:'Plan et scénarios ICT' },
+  ];
+
+  if (loading) return (
+    <div style={{ padding:'40px', display:'flex', alignItems:'center', justifyContent:'center', color:'#3a4a5a', fontSize:'12px', letterSpacing:'2px', fontFamily:"'JetBrains Mono','Fira Code',monospace" }}>
+      CHARGEMENT...
+    </div>
+  );
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 'none', width: '100%', boxSizing: 'border-box' }}>
-
+    <div style={{ padding:'24px 28px', width:'100%', boxSizing:'border-box', fontFamily:"'JetBrains Mono','Fira Code',monospace" }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '6px' }}>TRADING JOURNAL</div>
-          <h1 style={{ fontSize: '23px', fontWeight: '700', color: '#e8edf8', margin: 0 }}>Analyse de Marché</h1>
-          <div style={{ fontSize: '13px', color: '#5a6a82', marginTop: '3px' }}>
-            {currentList.length} analyse{currentList.length > 1 ? 's' : ''} · {mode === 'daily' ? 'Vue journalière' : 'Vue hebdomadaire'}
-          </div>
-        </div>
-        <button onClick={() => setShowNewForm(true)} style={{ background: 'linear-gradient(135deg,rgba(136,153,187,0.22),rgba(0,170,85,0.1))', border: '1px solid rgba(136,153,187,0.35)', color: '#8899bb', padding: '10px 18px', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', letterSpacing: '1px' }}>
-          + NOUVELLE ANALYSE
-        </button>
+      <div style={{ marginBottom:'24px' }}>
+        <div style={{ fontSize:'11px', color:'#3a4a5a', letterSpacing:'3px', marginBottom:'4px' }}>IA MARCHÉ · NQ/MNQ</div>
+        <h1 style={{ fontSize:'22px', fontWeight:'700', color:'#e8edf8', margin:'0 0 4px' }}>Analyse de Marché</h1>
+        <div style={{ fontSize:'12px', color:'#3a4a5a' }}>Résumés ICT automatiques · Claude AI · Yahoo Finance</div>
       </div>
 
-      {/* Mode tabs */}
-      <div style={{ display: 'flex', gap: '0', marginBottom: '20px', background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.12)', borderRadius: '8px', padding: '4px' }}>
-        {[
-          { key: 'daily',  label: '📅 Journalière', desc: 'Analyse par jour' },
-          { key: 'weekly', label: '📆 Hebdomadaire', desc: 'Bilan par semaine' },
-        ].map(({ key, label, desc }) => (
-          <button key={key} onClick={() => setMode(key)} style={{ flex: 1, padding: '12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: mode===key?'rgba(136,153,187,0.14)':'transparent', fontFamily: 'inherit', transition: 'all 0.2s' }}>
-            <div style={{ fontSize: '14px', fontWeight: '700', color: mode===key?'#8899bb':'#6878a0', marginBottom: '2px' }}>{label}</div>
-            <div style={{ fontSize:'13px', color: mode===key?'#8a3a3a':'#3a5a3a' }}>{desc}</div>
-            {mode===key && <div style={{ height: '2px', background: '#8899bb', borderRadius: '2px', marginTop: '8px', boxShadow: '0 0 6px #8899bb' }} />}
+      {/* No API key banner */}
+      {noKey && (
+        <div style={{ marginBottom:'18px', padding:'12px 16px', background:'rgba(255,160,32,0.08)', border:'1px solid rgba(255,160,32,0.25)', borderRadius:'8px', fontSize:'12px', color:'#f0a020', display:'flex', gap:'10px', alignItems:'center' }}>
+          <span>⚠</span>
+          <span>Clé API Anthropic non configurée. Configure-la dans le chat IA (icône robot dans la sidebar) pour activer les analyses automatiques.</span>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div style={{ display:'flex', gap:'6px', marginBottom:'24px', background:'rgba(14,15,22,0.4)', padding:'5px', borderRadius:'8px', border:'1px solid rgba(136,153,187,0.07)' }}>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            style={{ flex:1, padding:'10px 8px', borderRadius:'5px', cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s',
+              border:    tab===t.id ? '1px solid rgba(136,153,187,0.30)' : '1px solid transparent',
+              background:tab===t.id ? 'rgba(136,153,187,0.10)'          : 'transparent',
+              color:     tab===t.id ? '#8899bb'                          : '#3a4a5a',
+            }}>
+            <div style={{ fontSize:'13px', marginBottom:'2px', fontWeight: tab===t.id?'700':'400' }}>{t.label}</div>
+            <div style={{ fontSize:'10px', opacity:0.7, letterSpacing:'0.5px' }}>{t.sub}</div>
           </button>
         ))}
       </div>
 
-      {/* Instruments management */}
-      <div style={{ background: 'rgba(14,15,22,0.3)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '6px', padding: '12px 16px', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1px', flexShrink: 0 }}>INSTRUMENTS :</span>
-          {instruments.map(inst => (
-            <div key={inst} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.14)', borderRadius: '4px', padding: '3px 8px' }}>
-              <span style={{ fontSize:'13px', color: '#8899bb' }}>{inst}</span>
-              {!DEFAULT_INSTRUMENTS.includes(inst) && (
-                <button onClick={() => removeInstrument(inst)} style={{ background: 'none', border: 'none', color: '#5a6a82', cursor: 'pointer', fontSize:'13px', padding: '0 0 0 2px', lineHeight: 1 }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#ff4455'}
-                  onMouseLeave={e => e.currentTarget.style.color = '#5a6a82'}
-                >×</button>
-              )}
-            </div>
-          ))}
-          {showAddInst ? (
-            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-              <input autoFocus placeholder="Ex: EUR/GBP" value={newCustomInst} onChange={e => setNewCustomInst(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') addInstrument(); if (e.key === 'Escape') setShowAddInst(false); }}
-                style={{ ...inp, width: '120px', padding: '4px 8px', fontSize:'13px' }} />
-              <button onClick={addInstrument} style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.22)', color: '#8899bb', padding: '4px 10px', borderRadius: '4px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>+</button>
-              <button onClick={() => setShowAddInst(false)} style={{ background: 'none', border: 'none', color: '#5a6a82', cursor: 'pointer', fontSize: '14px' }}>×</button>
-            </div>
-          ) : (
-            <button onClick={() => setShowAddInst(true)} style={{ background: 'none', border: '1px dashed #1a4a2a', color: '#5a6a82', padding: '3px 10px', borderRadius: '4px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>+ Ajouter</button>
-          )}
-        </div>
-      </div>
-
-      {/* List */}
-      {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: '#5a6a82', fontSize: '13px', letterSpacing: '2px' }}>CHARGEMENT...</div>
-      ) : (
-        <AnalysisList
-          mode={mode}
-          analyses={currentList}
-          instruments={instruments}
-          onSelect={a => setEditing(mode === 'daily' ? { date: a.date, instrument: a.instrument } : { weekStart: a.week_start, instrument: a.instrument })}
-          onNew={() => setShowNewForm(true)}
-          onDelete={deleteAnalysis}
-        />
-      )}
-
-      {/* New analysis modal */}
-      {showNewForm && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setShowNewForm(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#0c0d16', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '10px', width: '100%', maxWidth: '440px', padding: '28px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <div>
-                <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '4px' }}>NOUVELLE</div>
-                <div style={{ fontSize: '18px', fontWeight: '700', color: '#e8edf8' }}>Analyse {mode === 'daily' ? 'Journalière' : 'Hebdomadaire'}</div>
-              </div>
-              <button onClick={() => setShowNewForm(false)} style={{ background: 'none', border: '1px solid #1e2c40', color: '#5868a0', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>×</button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '6px' }}>{mode === 'daily' ? 'DATE' : 'SEMAINE DU'}</div>
-                <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} style={{ ...inp, width: '100%', colorScheme: 'dark' }} />
-                {mode === 'weekly' && <div style={{ fontSize:'13px', color: '#5a6a82', marginTop: '4px' }}>Semaine du {getWeekLabel(getWeekStart(newDate))}</div>}
-              </div>
-
-              <div>
-                <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '6px' }}>INSTRUMENT</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '6px' }}>
-                  {instruments.map(inst => (
-                    <button key={inst} onClick={() => setNewInstrument(inst)} style={{ padding: '8px 4px', borderRadius: '5px', border: `1px solid ${newInstrument===inst?'rgba(136,153,187,0.45)':'rgba(136,153,187,0.12)'}`, background: newInstrument===inst?'rgba(136,153,187,0.14)':'rgba(14,15,22,0.5)', color: newInstrument===inst?'#8899bb':'#7888a0', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer', fontWeight: newInstrument===inst?'700':'400' }}>{inst}</button>
-                  ))}
-                </div>
-              </div>
-
-              <button onClick={startNew} style={{ padding: '12px', borderRadius: '6px', background: 'linear-gradient(135deg,rgba(136,153,187,0.22),rgba(0,170,85,0.1))', border: '1px solid rgba(136,153,187,0.35)', color: '#8899bb', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer' }}>
-                ✏️ CRÉER L'ANALYSE
+      {/* DAILY TAB */}
+      {tab === 'daily' && (
+        <div>
+          {/* Date nav + generate */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'18px', flexWrap:'wrap', gap:'10px' }}>
+            <DateSelector analyses={dailyAnalyses} type="daily" selected={selDaily} onSelect={d => setSelectedDates(s => ({...s, daily:d}))} />
+            <div style={{ display:'flex', gap:'8px', alignItems:'center', marginLeft:'auto' }}>
+              {/* Date input */}
+              <input type="date" defaultValue={selDaily ?? getLastTradeDay()}
+                id="daily-date-input"
+                style={{ padding:'5px 8px', background:'rgba(14,15,22,0.6)', border:'1px solid rgba(136,153,187,0.18)', borderRadius:'5px', color:'#8899bb', fontSize:'11px', fontFamily:'inherit' }} />
+              <button onClick={() => {
+                const v = document.getElementById('daily-date-input')?.value;
+                if (v) { generate('daily', v); setSelectedDates(s => ({...s, daily:v})); }
+              }} style={{ padding:'5px 14px', background:'rgba(136,153,187,0.10)', border:'1px solid rgba(136,153,187,0.25)', borderRadius:'5px', color:'#8899bb', fontSize:'11px', fontFamily:'inherit', cursor:'pointer', letterSpacing:'1px', whiteSpace:'nowrap' }}>
+                ⚡ Générer
               </button>
             </div>
           </div>
+          {/* Title */}
+          {selDaily && (
+            <div style={{ marginBottom:'16px', fontSize:'12px', color:'#5a6a82', letterSpacing:'1px' }}>
+              {fmtDate(selDaily)}
+            </div>
+          )}
+          <AnalysisCard
+            analysis={curDaily}
+            generating={isGenDaily ? 'Analyse ICT de la journée en cours…' : null}
+            onRegenerate={() => {
+              const d = selDaily ?? getLastTradeDay();
+              generate('daily', d);
+            }}
+            onDelete={() => curDaily && deleteAnalysis(curDaily.id, 'daily', selDaily)}
+          />
         </div>
       )}
+
+      {/* WEEKLY TAB */}
+      {tab === 'weekly' && (
+        <div>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'18px', flexWrap:'wrap', gap:'10px' }}>
+            <DateSelector analyses={weeklyAnalyses} type="weekly" selected={selWeekly} onSelect={d => setSelectedDates(s => ({...s, weekly:d}))} />
+            <div style={{ display:'flex', gap:'8px', alignItems:'center', marginLeft:'auto' }}>
+              <input type="date" defaultValue={selWeekly ?? getLastMonday()} id="weekly-date-input"
+                style={{ padding:'5px 8px', background:'rgba(14,15,22,0.6)', border:'1px solid rgba(136,153,187,0.18)', borderRadius:'5px', color:'#8899bb', fontSize:'11px', fontFamily:'inherit' }} />
+              <button onClick={() => {
+                const raw = document.getElementById('weekly-date-input')?.value;
+                if (raw) { const v = getWeekStart(raw); generate('weekly', v); setSelectedDates(s => ({...s, weekly:v})); }
+              }} style={{ padding:'5px 14px', background:'rgba(136,153,187,0.10)', border:'1px solid rgba(136,153,187,0.25)', borderRadius:'5px', color:'#8899bb', fontSize:'11px', fontFamily:'inherit', cursor:'pointer', letterSpacing:'1px', whiteSpace:'nowrap' }}>
+                ⚡ Générer
+              </button>
+            </div>
+          </div>
+          {selWeekly && (
+            <div style={{ marginBottom:'16px', fontSize:'12px', color:'#5a6a82', letterSpacing:'1px' }}>
+              Semaine du {fmtWeek(selWeekly)}
+            </div>
+          )}
+          <AnalysisCard
+            analysis={curWeekly}
+            generating={isGenWeekly ? 'Bilan hebdomadaire ICT en cours…' : null}
+            onRegenerate={() => {
+              const d = selWeekly ?? getLastMonday();
+              generate('weekly', d);
+            }}
+            onDelete={() => curWeekly && deleteAnalysis(curWeekly.id, 'weekly', selWeekly)}
+          />
+        </div>
+      )}
+
+      {/* NEXT WEEK TAB */}
+      {tab === 'next_week' && (
+        <div>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'18px', flexWrap:'wrap', gap:'10px' }}>
+            <DateSelector analyses={nextWeekAnalyses} type="next_week" selected={selNextWeek} onSelect={d => setSelectedDates(s => ({...s, next_week:d}))} />
+            <div style={{ display:'flex', gap:'8px', alignItems:'center', marginLeft:'auto' }}>
+              <button onClick={() => {
+                const d = getNextMonday();
+                generate('next_week', d);
+                setSelectedDates(s => ({...s, next_week:d}));
+              }} style={{ padding:'5px 14px', background:'rgba(136,153,187,0.10)', border:'1px solid rgba(136,153,187,0.25)', borderRadius:'5px', color:'#8899bb', fontSize:'11px', fontFamily:'inherit', cursor:'pointer', letterSpacing:'1px', whiteSpace:'nowrap' }}>
+                ⚡ Générer (semaine suivante)
+              </button>
+            </div>
+          </div>
+          {selNextWeek && (
+            <div style={{ marginBottom:'16px', fontSize:'12px', color:'#5a6a82', letterSpacing:'1px' }}>
+              Plan semaine du {fmtWeek(selNextWeek)}
+            </div>
+          )}
+          <AnalysisCard
+            analysis={curNextWeek}
+            generating={isGenNextWeek ? 'Plan ICT semaine suivante en cours…' : null}
+            onRegenerate={() => {
+              const d = selNextWeek ?? getNextMonday();
+              generate('next_week', d);
+            }}
+            onDelete={() => curNextWeek && deleteAnalysis(curNextWeek.id, 'next_week', selNextWeek)}
+          />
+        </div>
+      )}
+
+      {/* Footer info */}
+      <div style={{ marginTop:'32px', paddingTop:'16px', borderTop:'1px solid rgba(136,153,187,0.08)', display:'flex', gap:'20px', flexWrap:'wrap' }}>
+        <div style={{ fontSize:'10px', color:'#2a3a4a', letterSpacing:'1px' }}>
+          ⏱ Résumé journalier : Lun–Ven à 22h00 (Paris)
+        </div>
+        <div style={{ fontSize:'10px', color:'#2a3a4a', letterSpacing:'1px' }}>
+          ⏱ Bilan hebdo + plan : Samedi à 08h00 (Paris)
+        </div>
+        <div style={{ fontSize:'10px', color:'#2a3a4a', letterSpacing:'1px' }}>
+          📡 Données : Yahoo Finance (NQ=F · 15 min délai)
+        </div>
+      </div>
     </div>
   );
 }
