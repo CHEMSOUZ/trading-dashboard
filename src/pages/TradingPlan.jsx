@@ -469,7 +469,7 @@ export default function TradingPlan() {
   const plan = PLANS[activeTab] ?? PLANS.payout5j;
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '1000px', fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>
+    <div style={{ padding: '24px 28px', width: '100%', boxSizing: 'border-box', fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>
       <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
 
       {/* ── Header ── */}

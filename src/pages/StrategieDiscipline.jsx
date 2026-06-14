@@ -542,7 +542,7 @@ export default function StrategieDiscipline() {
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('strategie_tab') || 'newyork');
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '1000px', fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>
+    <div style={{ padding: '24px 28px', width: '100%', boxSizing: 'border-box', fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>
       <div style={{ marginBottom: '24px' }}>
         <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>SESSIONS ICT</div>
         <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8edf8', margin: '0 0 4px' }}>Stratégie et Discipline</h1>
