@@ -24,6 +24,7 @@ const FitnessSante      = lazy(() => import('./pages/FitnessSante'));
 const Bot               = lazy(() => import('./pages/Bot'));
 const AiCoachPanel      = lazy(() => import('./features/ai-coach/AiCoachPanel'));
 const Goals             = lazy(() => import('./features/goals/Goals'));
+const CsvImport         = lazy(() => import('./pages/CsvImport'));
 
 const SHORTCUTS = [
   { section: 'Navigation', items: [
@@ -191,6 +192,7 @@ export default function App() {
               <Route path="/journal/new"   element={<NewTrade />} />
               <Route path="/journal/:id"   element={<NewTrade />} />
               <Route path="/goals"         element={<Goals />} />
+              <Route path="/import"        element={<CsvImport />} />
             </Routes>
           </Suspense>
         </main>
