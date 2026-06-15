@@ -38,9 +38,6 @@ function buildChart(container, candles, zones, isDefaultTf) {
     timeScale: {
       borderColor: 'rgba(136,153,187,0.15)',
       timeVisible: true,
-      fixLeftEdge: true,
-      fixRightEdge: true,
-      rightOffset: 0,
       tickMarkFormatter: (ts, tickMarkType) => {
         const d = new Date(ts * 1000);
         const tz = 'Europe/Paris';
