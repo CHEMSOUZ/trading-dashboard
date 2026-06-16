@@ -11,6 +11,17 @@ const TF_LIST = [
   { tf: '1d',  label: 'D1'  },
 ];
 
+// Limite maximale de données Yahoo Finance par intervalle
+const TF_MAX_DAYS = {
+  '1m':  7,
+  '5m':  60,
+  '15m': 60,
+  '30m': 60,
+  '1h':  730,
+  '4h':  730,
+  '1d':  1825,
+};
+
 function buildChart(container, candles, zones, isDefaultTf) {
   const chart = createChart(container, {
     width:  container.clientWidth,
@@ -171,7 +182,7 @@ export default function NQChart({ candles, zones, label, defaultTf, dateRange, s
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayCandles, zones]);
 
-  // On TF change: fetch new candles if range is known, else keep stored
+  // On TF change: fetch max available data per Yahoo Finance limits
   const switchTf = useCallback(async (tf) => {
     if (tf === activeTf) return;
     setActiveTf(tf);
@@ -179,14 +190,17 @@ export default function NQChart({ candles, zones, label, defaultTf, dateRange, s
       setDisplay(candles);
       return;
     }
-    if (!dateRange?.from || !window.market?.getCandles) return;
+    if (!window.market?.getCandles) return;
     setLoading(true);
     try {
-      const res = await window.market.getCandles(dateRange.from, dateRange.to, tf, yahooSym);
+      const days = TF_MAX_DAYS[tf] ?? 183;
+      const to   = new Date().toISOString().slice(0, 10);
+      const from = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      const res  = await window.market.getCandles(from, to, tf, yahooSym);
       if (res.ok && res.data?.length) setDisplay(res.data);
     } catch(_) {}
     setLoading(false);
-  }, [activeTf, defaultTf, candles, dateRange]);
+  }, [activeTf, defaultTf, candles, yahooSym]);
 
   if (!candles?.length) return null;
 
