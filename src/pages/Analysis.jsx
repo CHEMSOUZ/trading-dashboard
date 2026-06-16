@@ -155,49 +155,6 @@ function GeneratingCard({ label }) {
   );
 }
 
-// ── Historical chart — 6 months D1 avec markup ICT ───────────
-function HistoricalChart({ asset }) {
-  const [data, setData]       = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    setData(null);
-    let cancelled = false;
-    setLoading(true);
-    window.market.getHistoricalCandles(asset, 183).then(res => {
-      if (!cancelled && res.ok) setData(res.data);
-      if (!cancelled) setLoading(false);
-    }).catch(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [asset]);
-
-  const dateRange = useMemo(() => {
-    const to   = new Date().toISOString().slice(0, 10);
-    const from = new Date(Date.now() - 183 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-    return { from, to };
-  }, []);
-
-  if (loading) return (
-    <div style={{ height:'120px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', color:'#3a4a5a', letterSpacing:'1px', border:'1px solid rgba(136,153,187,0.10)', borderRadius:'10px', marginBottom:'20px', background:'#0a0e14' }}>
-      CHARGEMENT HISTORIQUE {asset}…
-    </div>
-  );
-  if (!data?.candles?.length) return null;
-
-  return (
-    <div style={{ marginBottom:'20px' }}>
-      <NQChart
-        candles={data.candles}
-        zones={data.zones}
-        label="D1 · 6 MOIS · MARKUP ICT"
-        defaultTf="1d"
-        dateRange={dateRange}
-        symbol={asset}
-        yahooSym={ASSET_YAHOO[asset]}
-      />
-    </div>
-  );
-}
 
 // ── Chat panel ────────────────────────────────────────────────
 function ChatPanel({ analysisContent, asset, tab }) {
@@ -324,6 +281,8 @@ function AssetSelector({ selected, onChange }) {
 // ── Single analysis card ──────────────────────────────────────
 function AnalysisCard({ analysis, onRegenerate, onDelete, generating, chartLabel, asset }) {
   const [confirmDel, setConfirmDel] = useState(false);
+  const [d1Data, setD1Data]         = useState(null);
+  const [d1Loading, setD1Loading]   = useState(false);
 
   const marketData = useMemo(() => {
     if (!analysis?.market_data) return {};
@@ -332,6 +291,33 @@ function AnalysisCard({ analysis, onRegenerate, onDelete, generating, chartLabel
 
   const assetDisplay = (marketData.meta?.symbol ?? asset ?? 'MNQ').replace('=F', '');
   const yahooSym     = ASSET_YAHOO[assetDisplay] ?? ASSET_YAHOO[asset] ?? 'MNQ%3DF';
+
+  // Fetch 6-month D1 candles when analysis is available
+  useEffect(() => {
+    if (!analysis) { setD1Data(null); return; }
+    let cancelled = false;
+    setD1Data(null);
+    setD1Loading(true);
+    window.market.getHistoricalCandles(assetDisplay || 'MNQ', 183).then(res => {
+      if (!cancelled && res.ok && res.data?.candles?.length) setD1Data(res.data);
+      if (!cancelled) setD1Loading(false);
+    }).catch(() => { if (!cancelled) setD1Loading(false); });
+    return () => { cancelled = true; };
+  }, [analysis?.id, assetDisplay]);
+
+  // D1 swings (correctly indexed for D1) + AI liquidity levels (absolute timestamps)
+  const mergedZones = useMemo(() => {
+    if (!d1Data) return marketData.zones;
+    return {
+      fvgs: [],
+      swings:    d1Data.zones?.swings    ?? [],
+      liquidity: marketData.zones?.liquidity ?? d1Data.zones?.liquidity ?? [],
+    };
+  }, [d1Data, marketData.zones]);
+
+  const chartCandles   = d1Data?.candles?.length ? d1Data.candles : marketData.candles;
+  const chartDefaultTf = d1Data ? '1d' : (marketData.meta?.defaultTf ?? '15m');
+  const chartDateRange = marketData.meta ? { from: marketData.meta.from, to: marketData.meta.to } : null;
 
   if (generating) return <GeneratingCard label={generating} />;
   if (!analysis) return (
@@ -369,14 +355,20 @@ function AnalysisCard({ analysis, onRegenerate, onDelete, generating, chartLabel
           )}
         </div>
       </div>
-      {/* Chart */}
-      {marketData.candles?.length > 0 && (
+      {/* Chart — D1 6 mois par défaut, TF analyse (M15/H1) accessibles via les boutons */}
+      {d1Loading && (
+        <div style={{ height:'80px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', color:'#3a4a5a', letterSpacing:'1px', border:'1px solid rgba(136,153,187,0.10)', borderRadius:'10px', marginBottom:'24px', background:'#0a0e14' }}>
+          CHARGEMENT GRAPHIQUE {assetDisplay}…
+        </div>
+      )}
+      {!d1Loading && chartCandles?.length > 0 && (
         <NQChart
-          candles={marketData.candles}
-          zones={marketData.zones}
+          key={`${assetDisplay}-${chartDefaultTf}`}
+          candles={chartCandles}
+          zones={mergedZones}
           label={chartLabel}
-          defaultTf={marketData.meta?.defaultTf}
-          dateRange={marketData.meta ? { from: marketData.meta.from, to: marketData.meta.to } : null}
+          defaultTf={chartDefaultTf}
+          dateRange={chartDateRange}
           symbol={assetDisplay}
           yahooSym={yahooSym}
         />
@@ -563,8 +555,6 @@ export default function Analysis() {
       {/* DAILY TAB */}
       {tab === 'daily' && (
         <div>
-          {/* Historical chart */}
-          <HistoricalChart asset={selectedAsset} />
 
           {/* Date nav + generate */}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'18px', flexWrap:'wrap', gap:'10px' }}>
@@ -601,8 +591,6 @@ export default function Analysis() {
       {/* WEEKLY TAB */}
       {tab === 'weekly' && (
         <div>
-          <HistoricalChart asset={selectedAsset} />
-
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'18px', flexWrap:'wrap', gap:'10px' }}>
             <DateSelector analyses={weeklyAnalyses} type={typeWeekly} selected={selWeekly} onSelect={d => setSelectedDates(s => ({...s, weekly:d}))} />
             <div style={{ display:'flex', gap:'8px', alignItems:'center', marginLeft:'auto' }}>
@@ -636,8 +624,6 @@ export default function Analysis() {
       {/* NEXT WEEK TAB */}
       {tab === 'next_week' && (
         <div>
-          <HistoricalChart asset={selectedAsset} />
-
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'18px', flexWrap:'wrap', gap:'10px' }}>
             <DateSelector analyses={nextWeekAnalyses} type={typeNextWeek} selected={selNextWeek} onSelect={d => setSelectedDates(s => ({...s, next_week:d}))} />
             <div style={{ display:'flex', gap:'8px', alignItems:'center', marginLeft:'auto' }}>
