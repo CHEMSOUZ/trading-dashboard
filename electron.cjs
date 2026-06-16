@@ -230,6 +230,61 @@ function computeHistoricalZones(candles) {
   return { fvgs: [], swings: structPts.slice(-6), liquidity };
 }
 
+// Détection algorithmique EQH/EQL sur n'importe quel TF (M1, M5…)
+// lb = lookback candles de chaque côté, tol = tolérance de prix relative
+function computeEqhEql(candles, lb = 10, tol = 0.0004) {
+  if (!candles || candles.length < lb * 2 + 2) return [];
+  const n = candles.length;
+  const swingHighs = [], swingLows = [];
+
+  for (let i = lb; i < n - lb; i++) {
+    const c = candles[i];
+    let isH = true, isL = true;
+    for (let j = i - lb; j <= i + lb; j++) {
+      if (j === i) continue;
+      if (candles[j].high >= c.high) isH = false;
+      if (candles[j].low  <= c.low)  isL = false;
+    }
+    if (isH) swingHighs.push({ idx: i, price: c.high, ts: c.ts });
+    if (isL) swingLows.push({ idx: i, price: c.low,  ts: c.ts });
+  }
+
+  const result = [];
+
+  // Toutes les paires de swing highs proches — pas seulement consécutives
+  for (let i = 0; i < swingHighs.length; i++) {
+    for (let j = i + 1; j < swingHighs.length; j++) {
+      const a = swingHighs[i], b = swingHighs[j];
+      if (Math.abs(a.price - b.price) / b.price < tol) {
+        const level = Math.max(a.price, b.price);
+        // Non liquidé si aucune bougie après b n'est montée au-dessus
+        const mitigated = candles.slice(b.idx + 1).some(c => c.high > level);
+        if (!mitigated) {
+          result.push({ price: Math.round(level * 100) / 100, type: 'EQH', label: 'EQH', ts: a.ts });
+          break; // une seule EQH par swing high
+        }
+      }
+    }
+  }
+
+  // Toutes les paires de swing lows proches
+  for (let i = 0; i < swingLows.length; i++) {
+    for (let j = i + 1; j < swingLows.length; j++) {
+      const a = swingLows[i], b = swingLows[j];
+      if (Math.abs(a.price - b.price) / b.price < tol) {
+        const level = Math.min(a.price, b.price);
+        const mitigated = candles.slice(b.idx + 1).some(c => c.low < level);
+        if (!mitigated) {
+          result.push({ price: Math.round(level * 100) / 100, type: 'EQL', label: 'EQL', ts: a.ts });
+          break;
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
 async function fetchNQRange(fromDate, toDate, interval, symbol) {
   const sym = symbol ?? 'MNQ%3DF'; // default MNQ=F
   const p1 = Math.floor(new Date(fromDate + 'T00:00:00Z').getTime() / 1000);
@@ -357,8 +412,13 @@ async function generateIctAnalysis(type, date, asset) {
     const { high: pwh, low: pwl } = calcHighLow(prevWkD1);
     if (pwh && prevWkD1.length) fixedLevels.push({ price: pwh, type: 'PWH', label: 'PWH', ts: sortedD[0]?.ts });
     if (pwl && prevWkD1.length) fixedLevels.push({ price: pwl, type: 'PWL', label: 'PWL', ts: sortedD[0]?.ts });
-    const aiLiqDaily = (zones.liquidity ?? []).filter(l => ['BSL','SSL','EQH','EQL'].includes(l.type)).slice(0, 4);
-    zones.liquidity = [...fixedLevels, ...aiLiqDaily];
+    const aiBslSsl = (zones.liquidity ?? []).filter(l => ['BSL','SSL'].includes(l.type)).slice(0, 4);
+    // EQH/EQL algorithmiques sur M1 — toute la période de contexte + journée analysée
+    let m1Candles = [];
+    try { m1Candles = await fetchNQRange(ctxFrom, date, '1m', yahooSym); } catch(_) {}
+    const m1Sorted  = m1Candles.filter(c => parisHourOf(c.ts) < 23).sort((a, b) => a.ts - b.ts);
+    const m1EqhEql  = computeEqhEql(m1Sorted, 10, 0.0004).slice(0, 8);
+    zones.liquidity = [...fixedLevels, ...aiBslSsl, ...m1EqhEql];
 
     return { content, candles, zones,
       meta: { symbol: assetKey, from: ctxFrom, to: date, defaultTf: '15m' } };
@@ -412,8 +472,13 @@ async function generateIctAnalysis(type, date, asset) {
     const { high: pwhWk, low: pwlWk } = calcHighLow(ctxCandles);
     if (pwhWk) fixedLevelsWk.push({ price: pwhWk, type: 'PWH', label: 'PWH', ts: sortedW[0]?.ts });
     if (pwlWk) fixedLevelsWk.push({ price: pwlWk, type: 'PWL', label: 'PWL', ts: sortedW[0]?.ts });
-    const aiLiqWk = (zones.liquidity ?? []).filter(l => ['BSL','SSL','EQH','EQL'].includes(l.type)).slice(0, 4);
-    zones.liquidity = [...fixedLevelsWk, ...aiLiqWk];
+    const aiBslSslWk = (zones.liquidity ?? []).filter(l => ['BSL','SSL'].includes(l.type)).slice(0, 4);
+    // EQH/EQL algorithmiques sur M5 — semaine analysée + contexte
+    let m5CandlesWk = [];
+    try { m5CandlesWk = await fetchNQRange(ctxFrom, fridayStr, '5m', yahooSym); } catch(_) {}
+    const m5SortedWk = m5CandlesWk.sort((a, b) => a.ts - b.ts);
+    const m5EqhEqlWk = computeEqhEql(m5SortedWk, 5, 0.0005).slice(0, 8);
+    zones.liquidity = [...fixedLevelsWk, ...aiBslSslWk, ...m5EqhEqlWk];
 
     return { content, candles, zones,
       meta: { symbol: assetKey, from: ctxFrom, to: fridayStr, defaultTf: '1h' } };
@@ -466,8 +531,13 @@ async function generateIctAnalysis(type, date, asset) {
     const { high: pwhNW, low: pwlNW } = calcHighLow(lastWkCandles);
     if (pwhNW) fixedLevelsNW.push({ price: pwhNW, type: 'PWH', label: 'PWH (sem. passée)', ts: sortedNW[0]?.ts });
     if (pwlNW) fixedLevelsNW.push({ price: pwlNW, type: 'PWL', label: 'PWL (sem. passée)', ts: sortedNW[0]?.ts });
-    const aiLiqNW = (zones.liquidity ?? []).filter(l => ['BSL','SSL','EQH','EQL'].includes(l.type)).slice(0, 4);
-    zones.liquidity = [...fixedLevelsNW, ...aiLiqNW];
+    const aiBslSslNW = (zones.liquidity ?? []).filter(l => ['BSL','SSL'].includes(l.type)).slice(0, 4);
+    // EQH/EQL algorithmiques sur M5 — 2 semaines de contexte
+    let m5CandlesNW = [];
+    try { m5CandlesNW = await fetchNQRange(ctxFrom, lastFri, '5m', yahooSym); } catch(_) {}
+    const m5SortedNW = m5CandlesNW.sort((a, b) => a.ts - b.ts);
+    const m5EqhEqlNW = computeEqhEql(m5SortedNW, 5, 0.0005).slice(0, 8);
+    zones.liquidity = [...fixedLevelsNW, ...aiBslSslNW, ...m5EqhEqlNW];
 
     return { content, candles, zones,
       meta: { symbol: assetKey, from: ctxFrom, to: lastFri, defaultTf: '1h' } };
