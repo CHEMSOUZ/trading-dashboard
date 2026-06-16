@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { createChart, CandlestickSeries } from 'lightweight-charts';
 import NQChart from '../components/NQChart';
 
 // ── Futures assets ────────────────────────────────────────────
@@ -156,104 +155,46 @@ function GeneratingCard({ label }) {
   );
 }
 
-// ── Historical chart — 6 months D1 ───────────────────────────
+// ── Historical chart — 6 months D1 avec markup ICT ───────────
 function HistoricalChart({ asset }) {
-  const containerRef = useRef(null);
-  const chartRef     = useRef(null);
-  const [candles, setCandles] = useState([]);
+  const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setCandles([]);
+    setData(null);
     let cancelled = false;
     setLoading(true);
-    const yahooSym = ASSET_YAHOO[asset] ?? 'MNQ%3DF';
-    const to   = new Date().toISOString().slice(0, 10);
-    const from = new Date(Date.now() - 183 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-    window.market.getCandles(from, to, '1d', yahooSym).then(res => {
-      if (!cancelled && res.ok && res.data?.length) setCandles(res.data);
+    window.market.getHistoricalCandles(asset, 183).then(res => {
+      if (!cancelled && res.ok) setData(res.data);
       if (!cancelled) setLoading(false);
     }).catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [asset]);
 
-  useEffect(() => {
-    if (!containerRef.current || !candles.length) return;
-    if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; }
+  const dateRange = useMemo(() => {
+    const to   = new Date().toISOString().slice(0, 10);
+    const from = new Date(Date.now() - 183 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    return { from, to };
+  }, []);
 
-    const chart = createChart(containerRef.current, {
-      width:  containerRef.current.clientWidth,
-      height: 220,
-      layout: { background: { color: '#0a0e14' }, textColor: '#8899bb' },
-      grid:   { vertLines: { color: 'rgba(136,153,187,0.06)' }, horzLines: { color: 'rgba(136,153,187,0.06)' } },
-      timeScale: {
-        borderColor: 'rgba(136,153,187,0.15)', timeVisible: true,
-        tickMarkFormatter: (ts, type) => {
-          const d = new Date(ts * 1000);
-          if (type <= 1) return d.toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', month: 'short', year: 'numeric' });
-          return d.toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit' });
-        },
-      },
-      rightPriceScale: { borderColor: 'rgba(136,153,187,0.15)' },
-      crosshair: { mode: 1 },
-    });
-
-    const series = chart.addSeries(CandlestickSeries, {
-      upColor: '#26a69a', downColor: '#ef5350',
-      borderVisible: false, wickUpColor: '#26a69a', wickDownColor: '#ef5350',
-    });
-
-    const sorted = [...candles]
-      .filter(c => c.open != null && c.close != null)
-      .sort((a, b) => a.ts - b.ts);
-
-    series.setData(sorted.map(c => ({ time: c.ts, open: +c.open, high: +c.high, low: +c.low, close: +c.close })));
-    chart.timeScale().fitContent();
-    chartRef.current = chart;
-
-    const ro = new ResizeObserver(() => {
-      if (containerRef.current && chartRef.current)
-        chartRef.current.resize(containerRef.current.clientWidth, 220);
-    });
-    ro.observe(containerRef.current);
-    return () => { ro.disconnect(); if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; } };
-  }, [candles]);
-
-  const stats = useMemo(() => {
-    if (!candles.length) return null;
-    const sorted = [...candles].sort((a, b) => a.ts - b.ts);
-    const first = sorted[0], last = sorted[sorted.length - 1];
-    const hi = Math.max(...sorted.map(c => +c.high));
-    const lo = Math.min(...sorted.map(c => +c.low));
-    const chg = first ? ((+last.close - +first.open) / +first.open * 100).toFixed(2) : null;
-    return { hi, lo, chg };
-  }, [candles]);
+  if (loading) return (
+    <div style={{ height:'120px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', color:'#3a4a5a', letterSpacing:'1px', border:'1px solid rgba(136,153,187,0.10)', borderRadius:'10px', marginBottom:'20px', background:'#0a0e14' }}>
+      CHARGEMENT HISTORIQUE {asset}…
+    </div>
+  );
+  if (!data?.candles?.length) return null;
 
   return (
-    <div style={{ marginBottom:'20px', border:'1px solid rgba(136,153,187,0.10)', borderRadius:'10px', overflow:'hidden', background:'#0a0e14' }}>
-      <div style={{ padding:'8px 14px', borderBottom:'1px solid rgba(136,153,187,0.08)', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'8px' }}>
-        <span style={{ fontSize:'10px', color:'#5a6a82', letterSpacing:'1px' }}>{asset} · D1 · 6 MOIS HISTORIQUE</span>
-        {stats && (
-          <span style={{ fontSize:'10px', color:'#3a4a5a', display:'flex', gap:'14px' }}>
-            <span>H: <span style={{ color:'#26a69a' }}>{stats.hi?.toFixed(0) ?? '—'}</span></span>
-            <span>L: <span style={{ color:'#ef5350' }}>{stats.lo?.toFixed(0) ?? '—'}</span></span>
-            {stats.chg !== null && (
-              <span>Perf 6M: <span style={{ color: +stats.chg >= 0 ? '#26a69a' : '#ef5350' }}>{+stats.chg > 0 ? '+' : ''}{stats.chg}%</span></span>
-            )}
-          </span>
-        )}
-      </div>
-      {loading ? (
-        <div style={{ height:'220px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', color:'#3a4a5a', letterSpacing:'1px' }}>
-          CHARGEMENT HISTORIQUE…
-        </div>
-      ) : !candles.length ? (
-        <div style={{ height:'220px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', color:'#3a4a5a' }}>
-          Données indisponibles pour {asset}
-        </div>
-      ) : (
-        <div ref={containerRef} style={{ width:'100%' }} />
-      )}
+    <div style={{ marginBottom:'20px' }}>
+      <NQChart
+        candles={data.candles}
+        zones={data.zones}
+        label="D1 · 6 MOIS · MARKUP ICT"
+        defaultTf="1d"
+        dateRange={dateRange}
+        symbol={asset}
+        yahooSym={ASSET_YAHOO[asset]}
+      />
     </div>
   );
 }

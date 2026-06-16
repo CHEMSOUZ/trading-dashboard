@@ -135,6 +135,101 @@ function parisHourOf(ts) {
   return parseInt(parts.find(p => p.type === 'hour')?.value ?? '0', 10) % 24;
 }
 
+function computeHistoricalZones(candles) {
+  if (!candles || candles.length < 8) return { fvgs: [], swings: [], liquidity: [] };
+  const n  = candles.length;
+  const LB = 3;
+
+  // Swing detection
+  const swingHighs = [], swingLows = [];
+  for (let i = LB; i < n - LB; i++) {
+    const c = candles[i];
+    let isH = true, isL = true;
+    for (let j = i - LB; j <= i + LB; j++) {
+      if (j === i) continue;
+      if (candles[j].high >= c.high) isH = false;
+      if (candles[j].low  <= c.low)  isL = false;
+    }
+    if (isH) swingHighs.push({ idx: i, price: c.high, ts: c.ts });
+    if (isL) swingLows.push({ idx: i, price: c.low,  ts: c.ts });
+  }
+
+  const lastClose = candles[n - 1]?.close ?? 0;
+
+  // BSL = swing highs above price (unmitigated), take last 4
+  const bsl = swingHighs.filter(s => s.price > lastClose).slice(-4);
+  // SSL = swing lows below price (unmitigated), take last 4
+  const ssl = swingLows.filter(s => s.price < lastClose).slice(-4);
+
+  // EQH = consecutive swing highs within 0.2% tolerance, above price
+  const EQ_TOL = 0.002;
+  const eqh = [];
+  for (let i = 1; i < swingHighs.length; i++) {
+    const a = swingHighs[i - 1], b = swingHighs[i];
+    if (Math.abs(a.price - b.price) / b.price < EQ_TOL && b.price > lastClose)
+      eqh.push({ idx: b.idx, price: Math.max(a.price, b.price), ts: b.ts });
+  }
+  // EQL = consecutive swing lows within 0.2%, below price
+  const eql = [];
+  for (let i = 1; i < swingLows.length; i++) {
+    const a = swingLows[i - 1], b = swingLows[i];
+    if (Math.abs(a.price - b.price) / b.price < EQ_TOL && b.price < lastClose)
+      eql.push({ idx: b.idx, price: Math.min(a.price, b.price), ts: b.ts });
+  }
+
+  // PWH/PWL — group D1 candles by ISO week
+  const weekMap = {};
+  for (const c of candles) {
+    const d = new Date(c.ts * 1000), day = d.getUTCDay();
+    const mon = new Date(d);
+    mon.setUTCDate(d.getUTCDate() - (day === 0 ? 6 : day - 1));
+    const wk = mon.toISOString().slice(0, 10);
+    if (!weekMap[wk]) weekMap[wk] = [];
+    weekMap[wk].push(c);
+  }
+  const weeks   = Object.keys(weekMap).sort();
+  const prevWkKey = weeks[weeks.length - 2];
+  const prevWkCandles = prevWkKey ? weekMap[prevWkKey] : [];
+  const { high: pwh, low: pwl } = calcHighLow(prevWkCandles);
+  const pwTs = candles[0]?.ts;
+
+  // PDH/PDL — previous closed D1 candle
+  const pdCandle = candles[n - 2];
+  const pdh = pdCandle ? Math.round(pdCandle.high) : null;
+  const pdl = pdCandle ? Math.round(pdCandle.low)  : null;
+  const pdTs = pdCandle?.ts;
+
+  // Structure points HH/HL/LH/LL (last 6)
+  const allSwings = [
+    ...swingHighs.map(s => ({ ...s, type: 'high' })),
+    ...swingLows.map(s  => ({ ...s, type: 'low'  })),
+  ].sort((a, b) => a.idx - b.idx);
+  const structPts = [];
+  let lastH = null, lastL = null;
+  for (const sw of allSwings) {
+    if (sw.type === 'high') {
+      structPts.push({ idx: sw.idx, type: 'high', label: lastH == null || sw.price > lastH ? 'HH' : 'LH' });
+      lastH = sw.price;
+    } else {
+      structPts.push({ idx: sw.idx, type: 'low', label: lastL == null || sw.price > lastL ? 'HL' : 'LL' });
+      lastL = sw.price;
+    }
+  }
+
+  // Build liquidity array
+  const liquidity = [];
+  if (pwh) liquidity.push({ price: pwh, type: 'PWH', label: 'PWH', ts: pwTs });
+  if (pwl) liquidity.push({ price: pwl, type: 'PWL', label: 'PWL', ts: pwTs });
+  if (pdh) liquidity.push({ price: pdh, type: 'PDH', label: 'PDH', ts: pdTs });
+  if (pdl) liquidity.push({ price: pdl, type: 'PDL', label: 'PDL', ts: pdTs });
+  for (const b of bsl.slice(-3)) liquidity.push({ price: Math.round(b.price), type: 'BSL', label: 'BSL', ts: b.ts });
+  for (const s of ssl.slice(-3)) liquidity.push({ price: Math.round(s.price), type: 'SSL', label: 'SSL', ts: s.ts });
+  for (const e of eqh.slice(-2)) liquidity.push({ price: Math.round(e.price), type: 'EQH', label: 'EQH', ts: e.ts });
+  for (const e of eql.slice(-2)) liquidity.push({ price: Math.round(e.price), type: 'EQL', label: 'EQL', ts: e.ts });
+
+  return { fvgs: [], swings: structPts.slice(-6), liquidity };
+}
+
 async function fetchNQRange(fromDate, toDate, interval, symbol) {
   const sym = symbol ?? 'MNQ%3DF'; // default MNQ=F
   const p1 = Math.floor(new Date(fromDate + 'T00:00:00Z').getTime() / 1000);
@@ -821,6 +916,19 @@ function registerHandlers() {
       const sym  = symbol ?? 'MNQ%3DF';
       const data = await fetchNQRange(from, to, tf ?? '15m', sym);
       return { ok: true, data };
+    } catch(e) { return { ok: false, error: e.message }; }
+  });
+
+  ipcMain.handle('market:getHistoricalCandles', async (_, asset, days) => {
+    try {
+      const key  = (asset || 'MNQ').toUpperCase();
+      const info = ANALYSIS_SYMBOL_MAP[key] ?? ANALYSIS_SYMBOL_MAP.MNQ;
+      const to   = new Date().toISOString().slice(0, 10);
+      const from = new Date(Date.now() - (days || 183) * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      const raw  = await fetchNQRange(from, to, '1d', info.yahoo);
+      const candles = raw.sort((a, b) => a.ts - b.ts);
+      const zones   = computeHistoricalZones(candles);
+      return { ok: true, data: { candles, zones } };
     } catch(e) { return { ok: false, error: e.message }; }
   });
 
