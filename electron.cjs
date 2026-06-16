@@ -161,21 +161,8 @@ function computeHistoricalZones(candles) {
   // SSL = swing lows below price (unmitigated), take last 4
   const ssl = swingLows.filter(s => s.price < lastClose).slice(-4);
 
-  // EQH = consecutive swing highs within 0.2% tolerance, above price
-  const EQ_TOL = 0.002;
-  const eqh = [];
-  for (let i = 1; i < swingHighs.length; i++) {
-    const a = swingHighs[i - 1], b = swingHighs[i];
-    if (Math.abs(a.price - b.price) / b.price < EQ_TOL && b.price > lastClose)
-      eqh.push({ idx: b.idx, price: Math.max(a.price, b.price), ts: b.ts });
-  }
-  // EQL = consecutive swing lows within 0.2%, below price
-  const eql = [];
-  for (let i = 1; i < swingLows.length; i++) {
-    const a = swingLows[i - 1], b = swingLows[i];
-    if (Math.abs(a.price - b.price) / b.price < EQ_TOL && b.price < lastClose)
-      eql.push({ idx: b.idx, price: Math.min(a.price, b.price), ts: b.ts });
-  }
+  // EQH/EQL via clustering (paires, triples…) — tolérance 0.2% pour D1
+  const eqhEqlD1 = computeEqhEql(candles, LB, 0.002);
 
   // PWH/PWL — group D1 candles by ISO week
   const weekMap = {};
@@ -224,15 +211,15 @@ function computeHistoricalZones(candles) {
   if (pdl) liquidity.push({ price: pdl, type: 'PDL', label: 'PDL', ts: pdTs });
   for (const b of bsl.slice(-3)) liquidity.push({ price: Math.round(b.price), type: 'BSL', label: 'BSL', ts: b.ts });
   for (const s of ssl.slice(-3)) liquidity.push({ price: Math.round(s.price), type: 'SSL', label: 'SSL', ts: s.ts });
-  for (const e of eqh.slice(-2)) liquidity.push({ price: Math.round(e.price), type: 'EQH', label: 'EQH', ts: e.ts });
-  for (const e of eql.slice(-2)) liquidity.push({ price: Math.round(e.price), type: 'EQL', label: 'EQL', ts: e.ts });
+  for (const e of eqhEqlD1)      liquidity.push({ ...e, price: Math.round(e.price) });
 
   return { fvgs: [], swings: structPts.slice(-6), liquidity };
 }
 
-// Détection algorithmique EQH/EQL sur n'importe quel TF (M1, M5…)
-// lb = lookback candles de chaque côté, tol = tolérance de prix relative
-function computeEqhEql(candles, lb = 10, tol = 0.0004) {
+// Détection EQH/EQL par clustering de prix — paires, triples, quadruples…
+// lb  = lookback de chaque côté pour détecter un swing
+// tol = tolérance relative (0.001 = 0.1%) : tous les swings dans la même bande de prix forment un groupe
+function computeEqhEql(candles, lb = 10, tol = 0.001) {
   if (!candles || candles.length < lb * 2 + 2) return [];
   const n = candles.length;
   const swingHighs = [], swingLows = [];
@@ -249,37 +236,46 @@ function computeEqhEql(candles, lb = 10, tol = 0.0004) {
     if (isL) swingLows.push({ idx: i, price: c.low,  ts: c.ts });
   }
 
-  const result = [];
-
-  // Toutes les paires de swing highs proches — pas seulement consécutives
-  for (let i = 0; i < swingHighs.length; i++) {
-    for (let j = i + 1; j < swingHighs.length; j++) {
-      const a = swingHighs[i], b = swingHighs[j];
-      if (Math.abs(a.price - b.price) / b.price < tol) {
-        const level = Math.max(a.price, b.price);
-        // Non liquidé si aucune bougie après b n'est montée au-dessus
-        const mitigated = candles.slice(b.idx + 1).some(c => c.high > level);
-        if (!mitigated) {
-          result.push({ price: Math.round(level * 100) / 100, type: 'EQH', label: 'EQH', ts: a.ts });
-          break; // une seule EQH par swing high
-        }
+  // Regroupe les swings par bande de prix (tri par prix, puis fenêtre glissante)
+  function priceBandClusters(swings) {
+    if (!swings.length) return [];
+    const sorted = [...swings].sort((a, b) => a.price - b.price);
+    const clusters = [];
+    let cl = [sorted[0]];
+    for (let i = 1; i < sorted.length; i++) {
+      // On compare le prix courant au prix MIN du cluster courant
+      if ((sorted[i].price - cl[0].price) / cl[0].price < tol) {
+        cl.push(sorted[i]);
+      } else {
+        if (cl.length >= 2) clusters.push([...cl]);
+        cl = [sorted[i]];
       }
     }
+    if (cl.length >= 2) clusters.push(cl);
+    return clusters;
   }
 
-  // Toutes les paires de swing lows proches
-  for (let i = 0; i < swingLows.length; i++) {
-    for (let j = i + 1; j < swingLows.length; j++) {
-      const a = swingLows[i], b = swingLows[j];
-      if (Math.abs(a.price - b.price) / b.price < tol) {
-        const level = Math.min(a.price, b.price);
-        const mitigated = candles.slice(b.idx + 1).some(c => c.low < level);
-        if (!mitigated) {
-          result.push({ price: Math.round(level * 100) / 100, type: 'EQL', label: 'EQL', ts: a.ts });
-          break;
-        }
-      }
-    }
+  const result = [];
+
+  // EQH : clusters de swing highs non liquidés
+  for (const cls of priceBandClusters(swingHighs)) {
+    const level   = Math.max(...cls.map(s => s.price));
+    const lastIdx = Math.max(...cls.map(s => s.idx));
+    // Non liquidé = aucune bougie après le dernier swing n'est passée au-dessus
+    if (candles.slice(lastIdx + 1).some(c => c.high > level)) continue;
+    const firstTs = [...cls].sort((a, b) => a.idx - b.idx)[0].ts;
+    const lbl = cls.length > 2 ? `EQH×${cls.length}` : 'EQH';
+    result.push({ price: Math.round(level * 100) / 100, type: 'EQH', label: lbl, ts: firstTs });
+  }
+
+  // EQL : clusters de swing lows non liquidés
+  for (const cls of priceBandClusters(swingLows)) {
+    const level   = Math.min(...cls.map(s => s.price));
+    const lastIdx = Math.max(...cls.map(s => s.idx));
+    if (candles.slice(lastIdx + 1).some(c => c.low < level)) continue;
+    const firstTs = [...cls].sort((a, b) => a.idx - b.idx)[0].ts;
+    const lbl = cls.length > 2 ? `EQL×${cls.length}` : 'EQL';
+    result.push({ price: Math.round(level * 100) / 100, type: 'EQL', label: lbl, ts: firstTs });
   }
 
   return result;
@@ -417,7 +413,7 @@ async function generateIctAnalysis(type, date, asset) {
     let m1Candles = [];
     try { m1Candles = await fetchNQRange(ctxFrom, date, '1m', yahooSym); } catch(_) {}
     const m1Sorted  = m1Candles.filter(c => parisHourOf(c.ts) < 23).sort((a, b) => a.ts - b.ts);
-    const m1EqhEql  = computeEqhEql(m1Sorted, 10, 0.0004).slice(0, 8);
+    const m1EqhEql = computeEqhEql(m1Sorted, 10, 0.001);
     zones.liquidity = [...fixedLevels, ...aiBslSsl, ...m1EqhEql];
 
     return { content, candles, zones,
@@ -477,7 +473,7 @@ async function generateIctAnalysis(type, date, asset) {
     let m5CandlesWk = [];
     try { m5CandlesWk = await fetchNQRange(ctxFrom, fridayStr, '5m', yahooSym); } catch(_) {}
     const m5SortedWk = m5CandlesWk.sort((a, b) => a.ts - b.ts);
-    const m5EqhEqlWk = computeEqhEql(m5SortedWk, 5, 0.0005).slice(0, 8);
+    const m5EqhEqlWk = computeEqhEql(m5SortedWk, 5, 0.001);
     zones.liquidity = [...fixedLevelsWk, ...aiBslSslWk, ...m5EqhEqlWk];
 
     return { content, candles, zones,
@@ -536,7 +532,7 @@ async function generateIctAnalysis(type, date, asset) {
     let m5CandlesNW = [];
     try { m5CandlesNW = await fetchNQRange(ctxFrom, lastFri, '5m', yahooSym); } catch(_) {}
     const m5SortedNW = m5CandlesNW.sort((a, b) => a.ts - b.ts);
-    const m5EqhEqlNW = computeEqhEql(m5SortedNW, 5, 0.0005).slice(0, 8);
+    const m5EqhEqlNW = computeEqhEql(m5SortedNW, 5, 0.001);
     zones.liquidity = [...fixedLevelsNW, ...aiBslSslNW, ...m5EqhEqlNW];
 
     return { content, candles, zones,
