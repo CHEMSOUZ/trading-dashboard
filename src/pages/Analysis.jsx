@@ -317,7 +317,11 @@ function AnalysisCard({ analysis, onRegenerate, onDelete, generating, chartLabel
 
   const chartCandles   = d1Data?.candles?.length ? d1Data.candles : marketData.candles;
   const chartDefaultTf = d1Data ? '1d' : (marketData.meta?.defaultTf ?? '15m');
-  const chartDateRange = marketData.meta ? { from: marketData.meta.from, to: marketData.meta.to } : null;
+  // 6 mois pour tous les TF — Yahoo retourne ce qu'il peut selon l'intervalle (M1 max 7j, M5/M15 max 60j, H1+ max 6 mois)
+  const chartDateRange = useMemo(() => ({
+    from: new Date(Date.now() - 183 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+    to:   new Date().toISOString().slice(0, 10),
+  }), []);
 
   if (generating) return <GeneratingCard label={generating} />;
   if (!analysis) return (
