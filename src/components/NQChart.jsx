@@ -11,15 +11,15 @@ const TF_LIST = [
   { tf: '1d',  label: 'D1'  },
 ];
 
-// Limite maximale de données Yahoo Finance par intervalle
-const TF_MAX_DAYS = {
-  '1m':  7,
-  '5m':  60,
-  '15m': 60,
-  '30m': 60,
-  '1h':  730,
-  '4h':  730,
-  '1d':  1825,
+// Plages à essayer pour chaque TF (du plus long au plus court — fallback automatique)
+const TF_DAY_RANGES = {
+  '1m':  [5, 3, 1],
+  '5m':  [55, 30, 14],
+  '15m': [55, 30, 14],
+  '30m': [55, 30, 14],
+  '1h':  [700, 365, 60],
+  '4h':  [700, 365, 60],
+  '1d':  [730, 365, 180],
 };
 
 function buildChart(container, candles, zones, isDefaultTf) {
@@ -182,23 +182,38 @@ export default function NQChart({ candles, zones, label, defaultTf, dateRange, s
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayCandles, zones]);
 
-  // On TF change: fetch max available data per Yahoo Finance limits
+  // On TF change: essaie plusieurs plages avec fallback automatique
   const switchTf = useCallback(async (tf) => {
     if (tf === activeTf) return;
+    const prevTf = activeTf;
     setActiveTf(tf);
+
+    // TF par défaut : restaure les candles originaux directement
     if (tf === (defaultTf ?? '15m') && candles?.length) {
       setDisplay(candles);
       return;
     }
     if (!window.market?.getCandles) return;
+
     setLoading(true);
-    try {
-      const days = TF_MAX_DAYS[tf] ?? 183;
-      const to   = new Date().toISOString().slice(0, 10);
-      const from = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString().slice(0, 10);
-      const res  = await window.market.getCandles(from, to, tf, yahooSym);
-      if (res.ok && res.data?.length) setDisplay(res.data);
-    } catch(_) {}
+    const to     = new Date().toISOString().slice(0, 10);
+    const ranges = TF_DAY_RANGES[tf] ?? [60, 30, 7];
+    let fetched  = false;
+
+    for (const days of ranges) {
+      try {
+        const from = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString().slice(0, 10);
+        const res  = await window.market.getCandles(from, to, tf, yahooSym);
+        if (res.ok && res.data?.length) {
+          setDisplay(res.data);
+          fetched = true;
+          break;
+        }
+      } catch(_) {}
+    }
+
+    // Aucune donnée obtenue — restaure le TF précédent
+    if (!fetched) setActiveTf(prevTf);
     setLoading(false);
   }, [activeTf, defaultTf, candles, yahooSym]);
 
