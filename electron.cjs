@@ -107,6 +107,34 @@ function calcHighLow(candles) {
   };
 }
 
+// ── Futures symbol map for AI analysis ───────────────────────
+const ANALYSIS_SYMBOL_MAP = {
+  MNQ: { yahoo: 'MNQ%3DF', label: 'MNQ (Micro NASDAQ-100 Futures)' },
+  NQ:  { yahoo: 'NQ%3DF',  label: 'NQ (E-mini NASDAQ-100 Futures)'  },
+  MES: { yahoo: 'MES%3DF', label: 'MES (Micro S&P 500 Futures)'     },
+  ES:  { yahoo: 'ES%3DF',  label: 'ES (E-mini S&P 500 Futures)'      },
+  MGC: { yahoo: 'MGC%3DF', label: 'MGC (Micro Gold Futures)'         },
+  GC:  { yahoo: 'GC%3DF',  label: 'GC (Gold Futures)'                },
+  MCL: { yahoo: 'MCL%3DF', label: 'MCL (Micro Crude Oil Futures)'    },
+  CL:  { yahoo: 'CL%3DF',  label: 'CL (Crude Oil Futures)'           },
+  M2K: { yahoo: 'M2K%3DF', label: 'M2K (Micro Russell 2000 Futures)' },
+  RTY: { yahoo: 'RTY%3DF', label: 'RTY (E-mini Russell 2000 Futures)'},
+  MYM: { yahoo: 'MYM%3DF', label: 'MYM (Micro Dow Jones Futures)'    },
+  YM:  { yahoo: 'YM%3DF',  label: 'YM (E-mini Dow Jones Futures)'    },
+  SI:  { yahoo: 'SI%3DF',  label: 'SI (Silver Futures)'              },
+};
+
+// Paris timezone helpers (journée 00h–23h heure française)
+function parisDateStr(ts) {
+  return new Intl.DateTimeFormat('sv', { timeZone: 'Europe/Paris' }).format(new Date(ts * 1000));
+}
+function parisHourOf(ts) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Paris', hour: 'numeric', hour12: false,
+  }).formatToParts(new Date(ts * 1000));
+  return parseInt(parts.find(p => p.type === 'hour')?.value ?? '0', 10) % 24;
+}
+
 async function fetchNQRange(fromDate, toDate, interval, symbol) {
   const sym = symbol ?? 'MNQ%3DF'; // default MNQ=F
   const p1 = Math.floor(new Date(fromDate + 'T00:00:00Z').getTime() / 1000);
@@ -121,7 +149,7 @@ async function fetchNQRange(fromDate, toDate, interval, symbol) {
     req.setTimeout(20000, () => { req.destroy(); reject(new Error('Timeout')); });
   });
   const result = raw?.chart?.result?.[0];
-  if (!result) throw new Error('Pas de données MNQ');
+  if (!result) throw new Error(`Pas de données pour ${sym}`);
   const ts = result.timestamp ?? [];
   const q  = result.indicators?.quote?.[0] ?? {};
   return ts.map((t, i) => ({
@@ -163,18 +191,22 @@ RÈGLES :
   idx = numéro [N] exact de la bougie (obligatoire). MAX 6 niveaux. Prix = H ou L exact.
 - Tous prix = entiers. Rien après ---END_CHART_ZONES---.`
 // ── ICT analysis generation ───────────────────────────────────
-async function generateIctAnalysis(type, date) {
+async function generateIctAnalysis(type, date, asset) {
+  const assetKey  = (asset || 'MNQ').toUpperCase();
+  const assetInfo = ANALYSIS_SYMBOL_MAP[assetKey] ?? ANALYSIS_SYMBOL_MAP.MNQ;
+  const yahooSym  = assetInfo.yahoo;
+  const assetLbl  = assetInfo.label;
 
-  // ── DAILY — M15, 1 jour de contexte préalable ─────────────
+  // ── DAILY — M15, 3 jours de contexte préalable ─────────────
   if (type === 'daily') {
-    const ctxFrom = addDays(date, -3); // 3 jours arrière (couvre le vendredi si lundi)
+    const ctxFrom = addDays(date, -3);
     let candles = [];
-    try { candles = await fetchNQRange(ctxFrom, date, '15m'); } catch(_) {}
+    try { candles = await fetchNQRange(ctxFrom, date, '15m', yahooSym); } catch(_) {}
 
-    // Séparer candles de contexte vs jour d'analyse
-    const ctxCandles  = candles.filter(c => new Date(c.ts * 1000).toISOString().slice(0,10) !== date);
-    const dayCandles  = candles.filter(c => new Date(c.ts * 1000).toISOString().slice(0,10) === date);
-    const ctxOffset   = ctxCandles.length;
+    // Séparer par date Paris — journée 00h–23h heure française
+    const ctxCandles = candles.filter(c => parisDateStr(c.ts) < date);
+    const dayCandles = candles.filter(c => parisDateStr(c.ts) === date && parisHourOf(c.ts) < 23);
+    const ctxOffset  = ctxCandles.length;
 
     const fmtRow = (c, i) => {
       const d = new Date(c.ts * 1000);
@@ -187,7 +219,7 @@ async function generateIctAnalysis(type, date) {
       { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
     const raw = await callAnthropicApiLong([{ role:'user', content:
-      `Génère un résumé de journée ICT complet pour le MNQ le ${date}.\n\n` +
+      `Génère un résumé de journée ICT complet pour le ${assetLbl} le ${date}.\n\n` +
       `CONTEXTE PRÉCÉDENT (M15 UTC, idx 0…${ctxOffset-1}):\n${ctxRows}\n\n` +
       `=== JOURNÉE ANALYSÉE : ${date} (idx ${ctxOffset}…) ===\n${dayRows}\n\n` +
       `Rédige l'analyse en Markdown structurée ainsi :\n\n` +
@@ -204,21 +236,20 @@ async function generateIctAnalysis(type, date) {
       ZONES_INSTRUCTION +
       '\n  RESTRICTION DAILY : les idx BSL/SSL/EQH/EQL doivent tous être >= ' + ctxOffset + ' (journée analysée). Pas de zones de liquidité sur le contexte précédent (idx < ctxOffset).'
     }],
-    `Tu es un analyste expert ICT (Inner Circle Trader) sur le MNQ (Micro NASDAQ-100 Futures). Tu analyses les marchés en M15 pour des traders français (horaires CET/Paris). Sois précis, structuré et opérationnel.`);
+    `Tu es un analyste expert ICT (Inner Circle Trader) sur le ${assetLbl}. Tu analyses les marchés en M15 pour des traders français (horaires CET/Paris). Sois précis, structuré et opérationnel.`);
     const { content, zones } = parseChartZones(raw);
 
-    // Resoudre idx->ts pour zones IA (liquidity)
     const sortedD = [...candles].sort((a,b) => a.ts - b.ts);
     (zones.liquidity ?? []).forEach(l => { if (l.idx != null && l.ts == null) l.ts = sortedD[l.idx]?.ts; });
 
-    // --- Niveaux deterministes PDH/PDL + PWH/PWL ---
+    // PDH/PDL : veille, heure Paris 00h–23h uniquement
     const fixedLevels = [];
-    const ctxDates = [...new Set(ctxCandles.map(c => new Date(c.ts*1000).toISOString().slice(0,10)))].sort().reverse();
-    if (ctxDates[0]) {
-      const pdCandles = ctxCandles.filter(c => new Date(c.ts*1000).toISOString().slice(0,10) === ctxDates[0]);
-      const { high: pdh, highTs: pdhTs, low: pdl, lowTs: pdlTs } = calcHighLow(pdCandles);
-      if (pdh) fixedLevels.push({ price: pdh, type: 'PDH', label: 'PDH', ts: pdhTs });
-      if (pdl) fixedLevels.push({ price: pdl, type: 'PDL', label: 'PDL', ts: pdlTs });
+    const ctxDatesParis = [...new Set(ctxCandles.map(c => parisDateStr(c.ts)))].sort().reverse();
+    if (ctxDatesParis[0]) {
+      const pdCandles = ctxCandles.filter(c => parisDateStr(c.ts) === ctxDatesParis[0] && parisHourOf(c.ts) < 23);
+      const { high: pdh, low: pdl } = calcHighLow(pdCandles);
+      if (pdh) fixedLevels.push({ price: pdh, type: 'PDH', label: 'PDH', ts: sortedD[0]?.ts });
+      if (pdl) fixedLevels.push({ price: pdl, type: 'PDL', label: 'PDL', ts: sortedD[0]?.ts });
     }
     const analysisDay = new Date(date + 'T12:00:00Z');
     const dow         = analysisDay.getUTCDay();
@@ -227,7 +258,7 @@ async function generateIctAnalysis(type, date) {
     const prevWkMon   = addDays(thisMonday, -7);
     const prevWkFri   = addDays(thisMonday, -3);
     let prevWkD1 = [];
-    try { prevWkD1 = await fetchNQRange(prevWkMon, prevWkFri, '1d'); } catch(_) {}
+    try { prevWkD1 = await fetchNQRange(prevWkMon, prevWkFri, '1d', yahooSym); } catch(_) {}
     const { high: pwh, low: pwl } = calcHighLow(prevWkD1);
     if (pwh && prevWkD1.length) fixedLevels.push({ price: pwh, type: 'PWH', label: 'PWH', ts: sortedD[0]?.ts });
     if (pwl && prevWkD1.length) fixedLevels.push({ price: pwl, type: 'PWL', label: 'PWL', ts: sortedD[0]?.ts });
@@ -235,7 +266,7 @@ async function generateIctAnalysis(type, date) {
     zones.liquidity = [...fixedLevels, ...aiLiqDaily];
 
     return { content, candles, zones,
-      meta: { symbol: 'MNQ=F', from: ctxFrom, to: date, defaultTf: '15m' } };
+      meta: { symbol: assetKey, from: ctxFrom, to: date, defaultTf: '15m' } };
   }
 
   // ── WEEKLY — H1, 1 semaine de contexte préalable ──────────
@@ -243,9 +274,9 @@ async function generateIctAnalysis(type, date) {
     const friday    = new Date(date + 'T12:00:00Z');
     friday.setUTCDate(friday.getUTCDate() + 4);
     const fridayStr = friday.toISOString().slice(0,10);
-    const ctxFrom   = addDays(date, -7); // semaine précédente
+    const ctxFrom   = addDays(date, -7);
     let candles = [];
-    try { candles = await fetchNQRange(ctxFrom, fridayStr, '1h'); } catch(_) {}
+    try { candles = await fetchNQRange(ctxFrom, fridayStr, '1h', yahooSym); } catch(_) {}
 
     const ctxCandles = candles.filter(c => c.ts < new Date(date + 'T00:00:00Z').getTime() / 1000);
     const wkCandles  = candles.filter(c => c.ts >= new Date(date + 'T00:00:00Z').getTime() / 1000);
@@ -264,7 +295,7 @@ async function generateIctAnalysis(type, date) {
     const wLabel = `${d0.toLocaleDateString('fr-FR',{day:'numeric',month:'long'})} – ${d1.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}`;
 
     const raw = await callAnthropicApiLong([{ role:'user', content:
-      `Génère un bilan hebdomadaire ICT pour le MNQ. Semaine du ${wLabel}.\n\n` +
+      `Génère un bilan hebdomadaire ICT pour le ${assetLbl}. Semaine du ${wLabel}.\n\n` +
       `CONTEXTE SEMAINE PRÉCÉDENTE (H1, idx 0…${ctxOffset-1}):\n${ctxRows}\n\n` +
       `=== SEMAINE ANALYSÉE (idx ${ctxOffset}…) ===\n${wkRows}\n\n` +
       `Rédige en Markdown :\n\n## 📈 BILAN HEBDOMADAIRE — ${wLabel}\n\n` +
@@ -276,23 +307,21 @@ async function generateIctAnalysis(type, date) {
       `### ✅ BILAN ICT DE LA SEMAINE\n[Synthèse en 2-3 phrases]` +
       ZONES_INSTRUCTION
     }],
-    `Tu es un analyste expert ICT sur le MNQ (Micro NASDAQ-100 Futures). Tu rédiges des bilans hebdomadaires en H1 pour des traders français.`);
+    `Tu es un analyste expert ICT sur le ${assetLbl}. Tu rédiges des bilans hebdomadaires en H1 pour des traders français.`);
     const { content, zones } = parseChartZones(raw);
 
-    // Resoudre idx->ts pour zones IA
     const sortedW = [...candles].sort((a,b) => a.ts - b.ts);
     (zones.liquidity ?? []).forEach(l => { if (l.idx != null && l.ts == null) l.ts = sortedW[l.idx]?.ts; });
 
-    // PWH/PWL : semaine precedente = ctxCandles
     const fixedLevelsWk = [];
-    const { high: pwhWk, highTs: pwhWkTs, low: pwlWk, lowTs: pwlWkTs } = calcHighLow(ctxCandles);
-    if (pwhWk) fixedLevelsWk.push({ price: pwhWk, type: 'PWH', label: 'PWH', ts: pwhWkTs });
-    if (pwlWk) fixedLevelsWk.push({ price: pwlWk, type: 'PWL', label: 'PWL', ts: pwlWkTs });
+    const { high: pwhWk, low: pwlWk } = calcHighLow(ctxCandles);
+    if (pwhWk) fixedLevelsWk.push({ price: pwhWk, type: 'PWH', label: 'PWH', ts: sortedW[0]?.ts });
+    if (pwlWk) fixedLevelsWk.push({ price: pwlWk, type: 'PWL', label: 'PWL', ts: sortedW[0]?.ts });
     const aiLiqWk = (zones.liquidity ?? []).filter(l => ['BSL','SSL','EQH','EQL'].includes(l.type)).slice(0, 4);
     zones.liquidity = [...fixedLevelsWk, ...aiLiqWk];
 
     return { content, candles, zones,
-      meta: { symbol: 'MNQ=F', from: ctxFrom, to: fridayStr, defaultTf: '1h' } };
+      meta: { symbol: assetKey, from: ctxFrom, to: fridayStr, defaultTf: '1h' } };
   }
 
   // ── NEXT_WEEK — H1, 2 semaines de contexte ────────────────
@@ -303,7 +332,7 @@ async function generateIctAnalysis(type, date) {
     const ctxFrom   = addDays(date, -14);
     const lastFri   = addDays(date, -3);
     let candles = [];
-    try { candles = await fetchNQRange(ctxFrom, lastFri, '1h'); } catch(_) {}
+    try { candles = await fetchNQRange(ctxFrom, lastFri, '1h', yahooSym); } catch(_) {}
 
     const rows = candles.map((c, i) => {
       const d = new Date(c.ts * 1000);
@@ -316,8 +345,8 @@ async function generateIctAnalysis(type, date) {
     const wLabel = `${d0.toLocaleDateString('fr-FR',{day:'numeric',month:'long'})} – ${d1.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}`;
 
     const raw = await callAnthropicApiLong([{ role:'user', content:
-      `Génère un plan de trading ICT pour la semaine prochaine du MNQ (${wLabel}).\n\n` +
-      `CONTEXTE — MNQ 2 dernières semaines (H1, idx 0…${candles.length-1}):\n${rows}\n\n` +
+      `Génère un plan de trading ICT pour la semaine prochaine du ${assetLbl} (${wLabel}).\n\n` +
+      `CONTEXTE — ${assetLbl} 2 dernières semaines (H1, idx 0…${candles.length-1}):\n${rows}\n\n` +
       `Rédige en Markdown :\n\n## 🔭 PLAN ICT — Semaine du ${wLabel}\n\n` +
       `### 📊 CONTEXTE MACRO\n[Structure actuelle, tendance en cours, niveaux hebdo importants]\n\n` +
       `### 💧 LIQUIDITÉ À SURVEILLER\n- BSL (Buy Side): Equal Highs, PWH, Swing Highs\n- SSL (Sell Side): Equal Lows, PWL, Swing Lows\n\n` +
@@ -328,27 +357,25 @@ async function generateIctAnalysis(type, date) {
       `### ⚠️ POINTS DE VIGILANCE\n[News macro, FOMC, NFP ou événements importants cette semaine]\n\n` +
       `### 🎯 SESSIONS PRIORITAIRES\n[Silver Bullet windows et moments clés à privilégier]` +
       ZONES_INSTRUCTION +
-      '\n  RESTRICTION NEXT_WEEK : BSL/SSL/EQH/EQL uniquement si NON liquides par les ${candles.length-1} bougies de contexte disponibles. Seuls les niveaux vierges/non touchés sont pertinents. idx obligatoire.'
+      `\n  RESTRICTION NEXT_WEEK : BSL/SSL/EQH/EQL uniquement si NON liquides par les ${candles.length-1} bougies de contexte disponibles. Seuls les niveaux vierges/non touchés sont pertinents. idx obligatoire.`
     }],
-    `Tu es un analyste expert ICT sur le MNQ (Micro NASDAQ-100 Futures). Tu prépares des plans de trading hebdomadaires en H1 pour des traders français.`);
+    `Tu es un analyste expert ICT sur le ${assetLbl}. Tu prépares des plans de trading hebdomadaires en H1 pour des traders français.`);
     const { content, zones } = parseChartZones(raw);
 
-    // Resoudre idx->ts pour zones IA
     const sortedNW = [...candles].sort((a,b) => a.ts - b.ts);
     (zones.liquidity ?? []).forEach(l => { if (l.idx != null && l.ts == null) l.ts = sortedNW[l.idx]?.ts; });
 
-    // PWH/PWL : derniere semaine des candles de contexte
     const fixedLevelsNW = [];
     const lastWkStart = new Date(addDays(date, -7) + 'T00:00:00Z').getTime() / 1000;
     const lastWkCandles = candles.filter(c => c.ts >= lastWkStart);
-    const { high: pwhNW, highTs: pwhNWTs, low: pwlNW, lowTs: pwlNWTs } = calcHighLow(lastWkCandles);
-    if (pwhNW) fixedLevelsNW.push({ price: pwhNW, type: 'PWH', label: 'PWH (sem. passée)', ts: pwhNWTs });
-    if (pwlNW) fixedLevelsNW.push({ price: pwlNW, type: 'PWL', label: 'PWL (sem. passée)', ts: pwlNWTs });
+    const { high: pwhNW, low: pwlNW } = calcHighLow(lastWkCandles);
+    if (pwhNW) fixedLevelsNW.push({ price: pwhNW, type: 'PWH', label: 'PWH (sem. passée)', ts: sortedNW[0]?.ts });
+    if (pwlNW) fixedLevelsNW.push({ price: pwlNW, type: 'PWL', label: 'PWL (sem. passée)', ts: sortedNW[0]?.ts });
     const aiLiqNW = (zones.liquidity ?? []).filter(l => ['BSL','SSL','EQH','EQL'].includes(l.type)).slice(0, 4);
     zones.liquidity = [...fixedLevelsNW, ...aiLiqNW];
 
     return { content, candles, zones,
-      meta: { symbol: 'MNQ=F', from: ctxFrom, to: lastFri, defaultTf: '1h' } };
+      meta: { symbol: assetKey, from: ctxFrom, to: lastFri, defaultTf: '1h' } };
   }
 
   throw new Error(`Type inconnu: ${type}`);
@@ -602,9 +629,9 @@ app.whenReady().then(async () => {
       // Lun-Ven après 20h UTC (22h Paris) → résumé journalier
       if (day >= 1 && day <= 5 && utcH >= 20) {
         if (!marketDbMod.getOne('daily', todayStr)) {
-          const { content, candles, zones, meta } = await generateIctAnalysis('daily', todayStr);
+          const { content, candles, zones, meta } = await generateIctAnalysis('daily', todayStr, 'MNQ');
           marketDbMod.upsert('daily', todayStr, content, { candles, zones, meta });
-          mainWindow?.webContents.send('market:analysisGenerated', { type:'daily', date:todayStr });
+          mainWindow?.webContents.send('market:analysisGenerated', { type:'daily', date:todayStr, asset:'MNQ' });
         }
       }
       // Samedi après 6h UTC (8h Paris) → bilan semaine + preview suivante
@@ -614,14 +641,14 @@ app.whenReady().then(async () => {
         const nextMon = new Date(now); nextMon.setUTCDate(now.getUTCDate() + 2);
         const nextMonStr = nextMon.toISOString().slice(0,10);
         if (!marketDbMod.getOne('weekly', lastMonStr)) {
-          const { content, candles, zones, meta } = await generateIctAnalysis('weekly', lastMonStr);
+          const { content, candles, zones, meta } = await generateIctAnalysis('weekly', lastMonStr, 'MNQ');
           marketDbMod.upsert('weekly', lastMonStr, content, { candles, zones, meta });
-          mainWindow?.webContents.send('market:analysisGenerated', { type:'weekly', date:lastMonStr });
+          mainWindow?.webContents.send('market:analysisGenerated', { type:'weekly', date:lastMonStr, asset:'MNQ' });
         }
         if (!marketDbMod.getOne('next_week', nextMonStr)) {
-          const { content, candles, zones, meta } = await generateIctAnalysis('next_week', nextMonStr);
+          const { content, candles, zones, meta } = await generateIctAnalysis('next_week', nextMonStr, 'MNQ');
           marketDbMod.upsert('next_week', nextMonStr, content, { candles, zones, meta });
-          mainWindow?.webContents.send('market:analysisGenerated', { type:'next_week', date:nextMonStr });
+          mainWindow?.webContents.send('market:analysisGenerated', { type:'next_week', date:nextMonStr, asset:'MNQ' });
         }
       }
     } catch(e) { console.error('[Market scheduler]', e.message); }
@@ -770,10 +797,12 @@ function registerHandlers() {
     catch(e) { return { ok: false, error: e.message }; }
   });
 
-  ipcMain.handle('market:generateAiAnalysis', async (_, type, date) => {
+  ipcMain.handle('market:generateAiAnalysis', async (_, type, date, asset) => {
     try {
-      const { content, candles, zones, meta } = await generateIctAnalysis(type, date);
-      const row = marketDbMod.upsert(type, date, content, { candles, zones, meta });
+      const assetKey   = (asset || 'MNQ').toUpperCase();
+      const storedType = assetKey === 'MNQ' ? type : `${type}_${assetKey}`;
+      const { content, candles, zones, meta } = await generateIctAnalysis(type, date, assetKey);
+      const row = marketDbMod.upsert(storedType, date, content, { candles, zones, meta });
       return { ok: true, data: row };
     } catch(e) {
       if (e.message === 'NO_API_KEY') return { ok: false, error: 'no_api_key' };
@@ -786,10 +815,11 @@ function registerHandlers() {
     catch(e) { return { ok: false, error: e.message }; }
   });
 
-  // Fetch MNQ candles on-demand (for TF switching in the chart)
-  ipcMain.handle('market:getCandles', async (_, from, to, tf) => {
+  // Fetch candles on-demand (for TF switching and historical charts)
+  ipcMain.handle('market:getCandles', async (_, from, to, tf, symbol) => {
     try {
-      const data = await fetchNQRange(from, to, tf ?? '15m', 'MNQ%3DF');
+      const sym  = symbol ?? 'MNQ%3DF';
+      const data = await fetchNQRange(from, to, tf ?? '15m', sym);
       return { ok: true, data };
     } catch(e) { return { ok: false, error: e.message }; }
   });

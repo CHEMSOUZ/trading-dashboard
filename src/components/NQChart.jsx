@@ -132,7 +132,7 @@ function buildChart(container, candles, zones, isDefaultTf) {
   return chart;
 }
 
-export default function NQChart({ candles, zones, label, defaultTf, dateRange }) {
+export default function NQChart({ candles, zones, label, defaultTf, dateRange, symbol, yahooSym }) {
   const containerRef                 = useRef(null);
   const chartRef                     = useRef(null);
   const [activeTf, setActiveTf]      = useState(defaultTf ?? '15m');
@@ -177,7 +177,7 @@ export default function NQChart({ candles, zones, label, defaultTf, dateRange })
     if (!dateRange?.from || !window.market?.getCandles) return;
     setLoading(true);
     try {
-      const res = await window.market.getCandles(dateRange.from, dateRange.to, tf);
+      const res = await window.market.getCandles(dateRange.from, dateRange.to, tf, yahooSym);
       if (res.ok && res.data?.length) setDisplay(res.data);
     } catch(_) {}
     setLoading(false);
@@ -189,7 +189,7 @@ export default function NQChart({ candles, zones, label, defaultTf, dateRange })
     <div style={{ marginBottom: '24px', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(136,153,187,0.12)', background: '#0a0e14' }}>
       {/* Header */}
       <div style={{ padding: '8px 14px', fontSize: '10px', color: '#3a4a5a', letterSpacing: '1px', borderBottom: '1px solid rgba(136,153,187,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-        <span style={{ color: '#5a6a82' }}>MNQ1! · {label ?? 'ICT ZONES'}</span>
+        <span style={{ color: '#5a6a82' }}>{symbol ?? 'MNQ'}! · {label ?? 'ICT ZONES'}</span>
 
         {/* TF selector */}
         <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>

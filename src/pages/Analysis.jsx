@@ -1,5 +1,33 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { createChart, CandlestickSeries } from 'lightweight-charts';
 import NQChart from '../components/NQChart';
+
+// ── Futures assets ────────────────────────────────────────────
+const FUTURES_ASSETS = [
+  { key:'MNQ', label:'MNQ', name:'Micro NASDAQ-100' },
+  { key:'NQ',  label:'NQ',  name:'E-mini NASDAQ-100' },
+  { key:'MES', label:'MES', name:'Micro S&P 500' },
+  { key:'ES',  label:'ES',  name:'E-mini S&P 500' },
+  { key:'MGC', label:'MGC', name:'Micro Gold' },
+  { key:'GC',  label:'GC',  name:'Gold Futures' },
+  { key:'MCL', label:'MCL', name:'Micro Crude Oil' },
+  { key:'CL',  label:'CL',  name:'Crude Oil' },
+  { key:'M2K', label:'M2K', name:'Micro Russell 2K' },
+  { key:'RTY', label:'RTY', name:'Russell 2000' },
+  { key:'MYM', label:'MYM', name:'Micro Dow Jones' },
+  { key:'YM',  label:'YM',  name:'E-mini Dow Jones' },
+  { key:'SI',  label:'SI',  name:'Silver' },
+];
+
+const ASSET_YAHOO = {
+  MNQ:'MNQ%3DF', NQ:'NQ%3DF', MES:'MES%3DF', ES:'ES%3DF',
+  MGC:'MGC%3DF', GC:'GC%3DF', MCL:'MCL%3DF', CL:'CL%3DF',
+  M2K:'M2K%3DF', RTY:'RTY%3DF', MYM:'MYM%3DF', YM:'YM%3DF', SI:'SI%3DF',
+};
+
+function getTypeKey(baseType, asset) {
+  return asset === 'MNQ' ? baseType : `${baseType}_${asset}`;
+}
 
 // ── Helpers ───────────────────────────────────────────────────
 function getWeekStart(date) {
@@ -128,14 +156,241 @@ function GeneratingCard({ label }) {
   );
 }
 
+// ── Historical chart — 6 months D1 ───────────────────────────
+function HistoricalChart({ asset }) {
+  const containerRef = useRef(null);
+  const chartRef     = useRef(null);
+  const [candles, setCandles] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setCandles([]);
+    let cancelled = false;
+    setLoading(true);
+    const yahooSym = ASSET_YAHOO[asset] ?? 'MNQ%3DF';
+    const to   = new Date().toISOString().slice(0, 10);
+    const from = new Date(Date.now() - 183 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    window.market.getCandles(from, to, '1d', yahooSym).then(res => {
+      if (!cancelled && res.ok && res.data?.length) setCandles(res.data);
+      if (!cancelled) setLoading(false);
+    }).catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [asset]);
+
+  useEffect(() => {
+    if (!containerRef.current || !candles.length) return;
+    if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; }
+
+    const chart = createChart(containerRef.current, {
+      width:  containerRef.current.clientWidth,
+      height: 220,
+      layout: { background: { color: '#0a0e14' }, textColor: '#8899bb' },
+      grid:   { vertLines: { color: 'rgba(136,153,187,0.06)' }, horzLines: { color: 'rgba(136,153,187,0.06)' } },
+      timeScale: {
+        borderColor: 'rgba(136,153,187,0.15)', timeVisible: true,
+        tickMarkFormatter: (ts, type) => {
+          const d = new Date(ts * 1000);
+          if (type <= 1) return d.toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', month: 'short', year: 'numeric' });
+          return d.toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit' });
+        },
+      },
+      rightPriceScale: { borderColor: 'rgba(136,153,187,0.15)' },
+      crosshair: { mode: 1 },
+    });
+
+    const series = chart.addSeries(CandlestickSeries, {
+      upColor: '#26a69a', downColor: '#ef5350',
+      borderVisible: false, wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+    });
+
+    const sorted = [...candles]
+      .filter(c => c.open != null && c.close != null)
+      .sort((a, b) => a.ts - b.ts);
+
+    series.setData(sorted.map(c => ({ time: c.ts, open: +c.open, high: +c.high, low: +c.low, close: +c.close })));
+    chart.timeScale().fitContent();
+    chartRef.current = chart;
+
+    const ro = new ResizeObserver(() => {
+      if (containerRef.current && chartRef.current)
+        chartRef.current.resize(containerRef.current.clientWidth, 220);
+    });
+    ro.observe(containerRef.current);
+    return () => { ro.disconnect(); if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; } };
+  }, [candles]);
+
+  const stats = useMemo(() => {
+    if (!candles.length) return null;
+    const sorted = [...candles].sort((a, b) => a.ts - b.ts);
+    const first = sorted[0], last = sorted[sorted.length - 1];
+    const hi = Math.max(...sorted.map(c => +c.high));
+    const lo = Math.min(...sorted.map(c => +c.low));
+    const chg = first ? ((+last.close - +first.open) / +first.open * 100).toFixed(2) : null;
+    return { hi, lo, chg };
+  }, [candles]);
+
+  return (
+    <div style={{ marginBottom:'20px', border:'1px solid rgba(136,153,187,0.10)', borderRadius:'10px', overflow:'hidden', background:'#0a0e14' }}>
+      <div style={{ padding:'8px 14px', borderBottom:'1px solid rgba(136,153,187,0.08)', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'8px' }}>
+        <span style={{ fontSize:'10px', color:'#5a6a82', letterSpacing:'1px' }}>{asset} · D1 · 6 MOIS HISTORIQUE</span>
+        {stats && (
+          <span style={{ fontSize:'10px', color:'#3a4a5a', display:'flex', gap:'14px' }}>
+            <span>H: <span style={{ color:'#26a69a' }}>{stats.hi?.toFixed(0) ?? '—'}</span></span>
+            <span>L: <span style={{ color:'#ef5350' }}>{stats.lo?.toFixed(0) ?? '—'}</span></span>
+            {stats.chg !== null && (
+              <span>Perf 6M: <span style={{ color: +stats.chg >= 0 ? '#26a69a' : '#ef5350' }}>{+stats.chg > 0 ? '+' : ''}{stats.chg}%</span></span>
+            )}
+          </span>
+        )}
+      </div>
+      {loading ? (
+        <div style={{ height:'220px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', color:'#3a4a5a', letterSpacing:'1px' }}>
+          CHARGEMENT HISTORIQUE…
+        </div>
+      ) : !candles.length ? (
+        <div style={{ height:'220px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', color:'#3a4a5a' }}>
+          Données indisponibles pour {asset}
+        </div>
+      ) : (
+        <div ref={containerRef} style={{ width:'100%' }} />
+      )}
+    </div>
+  );
+}
+
+// ── Chat panel ────────────────────────────────────────────────
+function ChatPanel({ analysisContent, asset, tab }) {
+  const [open, setOpen]           = useState(false);
+  const [messages, setMessages]   = useState([]);
+  const [input, setInput]         = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const endRef = useRef(null);
+
+  useEffect(() => { setMessages([]); setInput(''); }, [tab, asset]);
+
+  useEffect(() => {
+    if (open) endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, open]);
+
+  async function send() {
+    const text = input.trim();
+    if (!text || aiLoading) return;
+    const userMsg = { role:'user', content:text };
+    const updated = [...messages, userMsg];
+    setMessages(updated);
+    setInput('');
+    setAiLoading(true);
+
+    const sys = `Tu es un assistant trading expert ICT (Inner Circle Trader). Tu analyses l'actif ${asset}.\nContexte de l'analyse actuelle :\n${analysisContent ? analysisContent.slice(0, 3000) : 'Aucune analyse générée.'}\nRéponds de façon concise, précise et opérationnelle. Utilise les concepts ICT (liquidité, FVG, sessions, DOL, MSS, displacement...).`;
+
+    try {
+      const res = await window.ai.chat(updated, sys);
+      if (res.ok) {
+        setMessages(prev => [...prev, { role:'assistant', content:res.data }]);
+      } else {
+        const errMsg = res.error === 'no_api_key' ? 'Clé API Anthropic manquante. Configure-la dans le chat IA.' : res.error;
+        setMessages(prev => [...prev, { role:'assistant', content:'⚠ ' + errMsg }]);
+      }
+    } catch(_) {
+      setMessages(prev => [...prev, { role:'assistant', content:'⚠ Erreur de connexion.' }]);
+    }
+    setAiLoading(false);
+  }
+
+  const userCount = messages.filter(m => m.role === 'user').length;
+
+  return (
+    <div style={{ marginTop:'20px', border:'1px solid rgba(136,153,187,0.12)', borderRadius:'10px', overflow:'hidden' }}>
+      <button onClick={() => setOpen(o => !o)}
+        style={{ width:'100%', padding:'10px 14px', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', background:'rgba(14,15,22,0.5)', border:'none', borderBottom: open ? '1px solid rgba(136,153,187,0.10)' : 'none', fontFamily:'inherit' }}>
+        <span style={{ fontSize:'11px', color:'#5a6a82', letterSpacing:'1px' }}>
+          💬 CHAT IA — {asset}{userCount > 0 ? ` (${userCount})` : ''}
+        </span>
+        <span style={{ color:'#3a4a5a', fontSize:'10px' }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div style={{ background:'rgba(10,14,20,0.8)' }}>
+          <div style={{ maxHeight:'320px', overflowY:'auto', padding:'12px 14px', display:'flex', flexDirection:'column', gap:'10px' }}>
+            {messages.length === 0 && (
+              <div style={{ fontSize:'11px', color:'#3a4a5a', textAlign:'center', padding:'24px 0' }}>
+                Posez une question sur {asset} ou l'analyse ci-dessus
+              </div>
+            )}
+            {messages.map((m, i) => (
+              <div key={i} style={{
+                alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
+                maxWidth:'85%', padding:'8px 12px',
+                background: m.role === 'user' ? 'rgba(136,153,187,0.12)' : 'rgba(20,24,32,0.8)',
+                border:`1px solid ${m.role === 'user' ? 'rgba(136,153,187,0.20)' : 'rgba(136,153,187,0.10)'}`,
+                borderRadius:'8px', fontSize:'12px', color:'#8899bb', lineHeight:'1.6', whiteSpace:'pre-wrap',
+              }}>
+                {m.content}
+              </div>
+            ))}
+            {aiLoading && (
+              <div style={{ alignSelf:'flex-start', fontSize:'11px', color:'#3a4a5a', padding:'8px 12px' }}>
+                ⌛ Réflexion…
+              </div>
+            )}
+            <div ref={endRef} />
+          </div>
+          <div style={{ padding:'10px 12px', borderTop:'1px solid rgba(136,153,187,0.08)', display:'flex', gap:'8px', alignItems:'center' }}>
+            <input
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+              placeholder={`Question sur ${asset}…`}
+              style={{ flex:1, padding:'7px 10px', background:'rgba(14,15,22,0.6)', border:'1px solid rgba(136,153,187,0.18)', borderRadius:'5px', color:'#8899bb', fontSize:'12px', fontFamily:'inherit', outline:'none' }}
+            />
+            <button onClick={send} disabled={aiLoading}
+              style={{ padding:'7px 14px', background:'rgba(136,153,187,0.10)', border:'1px solid rgba(136,153,187,0.25)', borderRadius:'5px', color: aiLoading ? '#3a4a5a' : '#8899bb', fontSize:'11px', fontFamily:'inherit', cursor: aiLoading ? 'default' : 'pointer', letterSpacing:'0.5px' }}>
+              ↵
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Asset selector ────────────────────────────────────────────
+function AssetSelector({ selected, onChange }) {
+  return (
+    <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', marginBottom:'20px', padding:'10px 12px', background:'rgba(14,15,22,0.4)', borderRadius:'8px', border:'1px solid rgba(136,153,187,0.07)', alignItems:'center' }}>
+      <span style={{ fontSize:'10px', color:'#3a4a5a', letterSpacing:'1px', marginRight:'4px', whiteSpace:'nowrap' }}>ACTIF:</span>
+      {FUTURES_ASSETS.map(a => {
+        const isActive = a.key === selected;
+        return (
+          <button key={a.key} onClick={() => onChange(a.key)}
+            title={a.name}
+            style={{
+              padding:'4px 10px',
+              background: isActive ? 'rgba(136,153,187,0.15)' : 'transparent',
+              border:`1px solid ${isActive ? 'rgba(136,153,187,0.40)' : 'rgba(136,153,187,0.10)'}`,
+              borderRadius:'5px',
+              color: isActive ? '#8899bb' : '#3a4a5a',
+              fontSize:'11px', fontFamily:'inherit', cursor:'pointer', letterSpacing:'0.5px',
+              fontWeight: isActive ? '700' : '400',
+            }}>
+            {a.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Single analysis card ──────────────────────────────────────
-function AnalysisCard({ analysis, onRegenerate, onDelete, generating, chartLabel }) {
+function AnalysisCard({ analysis, onRegenerate, onDelete, generating, chartLabel, asset }) {
   const [confirmDel, setConfirmDel] = useState(false);
 
   const marketData = useMemo(() => {
     if (!analysis?.market_data) return {};
     try { return JSON.parse(analysis.market_data); } catch(_) { return {}; }
   }, [analysis?.market_data]);
+
+  const assetDisplay = (marketData.meta?.symbol ?? asset ?? 'MNQ').replace('=F', '');
+  const yahooSym     = ASSET_YAHOO[assetDisplay] ?? ASSET_YAHOO[asset] ?? 'MNQ%3DF';
 
   if (generating) return <GeneratingCard label={generating} />;
   if (!analysis) return (
@@ -153,7 +408,7 @@ function AnalysisCard({ analysis, onRegenerate, onDelete, generating, chartLabel
       {/* Header bar */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'18px', paddingBottom:'12px', borderBottom:'1px solid rgba(136,153,187,0.10)' }}>
         <div style={{ fontSize:'11px', color:'#3a4a5a', letterSpacing:'1px' }}>
-          Généré le {fmtTs(analysis.generated_at)} · NQ/MNQ
+          Généré le {fmtTs(analysis.generated_at)} · {assetDisplay}
         </div>
         <div style={{ display:'flex', gap:'8px' }}>
           <button onClick={onRegenerate}
@@ -181,6 +436,8 @@ function AnalysisCard({ analysis, onRegenerate, onDelete, generating, chartLabel
           label={chartLabel}
           defaultTf={marketData.meta?.defaultTf}
           dateRange={marketData.meta ? { from: marketData.meta.from, to: marketData.meta.to } : null}
+          symbol={assetDisplay}
+          yahooSym={yahooSym}
         />
       )}
       {/* Content */}
@@ -198,7 +455,7 @@ function DateSelector({ analyses, type, selected, onSelect }) {
   return (
     <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', marginBottom:'18px' }}>
       {options.map(a => {
-        const label = type === 'daily' ? new Date(a.date + 'T12:00:00Z').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : `Sem. ${new Date(a.date+'T12:00:00Z').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}`;
+        const label = type.startsWith('daily') ? new Date(a.date + 'T12:00:00Z').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : `Sem. ${new Date(a.date+'T12:00:00Z').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}`;
         const isActive = a.date === selected;
         return (
           <button key={a.date} onClick={() => onSelect(a.date)}
@@ -213,22 +470,27 @@ function DateSelector({ analyses, type, selected, onSelect }) {
 
 // ── Main ──────────────────────────────────────────────────────
 export default function Analysis() {
-  const [tab, setTab]             = useState('daily');
-  const [analyses, setAnalyses]   = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [generating, setGenerating] = useState({}); // { 'daily:2026-06-12': true, ... }
+  const [tab, setTab]               = useState('daily');
+  const [analyses, setAnalyses]     = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [generating, setGenerating] = useState({});
   const [selectedDates, setSelectedDates] = useState({});
-  const [noKey, setNoKey]         = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState('MNQ');
+  const [noKey, setNoKey]           = useState(false);
 
   useEffect(() => {
     loadAndAutoGenerate();
     if (window.market?.onAnalysisGenerated) {
-      window.market.onAnalysisGenerated(({ type, date }) => {
+      window.market.onAnalysisGenerated(({ type, date, asset: evtAsset }) => {
         refreshAnalyses();
-        setGenerating(g => { const n = {...g}; delete n[`${type}:${date}`]; return n; });
+        const a = evtAsset || 'MNQ';
+        setGenerating(g => { const n = {...g}; delete n[`${type}:${date}:${a}`]; return n; });
       });
     }
   }, []);
+
+  // Reset date selection when switching asset
+  useEffect(() => { setSelectedDates({}); }, [selectedAsset]);
 
   async function refreshAnalyses() {
     const res = await window.market.getAiAnalyses();
@@ -243,59 +505,60 @@ export default function Analysis() {
     setLoading(false);
 
     const today = new Date();
-    const todayUtcDay = today.getUTCDay(); // 0=Sun,6=Sat
+    const todayUtcDay = today.getUTCDay();
 
-    // Auto-generate: June 12 daily (user request)
+    // Auto-generate for MNQ only
     const key12 = '2026-06-12';
     if (!existing.some(a => a.type === 'daily' && a.date === key12)) {
-      generate('daily', key12);
+      generate('daily', key12, 'MNQ');
     }
-
-    // Auto-generate: week of June 8 (user request)
     const keyW8 = '2026-06-08';
     if (!existing.some(a => a.type === 'weekly' && a.date === keyW8)) {
-      generate('weekly', keyW8);
+      generate('weekly', keyW8, 'MNQ');
     }
-
-    // Auto-generate: next week June 15 (user request)
     const keyNW = '2026-06-15';
     if (!existing.some(a => a.type === 'next_week' && a.date === keyNW)) {
-      generate('next_week', keyNW);
+      generate('next_week', keyNW, 'MNQ');
     }
 
-    // Auto-generate: last trading day if Sat or Sun
     if (todayUtcDay === 6 || todayUtcDay === 0) {
       const lastTrade = getLastTradeDay();
       if (!existing.some(a => a.type === 'daily' && a.date === lastTrade) && lastTrade !== key12) {
-        generate('daily', lastTrade);
+        generate('daily', lastTrade, 'MNQ');
       }
     }
   }
 
-  async function generate(type, date) {
-    const gKey = `${type}:${date}`;
+  async function generate(type, date, assetOverride) {
+    const asset = assetOverride ?? selectedAsset;
+    const gKey  = `${type}:${date}:${asset}`;
     setGenerating(g => ({ ...g, [gKey]: true }));
-    const res = await window.market.generateAiAnalysis(type, date);
+    const res = await window.market.generateAiAnalysis(type, date, asset);
     setGenerating(g => { const n = {...g}; delete n[gKey]; return n; });
     if (!res.ok) {
       if (res.error === 'no_api_key') setNoKey(true);
       return;
     }
+    const storedType = asset === 'MNQ' ? type : `${type}_${asset}`;
     setAnalyses(prev => {
-      const filtered = prev.filter(a => !(a.type === type && a.date === date));
+      const filtered = prev.filter(a => !(a.type === storedType && a.date === date));
       return [res.data, ...filtered];
     });
   }
 
-  async function deleteAnalysis(id, type, date) {
+  async function deleteAnalysis(id) {
     await window.market.deleteAiAnalysis(id);
     setAnalyses(prev => prev.filter(a => a.id !== id));
   }
 
-  // Derive what to show for each tab
-  const dailyAnalyses    = useMemo(() => analyses.filter(a => a.type === 'daily').sort((a,b) => b.date.localeCompare(a.date)), [analyses]);
-  const weeklyAnalyses   = useMemo(() => analyses.filter(a => a.type === 'weekly').sort((a,b) => b.date.localeCompare(a.date)), [analyses]);
-  const nextWeekAnalyses = useMemo(() => analyses.filter(a => a.type === 'next_week').sort((a,b) => b.date.localeCompare(a.date)), [analyses]);
+  // Derive filtered analyses per asset
+  const typeDaily    = getTypeKey('daily',     selectedAsset);
+  const typeWeekly   = getTypeKey('weekly',    selectedAsset);
+  const typeNextWeek = getTypeKey('next_week', selectedAsset);
+
+  const dailyAnalyses    = useMemo(() => analyses.filter(a => a.type === typeDaily).sort((a,b) => b.date.localeCompare(a.date)),    [analyses, typeDaily]);
+  const weeklyAnalyses   = useMemo(() => analyses.filter(a => a.type === typeWeekly).sort((a,b) => b.date.localeCompare(a.date)),   [analyses, typeWeekly]);
+  const nextWeekAnalyses = useMemo(() => analyses.filter(a => a.type === typeNextWeek).sort((a,b) => b.date.localeCompare(a.date)), [analyses, typeNextWeek]);
 
   const selDaily    = selectedDates.daily    ?? dailyAnalyses[0]?.date;
   const selWeekly   = selectedDates.weekly   ?? weeklyAnalyses[0]?.date;
@@ -305,16 +568,9 @@ export default function Analysis() {
   const curWeekly   = weeklyAnalyses.find(a => a.date === selWeekly) ?? null;
   const curNextWeek = nextWeekAnalyses.find(a => a.date === selNextWeek) ?? null;
 
-  // Keys for generating state
-  const genKeyDaily    = selDaily    ? `daily:${selDaily}`         : null;
-  const genKeyWeekly   = selWeekly   ? `weekly:${selWeekly}`       : null;
-  const genKeyNextWeek = selNextWeek ? `next_week:${selNextWeek}`  : null;
-  const anyDaily       = Object.keys(generating).some(k => k.startsWith('daily:'));
-  const anyWeekly      = Object.keys(generating).some(k => k.startsWith('weekly:'));
-  const anyNextWeek    = Object.keys(generating).some(k => k.startsWith('next_week:'));
-  const isGenDaily     = genKeyDaily    ? !!generating[genKeyDaily]    : anyDaily;
-  const isGenWeekly    = genKeyWeekly   ? !!generating[genKeyWeekly]   : anyWeekly;
-  const isGenNextWeek  = genKeyNextWeek ? !!generating[genKeyNextWeek] : anyNextWeek;
+  const isGenDaily    = Object.keys(generating).some(k => k.startsWith(`daily:`) && k.endsWith(`:${selectedAsset}`));
+  const isGenWeekly   = Object.keys(generating).some(k => k.startsWith(`weekly:`) && k.endsWith(`:${selectedAsset}`));
+  const isGenNextWeek = Object.keys(generating).some(k => k.startsWith(`next_week:`) && k.endsWith(`:${selectedAsset}`));
 
   const TABS = [
     { id:'daily',     label:'📊 Journalier',      sub:'Résumé ICT du jour' },
@@ -331,8 +587,8 @@ export default function Analysis() {
   return (
     <div style={{ padding:'24px 28px', width:'100%', boxSizing:'border-box', fontFamily:"'JetBrains Mono','Fira Code',monospace" }}>
       {/* Header */}
-      <div style={{ marginBottom:'24px' }}>
-        <div style={{ fontSize:'11px', color:'#3a4a5a', letterSpacing:'3px', marginBottom:'4px' }}>IA MARCHÉ · NQ/MNQ</div>
+      <div style={{ marginBottom:'20px' }}>
+        <div style={{ fontSize:'11px', color:'#3a4a5a', letterSpacing:'3px', marginBottom:'4px' }}>IA MARCHÉ · FUTURES</div>
         <h1 style={{ fontSize:'22px', fontWeight:'700', color:'#e8edf8', margin:'0 0 4px' }}>Analyse de Marché</h1>
         <div style={{ fontSize:'12px', color:'#3a4a5a' }}>Résumés ICT automatiques · Claude AI · Yahoo Finance</div>
       </div>
@@ -344,6 +600,9 @@ export default function Analysis() {
           <span>Clé API Anthropic non configurée. Configure-la dans le chat IA (icône robot dans la sidebar) pour activer les analyses automatiques.</span>
         </div>
       )}
+
+      {/* Asset selector */}
+      <AssetSelector selected={selectedAsset} onChange={setSelectedAsset} />
 
       {/* Tabs */}
       <div style={{ display:'flex', gap:'6px', marginBottom:'24px', background:'rgba(14,15,22,0.4)', padding:'5px', borderRadius:'8px', border:'1px solid rgba(136,153,187,0.07)' }}>
@@ -363,11 +622,13 @@ export default function Analysis() {
       {/* DAILY TAB */}
       {tab === 'daily' && (
         <div>
+          {/* Historical chart */}
+          <HistoricalChart asset={selectedAsset} />
+
           {/* Date nav + generate */}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'18px', flexWrap:'wrap', gap:'10px' }}>
-            <DateSelector analyses={dailyAnalyses} type="daily" selected={selDaily} onSelect={d => setSelectedDates(s => ({...s, daily:d}))} />
+            <DateSelector analyses={dailyAnalyses} type={typeDaily} selected={selDaily} onSelect={d => setSelectedDates(s => ({...s, daily:d}))} />
             <div style={{ display:'flex', gap:'8px', alignItems:'center', marginLeft:'auto' }}>
-              {/* Date input */}
               <input type="date" defaultValue={selDaily ?? getLastTradeDay()}
                 id="daily-date-input"
                 style={{ padding:'5px 8px', background:'rgba(14,15,22,0.6)', border:'1px solid rgba(136,153,187,0.18)', borderRadius:'5px', color:'#8899bb', fontSize:'11px', fontFamily:'inherit' }} />
@@ -379,7 +640,6 @@ export default function Analysis() {
               </button>
             </div>
           </div>
-          {/* Title */}
           {selDaily && (
             <div style={{ marginBottom:'16px', fontSize:'12px', color:'#5a6a82', letterSpacing:'1px' }}>
               {fmtDate(selDaily)}
@@ -389,20 +649,21 @@ export default function Analysis() {
             analysis={curDaily}
             generating={isGenDaily ? 'Analyse ICT de la journée en cours…' : null}
             chartLabel="M15 · ICT SESSIONS"
-            onRegenerate={() => {
-              const d = selDaily ?? getLastTradeDay();
-              generate('daily', d);
-            }}
-            onDelete={() => curDaily && deleteAnalysis(curDaily.id, 'daily', selDaily)}
+            asset={selectedAsset}
+            onRegenerate={() => generate('daily', selDaily ?? getLastTradeDay())}
+            onDelete={() => curDaily && deleteAnalysis(curDaily.id)}
           />
+          <ChatPanel analysisContent={curDaily?.content} asset={selectedAsset} tab="daily" />
         </div>
       )}
 
       {/* WEEKLY TAB */}
       {tab === 'weekly' && (
         <div>
+          <HistoricalChart asset={selectedAsset} />
+
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'18px', flexWrap:'wrap', gap:'10px' }}>
-            <DateSelector analyses={weeklyAnalyses} type="weekly" selected={selWeekly} onSelect={d => setSelectedDates(s => ({...s, weekly:d}))} />
+            <DateSelector analyses={weeklyAnalyses} type={typeWeekly} selected={selWeekly} onSelect={d => setSelectedDates(s => ({...s, weekly:d}))} />
             <div style={{ display:'flex', gap:'8px', alignItems:'center', marginLeft:'auto' }}>
               <input type="date" defaultValue={selWeekly ?? getLastMonday()} id="weekly-date-input"
                 style={{ padding:'5px 8px', background:'rgba(14,15,22,0.6)', border:'1px solid rgba(136,153,187,0.18)', borderRadius:'5px', color:'#8899bb', fontSize:'11px', fontFamily:'inherit' }} />
@@ -423,20 +684,21 @@ export default function Analysis() {
             analysis={curWeekly}
             generating={isGenWeekly ? 'Bilan hebdomadaire ICT en cours…' : null}
             chartLabel="H1 · BILAN HEBDO"
-            onRegenerate={() => {
-              const d = selWeekly ?? getLastMonday();
-              generate('weekly', d);
-            }}
-            onDelete={() => curWeekly && deleteAnalysis(curWeekly.id, 'weekly', selWeekly)}
+            asset={selectedAsset}
+            onRegenerate={() => generate('weekly', selWeekly ?? getLastMonday())}
+            onDelete={() => curWeekly && deleteAnalysis(curWeekly.id)}
           />
+          <ChatPanel analysisContent={curWeekly?.content} asset={selectedAsset} tab="weekly" />
         </div>
       )}
 
       {/* NEXT WEEK TAB */}
       {tab === 'next_week' && (
         <div>
+          <HistoricalChart asset={selectedAsset} />
+
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'18px', flexWrap:'wrap', gap:'10px' }}>
-            <DateSelector analyses={nextWeekAnalyses} type="next_week" selected={selNextWeek} onSelect={d => setSelectedDates(s => ({...s, next_week:d}))} />
+            <DateSelector analyses={nextWeekAnalyses} type={typeNextWeek} selected={selNextWeek} onSelect={d => setSelectedDates(s => ({...s, next_week:d}))} />
             <div style={{ display:'flex', gap:'8px', alignItems:'center', marginLeft:'auto' }}>
               <button onClick={() => {
                 const d = getNextMonday();
@@ -456,25 +718,24 @@ export default function Analysis() {
             analysis={curNextWeek}
             generating={isGenNextWeek ? 'Plan ICT semaine suivante en cours…' : null}
             chartLabel="H1 · PLAN SEMAINE"
-            onRegenerate={() => {
-              const d = selNextWeek ?? getNextMonday();
-              generate('next_week', d);
-            }}
-            onDelete={() => curNextWeek && deleteAnalysis(curNextWeek.id, 'next_week', selNextWeek)}
+            asset={selectedAsset}
+            onRegenerate={() => generate('next_week', selNextWeek ?? getNextMonday())}
+            onDelete={() => curNextWeek && deleteAnalysis(curNextWeek.id)}
           />
+          <ChatPanel analysisContent={curNextWeek?.content} asset={selectedAsset} tab="next_week" />
         </div>
       )}
 
-      {/* Footer info */}
+      {/* Footer */}
       <div style={{ marginTop:'32px', paddingTop:'16px', borderTop:'1px solid rgba(136,153,187,0.08)', display:'flex', gap:'20px', flexWrap:'wrap' }}>
         <div style={{ fontSize:'10px', color:'#2a3a4a', letterSpacing:'1px' }}>
-          ⏱ Résumé journalier : Lun–Ven à 22h00 (Paris)
+          ⏱ Résumé journalier : Lun–Ven à 22h00 (Paris) · MNQ auto
         </div>
         <div style={{ fontSize:'10px', color:'#2a3a4a', letterSpacing:'1px' }}>
-          ⏱ Bilan hebdo + plan : Samedi à 08h00 (Paris)
+          ⏱ Bilan hebdo + plan : Samedi à 08h00 (Paris) · MNQ auto
         </div>
         <div style={{ fontSize:'10px', color:'#2a3a4a', letterSpacing:'1px' }}>
-          📡 Données : Yahoo Finance (MNQ=F · 15 min délai)
+          📡 Données : Yahoo Finance (15 min délai)
         </div>
       </div>
     </div>
