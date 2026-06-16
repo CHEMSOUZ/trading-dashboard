@@ -76,20 +76,25 @@ function buildChart(container, candles, zones, isDefaultTf) {
 
   // Key levels — drawn as LineSeries starting from the origin candle
   const LEVEL_STYLE = {
-    PWH: { color: '#ff6b6b', lineWidth: 2, lineStyle: 0 },
-    PWL: { color: '#51cf66', lineWidth: 2, lineStyle: 0 },
-    PDH: { color: '#ffa94d', lineWidth: 1, lineStyle: 2 },
-    PDL: { color: '#a9e34b', lineWidth: 1, lineStyle: 2 },
-    BSL: { color: '#26a69a', lineWidth: 2, lineStyle: 2 },
-    SSL: { color: '#ef5350', lineWidth: 2, lineStyle: 2 },
-    EQH: { color: '#ff6b6b', lineWidth: 1, lineStyle: 1 },
-    EQL: { color: '#51cf66', lineWidth: 1, lineStyle: 1 },
+    PWH:      { color: '#ff6b6b', lineWidth: 2, lineStyle: 0 },
+    PWL:      { color: '#51cf66', lineWidth: 2, lineStyle: 0 },
+    PDH:      { color: '#ffa94d', lineWidth: 1, lineStyle: 2 },
+    PDL:      { color: '#a9e34b', lineWidth: 1, lineStyle: 2 },
+    BSL:      { color: '#26a69a', lineWidth: 2, lineStyle: 2 },
+    SSL:      { color: '#ef5350', lineWidth: 2, lineStyle: 2 },
+    EQH:      { color: '#ff6b6b', lineWidth: 1, lineStyle: 1 },
+    EQL:      { color: '#51cf66', lineWidth: 1, lineStyle: 1 },
+    // EQH/EQL forts : 3+ swing highs/lows dans la même bande (ligne pleine, épaisse, couleur vive)
+    EQH_STRONG: { color: '#ff1144', lineWidth: 3, lineStyle: 0 },
+    EQL_STRONG: { color: '#00ff66', lineWidth: 3, lineStyle: 0 },
   };
   const firstTs = sorted[0]?.ts;
   const lastTs  = sorted[sorted.length - 1]?.ts;
   for (const l of zones?.liquidity ?? []) {
     if (!l.price || !firstTs || !lastTs) continue;
-    const s = LEVEL_STYLE[l.type] ?? { color: '#8899bb', lineWidth: 1, lineStyle: 2 };
+    const isStrong = l.label?.includes('×');
+    const styleKey = isStrong ? `${l.type}_STRONG` : l.type;
+    const s = LEVEL_STYLE[styleKey] ?? LEVEL_STYLE[l.type] ?? { color: '#8899bb', lineWidth: 1, lineStyle: 2 };
     const startTs = (l.ts && l.ts >= firstTs) ? l.ts : firstTs;
     const lvl = chart.addSeries(LineSeries, {
       color: s.color,
@@ -222,6 +227,8 @@ export default function NQChart({ candles, zones, label, defaultTf, dateRange, s
             <span>SSL <span style={{ color: '#ef5350' }}>╌</span></span>
             <span>EQH <span style={{ color: '#ff6b6b' }}>╌</span></span>
             <span>EQL <span style={{ color: '#51cf66' }}>╌</span></span>
+            <span title="EQH/EQL avec 3+ swings">EQH× <span style={{ color: '#ff1144', fontWeight: 700 }}>━</span></span>
+            <span title="EQH/EQL avec 3+ swings">EQL× <span style={{ color: '#00ff66', fontWeight: 700 }}>━</span></span>
             <span>PWH <span style={{ color: '#ff6b6b' }}>━</span></span>
             <span>PWL <span style={{ color: '#51cf66' }}>━</span></span>
             <span>PDH <span style={{ color: '#ffa94d' }}>╌</span></span>
