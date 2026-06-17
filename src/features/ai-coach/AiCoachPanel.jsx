@@ -152,51 +152,6 @@ function InsightBadge({ insight }) {
   );
 }
 
-// ── ApiKeySetup ───────────────────────────────────────────────
-function ApiKeySetup({ onSaved }) {
-  const [key,    setKey]    = useState('');
-  const [saving, setSaving] = useState(false);
-  const [err,    setErr]    = useState('');
-
-  async function handleSave() {
-    if (!key.trim()) return;
-    setSaving(true); setErr('');
-    const res = await window.ai.setKey(key.trim());
-    setSaving(false);
-    if (res.ok) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: { msg: 'Clé API enregistrée', icon: '✓' } }));
-      onSaved();
-    } else {
-      setErr(res.error ?? 'Erreur inconnue');
-    }
-  }
-
-  return (
-    <div style={{ margin: '12px', padding: '16px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.28)', borderRadius: '10px', fontSize: '12px', color: '#fbbf24', lineHeight: '1.6' }}>
-      <div style={{ fontWeight: '700', marginBottom: '8px', fontSize: '13px' }}>Clé API Anthropic requise</div>
-      <div style={{ color: C.text3, marginBottom: '12px', fontSize: '12px' }}>
-        Nécessaire pour le chat IA. L'onglet "Analyse Locale" fonctionne sans clé.
-      </div>
-      <input
-        type="password"
-        placeholder="sk-ant-api03-..."
-        value={key}
-        onChange={e => setKey(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && handleSave()}
-        style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: '6px', padding: '8px 10px', color: '#fbbf24', fontSize: '12px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: '8px' }}
-      />
-      {err && <div style={{ color: '#ff5566', fontSize: '11px', marginBottom: '6px' }}>{err}</div>}
-      <button onClick={handleSave} disabled={saving || !key.trim()}
-        style={{ width: '100%', padding: '8px', background: saving ? 'rgba(245,158,11,0.10)' : 'rgba(245,158,11,0.18)', border: '1px solid rgba(245,158,11,0.45)', borderRadius: '6px', color: '#fbbf24', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', cursor: saving ? 'wait' : 'pointer', letterSpacing: '1px', transition: 'all 0.15s' }}>
-        {saving ? 'ENREGISTREMENT...' : 'ENREGISTRER LA CLÉ'}
-      </button>
-      <div style={{ marginTop: '10px', fontSize: '11px', color: C.text4, lineHeight: '1.5' }}>
-        Clé sauvegardée localement dans AppData — jamais envoyée ailleurs que l'API Anthropic.
-      </div>
-    </div>
-  );
-}
-
 // ── ChatBubble ───────────────────────────────────────────────
 function ChatBubble({ msg }) {
   const isUser = msg.role === 'user';
@@ -231,7 +186,8 @@ export default function AiCoachPanel({ open, onClose, activeAccount }) {
   const [messages,    setMessages]    = useState([]);
   const [input,       setInput]       = useState('');
   const [loading,     setLoading]     = useState(false);
-  const [hasKey,      setHasKey]      = useState(true);
+  const [isAuthenticated,     setIsAuthenticated]     = useState(true);
+  const [subscriptionInactive,setSubscriptionInactive] = useState(false);
   const [insights,    setInsights]    = useState([]);
   const [trades,      setTrades]      = useState([]);
   const [stats,       setStats]       = useState(null);
@@ -260,13 +216,13 @@ export default function AiCoachPanel({ open, onClose, activeAccount }) {
   useEffect(() => {
     if (!open) return;
     (async () => {
-      const [keyRes, histRes, tradesRes, statsRes] = await Promise.all([
-        window.ai.hasKey(),
+      const [sessionRes, histRes, tradesRes, statsRes] = await Promise.all([
+        window.auth.getSession(),
         window.ai.getMessages(),
         window.db.getAllTrades(),
         window.db.getStats(),
       ]);
-      setHasKey(keyRes.data ?? false);
+      setIsAuthenticated(sessionRes.data?.authenticated ?? false);
       if (histRes.ok) setMessages(histRes.data ?? []);
       const t = tradesRes.ok ? (tradesRes.data ?? []) : [];
       const s = statsRes.ok  ? (statsRes.data ?? null)  : null;
@@ -323,8 +279,13 @@ export default function AiCoachPanel({ open, onClose, activeAccount }) {
       const aiMsg = { role: 'assistant', content: res.data };
       setMessages(m => [...m, aiMsg]);
       await window.ai.addMessage(aiMsg);
-    } else if (res.error === 'no_api_key') {
-      setHasKey(false);
+    } else if (res.error === 'unauthenticated') {
+      setIsAuthenticated(false);
+    } else if (res.error === 'subscription_inactive') {
+      setSubscriptionInactive(true);
+    } else if (res.error === 'quota_exceeded') {
+      const errMsg = { role: 'assistant', content: `Quota IA mensuel atteint${res.resetDate ? `, réessaie après le ${res.resetDate}` : ''}.` };
+      setMessages(m => [...m, errMsg]);
     } else {
       const errMsg = { role: 'assistant', content: `Erreur: ${res.error}. Vérifie ta connexion ou réessaie.` };
       setMessages(m => [...m, errMsg]);
@@ -429,8 +390,19 @@ export default function AiCoachPanel({ open, onClose, activeAccount }) {
           </div>
         </div>
 
-        {/* No API key — inline setup form */}
-        {!hasKey && <ApiKeySetup onSaved={() => setHasKey(true)} />}
+        {/* Auth / subscription gating */}
+        {!isAuthenticated && (
+          <div style={{ margin: '12px', padding: '14px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.28)', borderRadius: '10px', fontSize: '12px', color: '#fbbf24', lineHeight: '1.6' }}>
+            <div style={{ fontWeight: '700', marginBottom: '4px', fontSize: '13px' }}>Connexion requise</div>
+            Connecte-toi pour utiliser le chat IA. L'onglet "Analyse Locale" fonctionne sans connexion.
+          </div>
+        )}
+        {isAuthenticated && subscriptionInactive && (
+          <div style={{ margin: '12px', padding: '14px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.28)', borderRadius: '10px', fontSize: '12px', color: '#fbbf24', lineHeight: '1.6' }}>
+            <div style={{ fontWeight: '700', marginBottom: '4px', fontSize: '13px' }}>Abonnement requis</div>
+            Un abonnement actif est nécessaire pour utiliser le chat IA.
+          </div>
+        )}
 
         {/* CHAT tab */}
         {tab === 'chat' && (

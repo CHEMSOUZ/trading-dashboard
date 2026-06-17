@@ -4,6 +4,28 @@ const fs    = require('fs');
 const http  = require('http');
 const https = require('https');
 const { autoUpdater } = require('electron-updater');
+const Store = require('electron-store');
+const demoModule = require('./demo.cjs');
+
+// ── Backend centralisé (auth + proxy IA) ─────────────────────
+// Changeable sans recompiler : surchargeable via .env (mêmes emplacements que loadEnv ci-dessous).
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
+
+// Chiffrement "obfuscation" (cf. doc electron-store) : protège contre une lecture
+// occasionnelle du fichier sur disque, pas contre un attaquant ayant accès au binaire/source.
+// Le vrai filet de sécurité reste la durée de vie courte du JWT (7j) côté serveur.
+const authStore = new Store({ name: 'auth', encryptionKey: 'td-local-auth-v1' });
+
+function getAuthToken()  { return authStore.get('token') || null; }
+function clearAuthToken() { authStore.delete('token'); authStore.delete('user'); }
+
+// Utilisateur authentifié mais abonnement non actif → dashboard en lecture seule
+// sur un dataset démo statique, jamais sur la vraie DB locale.
+function isDemoMode() {
+  const user = authStore.get('user');
+  return !!user && user.subscription_status !== 'active';
+}
+const DEMO_MODE_ERROR = { ok: false, error: 'demo_mode', message: 'Abonnement requis pour modifier vos données.' };
 
 // ── Load .env ─────────────────────────────────────────────────
 (function loadEnv() {
@@ -23,34 +45,27 @@ const { autoUpdater } = require('electron-updater');
   }
 })();
 
-// ── Anthropic API ─────────────────────────────────────────────
-function callAnthropicApi(messages, systemPrompt) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return Promise.reject(new Error('NO_API_KEY'));
+// ── Backend proxy IA ──────────────────────────────────────────
+// POST JSON générique vers BACKEND_URL, retourne { statusCode, body } sans throw
+// sur les statuts HTTP d'erreur (laisse l'appelant décider quoi en faire).
+function httpPostJson(pathName, payload, headers = {}) {
   return new Promise((resolve, reject) => {
-    const body = JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: messages.map(m => ({ role: m.role, content: m.content })),
-    });
-    const req = https.request({
-      hostname: 'api.anthropic.com', port: 443, path: '/v1/messages', method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'Content-Length': Buffer.byteLength(body),
-      },
+    const body = JSON.stringify(payload);
+    const url  = new URL(pathName, BACKEND_URL);
+    const lib  = url.protocol === 'https:' ? https : http;
+    const req = lib.request({
+      hostname: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? 443 : 80),
+      path: url.pathname,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), ...headers },
     }, (res) => {
       let data = '';
       res.on('data', c => { data += c; });
       res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.error) return reject(new Error(parsed.error.message));
-          resolve(parsed.content?.[0]?.text ?? '');
-        } catch(e) { reject(e); }
+        let parsed = {};
+        try { parsed = data ? JSON.parse(data) : {}; } catch(_) {}
+        resolve({ statusCode: res.statusCode, body: parsed });
       });
     });
     req.on('error', reject);
@@ -59,37 +74,48 @@ function callAnthropicApi(messages, systemPrompt) {
   });
 }
 
+async function backendAuthRequest(pathName, payload) {
+  const { statusCode, body } = await httpPostJson(pathName, payload);
+  if (statusCode >= 400) throw new Error(body.message || body.error || `HTTP ${statusCode}`);
+  return body;
+}
+
+async function callBackendChat(messages, systemPrompt, maxTokens) {
+  const token = getAuthToken();
+  if (!token) throw Object.assign(new Error('Non authentifié'), { code: 'UNAUTHENTICATED' });
+
+  const { statusCode, body } = await httpPostJson('/api/ai/chat',
+    { messages: messages.map(m => ({ role: m.role, content: m.content })), systemPrompt, maxTokens },
+    { Authorization: `Bearer ${token}` });
+
+  if (statusCode === 401) {
+    clearAuthToken();
+    mainWindow?.webContents.send('auth:sessionExpired');
+    throw Object.assign(new Error(body.message || 'Session expirée'), { code: 'UNAUTHENTICATED' });
+  }
+  if (statusCode === 403) {
+    throw Object.assign(new Error(body.message || 'Abonnement inactif'), { code: 'SUBSCRIPTION_INACTIVE' });
+  }
+  if (statusCode === 429) {
+    throw Object.assign(new Error(body.message || 'Quota dépassé'), {
+      code: 'QUOTA_EXCEEDED', resetDate: body.resetDate, used: body.used, limit: body.limit,
+    });
+  }
+  if (statusCode >= 400) {
+    throw new Error(body.message || body.error || `HTTP ${statusCode}`);
+  }
+  return body.reply ?? '';
+}
+
+function callAnthropicApi(messages, systemPrompt) {
+  return callBackendChat(messages, systemPrompt, 1024);
+}
+
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 
-// ── Anthropic long call (4096 tokens) ────────────────────────
 function callAnthropicApiLong(messages, systemPrompt) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return Promise.reject(new Error('NO_API_KEY'));
-  return new Promise((resolve, reject) => {
-    const body = JSON.stringify({
-      model: 'claude-sonnet-4-6', max_tokens: 4096,
-      system: systemPrompt,
-      messages: messages.map(m => ({ role: m.role, content: m.content })),
-    });
-    const req = https.request({
-      hostname: 'api.anthropic.com', port: 443, path: '/v1/messages', method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01', 'Content-Length': Buffer.byteLength(body) },
-    }, res => {
-      let data = '';
-      res.on('data', c => { data += c; });
-      res.on('end', () => {
-        try {
-          const p = JSON.parse(data);
-          if (p.error) return reject(new Error(p.error.message));
-          resolve(p.content?.[0]?.text ?? '');
-        } catch(e) { reject(e); }
-      });
-    });
-    req.on('error', reject);
-    req.write(body); req.end();
-  });
+  return callBackendChat(messages, systemPrompt, 4096);
 }
 
 // ── MNQ multi-day OHLCV fetch (symbol = URL-encoded Yahoo ticker) ─
@@ -551,6 +577,11 @@ let activeDbPath = null;
 let globalDb     = null;
 let globalDbPath = null;
 
+// Historique de chat IA en mode démo : en mémoire uniquement, jamais persisté,
+// réinitialisé à chaque démarrage de l'app — isolé de la vraie table ai_conversations.
+let demoChatMessages = [];
+let demoChatNextId   = 1;
+
 // ── Bot webhook server ────────────────────────────────────────
 let botServer      = null;
 let botPort        = 3001;
@@ -859,18 +890,28 @@ function registerHandlers() {
   });
 
   // ── Account handlers ──────────────────────────────────────
-  ipcMain.handle('accounts:getAll',    async () => { try { return { ok: true, data: accounts.getAllAccounts() }; } catch(e) { return { ok: false, error: e.message }; } });
-  ipcMain.handle('accounts:create',    async (_, acc) => { try { const a = accounts.createAccount(acc); await loadActiveDb(); return { ok: true, data: a }; } catch(e) { return { ok: false, error: e.message }; } });
-  ipcMain.handle('accounts:update',    async (_, id, u) => { try { return { ok: true, data: accounts.updateAccount(id, u) }; } catch(e) { return { ok: false, error: e.message }; } });
-  ipcMain.handle('accounts:delete',    async (_, id) => { try { const r = accounts.deleteAccount(id); await loadActiveDb(); return { ok: true, data: r }; } catch(e) { return { ok: false, error: e.message }; } });
-  ipcMain.handle('accounts:setActive', async (_, id) => { try { const r = accounts.setActiveAccount(id); await loadActiveDb(); return { ok: true, data: r }; } catch(e) { return { ok: false, error: e.message }; } });
-  ipcMain.handle('accounts:getActive', async () => { try { return { ok: true, data: accounts.getActiveAccount() }; } catch(e) { return { ok: false, error: e.message }; } });
+  ipcMain.handle('accounts:getAll',    async () => { if (isDemoMode()) return { ok: true, data: demoModule.getDemoAccountsList() }; try { return { ok: true, data: accounts.getAllAccounts() }; } catch(e) { return { ok: false, error: e.message }; } });
+  ipcMain.handle('accounts:create',    async (_, acc) => { if (isDemoMode()) return DEMO_MODE_ERROR; try { const a = accounts.createAccount(acc); await loadActiveDb(); return { ok: true, data: a }; } catch(e) { return { ok: false, error: e.message }; } });
+  ipcMain.handle('accounts:update',    async (_, id, u) => { if (isDemoMode()) return DEMO_MODE_ERROR; try { return { ok: true, data: accounts.updateAccount(id, u) }; } catch(e) { return { ok: false, error: e.message }; } });
+  ipcMain.handle('accounts:delete',    async (_, id) => { if (isDemoMode()) return DEMO_MODE_ERROR; try { const r = accounts.deleteAccount(id); await loadActiveDb(); return { ok: true, data: r }; } catch(e) { return { ok: false, error: e.message }; } });
+  ipcMain.handle('accounts:setActive', async (_, id) => { if (isDemoMode()) return DEMO_MODE_ERROR; try { const r = accounts.setActiveAccount(id); await loadActiveDb(); return { ok: true, data: r }; } catch(e) { return { ok: false, error: e.message }; } });
+  ipcMain.handle('accounts:getActive', async () => { if (isDemoMode()) return { ok: true, data: demoModule.getDemoAccount() }; try { return { ok: true, data: accounts.getActiveAccount() }; } catch(e) { return { ok: false, error: e.message }; } });
   ipcMain.handle('accounts:types',     async () => { try { return { ok: true, data: accounts.ACCOUNT_TYPES }; } catch(e) { return { ok: false, error: e.message }; } });
 
+  // Contenu statique du portrait psychologique démo (jamais d'appel IA facturé)
+  ipcMain.handle('demo:getEmotionalReport', () => ({ ok: true, data: demoModule.getDemoEmotionalReport() }));
+  ipcMain.handle('demo:getTraitCalendar',   () => ({ ok: true, data: demoModule.getDemoTraitCalendar() }));
+
   // ── DB handlers ───────────────────────────────────────────
-  const dbHandle = (channel, fn) => {
+  // demoFn: si le compte n'est pas abonné, sert ce dataset démo au lieu de lire la vraie DB.
+  // blockInDemo: refuse l'écriture en mode démo sans jamais toucher la vraie DB.
+  const dbHandle = (channel, fn, { demoFn, blockInDemo } = {}) => {
     ipcMain.handle(channel, async (_, ...args) => {
       try {
+        if (isDemoMode()) {
+          if (demoFn) return { ok: true, data: demoFn(...args) };
+          if (blockInDemo) return DEMO_MODE_ERROR;
+        }
         if (!activeDb || !activeDbPath) return { ok: false, error: 'Aucun compte actif' };
         return { ok: true, data: fn(activeDb, activeDbPath, ...args) };
       } catch(e) {
@@ -892,7 +933,7 @@ function registerHandlers() {
     });
   };
 
-  dbHandle('db:getAllTrades',           (db) => dbModule.getAllTrades(db));
+  dbHandle('db:getAllTrades',           (db) => dbModule.getAllTrades(db), { demoFn: () => demoModule.getDemoTrades() });
   ipcMain.handle('db:getTradesForPath', async (_, dbPath) => {
     try {
       const db = await dbModule.getDb(dbPath);
@@ -900,11 +941,11 @@ function registerHandlers() {
     } catch(e) { return { ok: false, error: e.message }; }
   });
   dbHandle('db:getTradeById',           (db, _, id) => dbModule.getTradeById(db, id));
-  dbHandle('db:insertTrade',            (db, dbp, t) => dbModule.insertTrade(db, dbp, t));
-  dbHandle('db:updateTrade',            (db, dbp, id, t) => dbModule.updateTrade(db, dbp, id, t));
-  dbHandle('db:deleteTrade',            (db, dbp, id) => dbModule.deleteTrade(db, dbp, id));
-  dbHandle('db:getStats',               (db) => dbModule.getStats(db));
-  dbHandle('db:importCsvTrades',        (db, dbp, rows) => dbModule.importCsvTrades(db, dbp, rows));
+  dbHandle('db:insertTrade',            (db, dbp, t) => dbModule.insertTrade(db, dbp, t), { blockInDemo: true });
+  dbHandle('db:updateTrade',            (db, dbp, id, t) => dbModule.updateTrade(db, dbp, id, t), { blockInDemo: true });
+  dbHandle('db:deleteTrade',            (db, dbp, id) => dbModule.deleteTrade(db, dbp, id), { blockInDemo: true });
+  dbHandle('db:getStats',               (db) => dbModule.getStats(db), { demoFn: () => demoModule.getDemoStats() });
+  dbHandle('db:importCsvTrades',        (db, dbp, rows) => dbModule.importCsvTrades(db, dbp, rows), { blockInDemo: true });
   dbHandle('db:insertEmotionalCheck',   (db, dbp, c) => dbModule.insertEmotionalCheck(db, dbp, c));
   dbHandle('db:getTodayEmotionalCheck', (db) => dbModule.getTodayEmotionalCheck(db));
 
@@ -916,41 +957,62 @@ function registerHandlers() {
   globalDbHandle('db:upsertWeeklyAnalysis',(db, dbp, a) => dbModule.upsertWeeklyAnalysis(db, dbp, a));
   globalDbHandle('db:deleteWeeklyAnalysis',(db, dbp, id) => dbModule.deleteWeeklyAnalysis(db, dbp, id));
 
+  // Bilan psychologique quotidien (global DB — partagé entre tous les comptes, jamais utilisé en mode démo)
+  globalDbHandle('db:getMentalReport',       (db, _, date) => dbModule.getMentalReport(db, date));
+  globalDbHandle('db:getMentalReportsRange', (db, _, startDate, endDate) => dbModule.getMentalReportsRange(db, startDate, endDate));
+  globalDbHandle('db:saveMentalReport',      (db, dbp, date, emotion, description) => dbModule.saveMentalReport(db, dbp, { date, emotion, description }));
+
   // ── AI Coach handlers ─────────────────────────────────────────
   ipcMain.handle('ai:hasKey', () => ({ ok: true, data: !!process.env.ANTHROPIC_API_KEY }));
-
-  ipcMain.handle('ai:setKey', async (_, key) => {
-    try {
-      const k = (key || '').trim();
-      if (!k.startsWith('sk-ant-')) return { ok: false, error: 'Clé invalide (doit commencer par sk-ant-)' };
-      const dir = path.join(process.env.APPDATA || process.env.HOME || '', 'trading-dashboard');
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      const envPath = path.join(dir, '.env');
-      let lines = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf-8').split('\n') : [];
-      const idx = lines.findIndex(l => l.startsWith('ANTHROPIC_API_KEY='));
-      const newLine = `ANTHROPIC_API_KEY="${k}"`;
-      if (idx >= 0) lines[idx] = newLine; else lines.push(newLine);
-      fs.writeFileSync(envPath, lines.filter(Boolean).join('\n') + '\n', 'utf-8');
-      process.env.ANTHROPIC_API_KEY = k;
-      return { ok: true };
-    } catch(e) {
-      return { ok: false, error: e.message };
-    }
-  });
 
   ipcMain.handle('ai:chat', async (_, messages, systemPrompt) => {
     try {
       const text = await callAnthropicApi(messages, systemPrompt);
       return { ok: true, data: text };
     } catch(e) {
-      if (e.message === 'NO_API_KEY') return { ok: false, error: 'no_api_key' };
+      if (e.code === 'UNAUTHENTICATED')       return { ok: false, error: 'unauthenticated', message: e.message };
+      if (e.code === 'SUBSCRIPTION_INACTIVE')  return { ok: false, error: 'subscription_inactive', message: e.message };
+      if (e.code === 'QUOTA_EXCEEDED')         return { ok: false, error: 'quota_exceeded', message: e.message, resetDate: e.resetDate, used: e.used, limit: e.limit };
       return { ok: false, error: e.message };
     }
   });
 
-  dbHandle('ai:getMessages',  (db) => dbModule.getAiMessages(db));
-  dbHandle('ai:addMessage',   (db, dbp, msg) => dbModule.insertAiMessage(db, dbp, msg));
-  dbHandle('ai:clearHistory', (db, dbp) => dbModule.clearAiConversations(db, dbp));
+  // ── Auth handlers ───────────────────────────────────────────
+  ipcMain.handle('auth:register', async (_, email, password) => {
+    try {
+      const res = await backendAuthRequest('/api/auth/register', { email, password });
+      authStore.set('token', res.token);
+      authStore.set('user', res.user);
+      return { ok: true, data: res.user };
+    } catch(e) { return { ok: false, error: e.message }; }
+  });
+
+  ipcMain.handle('auth:login', async (_, email, password) => {
+    try {
+      const res = await backendAuthRequest('/api/auth/login', { email, password });
+      authStore.set('token', res.token);
+      authStore.set('user', res.user);
+      return { ok: true, data: res.user };
+    } catch(e) { return { ok: false, error: e.message }; }
+  });
+
+  ipcMain.handle('auth:logout', () => {
+    clearAuthToken();
+    return { ok: true };
+  });
+
+  ipcMain.handle('auth:getSession', () => {
+    const token = getAuthToken();
+    const user  = authStore.get('user') || null;
+    return { ok: true, data: { authenticated: !!token, user } };
+  });
+
+  dbHandle('ai:getMessages',  (db) => dbModule.getAiMessages(db),
+    { demoFn: () => demoChatMessages });
+  dbHandle('ai:addMessage',   (db, dbp, msg) => dbModule.insertAiMessage(db, dbp, msg),
+    { demoFn: (msg) => { const row = { id: demoChatNextId++, ...msg }; demoChatMessages.push(row); return row; } });
+  dbHandle('ai:clearHistory', (db, dbp) => dbModule.clearAiConversations(db, dbp),
+    { demoFn: () => { demoChatMessages = []; } });
 
   // ── Market AI Analyses ────────────────────────────────────
   ipcMain.handle('market:getAiAnalyses', () => {
@@ -966,7 +1028,9 @@ function registerHandlers() {
       const row = marketDbMod.upsert(storedType, date, content, { candles, zones, meta });
       return { ok: true, data: row };
     } catch(e) {
-      if (e.message === 'NO_API_KEY') return { ok: false, error: 'no_api_key' };
+      if (e.code === 'UNAUTHENTICATED')       return { ok: false, error: 'unauthenticated', message: e.message };
+      if (e.code === 'SUBSCRIPTION_INACTIVE')  return { ok: false, error: 'subscription_inactive', message: e.message };
+      if (e.code === 'QUOTA_EXCEEDED')         return { ok: false, error: 'quota_exceeded', message: e.message, resetDate: e.resetDate, used: e.used, limit: e.limit };
       return { ok: false, error: e.message };
     }
   });

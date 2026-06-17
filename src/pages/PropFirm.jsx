@@ -125,11 +125,21 @@ function CTooltip({ active, payload, label }) {
   );
 }
 
-function MetricCard({ label, value, sub, color='#dde4ef', alert=false }) {
+function MetricCard({ label, value, sub, color='#dde4ef', alert=false, featured=false }) {
+  if (featured) {
+    const rgb = color === '#00cc77' ? '0,204,119' : color === '#ff3344' ? '255,51,68' : '136,153,187';
+    return (
+      <div style={{ background:`linear-gradient(135deg, rgba(${rgb},0.22), rgba(${rgb},0.05))`, border:`1px solid rgba(${rgb},0.35)`, borderRadius:'8px', padding:'18px 20px' }}>
+        <div style={{ fontSize:'14px', color:'#8898aa', letterSpacing:'1.5px', marginBottom:'8px' }}>{label}</div>
+        <div style={{ fontSize:'34px', fontWeight:'800', color, letterSpacing:'-0.8px', lineHeight:1 }}>{value}</div>
+        {sub && <div style={{ fontSize:'13px', color:'#8898aa', marginTop:'7px' }}>{sub}</div>}
+      </div>
+    );
+  }
   return (
     <div style={{ background:alert?'rgba(255,68,85,0.06)':'rgba(14,15,22,0.5)', border:`1px solid ${alert?'rgba(255,68,85,0.30)':'rgba(136,153,187,0.10)'}`, borderTop:`2px solid ${color}`, borderRadius:'6px', padding:'14px 16px' }}>
       <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'1.5px', marginBottom:'6px' }}>{label}</div>
-      <div style={{ fontSize:'20px', fontWeight:'700', color, lineHeight:1 }}>{value}</div>
+      <div style={{ fontSize:'16px', fontWeight:'700', color, lineHeight:1 }}>{value}</div>
       {sub && <div style={{ fontSize:'13px', color:alert?'#ff8888':'#5a6a82', marginTop:'5px' }}>{sub}</div>}
     </div>
   );
@@ -505,7 +515,7 @@ function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput,
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:'8px' }}>
         <MetricCard label="BALANCE" value={`${balance.toFixed(0)}$`} color={targetOk?'#00cc77':'#dde4ef'} sub={manualBalance>0?'Manuelle':'Calculée'} />
-        <MetricCard label="PROFIT NET" value={fmt(totalNet,true)} color={pnlColor(totalNet)} sub={`Objectif +${dynTarget.toLocaleString()}$`} />
+        <MetricCard label="PROFIT NET" value={fmt(totalNet,true)} color={pnlColor(totalNet)} sub={`Objectif +${dynTarget.toLocaleString()}$`} featured />
         <MetricCard label="MLL" value={`${mll.toLocaleString()}$`} color={isLocked?'#8899bb':'#ff4455'} alert={dist<500} sub={isLocked?'🔒 Verrouillée':'Trailing ↑'} />
         <MetricCard label="MEILLEUR JOUR" value={bestDay>0?fmt(bestDay,true):'—'} color={consBreach?'#f0a020':'#8899bb'} sub={`< ${dynLimit.toFixed(0)}$ requis`} />
       </div>
@@ -581,7 +591,7 @@ function ExpressStdTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:'8px' }}>
         <MetricCard label="BALANCE" value={`${balance.toFixed(0)}$`} color={isLocked?'#8899bb':'#dde4ef'} sub={manualBalance>0?'Manuelle':'Calculée'} />
-        <MetricCard label="P&L NET" value={fmt(totalNet,true)} color={pnlColor(totalNet)} />
+        <MetricCard label="P&L NET" value={fmt(totalNet,true)} color={pnlColor(totalNet)} featured />
         <MetricCard label="MLL" value={`${mll.toLocaleString()}$`} color={postPayout?'#00cc77':isLocked?'#8899bb':'#ff4455'} sub={postPayout?'0$ à vie':isLocked?'🔒 Verrouillée':'Trailing ↑'} />
         <MetricCard label="JOURS QUALIFIANTS" value={`${qualDays.length}/${winDaysNeeded}`} color={payoutOk?'#00cc77':'#f0a020'} sub={`≥${winDayMin}$ net/jour`} />
         <MetricCard label="MARGE MLL" value={`${dist.toFixed(0)}$`} color={dist<500?'#ff4455':dist<1000?'#f0a020':'#8899bb'} alert={dist<500} />
@@ -779,7 +789,7 @@ function LiveFundedTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:'8px' }}>
         <MetricCard label="BALANCE" value={`${balance.toFixed(0)}$`} color={bust?'#ff4455':'#00cc77'} sub={manualBalance>0?'Manuelle':'Calculée'} />
-        <MetricCard label="P&L NET" value={fmt(totalNet,true)} color={pnlColor(totalNet)} />
+        <MetricCard label="P&L NET" value={fmt(totalNet,true)} color={pnlColor(totalNet)} featured />
         <MetricCard label="FLOOR ABSOLU" value="0$" color="#ff4455" sub="Compte perdu si atteint" />
         {dailyLoss!=null && <MetricCard label="DAILY LIMIT" value={`-${dailyLoss.toLocaleString()}$`} color={dailyLimHit?'#ff4455':'#f0a020'} sub={dailyLimHit?"⛔ Atteint auj.":'Par jour de trading'} />}
         <MetricCard label="JOURS QUALIFIANTS" value={`${qualDays.length}/${winDaysNeeded}`} color={payoutOk?'#00cc77':'#f0a020'} sub={`≥${winDayMin}$ net/jour`} />

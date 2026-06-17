@@ -18,6 +18,10 @@ contextBridge.exposeInMainWorld('db', {
   getWeeklyAnalyses:      ()        => ipcRenderer.invoke('db:getWeeklyAnalyses'),
   upsertWeeklyAnalysis:   (a)       => ipcRenderer.invoke('db:upsertWeeklyAnalysis', a),
   deleteWeeklyAnalysis:   (id)      => ipcRenderer.invoke('db:deleteWeeklyAnalysis', id),
+  // Bilan psychologique quotidien
+  getMentalReport:        (date)              => ipcRenderer.invoke('db:getMentalReport', date),
+  getMentalReportsRange:  (startDate, endDate) => ipcRenderer.invoke('db:getMentalReportsRange', startDate, endDate),
+  saveMentalReport:       (date, emotion, description) => ipcRenderer.invoke('db:saveMentalReport', date, emotion, description),
 });
 
 contextBridge.exposeInMainWorld('accounts', {
@@ -44,11 +48,24 @@ contextBridge.exposeInMainWorld('shell', {
 
 contextBridge.exposeInMainWorld('ai', {
   hasKey:       ()           => ipcRenderer.invoke('ai:hasKey'),
-  setKey:       (key)        => ipcRenderer.invoke('ai:setKey', key),
+  // chat() résout toujours { ok, data } ou { ok:false, error: 'unauthenticated'|'subscription_inactive'|'quota_exceeded'|string, message?, resetDate?, used?, limit? }
   chat:         (msgs, sys)  => ipcRenderer.invoke('ai:chat', msgs, sys),
   getMessages:  ()           => ipcRenderer.invoke('ai:getMessages'),
   addMessage:   (msg)        => ipcRenderer.invoke('ai:addMessage', msg),
   clearHistory: ()           => ipcRenderer.invoke('ai:clearHistory'),
+});
+
+contextBridge.exposeInMainWorld('auth', {
+  register:         (email, password) => ipcRenderer.invoke('auth:register', email, password),
+  login:             (email, password) => ipcRenderer.invoke('auth:login', email, password),
+  logout:            ()                => ipcRenderer.invoke('auth:logout'),
+  getSession:        ()                => ipcRenderer.invoke('auth:getSession'),
+  onSessionExpired:  (cb)              => ipcRenderer.on('auth:sessionExpired', () => cb()),
+});
+
+contextBridge.exposeInMainWorld('demo', {
+  getEmotionalReport: () => ipcRenderer.invoke('demo:getEmotionalReport'),
+  getTraitCalendar:   () => ipcRenderer.invoke('demo:getTraitCalendar'),
 });
 
 contextBridge.exposeInMainWorld('market', {

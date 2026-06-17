@@ -110,6 +110,14 @@ function initSchema(db) {
       updated_at  TEXT DEFAULT (datetime('now')),
       UNIQUE(week_start, instrument)
     );
+
+    CREATE TABLE IF NOT EXISTS mental_reports (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      date         TEXT NOT NULL UNIQUE,
+      emotion      TEXT NOT NULL,
+      description  TEXT NOT NULL,
+      generated_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Migrations for existing DBs
@@ -472,6 +480,28 @@ function deleteWeeklyAnalysis(db, dbPath, id) {
   runQ(db, dbPath, 'DELETE FROM weekly_analysis WHERE id=?', [id]);
 }
 
+// ── MENTAL REPORTS (bilan psychologique quotidien) ───────────────
+function getMentalReport(db, date) {
+  return getOne(db, 'SELECT * FROM mental_reports WHERE date=?', [date]);
+}
+function getMentalReportsRange(db, startDate, endDate) {
+  return getAll(db, 'SELECT * FROM mental_reports WHERE date>=? AND date<=? ORDER BY date ASC', [startDate, endDate]);
+}
+function saveMentalReport(db, dbPath, report) {
+  const existing = getMentalReport(db, report.date);
+  if (existing) {
+    runQ(db, dbPath, `
+      UPDATE mental_reports SET emotion=:emotion, description=:description, generated_at=datetime('now')
+      WHERE date=:date
+    `, { ':emotion': report.emotion, ':description': report.description, ':date': report.date });
+  } else {
+    runQ(db, dbPath, `
+      INSERT INTO mental_reports (date, emotion, description) VALUES (:date, :emotion, :description)
+    `, { ':date': report.date, ':emotion': report.emotion, ':description': report.description });
+  }
+  return getMentalReport(db, report.date);
+}
+
 // ── AI CONVERSATIONS ──────────────────────────────────────────
 function getAiMessages(db) {
   return getAll(db, 'SELECT * FROM ai_conversations ORDER BY created_at ASC');
@@ -493,5 +523,6 @@ module.exports = {
   insertEmotionalCheck, getTodayEmotionalCheck,
   getDailyAnalyses, getDailyAnalysis, upsertDailyAnalysis, deleteDailyAnalysis,
   getWeeklyAnalyses, getWeeklyAnalysis, upsertWeeklyAnalysis, deleteWeeklyAnalysis,
+  getMentalReport, getMentalReportsRange, saveMentalReport,
   getAiMessages, insertAiMessage, clearAiConversations,
 };

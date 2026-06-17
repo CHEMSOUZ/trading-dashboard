@@ -49,11 +49,21 @@ function CTooltip({ active, payload, label }) {
 }
 
 // ── StatCard ──────────────────────────────────────────────────
-function StatCard({ label, value, sub, color = '#dde4ef' }) {
+function StatCard({ label, value, sub, color = '#dde4ef', featured = false }) {
+  if (featured) {
+    const rgb = color === '#00cc77' ? '0,204,119' : color === '#ff3344' ? '255,51,68' : '136,153,187';
+    return (
+      <div style={{ background:`linear-gradient(135deg, rgba(${rgb},0.22), rgba(${rgb},0.05))`, border:`1px solid rgba(${rgb},0.35)`, borderRadius:'8px', padding:'18px 20px' }}>
+        <div style={{ fontSize:'14px', color:'#8898aa', letterSpacing:'2px', marginBottom:'8px' }}>{label}</div>
+        <div style={{ fontSize:'34px', fontWeight:'800', color, letterSpacing:'-0.8px', lineHeight:1 }}>{value}</div>
+        {sub && <div style={{ fontSize:'13px', color:'#8898aa', marginTop:'7px' }}>{sub}</div>}
+      </div>
+    );
+  }
   return (
     <div style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.10)', borderTop: `2px solid ${color}`, borderRadius: '6px', padding: '14px 16px' }}>
       <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>{label}</div>
-      <div style={{ fontSize: '20px', fontWeight: '700', color, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: '16px', fontWeight: '700', color, lineHeight: 1 }}>{value}</div>
       {sub && <div style={{ fontSize:'13px', color: '#5868a0', marginTop: '5px' }}>{sub}</div>}
     </div>
   );
@@ -810,7 +820,7 @@ export default function GlobalView() {
         <>
           {/* KPI */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '10px', marginBottom: '20px' }}>
-            <StatCard label="P&L NET TOTAL"  value={fmt(pnl, true)}                color={pnlColor(pnl)}                  sub={`Frais: -${fees.toFixed(2)}$`} />
+            <StatCard label="P&L NET TOTAL"  value={fmt(pnl, true)}                color={pnlColor(pnl)}                  sub={`Frais: -${fees.toFixed(2)}$`} featured />
             <StatCard label="WINRATE GLOBAL" value={`${winrate.toFixed(1)}%`}       color={winrate>=50?'#8899bb':'#ff4455'} sub={`${wins}W / ${losses}L`} />
             <StatCard label="PROFIT FACTOR"  value={pf===999?'∞':pf.toFixed(2)}     color={pf>=1.5?'#8899bb':'#f0a020'} />
             <StatCard label="TOTAL TRADES"   value={total}                          color="#dde4ef"                        sub={`${accounts.length} compte${accounts.length>1?'s':''}`} />

@@ -341,13 +341,25 @@ function CalendarHeatmap({ trades }) {
 }
 
 // ── Stat Card ─────────────────────────────────────────────────
-function StatCard({ label, value, sub, color=T.text1 }) {
+function StatCard({ label, value, sub, color=T.text1, featured=false }) {
   const [hov, setHov] = useState(false);
+
+  if (featured) {
+    const rgb = color === '#00cc77' ? '0,204,119' : color === '#ff3344' ? '255,51,68' : '136,153,187';
+    return (
+      <div style={{ background:`linear-gradient(135deg, rgba(${rgb},0.22), rgba(${rgb},0.05))`, border:`1px solid rgba(${rgb},0.35)`, borderRadius:'8px', padding:'18px 20px' }}>
+        <div style={{ fontSize:'12px', color:T.text2, letterSpacing:'1.8px', marginBottom:'8px' }}>{label}</div>
+        <div style={{ fontSize:'34px', fontWeight:'800', color, letterSpacing:'-0.8px', lineHeight:1 }}>{value}</div>
+        {sub && <div style={{ fontSize:'12px', color:T.text2, marginTop:'7px' }}>{sub}</div>}
+      </div>
+    );
+  }
+
   return (
     <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{ background: hov ? `${T.bgHov}0.75)` : `${T.bg}0.60)`, border:`1px solid ${T.border}0.10)`, borderTop:`2px solid ${color}30`, borderRadius:'7px', padding:'14px 16px', transition:'all 0.18s', transform:hov?'translateY(-1px)':'none', boxShadow:hov?`0 4px 16px rgba(0,0,0,0.3)`:'none' }}>
       <div style={{ fontSize:'11px', color:T.text3, letterSpacing:'1.8px', marginBottom:'6px' }}>{label}</div>
-      <div style={{ fontSize:'20px', fontWeight:'700', color, letterSpacing:'-0.5px', lineHeight:1 }}>{value}</div>
+      <div style={{ fontSize:'16px', fontWeight:'700', color, letterSpacing:'-0.5px', lineHeight:1 }}>{value}</div>
       {sub && <div style={{ fontSize:'12px', color:T.text3, marginTop:'5px' }}>{sub}</div>}
     </div>
   );
@@ -504,7 +516,7 @@ function SyntheseTab({ trades, loading }) {
       <div>
         <SectionTitle>INDICATEURS CLÉS</SectionTitle>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:'10px' }}>
-          <StatCard label="P&L NET TOTAL"    value={fmt(total,true)}           color={pnlColor(total)} />
+          <StatCard label="P&L NET TOTAL"    value={fmt(total,true)}           color={pnlColor(total)} featured />
           <StatCard label="TRADES"           value={String(trades.length)}     color={T.text1} sub={`${wins.length}W · ${losses.length}L`} />
           <StatCard label="WIN RATE"         value={`${winrate}%`}             color={winrate>=50?'#00cc77':'#ff3344'} />
           <StatCard label="PROFIT FACTOR"    value={pf===99?'∞':pf.toFixed(2)} color={pf>=1.5?'#00cc77':pf>=1?T.text1:'#ff3344'} />

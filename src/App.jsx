@@ -9,11 +9,13 @@ import Sidebar from './layout/Sidebar';
 import AccountSelect from './pages/AccountSelect';
 import Journal from './pages/Journal';
 import NewTrade from './pages/NewTrade';
+import LoginScreen from './features/auth/LoginScreen';
 
 const Dashboard         = lazy(() => import('./pages/Dashboard'));
 const Stats             = lazy(() => import('./pages/Stats'));
 const PropFirm          = lazy(() => import('./pages/PropFirm'));
 const EmotionalCheck    = lazy(() => import('./pages/EmotionalCheck'));
+const TraderProfile     = lazy(() => import('./pages/TraderProfile'));
 const Analysis          = lazy(() => import('./pages/Analysis'));
 const GlobalView        = lazy(() => import('./pages/GlobalView'));
 const EconomicCalendar  = lazy(() => import('./pages/EconomicCalendar'));
@@ -49,6 +51,8 @@ const SHORTCUTS = [
 ];
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(null); // null = vérification en cours
+  const [authUser, setAuthUser]           = useState(null);
   const [activeAccount, setActiveAccount] = useState(null);
   const [loading, setLoading]             = useState(true);
   const [showAccountSelect, setShowAccountSelect] = useState(false);
@@ -57,6 +61,15 @@ export default function App() {
   const [aiCoachOpen, setAiCoachOpen]     = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [toast, setToast]                 = useState(null); // { msg, type: 'success'|'info'|'error' }
+
+  useEffect(() => {
+    (async () => {
+      const res = await window.auth.getSession();
+      setIsAuthenticated(res.ok ? !!res.data?.authenticated : false);
+      setAuthUser(res.ok ? (res.data?.user ?? null) : null);
+    })();
+    window.auth.onSessionExpired(() => setIsAuthenticated(false));
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -93,6 +106,18 @@ export default function App() {
     };
   }, []);
 
+  if (isAuthenticated === null) return (
+    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#090a10', color: '#5a6a82', fontSize: '13px', letterSpacing: '2px', fontFamily: 'monospace' }}>
+      VÉRIFICATION DE LA SESSION...
+    </div>
+  );
+
+  if (!isAuthenticated) {
+    return <LoginScreen onAuthenticated={(user) => { setAuthUser(user); setIsAuthenticated(true); }} />;
+  }
+
+  const isDemoMode = !!authUser && authUser.subscription_status !== 'active';
+
   if (loading) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#090a10', color: '#5a6a82', fontSize: '13px', letterSpacing: '2px', fontFamily: 'monospace' }}>
       CHARGEMENT...
@@ -127,6 +152,12 @@ export default function App() {
   function handleManageAccounts() {
     // Show account select screen
     setShowAccountSelect(true);
+  }
+
+  async function handleLogout() {
+    await window.auth.logout();
+    setAuthUser(null);
+    setIsAuthenticated(false);
   }
 
   if (showAccountSelect) {
@@ -167,6 +198,8 @@ export default function App() {
           onManageAccounts={handleManageAccounts}
           onToggleAiCoach={() => setAiCoachOpen(o => !o)}
           aiCoachOpen={aiCoachOpen}
+          onLogout={handleLogout}
+          isDemoMode={isDemoMode}
         />
         <main key={reloadKey} style={{ flex: 1, overflowY: 'auto', background: '#0c0d16', backgroundImage: 'radial-gradient(ellipse 60% 40% at 80% 0%,rgba(18,20,32,0.35) 0%,transparent 60%)' }}>
           <Suspense fallback={<PageLoader />}>
@@ -182,6 +215,7 @@ export default function App() {
               <Route path="/topstep"       element={<Navigate to="/propfirm" replace />} />
               <Route path="/lucid"         element={<Navigate to="/propfirm" replace />} />
               <Route path="/emotional"     element={<EmotionalCheck />} />
+              <Route path="/profile"       element={<TraderProfile />} />
               <Route path="/calendar"      element={<EconomicCalendar />} />
               <Route path="/payout"        element={<Payout />} />
               <Route path="/plan"          element={<TradingPlan />} />

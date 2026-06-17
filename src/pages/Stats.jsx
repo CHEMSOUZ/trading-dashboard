@@ -61,11 +61,21 @@ function CTooltip({ active, payload, label }) {
 }
 
 // ── Stat Card ─────────────────────────────────────────────────
-function StatCard({ label, value, sub, color = '#dde4ef' }) {
+function StatCard({ label, value, sub, color = '#dde4ef', featured = false }) {
+  if (featured) {
+    const rgb = color === '#00cc77' ? '0,204,119' : color === '#ff3344' ? '255,51,68' : '136,153,187';
+    return (
+      <div style={{ background:`linear-gradient(135deg, rgba(${rgb},0.22), rgba(${rgb},0.05))`, border:`1px solid rgba(${rgb},0.35)`, borderRadius:'8px', padding:'18px 20px' }}>
+        <div style={{ fontSize:'12px', color:'#8898aa', letterSpacing:'1.8px', marginBottom:'8px' }}>{label}</div>
+        <div style={{ fontSize:'34px', fontWeight:'800', color, letterSpacing:'-0.8px', lineHeight:1 }}>{value}</div>
+        {sub && <div style={{ fontSize:'12px', color:'#8898aa', marginTop:'7px' }}>{sub}</div>}
+      </div>
+    );
+  }
   return (
     <div style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.10)', borderTop: `2px solid ${color}`, borderRadius: '6px', padding: '12px 14px' }}>
       <div style={{ fontSize:'11px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '5px' }}>{label}</div>
-      <div style={{ fontSize: '18px', fontWeight: '700', color, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: '16px', fontWeight: '700', color, lineHeight: 1 }}>{value}</div>
       {sub && <div style={{ fontSize:'12px', color: '#5868a0', marginTop: '4px' }}>{sub}</div>}
     </div>
   );
@@ -499,7 +509,7 @@ export default function Stats() {
 
       {/* ── KPI GRID ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: '10px', marginBottom: '16px' }}>
-        <StatCard label="P&L NET" value={fmt(fPnl, true)} color={pnlColor(fPnl)} sub={`Frais: -${fFees.toFixed(2)}$`} />
+        <StatCard label="P&L NET" value={fmt(fPnl, true)} color={pnlColor(fPnl)} sub={`Frais: -${fFees.toFixed(2)}$`} featured />
         <StatCard label="WINRATE" value={`${fWR.toFixed(1)}%`} color={fWR >= 50 ? '#00cc77' : '#ff3344'} sub={`${fWins}W / ${fLosses}L / ${fBe}BE`} />
         <StatCard label="PROFIT FACTOR" value={fPF === 999 ? '∞' : fPF.toFixed(2)} color={fPF >= 1.5 ? '#00cc77' : fPF >= 1 ? '#f0a020' : '#ff3344'} />
         <StatCard label="AVG WIN NET" value={fmt(fAvgW, true)} color="#8899bb" sub={`Gross: ${fmt(fGrossW, true)}`} />

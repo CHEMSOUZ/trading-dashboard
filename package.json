@@ -1,6 +1,6 @@
 {
   "name": "trading-dashboard",
-  "version": "1.9.8",
+  "version": "1.9.9",
   "private": true,
   "main": "electron.cjs",
   "scripts": {
@@ -11,6 +11,7 @@
     "release": "vite build && electron-builder --publish always"
   },
   "dependencies": {
+    "electron-store": "^8.2.0",
     "electron-updater": "^6.8.3",
     "lightweight-charts": "^5.2.0",
     "react": "^19.0.0",
@@ -45,7 +46,9 @@
       "preload.cjs",
       "database.cjs",
       "accounts.cjs",
-      "market_db.cjs"
+      "market_db.cjs",
+      "demo.cjs",
+      "demo_data.json"
     ],
     "extraResources": [
       {
