@@ -16,12 +16,6 @@ const P = {
   accentL: '#a78bfa',
 };
 
-const EMOTION_EMOJI = {
-  'Discipliné':'🧘', 'Serein':'😌', 'Focalisé':'🎯',
-  'Stressé':'😰',   'Fragile':'⚠️','Surconfiant':'😤',
-  'Impulsif':'⚡',  'Vengeur':'😡',
-};
-
 // Accroche statique affichée sous le nom du trait dans le bandeau-badge.
 const EMOTION_TAGLINE = {
   'Discipliné':  'Exécution rigoureuse, plan respecté à la lettre.',
@@ -429,63 +423,104 @@ export default function EmotionalCheck() {
             <div style={{ height:'1px', flex:1, background:`${P.border}0.10)` }} />
           </button>
 
-          {showHistory && (
-            <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
-              {recentReports.map(r => {
-                const c  = EMOTION_COLORS[r.emotion] ?? P.text2;
-                const em = EMOTION_EMOJI[r.emotion]  ?? '🧠';
-                return <PastCard key={r.date} report={r} color={c} emoji={em} />;
-              })}
-            </div>
-          )}
+          {showHistory && <HistoryGrid reports={recentReports} />}
         </div>
       )}
     </div>
   );
 }
 
-// ── Carte historique ──────────────────────────────────────────
-function PastCard({ report, color, emoji }) {
-  const [open, setOpen] = useState(false);
-  const rgb = color==='#00cc77'?'0,204,119':color==='#f59e0b'?'245,158,11':color==='#ff3344'?'255,51,68':'136,153,187';
+// ── Historique IA — grille compacte (icônes de tonalité, façon mini-calendrier) ──
+function renderBlocks(text, color) {
+  if (!text) return null;
+  return text.split(/\n\n+/).map((block, i) => {
+    const lines    = block.trim().split('\n');
+    const isTitle  = ['ÉTAT ÉMOTIONNEL','PATTERNS','FOCUS'].some(t => lines[0]?.toUpperCase().includes(t));
+    if (isTitle) return (
+      <div key={i} style={{ marginBottom:'10px' }}>
+        <div style={{ fontSize:'9px', color, letterSpacing:'2px', fontWeight:'700', marginBottom:'4px', opacity:0.7 }}>{lines[0]}</div>
+        <div style={{ fontSize:'12px', color:'#dde4ef', lineHeight:'1.7' }}>{lines.slice(1).join('\n')}</div>
+      </div>
+    );
+    return <div key={i} style={{ fontSize:'12px', color:'#dde4ef', lineHeight:'1.7', marginBottom:'10px' }}>{block.trim()}</div>;
+  });
+}
 
-  function renderBlocks(text) {
-    if (!text) return null;
-    return text.split(/\n\n+/).map((block, i) => {
-      const lines    = block.trim().split('\n');
-      const isTitle  = ['ÉTAT ÉMOTIONNEL','PATTERNS','FOCUS'].some(t => lines[0]?.toUpperCase().includes(t));
-      if (isTitle) return (
-        <div key={i} style={{ marginBottom:'10px' }}>
-          <div style={{ fontSize:'9px', color, letterSpacing:'2px', fontWeight:'700', marginBottom:'4px', opacity:0.7 }}>{lines[0]}</div>
-          <div style={{ fontSize:'12px', color:'#dde4ef', lineHeight:'1.7' }}>{lines.slice(1).join('\n')}</div>
-        </div>
-      );
-      return <div key={i} style={{ fontSize:'12px', color:'#dde4ef', lineHeight:'1.7', marginBottom:'10px' }}>{block.trim()}</div>;
-    });
-  }
+// Première phrase du bloc "ÉTAT ÉMOTIONNEL", tronquée — pour le tooltip au survol.
+function extractSummary(text, maxLen = 100) {
+  if (!text) return '';
+  const first = text.split(/\n\n+/)[0] ?? '';
+  const lines = first.trim().split('\n');
+  const isTitle = ['ÉTAT ÉMOTIONNEL','PATTERNS','FOCUS'].some(t => lines[0]?.toUpperCase().includes(t));
+  const body = (isTitle ? lines.slice(1).join(' ') : first).trim();
+  const sentence = body.split(/(?<=[.!?])\s/)[0] ?? body;
+  return sentence.length > maxLen ? `${sentence.slice(0, maxLen - 1).trimEnd()}…` : sentence;
+}
+
+function HistoryGrid({ reports }) {
+  const [hovered,  setHovered]  = useState(null); // date
+  const [selected, setSelected] = useState(null); // date
+
+  const selectedReport = reports.find(r => r.date === selected);
+  const hoveredReport  = hovered !== selected ? reports.find(r => r.date === hovered) : null;
 
   return (
-    <div style={{ background:`rgba(14,15,22,0.40)`, border:`1px solid rgba(${rgb},0.14)`, borderRadius:'8px', overflow:'hidden' }}>
-      <div onClick={() => setOpen(o => !o)} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'12px 16px', cursor:'pointer' }}>
-        <span style={{ fontSize:'16px', flexShrink:0 }}>{emoji}</span>
-        <div style={{ flex:1 }}>
-          <div style={{ fontSize:'12px', color:'#dde4ef', fontWeight:'600' }}>
-            {new Date(report.date+'T12:00:00').toLocaleDateString('fr-FR',{ weekday:'long', day:'numeric', month:'long' })}
-          </div>
-          <div style={{ fontSize:'11px', color, fontWeight:'600', marginTop:'1px' }}>{report.emotion}</div>
-        </div>
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4a5a72" strokeWidth="2">
-          <polyline points={open?'18 15 12 9 6 15':'6 9 12 15 18 9'}/>
-        </svg>
+    <div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(64px,1fr))', gap:'8px' }}>
+        {reports.map(r => {
+          const color = EMOTION_COLORS[r.emotion] ?? P.text2;
+          const rgb   = emotionRgb(color);
+          const isSel = r.date === selected;
+          const label = new Date(r.date + 'T12:00:00').toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit' });
+          return (
+            <div key={r.date}
+              onMouseEnter={() => setHovered(r.date)}
+              onMouseLeave={() => setHovered(null)}
+              onClick={() => setSelected(s => s === r.date ? null : r.date)}
+              style={{
+                display:'flex', flexDirection:'column', alignItems:'center', gap:'5px',
+                padding:'10px 6px', borderRadius:'8px', cursor:'pointer', transition:'all 0.15s',
+                background:`rgba(${rgb},${isSel ? 0.18 : 0.07})`,
+                border:`1px solid rgba(${rgb},${isSel ? 0.55 : 0.18})`,
+              }}>
+              <ToneIcon tone={emotionTone(r.emotion)} color={color} size={18} />
+              <span style={{ fontSize:'10px', color: isSel ? color : P.text3, fontWeight: isSel ? '700' : '400' }}>{label}</span>
+            </div>
+          );
+        })}
       </div>
-      {open && (
-        <div style={{ padding:'0 16px 14px', borderTop:'1px solid rgba(136,153,187,0.08)' }}>
-          <div style={{ paddingTop:'12px' }}>{renderBlocks(report.text)}</div>
-          <div style={{ fontSize:'10px', color:'#2c3c54', marginTop:'8px' }}>
-            Généré · {new Date(report.generatedAt).toLocaleTimeString('fr-FR',{ hour:'2-digit', minute:'2-digit' })}
+
+      {/* Tooltip au survol — aperçu rapide, jamais affiché en même temps que le détail cliqué */}
+      {hoveredReport && (() => {
+        const color = EMOTION_COLORS[hoveredReport.emotion] ?? P.text2;
+        return (
+          <div style={{ position:'fixed', bottom:'22px', right:'22px', background:'rgba(8,9,16,0.97)', border:'1px solid rgba(136,153,187,0.22)', borderRadius:'8px', padding:'12px 16px', boxShadow:'0 8px 32px rgba(0,0,0,0.65)', zIndex:9999, maxWidth:'280px', pointerEvents:'none' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px' }}>
+              <ToneIcon tone={emotionTone(hoveredReport.emotion)} color={color} size={16} />
+              <span style={{ fontSize:'13px', fontWeight:'700', color:P.text1, textTransform:'capitalize' }}>{fmtDate(hoveredReport.date)}</span>
+            </div>
+            <div style={{ fontSize:'12px', color, fontWeight:'600', marginBottom:'4px' }}>{hoveredReport.emotion}</div>
+            <div style={{ fontSize:'12px', color:P.text2, lineHeight:'1.5' }}>{extractSummary(hoveredReport.text)}</div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
+      {/* Détail complet au clic — un seul ouvert à la fois */}
+      {selectedReport && (() => {
+        const color = EMOTION_COLORS[selectedReport.emotion] ?? P.text2;
+        const rgb   = emotionRgb(color);
+        return (
+          <div style={{ marginTop:'12px', background:'rgba(14,15,22,0.40)', border:`1px solid rgba(${rgb},0.20)`, borderRadius:'8px', padding:'16px', position:'relative' }}>
+            <button onClick={() => setSelected(null)}
+              style={{ position:'absolute', top:'12px', right:'12px', background:'none', border:'none', color:P.text3, cursor:'pointer', fontSize:'15px', lineHeight:1, padding:'0' }}>×</button>
+            <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px' }}>
+              <ToneIcon tone={emotionTone(selectedReport.emotion)} color={color} size={18} />
+              <span style={{ fontSize:'13px', fontWeight:'700', color, textTransform:'capitalize' }}>{fmtDate(selectedReport.date)}</span>
+            </div>
+            {renderBlocks(selectedReport.text, color)}
+          </div>
+        );
+      })()}
     </div>
   );
 }

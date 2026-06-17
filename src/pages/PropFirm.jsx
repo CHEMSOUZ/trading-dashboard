@@ -474,6 +474,11 @@ function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput,
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
+      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLE</div>
+      <ObjRow ok={!lost} pending={!lost}
+        label={`Ne pas descendre sous la MLL — trailing depuis ${(size-maxLoss).toLocaleString()}$`}
+        detail={`Balance : ${balance.toFixed(2)}$ · MLL : ${mll.toFixed(2)}$ · Marge : ${dist.toFixed(2)}$`} />
+
       <BalanceRow balanceInput={balanceInput} setBalanceInput={setBalanceInput} onSave={onSaveBalance} status={status} />
 
       {consBreach && (
@@ -488,11 +493,6 @@ function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput,
           </div>
         </div>
       )}
-
-      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLE</div>
-      <ObjRow ok={!lost} pending={!lost}
-        label={`Ne pas descendre sous la MLL — trailing depuis ${(size-maxLoss).toLocaleString()}$`}
-        detail={`Balance : ${balance.toFixed(2)}$ · MLL : ${mll.toFixed(2)}$ · Marge : ${dist.toFixed(2)}$`} />
 
       <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIFS</div>
 
@@ -565,13 +565,13 @@ function ExpressStdTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
+      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLE</div>
+      <MLLSection mll={mll} size={size} maxLoss={maxLoss} balance={balance} isLocked={isLocked} postPayout={postPayout} />
+
       <div style={{ display:'flex', gap:'10px', alignItems:'center', flexWrap:'wrap' }}>
         <BalanceRow balanceInput={balanceInput} setBalanceInput={setBalanceInput} onSave={onSaveBalance} status={status} />
         <PostPayoutToggle value={postPayout} onChange={setPostPayout} />
       </div>
-
-      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLE</div>
-      <MLLSection mll={mll} size={size} maxLoss={maxLoss} balance={balance} isLocked={isLocked} postPayout={postPayout} />
 
       <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIFS</div>
 
@@ -651,13 +651,13 @@ function ExpressConsTab({ trades, cfg, manualBalance, balanceInput, setBalanceIn
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
+      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLE</div>
+      <MLLSection mll={mll} size={size} maxLoss={maxLoss} balance={balance} isLocked={isLocked} postPayout={postPayout} />
+
       <div style={{ display:'flex', gap:'10px', alignItems:'center', flexWrap:'wrap' }}>
         <BalanceRow balanceInput={balanceInput} setBalanceInput={setBalanceInput} onSave={onSaveBalance} status={status} />
         <PostPayoutToggle value={postPayout} onChange={setPostPayout} />
       </div>
-
-      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLE</div>
-      <MLLSection mll={mll} size={size} maxLoss={maxLoss} balance={balance} isLocked={isLocked} postPayout={postPayout} />
 
       <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIFS</div>
 
@@ -745,18 +745,6 @@ function LiveFundedTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
-      <BalanceRow balanceInput={balanceInput} setBalanceInput={setBalanceInput} onSave={onSaveBalance} status={status} />
-
-      {dailyLimHit && (
-        <div style={{ background:'rgba(255,68,85,0.10)', border:'1px solid rgba(255,68,85,0.40)', borderRadius:'6px', padding:'14px 16px', display:'flex', gap:'12px', alignItems:'center' }}>
-          <span style={{ fontSize:'22px' }}>⛔</span>
-          <div>
-            <div style={{ fontSize:'13px', color:'#ff4455', fontWeight:'700', marginBottom:'4px' }}>Daily Loss Limit atteint — compte désactivé pour aujourd'hui</div>
-            <div style={{ fontSize:'13px', color:'#7888a0' }}>P&L aujourd'hui : {fmt(todayPnl,true)} · Limite : -{dailyLoss.toLocaleString()}$</div>
-          </div>
-        </div>
-      )}
-
       <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLES</div>
 
       <ObjRow ok={!bust} pending={!bust}
@@ -767,6 +755,18 @@ function LiveFundedTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
         <ObjRow ok={!dailyLimHit&&todayPnl!==null} pending={todayPnl===null}
           label={`Daily Loss Limit — max -${dailyLoss.toLocaleString()}$ par journée de trading`}
           detail={todayPnl!==null ? `Aujourd'hui : ${fmt(todayPnl,true)} · Marge : ${fmt(Math.max(0, dailyLoss + (todayPnl??0)))}` : "Aucun trade aujourd'hui"} />
+      )}
+
+      <BalanceRow balanceInput={balanceInput} setBalanceInput={setBalanceInput} onSave={onSaveBalance} status={status} />
+
+      {dailyLimHit && (
+        <div style={{ background:'rgba(255,68,85,0.10)', border:'1px solid rgba(255,68,85,0.40)', borderRadius:'6px', padding:'14px 16px', display:'flex', gap:'12px', alignItems:'center' }}>
+          <span style={{ fontSize:'22px' }}>⛔</span>
+          <div>
+            <div style={{ fontSize:'13px', color:'#ff4455', fontWeight:'700', marginBottom:'4px' }}>Daily Loss Limit atteint — compte désactivé pour aujourd'hui</div>
+            <div style={{ fontSize:'13px', color:'#7888a0' }}>P&L aujourd'hui : {fmt(todayPnl,true)} · Limite : -{dailyLoss.toLocaleString()}$</div>
+          </div>
+        </div>
       )}
 
       <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIF — PAYOUT</div>

@@ -470,6 +470,23 @@ function SyntheseTab({ trades, loading }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
 
+      {/* Stat cards */}
+      <div>
+        <SectionTitle>INDICATEURS CLÉS</SectionTitle>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:'10px' }}>
+          <StatCard label="P&L NET TOTAL"    value={fmt(total,true)}           color={pnlColor(total)} featured />
+          <StatCard label="TRADES"           value={String(trades.length)}     color={T.text1} sub={`${wins.length}W · ${losses.length}L`} />
+          <StatCard label="WIN RATE"         value={`${winrate}%`}             color={winrate>=50?'#00cc77':'#ff3344'} />
+          <StatCard label="PROFIT FACTOR"    value={pf===99?'∞':pf.toFixed(2)} color={pf>=1.5?'#00cc77':pf>=1?T.text1:'#ff3344'} />
+          <StatCard label="MOY. WIN"         value={fmt(avgWin,true)}          color='#00cc77' />
+          <StatCard label="MOY. LOSS"        value={avgLoss>0?`-${avgLoss.toFixed(2)}$`:'—'} color='#ff3344' />
+          <StatCard label="MEILLEUR TRADE"   value={bestT!=null?fmt(bestT,true):'—'} color='#00cc77' />
+          <StatCard label="PIRE TRADE"       value={worstT!=null?fmt(worstT,true):'—'} color='#ff3344' />
+          <StatCard label={`SÉRIE ${streakType??'—'}`} value={streak>0?`${streak}j`:'—'} color={streakType==='W'?'#00cc77':streakType==='L'?'#ff3344':T.text2} />
+          <StatCard label="FRAIS PAYÉS"      value={fees>0?`-${fees.toFixed(2)}$`:'0$'} color='#f0a020' />
+        </div>
+      </div>
+
       {/* Long vs Short */}
       {dirStats.length > 0 && (
         <>
@@ -511,23 +528,6 @@ function SyntheseTab({ trades, loading }) {
           </div>
         </>
       )}
-
-      {/* Stat cards */}
-      <div>
-        <SectionTitle>INDICATEURS CLÉS</SectionTitle>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:'10px' }}>
-          <StatCard label="P&L NET TOTAL"    value={fmt(total,true)}           color={pnlColor(total)} featured />
-          <StatCard label="TRADES"           value={String(trades.length)}     color={T.text1} sub={`${wins.length}W · ${losses.length}L`} />
-          <StatCard label="WIN RATE"         value={`${winrate}%`}             color={winrate>=50?'#00cc77':'#ff3344'} />
-          <StatCard label="PROFIT FACTOR"    value={pf===99?'∞':pf.toFixed(2)} color={pf>=1.5?'#00cc77':pf>=1?T.text1:'#ff3344'} />
-          <StatCard label="MOY. WIN"         value={fmt(avgWin,true)}          color='#00cc77' />
-          <StatCard label="MOY. LOSS"        value={avgLoss>0?`-${avgLoss.toFixed(2)}$`:'—'} color='#ff3344' />
-          <StatCard label="MEILLEUR TRADE"   value={bestT!=null?fmt(bestT,true):'—'} color='#00cc77' />
-          <StatCard label="PIRE TRADE"       value={worstT!=null?fmt(worstT,true):'—'} color='#ff3344' />
-          <StatCard label={`SÉRIE ${streakType??'—'}`} value={streak>0?`${streak}j`:'—'} color={streakType==='W'?'#00cc77':streakType==='L'?'#ff3344':T.text2} />
-          <StatCard label="FRAIS PAYÉS"      value={fees>0?`-${fees.toFixed(2)}$`:'0$'} color='#f0a020' />
-        </div>
-      </div>
 
       {/* Equity curve */}
       <div>

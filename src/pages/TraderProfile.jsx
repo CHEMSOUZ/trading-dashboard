@@ -11,33 +11,159 @@ const P = {
 };
 
 const WEEKDAY_LABELS = ['LUN','MAR','MER','JEU','VEN','SAM','DIM'];
+const CAL_MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
-function monthLabel(yearMonth) {
-  const [y, m] = yearMonth.split('-').map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+function monthLabel(year, month) {
+  return new Date(year, month, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 }
 
-// Grille de semaines (lundi-dimanche) pour le mois "YYYY-MM" donné.
-function buildMonthGrid(yearMonth) {
-  const [y, m]       = yearMonth.split('-').map(Number);
-  const daysInMonth  = new Date(y, m, 0).getDate();
-  const firstWeekday = (new Date(y, m - 1, 1).getDay() + 6) % 7; // 0 = lundi
+// ── Calendrier — même structure que TradingCalendar (GlobalView.jsx) :
+// navigation mois, grille 7 colonnes + colonne résumé de semaine, tooltip au
+// survol — mais sur des traits psychologiques (un par jour) plutôt que du P&L.
+function TraitCalendar({ calendar, referenceDay, onMonthChange }) {
+  const initial = referenceDay ? new Date(referenceDay + 'T12:00:00') : new Date();
+  const [year,    setYear]    = useState(initial.getFullYear());
+  const [month,   setMonth]   = useState(initial.getMonth());
+  const [hovered, setHovered] = useState(null);
+
+  useEffect(() => { onMonthChange?.(year, month); }, [year, month]);
+
+  const byDay = {};
+  for (const e of calendar) byDay[e.date] = e.emotion;
+
+  const rawFirst    = new Date(year, month, 1).getDay();
+  const firstDay    = rawFirst === 0 ? 6 : rawFirst - 1;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const cells = [];
-  for (let i = 0; i < firstWeekday; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(`${yearMonth}-${String(d).padStart(2, '0')}`);
-  while (cells.length % 7 !== 0) cells.push(null);
-
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   const weeks = [];
-  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
-  return weeks;
+  let wk = [];
+  cells.forEach((day, i) => {
+    wk.push(day);
+    if (wk.length === 7 || i === cells.length - 1) {
+      while (wk.length < 7) wk.push(null);
+      weeks.push([...wk]);
+      wk = [];
+    }
+  });
+
+  function weekDominant(wkArr) {
+    const firstIdx = wkArr.findIndex(d => d != null);
+    if (firstIdx < 0) return { count: 0, dominant: null };
+    const mondayDate = new Date(year, month, wkArr[firstIdx] - firstIdx);
+    const counts = {};
+    let count = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(mondayDate); d.setDate(d.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      const emotion = byDay[key];
+      if (emotion) { counts[emotion] = (counts[emotion] ?? 0) + 1; count++; }
+    }
+    const dominant = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    return { count, dominant };
+  }
+
+  function prevMonth() { if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1); }
+  function nextMonth() { if (month === 11) { setYear(y => y + 1); setMonth(0); } else setMonth(m => m + 1); }
+
+  return (
+    <div style={{ background:`${P.bg}0.4)`, border:`1px solid ${P.border}0.10)`, borderRadius:'12px', padding:'16px 18px', position:'relative' }}>
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'10px', marginBottom:'14px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+          <button onClick={prevMonth} style={{ background:'none', border:'none', color:P.text2, cursor:'pointer', fontSize:'17px', lineHeight:1 }}>‹</button>
+          <span style={{ fontSize:'15px', fontWeight:'700', color:P.text1, minWidth:'160px', textAlign:'center', textTransform:'capitalize' }}>{monthLabel(year, month)}</span>
+          <button onClick={nextMonth} style={{ background:'none', border:'none', color:P.text2, cursor:'pointer', fontSize:'17px', lineHeight:1 }}>›</button>
+          <button onClick={() => { const n = new Date(); setYear(n.getFullYear()); setMonth(n.getMonth()); }}
+            style={{ background:'rgba(136,153,187,0.10)', border:'1px solid rgba(136,153,187,0.18)', color:'#8899bb', padding:'3px 9px', borderRadius:'4px', fontSize:'12px', fontFamily:'inherit', cursor:'pointer' }}>Aujourd'hui</button>
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr) 80px', gap:'4px' }}>
+        {WEEKDAY_LABELS.map(d => (
+          <div key={d} style={{ textAlign:'center', fontSize:'11px', color:P.text3, padding:'4px 0', letterSpacing:'1px' }}>{d}</div>
+        ))}
+        <div style={{ textAlign:'center', fontSize:'11px', color:P.text3, padding:'4px 0' }}>SEM.</div>
+
+        {weeks.map((week, wi) => {
+          const { count: weekCount, dominant: weekDom } = weekDominant(week);
+          const weekColor = weekDom ? (EMOTION_COLORS[weekDom] ?? P.text2) : P.text4;
+          return [
+            ...week.map((day, di) => {
+              if (!day) return <div key={`e-${wi}-${di}`} style={{ minHeight:'56px', borderRadius:'6px', background:'rgba(14,15,22,0.15)', border:'1px solid rgba(136,153,187,0.03)' }} />;
+              const date    = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+              const emotion = byDay[date];
+              const color   = emotion ? (EMOTION_COLORS[emotion] ?? P.text2) : null;
+              const cellRgb = color ? emotionRgb(color) : null;
+              const isRef   = date === referenceDay;
+              const isHov   = hovered === date;
+              return (
+                <div key={date}
+                  onMouseEnter={() => setHovered(date)}
+                  onMouseLeave={() => setHovered(null)}
+                  style={{
+                    minHeight:'56px', borderRadius:'6px', padding:'5px 6px',
+                    display:'flex', flexDirection:'column', justifyContent:'space-between',
+                    background: isHov && emotion ? `rgba(${cellRgb},0.18)` : cellRgb ? `rgba(${cellRgb},0.10)` : 'transparent',
+                    border: isRef ? `1.5px solid ${color ?? 'rgba(0,170,255,0.60)'}` : `1px solid ${P.border}0.07)`,
+                    cursor: emotion ? 'pointer' : 'default', transition:'all 0.12s',
+                    transform: isHov && emotion ? 'scale(1.03)' : 'scale(1)',
+                    position:'relative', zIndex: isHov ? 3 : 1,
+                    boxShadow: isHov && emotion ? '0 4px 16px rgba(0,0,0,0.4)' : 'none',
+                  }}>
+                  <span style={{ fontSize:'11px', color: emotion ? P.text2 : P.text4, fontWeight: isRef ? '700' : '400' }}>{day}</span>
+                  {emotion && (
+                    <div style={{ display:'flex', alignItems:'center', gap:'4px' }}>
+                      <ToneIcon tone={emotionTone(emotion)} color={color} size={13} />
+                      <span style={{ fontSize:'10px', color, fontWeight:'600', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{emotion}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            }),
+            <div key={`w-${wi}`} style={{ background:'rgba(14,15,22,0.55)', border:`1px solid ${P.border}0.09)`, borderRadius:'6px', minHeight:'56px', padding:'6px 8px', display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center', gap:'4px' }}>
+              {weekCount > 0 ? (
+                <>
+                  <span style={{ fontSize:'10px', color:P.text4 }}>S{wi+1}</span>
+                  {weekDom && <ToneIcon tone={emotionTone(weekDom)} color={weekColor} size={14} />}
+                  <span style={{ fontSize:'9px', color:weekColor, textAlign:'center', lineHeight:1.2 }}>{weekCount}j</span>
+                </>
+              ) : (
+                <span style={{ fontSize:'10px', color:'#2e3d52' }}>S{wi+1}</span>
+              )}
+            </div>,
+          ];
+        })}
+      </div>
+
+      {/* Hover tooltip */}
+      {hovered && byDay[hovered] && (() => {
+        const emotion = byDay[hovered];
+        const color   = EMOTION_COLORS[emotion] ?? P.text2;
+        return (
+          <div style={{ position:'fixed', bottom:'22px', right:'22px', background:'rgba(8,9,16,0.97)', border:'1px solid rgba(136,153,187,0.22)', borderRadius:'8px', padding:'12px 16px', boxShadow:'0 8px 32px rgba(0,0,0,0.65)', zIndex:9999, minWidth:'200px', pointerEvents:'none', display:'flex', alignItems:'center', gap:'10px' }}>
+            <ToneIcon tone={emotionTone(emotion)} color={color} size={20} />
+            <div>
+              <div style={{ fontSize:'13px', fontWeight:'700', color:P.text1, marginBottom:'2px' }}>{hovered}</div>
+              <div style={{ fontSize:'12px', color, fontWeight:'600' }}>{emotion}</div>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
 }
 
 export default function TraderProfile() {
   const [loading,      setLoading]      = useState(true);
   const [isDemoMode,   setIsDemoMode]   = useState(false);
-  const [calendar,     setCalendar]     = useState([]); // [{ date, emotion }]
+  const [calendar,     setCalendar]     = useState([]); // [{ date, emotion }] — historique complet
   const [referenceDay, setReferenceDay] = useState(null);
+  const [viewYear,     setViewYear]     = useState(new Date().getFullYear());
+  const [viewMonth,    setViewMonth]    = useState(new Date().getMonth());
 
   useEffect(() => {
     (async () => {
@@ -54,13 +180,10 @@ export default function TraderProfile() {
         setCalendar(calRes.ok ? (calRes.data ?? []) : []);
         setReferenceDay(trades.reduce((max, t) => (t.date && t.date > max ? t.date : max), trades[0]?.date ?? null));
       } else {
-        // Utilisateur réel : mois civil courant, données issues de mental_reports (SQLite).
-        const today      = new Date().toISOString().slice(0, 10);
-        const yearMonth  = today.slice(0, 7);
-        const [y, m]     = yearMonth.split('-').map(Number);
-        const monthStart = `${yearMonth}-01`;
-        const monthEnd   = `${yearMonth}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
-        const rangeRes = await window.db.getMentalReportsRange(monthStart, monthEnd);
+        // Utilisateur réel : historique complet chargé une fois (comme Vue Globale charge
+        // tous les trades), filtré par mois affiché directement dans le calendrier.
+        const today = new Date().toISOString().slice(0, 10);
+        const rangeRes = await window.db.getMentalReportsRange('2000-01-01', '2100-01-01');
         const rows = rangeRes.ok ? (rangeRes.data ?? []) : [];
         setCalendar(rows.map(r => ({ date: r.date, emotion: r.emotion })));
         setReferenceDay(today);
@@ -73,14 +196,16 @@ export default function TraderProfile() {
     return <div style={{ padding:'24px 28px', color:P.text3, fontSize:'13px' }}>Chargement...</div>;
   }
 
-  const byDate = {};
-  for (const e of calendar) byDate[e.date] = e.emotion;
+  // Stats du bandeau (trait dominant + légende) scopées au mois affiché dans le calendrier.
+  const monthPfx = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
+  const monthEntries = calendar.filter(e => e.date.startsWith(monthPfx));
 
   const counts = {};
-  for (const e of calendar) counts[e.emotion] = (counts[e.emotion] ?? 0) + 1;
-  const legend    = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  const dominant  = legend[0]?.[0] ?? null;
+  for (const e of monthEntries) counts[e.emotion] = (counts[e.emotion] ?? 0) + 1;
+  const legend   = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const dominant = legend[0]?.[0] ?? null;
 
+  // Série actuelle : basée sur les entrées les plus récentes, indépendamment du mois affiché.
   const sortedAsc = [...calendar].sort((a, b) => a.date.localeCompare(b.date));
   let streak = 0;
   if (sortedAsc.length > 0) {
@@ -90,9 +215,6 @@ export default function TraderProfile() {
     }
   }
 
-  const month = (referenceDay ?? sortedAsc[sortedAsc.length - 1]?.date ?? '').slice(0, 7);
-  const weeks = month ? buildMonthGrid(month) : [];
-
   const dominantColor = dominant ? (EMOTION_COLORS[dominant] ?? P.text2) : P.text2;
   const dominantRgb    = emotionRgb(dominantColor);
 
@@ -101,7 +223,6 @@ export default function TraderProfile() {
       <div style={{ marginBottom:'24px' }}>
         <div style={{ fontSize:'11px', color:P.text3, letterSpacing:'3px', marginBottom:'5px' }}>TRADER PROFILE</div>
         <h1 style={{ fontSize:'22px', fontWeight:'700', color:P.text1, margin:'0 0 3px', letterSpacing:'-0.5px' }}>Profil Trader</h1>
-        <div style={{ fontSize:'13px', color:P.text3 }}>{month ? monthLabel(month) : ''}</div>
       </div>
 
       {/* Bandeau */}
@@ -128,35 +249,8 @@ export default function TraderProfile() {
       </div>
 
       {/* Calendrier */}
-      <div style={{ background:`${P.bg}0.4)`, border:`1px solid ${P.border}0.10)`, borderRadius:'12px', padding:'14px 16px', marginBottom:'16px' }}>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'4px', marginBottom:'6px' }}>
-          {WEEKDAY_LABELS.map(d => (
-            <div key={d} style={{ fontSize:'10px', color:P.text3, letterSpacing:'1px', textAlign:'center' }}>{d}</div>
-          ))}
-        </div>
-        {weeks.map((week, wi) => (
-          <div key={wi} style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'4px', marginBottom:'4px' }}>
-            {week.map((date, di) => {
-              if (!date) return <div key={di} />;
-              const emotion = byDate[date];
-              const color   = emotion ? (EMOTION_COLORS[emotion] ?? P.text2) : null;
-              const cellRgb = color ? emotionRgb(color) : null;
-              const isRef   = date === referenceDay;
-              const dayNum  = parseInt(date.slice(-2), 10);
-              return (
-                <div key={di} style={{
-                  height: '40px', borderRadius: '6px',
-                  border: isRef ? `2px solid ${color ?? '#8899bb'}` : `1px solid ${P.border}0.08)`,
-                  background: cellRgb ? `rgba(${cellRgb},0.08)` : 'transparent',
-                  display:'flex', flexDirection:'row', alignItems:'center', justifyContent:'center', gap:'4px',
-                }}>
-                  <span style={{ fontSize:'10px', color: emotion ? P.text2 : P.text4 }}>{dayNum}</span>
-                  {emotion && <ToneIcon tone={emotionTone(emotion)} color={color} size={11} />}
-                </div>
-              );
-            })}
-          </div>
-        ))}
+      <div style={{ marginBottom:'16px' }}>
+        <TraitCalendar calendar={calendar} referenceDay={referenceDay} onMonthChange={(y, m) => { setViewYear(y); setViewMonth(m); }} />
       </div>
 
       {/* Légende */}
