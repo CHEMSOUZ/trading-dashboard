@@ -1,4 +1,8 @@
 ﻿const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+// Doit tourner avant tout app.getPath/new Store/require('./accounts.cjs') — sinon Electron
+// utilise son nom par défaut ("Electron") pour calculer userData, et l'app écrit ses données
+// dans le mauvais dossier (packagé ou en dev).
+app.setName('Trading Dashboard');
 const path  = require('path');
 const fs    = require('fs');
 const http  = require('http');
@@ -769,6 +773,45 @@ async function loadGlobalDb() {
   }
 }
 
+// Migration ponctuelle : avant le correctif app.setName() ci-dessus, l'app écrivait ses
+// données dans %APPDATA%\Electron (nom par défaut d'Electron) au lieu de %APPDATA%\Trading
+// Dashboard. Copie les fichiers de données une seule fois vers le bon dossier ; l'ancien
+// dossier n'est jamais supprimé (sauvegarde de sécurité).
+function migrateLegacyElectronUserData() {
+  try {
+    const oldDir = path.join(app.getPath('appData'), 'Electron');
+    const newDir = app.getPath('userData'); // déjà correct grâce à app.setName() en tête de fichier
+
+    const oldAccountsFile = path.join(oldDir, 'accounts.json');
+    const newAccountsFile = path.join(newDir, 'accounts.json');
+
+    if (!fs.existsSync(oldAccountsFile) || fs.existsSync(newAccountsFile)) return; // rien à faire / déjà migré
+
+    fs.mkdirSync(newDir, { recursive: true });
+
+    const filesToCopy = fs.readdirSync(oldDir).filter(name =>
+      name === 'accounts.json' ||
+      name === 'global.db' ||
+      name === 'market_analyses.db' ||
+      name === 'bot_signals.json' ||
+      /^trading_.*\.db$/.test(name)
+    );
+
+    let copied = 0;
+    for (const name of filesToCopy) {
+      try {
+        fs.copyFileSync(path.join(oldDir, name), path.join(newDir, name));
+        copied++;
+      } catch (e) {
+        console.error(`[migration userData] échec copie ${name}:`, e.message);
+      }
+    }
+    console.log(`[migration userData] ${copied}/${filesToCopy.length} fichier(s) copiés de ${oldDir} vers ${newDir}. Ancien dossier conservé tel quel.`);
+  } catch (e) {
+    console.error('[migration userData] échec global:', e.message);
+  }
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400, height: 900,
@@ -795,6 +838,7 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  migrateLegacyElectronUserData();
   await init();
   await loadActiveDb();
   await loadGlobalDb();
