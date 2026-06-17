@@ -1,5 +1,5 @@
-// Couleurs / tonalités / icônes par trait psychologique — partagé entre
-// EmotionalCheck.jsx (portrait du jour) et TraderProfile.jsx (calendrier mensuel).
+// Couleurs / tonalités / icônes par trait psychologique — utilisé par
+// TraderProfile.jsx (portrait du jour + calendrier mensuel) et LoginScreen.jsx (teaser).
 export const EMOTION_COLORS = {
   'Discipliné':'#00cc77', 'Serein':'#00cc77',
   'Focalisé':  '#00aaff', 'Stressé':'#f59e0b',

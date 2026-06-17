@@ -14,7 +14,6 @@ import LoginScreen from './features/auth/LoginScreen';
 const Dashboard         = lazy(() => import('./pages/Dashboard'));
 const Stats             = lazy(() => import('./pages/Stats'));
 const PropFirm          = lazy(() => import('./pages/PropFirm'));
-const EmotionalCheck    = lazy(() => import('./pages/EmotionalCheck'));
 const TraderProfile     = lazy(() => import('./pages/TraderProfile'));
 const Analysis          = lazy(() => import('./pages/Analysis'));
 const GlobalView        = lazy(() => import('./pages/GlobalView'));
@@ -33,7 +32,7 @@ const SHORTCUTS = [
     { key: 'J', desc: 'Journal des trades' },
     { key: 'G', desc: 'Vue globale (comptes)' },
     { key: 'N', desc: 'Nouveau trade' },
-    { key: 'E', desc: 'Bilan émotionnel' },
+    { key: 'E', desc: 'Profil Trader' },
   ]},
   { section: 'Journal', items: [
     { key: '▶', desc: 'Replay du trade (bouton ligne)' },
@@ -97,7 +96,7 @@ export default function App() {
       if (e.key === 'j' || e.key === 'J') { window.location.hash = '#/journal'; }
       if (e.key === 'g' || e.key === 'G') { window.location.hash = '#/global'; }
       if (e.key === 'n' || e.key === 'N') { window.location.hash = '#/journal/new'; }
-      if (e.key === 'e' || e.key === 'E') { window.location.hash = '#/emotional'; }
+      if (e.key === 'e' || e.key === 'E') { window.location.hash = '#/profile'; }
     }
     window.addEventListener('keydown', onGlobalKey);
     return () => {
@@ -214,7 +213,7 @@ export default function App() {
               <Route path="/propfirm"      element={<PropFirm />} />
               <Route path="/topstep"       element={<Navigate to="/propfirm" replace />} />
               <Route path="/lucid"         element={<Navigate to="/propfirm" replace />} />
-              <Route path="/emotional"     element={<EmotionalCheck />} />
+              <Route path="/emotional"     element={<Navigate to="/profile" replace />} />
               <Route path="/profile"       element={<TraderProfile />} />
               <Route path="/calendar"      element={<EconomicCalendar />} />
               <Route path="/payout"        element={<Payout />} />
