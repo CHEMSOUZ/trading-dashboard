@@ -418,7 +418,6 @@ export default function TraderProfile() {
   const [modalDate,     setModalDate]     = useState(null);
 
   // ── Bilan IA du jour (anciennement État Mental) ──
-  const [allTrades,      setAllTrades]      = useState([]); // trades du compte actif (pour mini-stats jour dans ReportModal)
   const [report,         setReport]         = useState(null); // { date, emotion, text, generatedAt }
   const [generating,     setGenerating]     = useState(false);
   const [authError,      setAuthError]      = useState(null); // null | 'unauthenticated' | 'subscription_inactive' | 'quota_exceeded'
@@ -432,6 +431,7 @@ export default function TraderProfile() {
   const [weeklyAuthError,    setWeeklyAuthError]    = useState(null);
   const [weeklyQuotaReset,   setWeeklyQuotaReset]   = useState(null);
   const [weeklyInsufficient, setWeeklyInsufficient] = useState(false);
+  const [weeklyError,        setWeeklyError]        = useState(null); // erreur générique (ex: backend injoignable)
 
   useEffect(() => {
     (async () => {
@@ -442,7 +442,6 @@ export default function TraderProfile() {
       ]);
       const demoMode = !!sessionRes.data?.user && sessionRes.data.user.subscription_status !== 'active';
       const trades = tradesRes.ok ? (tradesRes.data ?? []) : [];
-      setAllTrades(trades);
       const day = demoMode
         ? trades.reduce((max, t) => (t.date && t.date > max ? t.date : max), trades[0]?.date ?? getPreviousTradingDay())
         : getPreviousTradingDay();
@@ -462,10 +461,11 @@ export default function TraderProfile() {
             const net = t.result_net ?? t.result;
             if (net != null && net !== 0 && Math.abs(net) < 10) continue; // micro trades exclus (cf. Vue Globale)
             const d = t.date; if (!d) continue;
-            if (!byDay[d]) byDay[d] = { count: 0, wins: 0, losses: 0 };
+            if (!byDay[d]) byDay[d] = { count: 0, wins: 0, losses: 0, pnl: 0 };
             byDay[d].count++;
             const val = net ?? 0;
             if (val > 0) byDay[d].wins++; else if (val < 0) byDay[d].losses++;
+            byDay[d].pnl += val;
           }
         }
         setTradeStats(byDay);
@@ -527,6 +527,7 @@ export default function TraderProfile() {
     setWeeklyAuthError(null);
     setWeeklyQuotaReset(null);
     setWeeklyInsufficient(false);
+    setWeeklyError(null);
 
     try {
       const weekStart = getCurrentWeekStart();
@@ -566,7 +567,8 @@ export default function TraderProfile() {
           if (res.error === 'quota_exceeded') setWeeklyQuotaReset(res.resetDate ?? null);
           return;
         }
-        throw new Error(res.error);
+        setWeeklyError(res.error || 'Erreur de connexion au serveur IA.');
+        return;
       }
 
       let parsed;
@@ -592,6 +594,7 @@ export default function TraderProfile() {
       });
     } catch (e) {
       console.error('Weekly AI report error:', e);
+      setWeeklyError(e.message || 'Erreur lors de la génération du bilan hebdomadaire.');
     } finally {
       setWeeklyGenerating(false);
     }
@@ -707,15 +710,16 @@ export default function TraderProfile() {
   const badgeColor = report ? (EMOTION_COLORS[report.emotion] ?? P.text2) : P.text3;
   const badgeRgb    = emotionRgb(badgeColor);
 
-  // Mini-stats du jour affichées dans la modale de détail (carte ouverte au clic calendrier).
+  // Mini-stats du jour affichées dans la modale de détail (carte ouverte au clic calendrier) —
+  // sourcées de tradeStats (agrégat tous comptes), même scope que les badges du calendrier,
+  // pour ne pas dépendre du compte actif au moment de l'ouverture (qui peut différer de celui
+  // actif lors de la génération du bilan).
   const modalEntry = modalDate ? calendar.find(e => e.date === modalDate) : null;
   let modalDayStats = null;
   if (modalEntry) {
-    const dayTrades = allTrades.filter(t => (t.date ?? '').startsWith(modalEntry.date));
-    const count = dayTrades.length;
-    const wins  = dayTrades.filter(t => (t.result_net ?? t.result ?? 0) > 0).length;
-    const pnl   = dayTrades.reduce((s, t) => s + (t.result_net ?? t.result ?? 0), 0);
-    modalDayStats = { count, wr: count > 0 ? Math.round(wins / count * 100) : null, pnl };
+    const dayStat = tradeStats[modalEntry.date];
+    const count = dayStat?.count ?? 0;
+    modalDayStats = { count, wr: count > 0 ? Math.round(dayStat.wins / count * 100) : null, pnl: dayStat?.pnl ?? 0 };
   }
 
   const noTradeSynthesis = noTrades ? computeNoTradeSynthesis(calendar) : null;
@@ -785,6 +789,10 @@ export default function TraderProfile() {
 
                 {weeklyInsufficient && !weeklyGenerating && (
                   <div style={{ fontSize:'12px', color:P.text3 }}>Historique encore trop court pour un bilan hebdomadaire.</div>
+                )}
+
+                {weeklyError && !weeklyGenerating && (
+                  <div style={{ fontSize:'12px', color:P.red }}>{weeklyError}</div>
                 )}
 
                 {weeklyReport && (
