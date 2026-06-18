@@ -910,7 +910,7 @@ function AnalyseTab({ byDow, bySessions, hourDataFull, byHour, pairArr, emotionA
         <Section title="🧠 PERFORMANCE PAR ÉTAT MENTAL">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {emotionArr.length === 0 ? (
-              <div style={{ color: '#3a1818', fontSize:'13px', textAlign: 'center', padding: '20px 0' }}>Renseigne ton émotion sur chaque trade</div>
+              <div style={{ color: '#3a1818', fontSize:'13px', textAlign: 'center', padding: '20px 0' }}>Aucun bilan IA disponible (Profil Trader)</div>
             ) : emotionArr.map(e => (
               <div key={e.em} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'rgba(14,15,22,0.4)', borderRadius: '5px', border: '1px solid rgba(136,153,187,0.08)' }}>
                 <div style={{ flex: 1 }}>
@@ -998,6 +998,7 @@ export default function GlobalView() {
   const [selectedAccounts, setSelectedAccounts] = useState([]);
   const [modal, setModal]           = useState(null); // { title, subtitle, color, trades }
   const [activeTab, setActiveTab]   = useState('overview');
+  const [mentalByDay, setMentalByDay] = useState({}); // { [date]: trait IA } — bilans du Profil Trader (DB globale)
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1012,6 +1013,14 @@ export default function GlobalView() {
         if (tRes.ok) tRes.data.forEach(t => allT.push({ ...t, _accountId: acc.id, _accountName: acc.name, _accountColor: acc.color }));
       }
       setAllTrades(allT);
+
+      // Bilans psychologiques quotidiens (Profil Trader) — DB globale, indépendante du compte.
+      const mentalRes = await window.db.getMentalReportsRange('2000-01-01', '2100-01-01');
+      if (mentalRes.ok) {
+        const byDay = {};
+        for (const r of mentalRes.data ?? []) byDay[r.date] = r.emotion;
+        setMentalByDay(byDay);
+      }
     } catch(e) { console.error('GlobalView:', e); }
     setLoading(false);
   }, []);
@@ -1124,13 +1133,24 @@ export default function GlobalView() {
   }, {});
   const pairArr = Object.entries(byPair).sort(([,a],[,b]) => b.total - a.total).map(([pair, d]) => ({ pair, ...d, wr: Math.round(d.wins/d.total*100) }));
 
-  // ── By emotion ────────────────────────────────────────────
-  const byEmotion = trades.reduce((acc, t) => {
-    const em = t.emotion ?? 'Inconnu';
-    if (!acc[em]) acc[em] = { total:0, wins:0, pnl:0 };
-    acc[em].total++;
-    if (getNet(t) > 0) acc[em].wins++;
-    acc[em].pnl += getNet(t);
+  // ── By emotion — trait IA quotidien du Profil Trader (pas l'émotion saisie par trade) :
+  // on agrège d'abord les trades par jour, puis on joint chaque jour au trait IA de ce jour-là.
+  const byDayForEmotion = trades.reduce((acc, t) => {
+    const d = t.date; if (!d) return acc;
+    if (!acc[d]) acc[d] = { pnl: 0, count: 0, wins: 0 };
+    const net = getNet(t);
+    acc[d].pnl += net;
+    acc[d].count++;
+    if (net > 0) acc[d].wins++;
+    return acc;
+  }, {});
+  const byEmotion = Object.entries(byDayForEmotion).reduce((acc, [date, d]) => {
+    const trait = mentalByDay[date];
+    if (!trait) return acc;
+    if (!acc[trait]) acc[trait] = { total:0, wins:0, pnl:0 };
+    acc[trait].total += d.count;
+    acc[trait].wins  += d.wins;
+    acc[trait].pnl   += d.pnl;
     return acc;
   }, {});
   const emotionArr = Object.entries(byEmotion).sort(([,a],[,b]) => b.total - a.total).map(([em, d]) => ({ em, ...d, wr: Math.round(d.wins/d.total*100) }));
