@@ -65,9 +65,9 @@ function StatCard({ label, value, sub, color = '#dde4ef', featured = false }) {
   if (featured) {
     const rgb = color === '#00cc77' ? '0,204,119' : color === '#ff3344' ? '255,51,68' : '136,153,187';
     return (
-      <div style={{ background:`linear-gradient(135deg, rgba(${rgb},0.22), rgba(${rgb},0.05))`, border:`1px solid rgba(${rgb},0.35)`, borderRadius:'8px', padding:'18px 20px' }}>
+      <div style={{ minWidth:0, background:`linear-gradient(135deg, rgba(${rgb},0.22), rgba(${rgb},0.05))`, border:`1px solid rgba(${rgb},0.35)`, borderRadius:'8px', padding:'18px 20px' }}>
         <div style={{ fontSize:'12px', color:'#8898aa', letterSpacing:'1.8px', marginBottom:'8px' }}>{label}</div>
-        <div style={{ fontSize:'34px', fontWeight:'800', color, letterSpacing:'-0.8px', lineHeight:1 }}>{value}</div>
+        <div style={{ fontSize:'34px', fontWeight:'800', color, letterSpacing:'-0.8px', lineHeight:1, overflowWrap:'anywhere' }}>{value}</div>
         {sub && <div style={{ fontSize:'12px', color:'#8898aa', marginTop:'7px' }}>{sub}</div>}
       </div>
     );
@@ -508,7 +508,7 @@ export default function Stats() {
       </div>
 
       {/* ── KPI GRID ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: '10px', marginBottom: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(5,1fr)', gap: '10px', marginBottom: '16px' }}>
         <StatCard label="P&L NET" value={fmt(fPnl, true)} color={pnlColor(fPnl)} sub={`Frais: -${fFees.toFixed(2)}$`} featured />
         <StatCard label="WINRATE" value={`${fWR.toFixed(1)}%`} color={fWR >= 50 ? '#00cc77' : '#ff3344'} sub={`${fWins}W / ${fLosses}L / ${fBe}BE`} />
         <StatCard label="PROFIT FACTOR" value={fPF === 999 ? '∞' : fPF.toFixed(2)} color={fPF >= 1.5 ? '#00cc77' : fPF >= 1 ? '#f0a020' : '#ff3344'} />

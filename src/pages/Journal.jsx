@@ -347,9 +347,9 @@ function StatCard({ label, value, sub, color=T.text1, featured=false }) {
   if (featured) {
     const rgb = color === '#00cc77' ? '0,204,119' : color === '#ff3344' ? '255,51,68' : '136,153,187';
     return (
-      <div style={{ background:`linear-gradient(135deg, rgba(${rgb},0.22), rgba(${rgb},0.05))`, border:`1px solid rgba(${rgb},0.35)`, borderRadius:'8px', padding:'18px 20px' }}>
+      <div style={{ gridColumn:'span 2', minWidth:0, background:`linear-gradient(135deg, rgba(${rgb},0.22), rgba(${rgb},0.05))`, border:`1px solid rgba(${rgb},0.35)`, borderRadius:'8px', padding:'18px 20px' }}>
         <div style={{ fontSize:'12px', color:T.text2, letterSpacing:'1.8px', marginBottom:'8px' }}>{label}</div>
-        <div style={{ fontSize:'34px', fontWeight:'800', color, letterSpacing:'-0.8px', lineHeight:1 }}>{value}</div>
+        <div style={{ fontSize:'34px', fontWeight:'800', color, letterSpacing:'-0.8px', lineHeight:1, overflowWrap:'anywhere' }}>{value}</div>
         {sub && <div style={{ fontSize:'12px', color:T.text2, marginTop:'7px' }}>{sub}</div>}
       </div>
     );

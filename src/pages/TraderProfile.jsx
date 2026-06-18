@@ -124,6 +124,36 @@ function MiniStat({ label, value }) {
   );
 }
 
+// Trait le plus fréquent sur un ensemble d'entrées calendar — utilisé pour le
+// bandeau "trait dominant ce mois" et pour la synthèse pleine période (jour sans trade).
+function dominantTrait(entries) {
+  const counts = {};
+  for (const e of entries) counts[e.emotion] = (counts[e.emotion] ?? 0) + 1;
+  const legend = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  return { legend, dominant: legend[0]?.[0] ?? null };
+}
+
+// Synthèse locale (aucun appel IA) affichée quand le jour cliqué n'a pas de trade :
+// trait dominant sur toute la période dispo + tendance 1ère moitié vs 2nde moitié.
+function computeNoTradeSynthesis(calendar) {
+  if (calendar.length === 0) return null;
+  const sorted = [...calendar].sort((a, b) => a.date.localeCompare(b.date));
+  const totalDays = sorted.length;
+  const { dominant: dominantOverall } = dominantTrait(sorted);
+
+  const mid = Math.ceil(totalDays / 2);
+  const { dominant: firstDom }  = dominantTrait(sorted.slice(0, mid));
+  const { dominant: secondDom } = dominantTrait(sorted.slice(mid));
+  const firstTone  = firstDom  ? emotionTone(firstDom)  : 'neutral';
+  const secondTone = secondDom ? emotionTone(secondDom) : 'neutral';
+
+  let trend = 'stable';
+  if (firstTone === 'negative' && secondTone === 'positive') trend = 'amelioration';
+  else if (firstTone === 'positive' && secondTone === 'negative') trend = 'degradation';
+
+  return { dominantOverall, trend, totalDays };
+}
+
 // Formatte le texte d'un rapport en blocs (ÉTAT ÉMOTIONNEL / PATTERNS / FOCUS).
 function renderBlocks(text, color) {
   if (!text) return <div style={{ fontSize:'13px', color:P.text3 }}>Aucun détail disponible pour ce jour.</div>;
@@ -149,7 +179,7 @@ function renderBlocks(text, color) {
 }
 
 // ── Modale — analyse psychologique complète d'un jour (ouverte au clic depuis le calendrier) ──
-function ReportModal({ entry, onClose }) {
+function ReportModal({ entry, dayStats, onClose }) {
   if (!entry) return null;
   const color = EMOTION_COLORS[entry.emotion] ?? P.text2;
   const rgb   = emotionRgb(color);
@@ -169,6 +199,13 @@ function ReportModal({ entry, onClose }) {
           <button onClick={onClose} style={{ background:'transparent', border:'none', color:P.text3, cursor:'pointer', fontSize:'18px', padding:'0', lineHeight:1 }}>✕</button>
         </div>
         <div style={{ padding:'22px 24px 24px', overflowY:'auto' }}>
+          {dayStats && (
+            <div style={{ display:'flex', gap:'8px', marginBottom:'20px' }}>
+              <MiniStat label="TRADES" value={dayStats.count} />
+              <MiniStat label="WIN RATE" value={dayStats.wr != null ? `${dayStats.wr}%` : '—'} />
+              <MiniStat label="P&L NET" value={dayStats.count > 0 ? `${dayStats.pnl >= 0 ? '+' : ''}${dayStats.pnl.toFixed(2)}$` : '—'} />
+            </div>
+          )}
           <div>{renderBlocks(entry.text, color)}</div>
           {entry.generatedAt && (
             <div style={{ marginTop:'20px', paddingTop:'14px', borderTop:`1px solid ${P.border}0.08)`, display:'flex', alignItems:'center', gap:'8px' }}>
@@ -349,6 +386,7 @@ export default function TraderProfile() {
   const [modalDate,     setModalDate]     = useState(null);
 
   // ── Bilan IA du jour (anciennement État Mental) ──
+  const [allTrades,      setAllTrades]      = useState([]); // trades du compte actif (pour mini-stats jour dans ReportModal)
   const [report,         setReport]         = useState(null); // { date, emotion, text, generatedAt }
   const [generating,     setGenerating]     = useState(false);
   const [authError,      setAuthError]      = useState(null); // null | 'unauthenticated' | 'subscription_inactive' | 'quota_exceeded'
@@ -365,6 +403,7 @@ export default function TraderProfile() {
       ]);
       const demoMode = !!sessionRes.data?.user && sessionRes.data.user.subscription_status !== 'active';
       const trades = tradesRes.ok ? (tradesRes.data ?? []) : [];
+      setAllTrades(trades);
       const day = demoMode
         ? trades.reduce((max, t) => (t.date && t.date > max ? t.date : max), trades[0]?.date ?? getPreviousTradingDay())
         : getPreviousTradingDay();
@@ -527,11 +566,7 @@ export default function TraderProfile() {
   // Stats du bandeau (trait dominant + légende) scopées au mois affiché dans le calendrier.
   const monthPfx = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
   const monthEntries = calendar.filter(e => e.date.startsWith(monthPfx));
-
-  const counts = {};
-  for (const e of monthEntries) counts[e.emotion] = (counts[e.emotion] ?? 0) + 1;
-  const legend   = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  const dominant = legend[0]?.[0] ?? null;
+  const { legend, dominant } = dominantTrait(monthEntries);
 
   // Série actuelle : basée sur les entrées les plus récentes, indépendamment du mois affiché.
   const sortedAsc = [...calendar].sort((a, b) => a.date.localeCompare(b.date));
@@ -548,6 +583,19 @@ export default function TraderProfile() {
 
   const badgeColor = report ? (EMOTION_COLORS[report.emotion] ?? P.text2) : P.text3;
   const badgeRgb    = emotionRgb(badgeColor);
+
+  // Mini-stats du jour affichées dans la modale de détail (carte ouverte au clic calendrier).
+  const modalEntry = modalDate ? calendar.find(e => e.date === modalDate) : null;
+  let modalDayStats = null;
+  if (modalEntry) {
+    const dayTrades = allTrades.filter(t => (t.date ?? '').startsWith(modalEntry.date));
+    const count = dayTrades.length;
+    const wins  = dayTrades.filter(t => (t.result_net ?? t.result ?? 0) > 0).length;
+    const pnl   = dayTrades.reduce((s, t) => s + (t.result_net ?? t.result ?? 0), 0);
+    modalDayStats = { count, wr: count > 0 ? Math.round(wins / count * 100) : null, pnl };
+  }
+
+  const noTradeSynthesis = noTrades ? computeNoTradeSynthesis(calendar) : null;
 
   return (
     <div style={{ padding:'24px 28px' }}>
@@ -575,13 +623,33 @@ export default function TraderProfile() {
         </div>
       )}
 
-      {/* ── Aucun trade ── */}
+      {/* ── Aucun trade : synthèse locale (sans appel IA) basée sur l'historique mental_reports ── */}
       {noTrades && !authError && !generating && (
-        <div style={{ marginBottom:'20px', padding:'20px', background:`${P.bg}0.40)`, border:`1px solid ${P.border}0.10)`, borderRadius:'10px', textAlign:'center' }}>
-          <div style={{ fontSize:'28px', marginBottom:'10px' }}>📊</div>
-          <div style={{ fontSize:'14px', color:P.text2 }}>Aucun trade enregistré le {fmtDate(referenceDay)}.</div>
-          <div style={{ fontSize:'12px', color:P.text3, marginTop:'4px' }}>Pas d'analyse disponible pour ce jour.</div>
-        </div>
+        noTradeSynthesis ? (() => {
+          const { dominantOverall, trend, totalDays } = noTradeSynthesis;
+          const trendLabel = trend === 'amelioration' ? "Ta tendance récente s'améliore"
+            : trend === 'degradation' ? 'Ta tendance récente montre des signes de dégradation'
+            : 'Ta tendance récente reste stable';
+          const trendColor = trend === 'amelioration' ? P.green : trend === 'degradation' ? P.red : P.text2;
+          return (
+            <div style={{ marginBottom:'20px', padding:'20px', background:`${P.bg}0.40)`, border:`1px solid ${P.border}0.10)`, borderRadius:'10px' }}>
+              <div style={{ fontSize:'13px', color:P.text2, marginBottom:'14px' }}>
+                Aucun trade enregistré le {fmtDate(referenceDay)} — voici la synthèse de ton évolution récente :
+              </div>
+              <div style={{ display:'flex', gap:'8px', marginBottom:'14px' }}>
+                <MiniStat label="TRAIT DOMINANT" value={dominantOverall ?? '—'} />
+                <MiniStat label="JOURS ANALYSÉS" value={totalDays} />
+              </div>
+              <div style={{ fontSize:'13px', color:trendColor, fontWeight:'700' }}>{trendLabel}.</div>
+            </div>
+          );
+        })() : (
+          <div style={{ marginBottom:'20px', padding:'20px', background:`${P.bg}0.40)`, border:`1px solid ${P.border}0.10)`, borderRadius:'10px', textAlign:'center' }}>
+            <div style={{ fontSize:'28px', marginBottom:'10px' }}>📊</div>
+            <div style={{ fontSize:'14px', color:P.text2 }}>Aucun trade enregistré le {fmtDate(referenceDay)}.</div>
+            <div style={{ fontSize:'12px', color:P.text3, marginTop:'4px' }}>Pas d'analyse disponible pour ce jour.</div>
+          </div>
+        )
       )}
 
       {/* ── Skeleton chargement ── */}
@@ -694,7 +762,7 @@ export default function TraderProfile() {
       </div>
 
       {modalDate && (
-        <ReportModal entry={calendar.find(e => e.date === modalDate)} onClose={() => setModalDate(null)} />
+        <ReportModal entry={modalEntry} dayStats={modalDayStats} onClose={() => setModalDate(null)} />
       )}
     </div>
   );
