@@ -37,6 +37,18 @@ function addDaysStr(dateStr, n) {
   return d.toISOString().slice(0, 10);
 }
 
+// Lundi de la semaine calendaire contenant la date donnée (ancré sur "aujourd'hui" réel,
+// pas sur referenceDay, pour que "1 appel IA max par semaine" reste stable peu importe
+// le dernier jour de trading).
+function mondayOf(d) {
+  const day  = d.getDay(); // 0=dim..6=sam
+  const diff = day === 0 ? -6 : 1 - day;
+  const m = new Date(d);
+  m.setDate(m.getDate() + diff);
+  return m.toISOString().slice(0, 10);
+}
+function getCurrentWeekStart() { return mondayOf(new Date()); }
+
 // Accroche statique affichée sous le nom du trait dans le bandeau-badge.
 const EMOTION_TAGLINE = {
   'Discipliné':  'Exécution rigoureuse, plan respecté à la lettre.',
@@ -88,6 +100,26 @@ FOCUS POUR DEMAIN
 
 Réponds en JSON pur sans markdown :
 {"emotion":"[UN SEUL MOT parmi: Discipliné|Serein|Focalisé|Stressé|Fragile|Surconfiant|Impulsif|Vengeur]","description":"[texte complet avec les 3 blocs séparés par \\n\\n]"}`;
+}
+
+// Prompt hebdomadaire — volontairement différent de buildPrompt : demande une synthèse
+// d'évolution sur plusieurs jours (tendance, patterns récurrents), pas un résumé jour par jour.
+function buildWeeklyPrompt(entries, weekStart) {
+  const weekEnd = addDaysStr(weekStart, 6);
+  const sorted  = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+  const recap = sorted.map(e => {
+    const txt = (e.text ?? '').replace(/\n+/g, ' ').slice(0, 280);
+    return `${fmtDate(e.date)} — ${e.emotion} : ${txt || '(pas de détail)'}`;
+  }).join('\n');
+
+  return `Tu es un expert en psychologie du trading. Voici les bilans psychologiques quotidiens d'un trader, du ${fmtDate(weekStart)} au ${fmtDate(weekEnd)} (${sorted.length} jour(s) avec activité disponibles) :
+
+${recap}
+
+Génère une SYNTHÈSE D'ÉVOLUTION sur l'ensemble de cette période — PAS un résumé jour par jour mis côte à côte. Identifie la tendance globale, les patterns psychologiques qui se répètent sur plusieurs jours (récurrence de stress, progression de la discipline, cycles émotionnels, revenge trading récurrent, etc.), et termine par une recommandation concrète pour la semaine suivante.
+
+Réponds en JSON pur sans markdown :
+{"trend":"[constat global en une courte expression, ex: 'En progression'|'Stable'|'Vigilance requise'|'En dégradation']","description":"[2 à 3 paragraphes de synthèse d'évolution, séparés par une ligne vide]"}`;
 }
 
 const SK_AI = 'mental_ai_reports';
@@ -394,6 +426,13 @@ export default function TraderProfile() {
   const [noTrades,       setNoTrades]       = useState(false);
   const [stats,          setStats]          = useState(null); // winrate/profitFactor/streak
 
+  // ── Bilan IA hebdomadaire (complément du bloc "aucun trade") ──
+  const [weeklyReport,       setWeeklyReport]       = useState(null); // { weekStart, trend, description, generatedAt }
+  const [weeklyGenerating,   setWeeklyGenerating]   = useState(false);
+  const [weeklyAuthError,    setWeeklyAuthError]    = useState(null);
+  const [weeklyQuotaReset,   setWeeklyQuotaReset]   = useState(null);
+  const [weeklyInsufficient, setWeeklyInsufficient] = useState(false);
+
   useEffect(() => {
     (async () => {
       const [sessionRes, tradesRes, statsRes] = await Promise.all([
@@ -473,6 +512,90 @@ export default function TraderProfile() {
     if (isDemoMode) return; // le rapport démo est déjà résolu au chargement
     generate(false);
   }, [loading]);
+
+  // Bilan hebdomadaire : déclenché uniquement quand le jour affiché n'a pas de trade.
+  // Vérifie d'abord en base (1 appel IA max par semaine calendaire, peu importe le nombre
+  // d'ouvertures de la page cette semaine-là) avant d'envisager un nouvel appel.
+  useEffect(() => {
+    if (loading || !noTrades || isDemoMode) return;
+    if (weeklyReport || weeklyGenerating) return;
+    loadOrGenerateWeeklyReport();
+  }, [loading, noTrades, isDemoMode]);
+
+  async function loadOrGenerateWeeklyReport() {
+    setWeeklyGenerating(true);
+    setWeeklyAuthError(null);
+    setWeeklyQuotaReset(null);
+    setWeeklyInsufficient(false);
+
+    try {
+      const weekStart = getCurrentWeekStart();
+      const existingRes = await window.db.getWeeklyReport(weekStart);
+      if (existingRes.ok && existingRes.data) {
+        setWeeklyReport({
+          weekStart:   existingRes.data.week_start,
+          trend:       existingRes.data.trend,
+          description: existingRes.data.description,
+          generatedAt: existingRes.data.generated_at,
+        });
+        return; // déjà généré cette semaine — aucun appel IA
+      }
+
+      // Bilans de la semaine calendaire en cours ; si trop peu, fallback sur les derniers
+      // jours disponibles au global (historique encore court, ex: 18 jours au total).
+      const weekEnd  = addDaysStr(weekStart, 6);
+      const withText = calendar.filter(e => e.text);
+      let source = withText.filter(e => e.date >= weekStart && e.date <= weekEnd);
+      if (source.length < 2) {
+        source = [...withText].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7);
+      }
+      if (source.length < 2) {
+        setWeeklyInsufficient(true);
+        return; // historique trop court — pas d'appel IA, rien à sauvegarder
+      }
+
+      const prompt = buildWeeklyPrompt(source, weekStart);
+      const res    = await window.ai.chat(
+        [{ role: 'user', content: prompt }],
+        'Tu es un expert en psychologie du trading. Réponds uniquement en JSON valide, sans markdown ni backticks.'
+      );
+
+      if (!res.ok) {
+        if (['unauthenticated', 'subscription_inactive', 'quota_exceeded'].includes(res.error)) {
+          setWeeklyAuthError(res.error);
+          if (res.error === 'quota_exceeded') setWeeklyQuotaReset(res.resetDate ?? null);
+          return;
+        }
+        throw new Error(res.error);
+      }
+
+      let parsed;
+      try {
+        const txt = res.data.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '');
+        parsed = JSON.parse(txt);
+      } catch {
+        const m = res.data.match(/\{[\s\S]*\}/);
+        parsed  = m ? JSON.parse(m[0]) : { trend: 'Analysé', description: res.data };
+      }
+
+      const trend       = parsed.trend       ?? 'Analysé';
+      const description = parsed.description ?? res.data;
+
+      const saveRes = await window.db.saveWeeklyReport(weekStart, trend, description);
+      const saved   = saveRes.ok ? saveRes.data : null;
+
+      setWeeklyReport({
+        weekStart:   saved?.week_start   ?? weekStart,
+        trend:       saved?.trend        ?? trend,
+        description: saved?.description ?? description,
+        generatedAt: saved?.generated_at ?? new Date().toISOString(),
+      });
+    } catch (e) {
+      console.error('Weekly AI report error:', e);
+    } finally {
+      setWeeklyGenerating(false);
+    }
+  }
 
   async function generate(force = false) {
     if (generating) return;
@@ -641,6 +764,41 @@ export default function TraderProfile() {
                 <MiniStat label="JOURS ANALYSÉS" value={totalDays} />
               </div>
               <div style={{ fontSize:'13px', color:trendColor, fontWeight:'700' }}>{trendLabel}.</div>
+
+              <div style={{ marginTop:'18px', paddingTop:'16px', borderTop:`1px solid ${P.border}0.08)` }}>
+                <div style={{ fontSize:'10px', color:P.text3, letterSpacing:'2px', fontWeight:'700', marginBottom:'10px' }}>BILAN IA HEBDOMADAIRE</div>
+
+                {weeklyAuthError && (
+                  <div style={{ fontSize:'12px', color:'#f59e0b', lineHeight:'1.6' }}>
+                    {weeklyAuthError === 'unauthenticated'      ? 'Connecte-toi pour activer le bilan hebdomadaire.'
+                      : weeklyAuthError === 'subscription_inactive' ? 'Abonnement requis pour activer le bilan hebdomadaire.'
+                      : `Quota IA mensuel atteint${weeklyQuotaReset ? `, réessaie après le ${weeklyQuotaReset}` : ''}.`}
+                  </div>
+                )}
+
+                {weeklyGenerating && !weeklyReport && (
+                  <div style={{ fontSize:'12px', color:P.text3, display:'flex', alignItems:'center', gap:'8px' }}>
+                    <span style={{ animation:'pulse 1.5s ease infinite', fontSize:'8px' }}>●</span>
+                    Claude analyse ta semaine...
+                  </div>
+                )}
+
+                {weeklyInsufficient && !weeklyGenerating && (
+                  <div style={{ fontSize:'12px', color:P.text3 }}>Historique encore trop court pour un bilan hebdomadaire.</div>
+                )}
+
+                {weeklyReport && (
+                  <>
+                    <div style={{ fontSize:'14px', fontWeight:'700', color:P.text1, marginBottom:'10px' }}>{weeklyReport.trend}</div>
+                    {weeklyReport.description.split(/\n\n+/).map((p, i) => (
+                      <div key={i} style={{ fontSize:'14px', color:P.text1, lineHeight:'1.8', marginBottom:'10px' }}>{p.trim()}</div>
+                    ))}
+                    <div style={{ fontSize:'11px', color:P.text4, marginTop:'4px' }}>
+                      Semaine du {fmtDate(weeklyReport.weekStart)} · Généré par Claude
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           );
         })() : (

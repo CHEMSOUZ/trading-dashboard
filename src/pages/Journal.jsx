@@ -2085,12 +2085,20 @@ function RiskManager({ trades, account, loading }) {
 const PF_TARGETS  = { topstep_50k:3000, topstep_100k:6000, topstep_150k:9000, lucid_eval_25k:1250, lucid_eval_50k:3000, lucid_eval_100k:6000, lucid_eval_150k:9000, tradovate_live:3000 };
 const PF_MAXLOSS  = { topstep_50k:2000, topstep_100k:3000, topstep_150k:4500, lucid_eval_25k:1000, lucid_eval_50k:2000, lucid_eval_100k:3000, lucid_eval_150k:4500, tradovate_live:2000 };
 
+const JOURNAL_TABS = [
+  { key: 'overview', label: "VUE D'ENSEMBLE" },
+  { key: 'trades',   label: 'TRADES' },
+  { key: 'analyse',  label: 'ANALYSE' },
+  { key: 'risk',     label: 'RISK MANAGER' },
+];
+
 export default function Journal() {
   const [trades,      setTrades]      = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [replayTrade, setReplayTrade] = useState(null);
   const [account,     setAccount]     = useState(null);
   const [stats,       setStats]       = useState(null);
+  const [activeTab,   setActiveTab]   = useState('overview');
   const navigate = useNavigate();
 
   useEffect(() => { loadTrades(); }, []);
@@ -2223,40 +2231,47 @@ export default function Journal() {
         );
       })()}
 
-      {/* Synthèse — stats + equity + calendar */}
-      <SyntheseTab trades={trades} loading={loading} />
-
-      {/* Séparateur Patterns & Heat Map */}
-      <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'28px 0 16px' }}>
-        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
-        <span style={{ fontSize:'12px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>PATTERNS & HEAT MAP</span>
-        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+      {/* Onglets */}
+      <div style={{ display:'flex', gap:'4px', marginBottom:'20px', borderBottom:`1px solid ${T.border}0.10)` }}>
+        {JOURNAL_TABS.map(t => (
+          <button key={t.key} onClick={() => setActiveTab(t.key)}
+            style={{ padding:'8px 16px', background:'transparent', border:'none', borderBottom:`2px solid ${activeTab===t.key?T.accentL:'transparent'}`, color:activeTab===t.key?T.accentL:T.text3, fontSize:'13px', fontFamily:'inherit', letterSpacing:'2px', fontWeight:'700', cursor:'pointer', transition:'all 0.15s', marginBottom:'-1px' }}>
+            {t.label}
+          </button>
+        ))}
       </div>
-      <AnalyticsSection trades={trades} loading={loading} />
 
-      {/* Séparateur Trades */}
-      <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'28px 0 16px' }}>
-        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
-        <span style={{ fontSize:'12px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>HISTORIQUE DES TRADES</span>
-        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+      {/* Vue d'ensemble */}
+      <div style={{ display: activeTab === 'overview' ? 'block' : 'none' }}>
+        <SyntheseTab trades={trades} loading={loading} />
       </div>
-      <TradesTab trades={trades} loading={loading} navigate={navigate} onDelete={handleDelete} onFeeUpdate={handleFeeUpdate} onNoteUpdate={handleNoteUpdate} onReplay={setReplayTrade} />
 
-      {/* Séparateur Graphiques */}
-      <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'28px 0 16px' }}>
-        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
-        <span style={{ fontSize:'12px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>GRAPHIQUES & ANALYSES</span>
-        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+      {/* Trades */}
+      <div style={{ display: activeTab === 'trades' ? 'block' : 'none' }}>
+        <TradesTab trades={trades} loading={loading} navigate={navigate} onDelete={handleDelete} onFeeUpdate={handleFeeUpdate} onNoteUpdate={handleNoteUpdate} onReplay={setReplayTrade} />
       </div>
-      <GraphiquesTab trades={trades} loading={loading} />
 
-      {/* Séparateur Risk Manager */}
-      <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'28px 0 16px' }}>
-        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
-        <span style={{ fontSize:'12px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>RISK MANAGER</span>
-        <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+      {/* Analyse */}
+      <div style={{ display: activeTab === 'analyse' ? 'block' : 'none' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'0 0 16px' }}>
+          <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+          <span style={{ fontSize:'12px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>PATTERNS & HEAT MAP</span>
+          <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+        </div>
+        <AnalyticsSection trades={trades} loading={loading} />
+
+        <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'28px 0 16px' }}>
+          <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+          <span style={{ fontSize:'12px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>GRAPHIQUES & ANALYSES</span>
+          <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+        </div>
+        <GraphiquesTab trades={trades} loading={loading} />
       </div>
-      <RiskManager trades={trades} account={account} loading={loading} />
+
+      {/* Risk Manager */}
+      <div style={{ display: activeTab === 'risk' ? 'block' : 'none' }}>
+        <RiskManager trades={trades} account={account} loading={loading} />
+      </div>
     </div>
     {replayTrade && <TradeReplay trade={replayTrade} onClose={() => setReplayTrade(null)} />}
     </>

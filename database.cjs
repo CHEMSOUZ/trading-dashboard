@@ -118,6 +118,14 @@ function initSchema(db) {
       description  TEXT NOT NULL,
       generated_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS weekly_reports (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      week_start   TEXT NOT NULL UNIQUE,
+      trend        TEXT NOT NULL,
+      description  TEXT NOT NULL,
+      generated_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Migrations for existing DBs
@@ -502,6 +510,25 @@ function saveMentalReport(db, dbPath, report) {
   return getMentalReport(db, report.date);
 }
 
+// ── WEEKLY REPORTS (bilan psychologique hebdomadaire, agrège plusieurs mental_reports) ──
+function getWeeklyReport(db, weekStart) {
+  return getOne(db, 'SELECT * FROM weekly_reports WHERE week_start=?', [weekStart]);
+}
+function saveWeeklyReport(db, dbPath, report) {
+  const existing = getWeeklyReport(db, report.week_start);
+  if (existing) {
+    runQ(db, dbPath, `
+      UPDATE weekly_reports SET trend=:trend, description=:description, generated_at=datetime('now')
+      WHERE week_start=:week_start
+    `, { ':trend': report.trend, ':description': report.description, ':week_start': report.week_start });
+  } else {
+    runQ(db, dbPath, `
+      INSERT INTO weekly_reports (week_start, trend, description) VALUES (:week_start, :trend, :description)
+    `, { ':week_start': report.week_start, ':trend': report.trend, ':description': report.description });
+  }
+  return getWeeklyReport(db, report.week_start);
+}
+
 // ── AI CONVERSATIONS ──────────────────────────────────────────
 function getAiMessages(db) {
   return getAll(db, 'SELECT * FROM ai_conversations ORDER BY created_at ASC');
@@ -524,5 +551,6 @@ module.exports = {
   getDailyAnalyses, getDailyAnalysis, upsertDailyAnalysis, deleteDailyAnalysis,
   getWeeklyAnalyses, getWeeklyAnalysis, upsertWeeklyAnalysis, deleteWeeklyAnalysis,
   getMentalReport, getMentalReportsRange, saveMentalReport,
+  getWeeklyReport, saveWeeklyReport,
   getAiMessages, insertAiMessage, clearAiConversations,
 };

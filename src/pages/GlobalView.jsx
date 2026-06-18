@@ -587,6 +587,107 @@ function profitTarget(type) {
   return 3000;
 }
 
+// ── Account filter — combobox multi-select avec recherche ───────────────
+function AccountFilterCombobox({ accounts, selectedAccounts, setSelectedAccounts }) {
+  const [open, setOpen]   = useState(false);
+  const [query, setQuery] = useState('');
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function onClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  // Recherche réinitialisée à CHAQUE ouverture du menu, pas seulement après une sélection.
+  useEffect(() => { if (open) setQuery(''); }, [open]);
+
+  const label = selectedAccounts.length === 0
+    ? `Tous les comptes (${accounts.length})`
+    : selectedAccounts.length === 1
+      ? (accounts.find(a => a.id === selectedAccounts[0])?.name ?? '1 compte sélectionné')
+      : `${selectedAccounts.length} comptes sélectionnés`;
+
+  const singleSelectedAcc = selectedAccounts.length === 1 ? accounts.find(a => a.id === selectedAccounts[0]) : null;
+  const filtered = accounts.filter(a => a.name.toLowerCase().includes(query.toLowerCase()));
+
+  function toggleAccount(id) {
+    setSelectedAccounts(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  return (
+    <div ref={ref} style={{ position: 'relative', width: '300px' }}>
+      <button onClick={() => setOpen(o => !o)} style={{
+        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
+        background: 'rgba(14,15,22,0.6)', border: `1px solid ${open ? '#8899bb' : 'rgba(136,153,187,0.20)'}`,
+        borderRadius: '6px', padding: '8px 12px', color: singleSelectedAcc ? singleSelectedAcc.color : '#8899bb',
+        fontSize: '13px', fontFamily: 'inherit', cursor: 'pointer', transition: 'border-color 0.15s',
+      }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '7px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {singleSelectedAcc && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: singleSelectedAcc.color, flexShrink: 0 }} />}
+          {label}
+        </span>
+        <span style={{ color: '#5a6a82', fontSize: '11px', flexShrink: 0 }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 50, width: '340px', maxHeight: '380px',
+          background: '#0d0e16', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '8px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        }}>
+          <div style={{ padding: '8px', borderBottom: '1px solid rgba(136,153,187,0.10)' }}>
+            <input autoFocus value={query} onChange={e => setQuery(e.target.value)}
+              placeholder="Rechercher un compte..."
+              style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(14,15,22,0.6)', border: '1px solid rgba(136,153,187,0.15)', borderRadius: '4px', padding: '6px 10px', color: '#dde4ef', fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}
+            />
+          </div>
+          <div style={{ overflowY: 'auto', padding: '6px' }}>
+            <div onClick={() => setSelectedAccounts([])} style={{
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', borderRadius: '5px', cursor: 'pointer', fontWeight: '700',
+              color: selectedAccounts.length === 0 ? '#8899bb' : '#dde4ef',
+              background: selectedAccounts.length === 0 ? 'rgba(136,153,187,0.12)' : 'transparent',
+              marginBottom: '4px', borderBottom: '1px solid rgba(136,153,187,0.10)',
+            }}>
+              <span style={{
+                width: '14px', height: '14px', borderRadius: '3px', flexShrink: 0,
+                border: `1px solid ${selectedAccounts.length === 0 ? '#8899bb' : 'rgba(136,153,187,0.35)'}`,
+                background: selectedAccounts.length === 0 ? '#8899bb' : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#0d0e16',
+              }}>{selectedAccounts.length === 0 ? '✓' : ''}</span>
+              Tous les comptes ({accounts.length})
+            </div>
+            {filtered.length === 0 ? (
+              <div style={{ padding: '10px', fontSize: '12px', color: '#5a6a82', textAlign: 'center' }}>Aucun compte trouvé</div>
+            ) : filtered.map(acc => {
+              const checked = selectedAccounts.includes(acc.id);
+              return (
+                <div key={acc.id} onClick={() => toggleAccount(acc.id)} style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', borderRadius: '5px', cursor: 'pointer',
+                  color: checked ? acc.color : '#dde4ef',
+                  background: checked ? `${acc.color}15` : 'transparent',
+                }}
+                  onMouseEnter={e => { if (!checked) e.currentTarget.style.background = 'rgba(136,153,187,0.06)'; }}
+                  onMouseLeave={e => { if (!checked) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <span style={{
+                    width: '14px', height: '14px', borderRadius: '3px', flexShrink: 0,
+                    border: `1px solid ${checked ? acc.color : 'rgba(136,153,187,0.35)'}`,
+                    background: checked ? acc.color : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#0d0e16',
+                  }}>{checked ? '✓' : ''}</span>
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: acc.color, flexShrink: 0 }} />
+                  <span style={{ fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{acc.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── MAIN ──────────────────────────────────────────────────────
 export default function GlobalView() {
   const [allTrades, setAllTrades]   = useState([]);
@@ -798,19 +899,9 @@ export default function GlobalView() {
 
       {/* Account filter */}
       {accounts.length > 1 && (
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center' }}>
           <span style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1px' }}>FILTRER :</span>
-          <button onClick={() => setSelectedAccounts([])} style={{ padding: '5px 12px', borderRadius: '4px', border: `1px solid ${selectedAccounts.length===0?'#8899bb':'#1e2c40'}`, background: selectedAccounts.length===0?'rgba(136,153,187,0.12)':'transparent', color: selectedAccounts.length===0?'#8899bb':'#5a6a82', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>Tous</button>
-          {accounts.map(acc => {
-            const active = selectedAccounts.includes(acc.id);
-            return (
-              <button key={acc.id} onClick={() => setSelectedAccounts(p => active ? p.filter(id => id !== acc.id) : [...p, acc.id])}
-                style={{ padding: '5px 12px', borderRadius: '4px', border: `1px solid ${active?acc.color:'#1e2c40'}`, background: active?`${acc.color}15`:'transparent', color: active?acc.color:'#5a6a82', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: acc.color }} />
-                {acc.name}
-              </button>
-            );
-          })}
+          <AccountFilterCombobox accounts={accounts} selectedAccounts={selectedAccounts} setSelectedAccounts={setSelectedAccounts} />
         </div>
       )}
 

@@ -22,6 +22,9 @@ contextBridge.exposeInMainWorld('db', {
   getMentalReport:        (date)              => ipcRenderer.invoke('db:getMentalReport', date),
   getMentalReportsRange:  (startDate, endDate) => ipcRenderer.invoke('db:getMentalReportsRange', startDate, endDate),
   saveMentalReport:       (date, emotion, description) => ipcRenderer.invoke('db:saveMentalReport', date, emotion, description),
+  // Bilan psychologique hebdomadaire
+  getWeeklyReport:        (weekStart)                    => ipcRenderer.invoke('db:getWeeklyReport', weekStart),
+  saveWeeklyReport:       (weekStart, trend, description) => ipcRenderer.invoke('db:saveWeeklyReport', weekStart, trend, description),
 });
 
 contextBridge.exposeInMainWorld('accounts', {
