@@ -7,6 +7,8 @@ const path  = require('path');
 const fs    = require('fs');
 const http  = require('http');
 const https = require('https');
+const net   = require('net');
+const { spawn } = require('child_process');
 const { autoUpdater } = require('electron-updater');
 const Store = require('electron-store');
 const demoModule = require('./demo.cjs');
@@ -50,6 +52,17 @@ const DEMO_MODE_ERROR = { ok: false, error: 'demo_mode', message: 'Abonnement re
 })();
 
 // ── Backend proxy IA ──────────────────────────────────────────
+// Node enveloppe les échecs de connexion vers "localhost" dans un AggregateError
+// dont le message top-level est vide (les vraies infos sont dans e.errors[]) —
+// on reconstruit un message explicite à partir du code d'erreur réseau.
+function friendlyNetworkError(e) {
+  const code = e.code || e.errors?.[0]?.code;
+  if (code === 'ECONNREFUSED') return `Backend inaccessible sur ${BACKEND_URL} (ECONNREFUSED) — le serveur est-il démarré ?`;
+  if (code === 'ENOTFOUND')    return `Serveur introuvable (${BACKEND_URL}) — vérifie ta connexion.`;
+  if (code === 'ETIMEDOUT' || code === 'ECONNRESET') return 'Le serveur ne répond pas (timeout).';
+  return e.message || 'Erreur réseau inconnue';
+}
+
 // POST JSON générique vers BACKEND_URL, retourne { statusCode, body } sans throw
 // sur les statuts HTTP d'erreur (laisse l'appelant décider quoi en faire).
 function httpPostJson(pathName, payload, headers = {}) {
@@ -72,7 +85,7 @@ function httpPostJson(pathName, payload, headers = {}) {
         resolve({ statusCode: res.statusCode, body: parsed });
       });
     });
-    req.on('error', reject);
+    req.on('error', e => reject(Object.assign(new Error(friendlyNetworkError(e)), { code: e.code })));
     req.write(body);
     req.end();
   });
@@ -587,6 +600,7 @@ let demoChatMessages = [];
 let demoChatNextId   = 1;
 
 // ── Bot webhook server ────────────────────────────────────────
+let backendProcess = null;
 let botServer      = null;
 let botPort        = 3001;
 let botSignals     = [];
@@ -614,6 +628,41 @@ function saveBotSignalsToFile() {
   try {
     if (botSignalsFile) fs.writeFileSync(botSignalsFile, JSON.stringify(botSignals), 'utf-8');
   } catch(e) { console.error('[Bot] Erreur sauvegarde historique:', e.message); }
+}
+
+// ── Backend Express (auth + proxy IA) ──────────────────────────
+// Démarré comme process séparé (express/better-sqlite3 vivent dans leur propre
+// node_modules, indépendant de l'ABI Electron) — jamais bundlé dans l'installeur :
+// il reste sur la machine de dev pour ne pas exposer ANTHROPIC_API_KEY/JWT_SECRET
+// dans une release publique.
+function isPortOpen(port, host = '127.0.0.1') {
+  return new Promise(resolve => {
+    const socket = new net.Socket();
+    socket.setTimeout(500);
+    socket.once('connect', () => { socket.destroy(); resolve(true); });
+    socket.once('timeout', () => { socket.destroy(); resolve(false); });
+    socket.once('error',   () => { resolve(false); });
+    socket.connect(port, host);
+  });
+}
+
+async function startBackendServer() {
+  const candidates = [path.join(__dirname, 'server'), 'C:\\Dev\\Dashboard\\trading-dashboard\\server'];
+  const serverDir = candidates.find(d => fs.existsSync(path.join(d, 'src', 'index.js')));
+  if (!serverDir) { console.error('[backend] dossier server/ introuvable — fonctionnalités IA indisponibles.'); return; }
+
+  const port = Number(new URL(BACKEND_URL).port || 3000);
+  if (await isPortOpen(port)) { console.log(`[backend] déjà actif sur le port ${port}, pas de relance.`); return; }
+
+  backendProcess = spawn('node', ['src/index.js'], { cwd: serverDir, env: process.env });
+  backendProcess.stdout.on('data', d => console.log('[backend]', d.toString().trim()));
+  backendProcess.stderr.on('data', d => console.error('[backend:err]', d.toString().trim()));
+  backendProcess.on('error', e => console.error('[backend] échec démarrage:', e.message));
+  backendProcess.on('exit', code => { console.log(`[backend] arrêté (code ${code})`); backendProcess = null; });
+}
+
+function stopBackendServer() {
+  if (backendProcess) { try { backendProcess.kill(); } catch(_) {} backendProcess = null; }
 }
 
 function startBotServer(port) {
@@ -848,6 +897,7 @@ app.whenReady().then(async () => {
   botSignals     = loadBotSignalsFromFile();
   createWindow();
   startBotServer(3001);
+  startBackendServer();
 
   if (app.isPackaged) {
     mainWindow.webContents.on('did-finish-load', () => {
@@ -893,6 +943,7 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   if (botServer) { try { botServer.close(); } catch(_) {} }
+  stopBackendServer();
   if (process.platform !== 'darwin') app.quit();
 });
 
