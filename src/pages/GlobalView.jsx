@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine, Cell,
@@ -6,6 +7,21 @@ import {
 
 // ── Helpers ───────────────────────────────────────────────────
 function getNet(t) { return t.result_net ?? t.result ?? 0; }
+function computeAccountDrawdown(trades) {
+  const sorted = [...trades].sort((a,b) => (a.date??'').localeCompare(b.date??'') || (a.id??0)-(b.id??0));
+  let cum = 0, peak = 0, maxDD = 0, maxDDPeak = 0, curStreak = 0, losingStreaks = 0;
+  sorted.forEach(t => {
+    const pnl = getNet(t);
+    cum += pnl;
+    if (cum > peak) peak = cum;
+    else if (cum < peak) { const dd = peak - cum; if (dd > maxDD) { maxDD = dd; maxDDPeak = peak; } }
+    if (pnl < 0) curStreak++;
+    else { if (curStreak >= 2) losingStreaks++; curStreak = 0; }
+  });
+  if (curStreak >= 2) losingStreaks++;
+  const maxDDPct = maxDDPeak > 0 ? (maxDD / maxDDPeak) * 100 : 0;
+  return { maxDD, maxDDPct, losingStreaks, fragile: maxDDPct > 10 || losingStreaks > 3 };
+}
 function fmt(n, sign = false) {
   if (n == null || isNaN(n)) return '—';
   return `${sign && n >= 0 ? '+' : ''}${n.toFixed(2)}$`;
@@ -780,7 +796,17 @@ function OverviewTab({
 }
 
 // ── Analyse ───────────────────────────────────────────────────
-function AnalyseTab({ byDow, bySessions, hourDataFull, byHour, pairArr, emotionArr, openDow, openSession, openHour }) {
+function AnalyseTab({ byDow, bySessions, hourDataFull, byHour, pairArr, emotionArr, byAccount, openDow, openSession, openHour }) {
+  const navigate = useNavigate();
+  const worstId = byAccount.length
+    ? byAccount.reduce((w, a) => a.maxDD > w.maxDD ? a : w, byAccount[0]).id
+    : null;
+
+  async function handleAnalyze(accountId) {
+    await window.accounts.setActive(accountId);
+    navigate('/journal', { state: { tab: 'analyse' } });
+  }
+
   return (
     <>
       {/* ── CHARTS ── */}
@@ -931,6 +957,50 @@ function AnalyseTab({ byDow, bySessions, hourDataFull, byHour, pairArr, emotionA
           </div>
         </Section>
       </div>
+
+      {/* Drawdown par compte */}
+      <div style={{ marginTop: '16px' }}>
+        <Section title="📉 DRAWDOWN PAR COMPTE">
+          {byAccount.length === 0 ? (
+            <div style={{ color: '#3a1818', fontSize:'13px', textAlign: 'center', padding: '20px 0' }}>Aucun compte avec des trades</div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <thead>
+                <tr>
+                  {['Compte', 'Drawdown max', 'Séquences', 'Statut', ''].map(h => (
+                    <th key={h} style={{ textAlign: h === 'Compte' ? 'left' : 'right', padding: '6px 10px', color: '#5a6a82', fontSize: '11px', letterSpacing: '1.5px', fontWeight: '700', borderBottom: '1px solid rgba(136,153,187,0.10)' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {byAccount.map(a => (
+                  <tr key={a.id} style={{ background: 'rgba(14,15,22,0.4)', borderLeft: `3px solid ${a.id === worstId ? '#ff3344' : 'transparent'}` }}>
+                    <td style={{ padding: '8px 10px', color: '#dde4ef', fontWeight: '600' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: a.color, marginRight: '8px' }} />
+                      {a.name}
+                    </td>
+                    <td style={{ padding: '8px 10px', textAlign: 'right', color: '#ff3344', fontWeight: '700' }}>
+                      -{a.maxDD.toFixed(2)}$<span style={{ color: '#5a6a82', fontWeight: '400', marginLeft: '6px' }}>({a.maxDDPct.toFixed(1)}%)</span>
+                    </td>
+                    <td style={{ padding: '8px 10px', textAlign: 'right', color: '#dde4ef' }}>{a.losingStreaks}</td>
+                    <td style={{ padding: '8px 10px', textAlign: 'right' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '4px', letterSpacing: '1px', color: a.fragile ? '#ff3344' : '#00cc77', background: a.fragile ? 'rgba(255,51,68,0.10)' : 'rgba(0,204,119,0.10)', border: `1px solid ${a.fragile ? 'rgba(255,51,68,0.30)' : 'rgba(0,204,119,0.30)'}` }}>
+                        {a.fragile ? 'FRAGILE' : 'ROBUSTE'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 10px', textAlign: 'right' }}>
+                      <button onClick={() => handleAnalyze(a.id)} style={{ background: 'transparent', border: 'none', color: '#8899bb', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', padding: '2px 4px' }}
+                        onMouseEnter={e => e.currentTarget.style.color = '#aabbd0'}
+                        onMouseLeave={e => e.currentTarget.style.color = '#8899bb'}
+                      >Analyser →</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Section>
+      </div>
     </>
   );
 }
@@ -1070,7 +1140,7 @@ export default function GlobalView() {
       const trailingFloor = hwm - maxLoss;
       if (floor != null && (cum <= trailingFloor || cum <= floor)) { everBlown = true; break; }
     }
-    return { id: acc.id, name: acc.name, color: acc.color, type: acc.type, total: at.length, pnl: ap, wr: at.length > 0 ? (aw/at.length)*100 : 0, isBlown: everBlown, balance: startBalance + ap, floor };
+    return { id: acc.id, name: acc.name, color: acc.color, type: acc.type, total: at.length, pnl: ap, wr: at.length > 0 ? (aw/at.length)*100 : 0, isBlown: everBlown, balance: startBalance + ap, floor, ...computeAccountDrawdown(at) };
   }).filter(a => a.total > 0).sort((a, b) => accountSortKey(a) - accountSortKey(b));
 
   // ── Long vs Short ─────────────────────────────────────────
@@ -1244,7 +1314,7 @@ export default function GlobalView() {
           <div style={{ display: activeTab === 'analyse' ? 'block' : 'none' }}>
             <AnalyseTab
               byDow={byDow} bySessions={bySessions} hourDataFull={hourDataFull} byHour={byHour}
-              pairArr={pairArr} emotionArr={emotionArr}
+              pairArr={pairArr} emotionArr={emotionArr} byAccount={byAccount}
               openDow={openDow} openSession={openSession} openHour={openHour}
             />
           </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import TradeReplay from '../features/replay/TradeReplay';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -2314,7 +2314,8 @@ export default function Journal() {
   const [replayTrade, setReplayTrade] = useState(null);
   const [account,     setAccount]     = useState(null);
   const [stats,       setStats]       = useState(null);
-  const [activeTab,   setActiveTab]   = useState('overview');
+  const location = useLocation();
+  const [activeTab,   setActiveTab]   = useState(location.state?.tab ?? 'overview');
   const navigate = useNavigate();
 
   useEffect(() => { loadTrades(); }, []);
