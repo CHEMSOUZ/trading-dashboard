@@ -58,6 +58,12 @@ contextBridge.exposeInMainWorld('ai', {
   clearHistory: ()           => ipcRenderer.invoke('ai:clearHistory'),
 });
 
+contextBridge.exposeInMainWorld('globalProfile', {
+  // Résolvent toujours { ok, data } ou { ok:false, error: 'unauthenticated'|'subscription_inactive'|'quota_exceeded'|string, message?, resetDate?, used?, limit? }
+  getLatest: ()              => ipcRenderer.invoke('globalProfile:getLatest'),
+  generate:  (stats, force)  => ipcRenderer.invoke('globalProfile:generate', stats, force),
+});
+
 contextBridge.exposeInMainWorld('auth', {
   register:         (email, password) => ipcRenderer.invoke('auth:register', email, password),
   login:             (email, password) => ipcRenderer.invoke('auth:login', email, password),

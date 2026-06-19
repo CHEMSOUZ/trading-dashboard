@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine, Cell,
@@ -7,21 +6,6 @@ import {
 
 // ── Helpers ───────────────────────────────────────────────────
 function getNet(t) { return t.result_net ?? t.result ?? 0; }
-function computeAccountDrawdown(trades) {
-  const sorted = [...trades].sort((a,b) => (a.date??'').localeCompare(b.date??'') || (a.id??0)-(b.id??0));
-  let cum = 0, peak = 0, maxDD = 0, maxDDPeak = 0, curStreak = 0, losingStreaks = 0;
-  sorted.forEach(t => {
-    const pnl = getNet(t);
-    cum += pnl;
-    if (cum > peak) peak = cum;
-    else if (cum < peak) { const dd = peak - cum; if (dd > maxDD) { maxDD = dd; maxDDPeak = peak; } }
-    if (pnl < 0) curStreak++;
-    else { if (curStreak >= 2) losingStreaks++; curStreak = 0; }
-  });
-  if (curStreak >= 2) losingStreaks++;
-  const maxDDPct = maxDDPeak > 0 ? (maxDD / maxDDPeak) * 100 : 0;
-  return { maxDD, maxDDPct, losingStreaks, fragile: maxDDPct > 10 || losingStreaks > 3 };
-}
 function fmt(n, sign = false) {
   if (n == null || isNaN(n)) return '—';
   return `${sign && n >= 0 ? '+' : ''}${n.toFixed(2)}$`;
@@ -796,17 +780,7 @@ function OverviewTab({
 }
 
 // ── Analyse ───────────────────────────────────────────────────
-function AnalyseTab({ byDow, bySessions, hourDataFull, byHour, pairArr, emotionArr, byAccount, openDow, openSession, openHour }) {
-  const navigate = useNavigate();
-  const worstId = byAccount.length
-    ? byAccount.reduce((w, a) => a.maxDD > w.maxDD ? a : w, byAccount[0]).id
-    : null;
-
-  async function handleAnalyze(accountId) {
-    await window.accounts.setActive(accountId);
-    navigate('/journal', { state: { tab: 'analyse' } });
-  }
-
+function AnalyseTab({ byDow, bySessions, hourDataFull, byHour, pairArr, emotionArr, allTrades, openDow, openSession, openHour }) {
   return (
     <>
       {/* ── CHARTS ── */}
@@ -958,50 +932,276 @@ function AnalyseTab({ byDow, bySessions, hourDataFull, byHour, pairArr, emotionA
         </Section>
       </div>
 
-      {/* Drawdown par compte */}
-      <div style={{ marginTop: '16px' }}>
-        <Section title="📉 DRAWDOWN PAR COMPTE">
-          {byAccount.length === 0 ? (
-            <div style={{ color: '#3a1818', fontSize:'13px', textAlign: 'center', padding: '20px 0' }}>Aucun compte avec des trades</div>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead>
-                <tr>
-                  {['Compte', 'Drawdown max', 'Séquences', 'Statut', ''].map(h => (
-                    <th key={h} style={{ textAlign: h === 'Compte' ? 'left' : 'right', padding: '6px 10px', color: '#5a6a82', fontSize: '11px', letterSpacing: '1.5px', fontWeight: '700', borderBottom: '1px solid rgba(136,153,187,0.10)' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {byAccount.map(a => (
-                  <tr key={a.id} style={{ background: 'rgba(14,15,22,0.4)', borderLeft: `3px solid ${a.id === worstId ? '#ff3344' : 'transparent'}` }}>
-                    <td style={{ padding: '8px 10px', color: '#dde4ef', fontWeight: '600' }}>
-                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: a.color, marginRight: '8px' }} />
-                      {a.name}
-                    </td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', color: '#ff3344', fontWeight: '700' }}>
-                      -{a.maxDD.toFixed(2)}$<span style={{ color: '#5a6a82', fontWeight: '400', marginLeft: '6px' }}>({a.maxDDPct.toFixed(1)}%)</span>
-                    </td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right', color: '#dde4ef' }}>{a.losingStreaks}</td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right' }}>
-                      <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '4px', letterSpacing: '1px', color: a.fragile ? '#ff3344' : '#00cc77', background: a.fragile ? 'rgba(255,51,68,0.10)' : 'rgba(0,204,119,0.10)', border: `1px solid ${a.fragile ? 'rgba(255,51,68,0.30)' : 'rgba(0,204,119,0.30)'}` }}>
-                        {a.fragile ? 'FRAGILE' : 'ROBUSTE'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '8px 10px', textAlign: 'right' }}>
-                      <button onClick={() => handleAnalyze(a.id)} style={{ background: 'transparent', border: 'none', color: '#8899bb', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', cursor: 'pointer', padding: '2px 4px' }}
-                        onMouseEnter={e => e.currentTarget.style.color = '#aabbd0'}
-                        onMouseLeave={e => e.currentTarget.style.color = '#8899bb'}
-                      >Analyser →</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </Section>
-      </div>
+      <GlobalTraderProfileSection allTrades={allTrades} />
     </>
+  );
+}
+
+// ── Profil trader global ───────────────────────────────────────
+const DOW_FR_FULL = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+
+function currentMonthKey() { return new Date().toISOString().slice(0, 7); }
+
+function wrColor(wr) {
+  if (wr < 50) return '#ff4455';
+  if (wr < 60) return '#f0a020';
+  return '#00cc77';
+}
+
+function computeGlobalStats(allTrades) {
+  const trades = allTrades.filter(t => getNet(t) != null && (t.entered_at || t.date));
+  if (!trades.length) return null;
+  const sorted = [...trades].sort((a,b) => (a.entered_at||a.date).localeCompare(b.entered_at||b.date));
+
+  const totalTrades = sorted.length;
+  const wins = sorted.filter(t => getNet(t) > 0).length;
+  const wrGlobal = Math.round((wins / totalTrades) * 1000) / 10;
+
+  const hourMap = {};
+  sorted.forEach(t => {
+    if (!t.entered_at) return;
+    const h = new Date(t.entered_at).getUTCHours();
+    (hourMap[h] ??= { wins: 0, total: 0 }).total++;
+    if (getNet(t) > 0) hourMap[h].wins++;
+  });
+  const wrByHour = Object.entries(hourMap).sort((a,b) => +a[0]-+b[0])
+    .map(([h, v]) => ({ hour: +h, wr: Math.round((v.wins/v.total)*1000)/10, count: v.total }));
+
+  const monthMap = {};
+  sorted.forEach(t => {
+    const key = (t.date ?? t.entered_at ?? '').slice(0, 7);
+    if (!key) return;
+    (monthMap[key] ??= { wins: 0, total: 0 }).total++;
+    if (getNet(t) > 0) monthMap[key].wins++;
+  });
+  const wrByMonth = Object.entries(monthMap).sort((a,b) => a[0].localeCompare(b[0]))
+    .map(([month, v]) => ({ month, wr: Math.round((v.wins/v.total)*1000)/10, count: v.total }));
+
+  const losers = sorted.filter(t => getNet(t) < 0 && (t.exited_at || t.entered_at));
+  let revengeTotal = 0;
+  losers.forEach(loser => {
+    const end = new Date(loser.exited_at || loser.entered_at).getTime();
+    const windowEnd = end + 2 * 60 * 60 * 1000;
+    revengeTotal += sorted.filter(t => {
+      if (!t.entered_at) return false;
+      const ts = new Date(t.entered_at).getTime();
+      return ts > end && ts <= windowEnd;
+    }).length;
+  });
+  const revengeTradingAvg = losers.length ? Math.round((revengeTotal / losers.length) * 100) / 100 : 0;
+
+  const rrTrades = sorted.filter(t => t.rr != null && !isNaN(t.rr));
+  const avgRR = rrTrades.length ? Math.round((rrTrades.reduce((s,t) => s+t.rr, 0) / rrTrades.length) * 100) / 100 : 0;
+
+  const dowMap = Array.from({ length: 7 }, () => ({ wins: 0, total: 0 }));
+  sorted.forEach(t => {
+    if (!t.date) return;
+    const d = new Date(t.date + 'T00:00:00').getDay();
+    dowMap[d].total++;
+    if (getNet(t) > 0) dowMap[d].wins++;
+  });
+  const dowStats = dowMap
+    .map((v, i) => ({ day: DOW_FR_FULL[i], wr: v.total ? Math.round((v.wins/v.total)*1000)/10 : null, total: v.total }))
+    .filter(d => d.total > 0);
+  const bestDay  = dowStats.length ? dowStats.reduce((b,d) => d.wr > b.wr ? d : b) : null;
+  const worstDay = dowStats.length ? dowStats.reduce((w,d) => d.wr < w.wr ? d : w) : null;
+
+  return {
+    totalTrades, wrGlobal, wrByHour, wrByMonth, revengeTradingAvg, avgRR,
+    bestDay:  bestDay  ? { day: bestDay.day,  wr: bestDay.wr  } : null,
+    worstDay: worstDay ? { day: worstDay.day, wr: worstDay.wr } : null,
+  };
+}
+
+function GlobalTraderProfileSection({ allTrades }) {
+  const [profile,       setProfile]       = useState(null);
+  const [loading,       setLoading]       = useState(true);
+  const [generating,    setGenerating]    = useState(false);
+  const [lastGenerated, setLastGenerated] = useState(null);
+  const [tradeCount,    setTradeCount]    = useState(0);
+  const [authError,     setAuthError]     = useState(null);
+  const [quotaResetDate,setQuotaResetDate]= useState(null);
+
+  async function runGenerate(force) {
+    const stats = computeGlobalStats(allTrades);
+    if (!stats) { setLoading(false); return; }
+    setGenerating(true);
+    setAuthError(null);
+    setQuotaResetDate(null);
+    const res = await window.globalProfile.generate(stats, force);
+    if (res.ok && res.data) {
+      setProfile(res.data);
+      setLastGenerated(res.data.generatedAt);
+      setTradeCount(res.data.tradeCount);
+    } else if (!res.ok) {
+      if (['unauthenticated','subscription_inactive','quota_exceeded'].includes(res.error)) {
+        setAuthError(res.error);
+        if (res.error === 'quota_exceeded') setQuotaResetDate(res.resetDate ?? null);
+      } else {
+        setAuthError(res.error || 'Erreur lors de la génération du profil.');
+      }
+    }
+    setGenerating(false);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setLoading(true);
+      const res = await window.globalProfile.getLatest();
+      if (!alive) return;
+      if (res.ok && res.data) {
+        setProfile(res.data);
+        setLastGenerated(res.data.generatedAt);
+        setTradeCount(res.data.tradeCount);
+        if (res.data.monthKey !== currentMonthKey()) {
+          await runGenerate(false);
+        } else {
+          setLoading(false);
+        }
+      } else if (!res.ok) {
+        if (['unauthenticated','subscription_inactive','quota_exceeded'].includes(res.error)) {
+          setAuthError(res.error);
+          if (res.error === 'quota_exceeded') setQuotaResetDate(res.resetDate ?? null);
+        }
+        setLoading(false);
+      } else {
+        setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleRefresh() {
+    if (!window.confirm('Régénérer le profil trader global ? Cela remplacera la synthèse actuelle pour ce mois.')) return;
+    runGenerate(true);
+  }
+
+  const card = (bg, border) => ({ background: bg, border: `1px solid ${border}`, borderRadius: '8px', padding: '16px 18px' });
+  const label = { fontSize: '11px', color: '#5a6a82', letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: '700', marginBottom: '8px' };
+
+  return (
+    <div style={{ marginTop: '16px' }}>
+      <Section title="🧠 PROFIL TRADER GLOBAL">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+          <div>
+            <div style={{ fontSize: '15px', fontWeight: '700', color: '#dde4ef' }}>🧠 Profil trader global</div>
+            {profile && (
+              <div style={{ fontSize: '12px', color: '#5868a0', marginTop: '2px' }}>
+                {tradeCount} trades analysés · Généré le {new Date(lastGenerated).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' })}
+              </div>
+            )}
+          </div>
+          {profile && (
+            <button onClick={handleRefresh} disabled={generating} style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.30)', color: '#aabbd0', padding: '7px 14px', borderRadius: '6px', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: generating ? 'default' : 'pointer', opacity: generating ? 0.6 : 1 }}>
+              Actualiser
+            </button>
+          )}
+        </div>
+
+        {authError && (
+          <div style={{ padding: '14px 16px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.22)', borderRadius: '8px', fontSize: '12px', color: '#f59e0b', lineHeight: '1.6' }}>
+            {authError === 'unauthenticated'      ? 'Connecte-toi pour générer ton profil trader global.'
+              : authError === 'subscription_inactive' ? 'Abonnement requis pour générer ton profil trader global.'
+              : authError === 'quota_exceeded'        ? `Quota IA mensuel atteint${quotaResetDate ? `, réessaie après le ${quotaResetDate}` : ''}.`
+              : authError}
+          </div>
+        )}
+
+        {(loading || generating) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '24px 0', justifyContent: 'center' }}>
+            <style>{`@keyframes gtpPulse{0%,80%,100%{opacity:.25;transform:scale(0.8)}40%{opacity:1;transform:scale(1)}}`}</style>
+            {[0,1,2].map(i => (
+              <span key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#8899bb', display: 'inline-block', animation: `gtpPulse 1.2s ease ${i*0.18}s infinite` }} />
+            ))}
+            <span style={{ fontSize: '12px', color: '#5a6a82', marginLeft: '6px' }}>Analyse de l'historique complet…</span>
+          </div>
+        )}
+
+        {!loading && !generating && !profile && !authError && (
+          <div style={{ textAlign: 'center', padding: '32px 0' }}>
+            <div style={{ fontSize: '13px', color: '#5868a0', marginBottom: '14px' }}>
+              Aucune synthèse générée — clique sur Actualiser pour analyser tout ton historique.
+            </div>
+            <button onClick={() => runGenerate(false)} style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.30)', color: '#aabbd0', padding: '8px 18px', borderRadius: '6px', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer' }}>
+              Générer maintenant
+            </button>
+          </div>
+        )}
+
+        {!loading && !generating && profile && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Identité */}
+            <div style={card('rgba(14,15,22,0.4)', 'rgba(136,153,187,0.10)')}>
+              <div style={label}>Identité de trading</div>
+              <div style={{ fontSize: '14px', color: '#dde4ef', lineHeight: '1.6' }}>{profile.identity}</div>
+            </div>
+
+            {/* Forces / Faiblesses */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={card('rgba(0,204,119,0.05)', 'rgba(0,204,119,0.20)')}>
+                <div style={{ ...label, color: '#00cc77' }}>↗ Points forts</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {profile.strengths.map((s, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                      <span style={{ color: '#00cc77', marginTop: '6px', fontSize: '8px' }}>●</span>
+                      <span style={{ fontSize: '13px', color: '#dde4ef', lineHeight: '1.5' }}>{s}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={card('rgba(255,68,85,0.05)', 'rgba(255,68,85,0.20)')}>
+                <div style={{ ...label, color: '#ff4455' }}>↘ Points faibles</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {profile.weaknesses.map((w, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                      <span style={{ color: '#ff4455', marginTop: '6px', fontSize: '8px' }}>●</span>
+                      <span style={{ fontSize: '13px', color: '#dde4ef', lineHeight: '1.5' }}>{w}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Priorité */}
+            <div style={card('rgba(240,160,32,0.06)', 'rgba(240,160,32,0.25)')}>
+              <div style={{ ...label, color: '#f0a020' }}>⚠ Priorité n°1</div>
+              <div style={{ fontSize: '14px', color: '#dde4ef', lineHeight: '1.6' }}>{profile.priority}</div>
+            </div>
+
+            {/* Évolution WR mensuel */}
+            <div style={card('rgba(14,15,22,0.4)', 'rgba(136,153,187,0.10)')}>
+              <div style={label}>Évolution WR mensuel</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                {profile.wrEvolution.map(m => (
+                  <div key={m.month} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '11px', color: '#5868a0', width: '64px', flexShrink: 0 }}>{m.month}</span>
+                    <div style={{ flex: 1, height: '6px', background: 'rgba(136,153,187,0.10)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.min(m.wr, 100)}%`, background: wrColor(m.wr), borderRadius: '3px' }} />
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: wrColor(m.wr), width: '40px', textAlign: 'right' }}>{m.wr}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#4a5a72' }}>
+              <span>
+                {(() => {
+                  const now = new Date();
+                  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                  return `Prochaine génération auto : 1er ${next.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`;
+                })()}
+              </span>
+              <span style={{ fontSize: '10px', fontWeight: '700', letterSpacing: '1px', padding: '2px 8px', borderRadius: '4px', background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.25)', color: '#aabbd0' }}>MENSUEL</span>
+            </div>
+          </div>
+        )}
+      </Section>
+    </div>
   );
 }
 
@@ -1140,7 +1340,7 @@ export default function GlobalView() {
       const trailingFloor = hwm - maxLoss;
       if (floor != null && (cum <= trailingFloor || cum <= floor)) { everBlown = true; break; }
     }
-    return { id: acc.id, name: acc.name, color: acc.color, type: acc.type, total: at.length, pnl: ap, wr: at.length > 0 ? (aw/at.length)*100 : 0, isBlown: everBlown, balance: startBalance + ap, floor, ...computeAccountDrawdown(at) };
+    return { id: acc.id, name: acc.name, color: acc.color, type: acc.type, total: at.length, pnl: ap, wr: at.length > 0 ? (aw/at.length)*100 : 0, isBlown: everBlown, balance: startBalance + ap, floor };
   }).filter(a => a.total > 0).sort((a, b) => accountSortKey(a) - accountSortKey(b));
 
   // ── Long vs Short ─────────────────────────────────────────
@@ -1314,7 +1514,7 @@ export default function GlobalView() {
           <div style={{ display: activeTab === 'analyse' ? 'block' : 'none' }}>
             <AnalyseTab
               byDow={byDow} bySessions={bySessions} hourDataFull={hourDataFull} byHour={byHour}
-              pairArr={pairArr} emotionArr={emotionArr} byAccount={byAccount}
+              pairArr={pairArr} emotionArr={emotionArr} allTrades={allTrades}
               openDow={openDow} openSession={openSession} openHour={openHour}
             />
           </div>

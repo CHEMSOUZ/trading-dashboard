@@ -6,6 +6,7 @@ const env = require('./config/env');
 const migrate = require('./db/migrate');
 const authRoutes = require('./routes/auth.routes');
 const aiRoutes = require('./routes/ai.routes');
+const globalProfileRoutes = require('./routes/global-profile.routes');
 const errorHandler = require('./middleware/errorHandler');
 
 migrate();
@@ -20,6 +21,7 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/global-profile', globalProfileRoutes);
 
 app.use((req, res) => res.status(404).json({ error: 'NOT_FOUND', message: 'Route inconnue.' }));
 app.use(errorHandler);

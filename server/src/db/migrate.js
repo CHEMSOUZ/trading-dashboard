@@ -21,6 +21,20 @@ function migrate() {
 
     CREATE INDEX IF NOT EXISTS idx_usage_logs_user_created
       ON usage_logs(user_id, created_at);
+
+    CREATE TABLE IF NOT EXISTS global_trader_profile (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      generated_at  TEXT NOT NULL,
+      month_key     TEXT NOT NULL,
+      trade_count   INTEGER NOT NULL,
+      identity      TEXT NOT NULL,
+      strengths     TEXT NOT NULL,
+      weaknesses    TEXT NOT NULL,
+      priority      TEXT NOT NULL,
+      wr_evolution  TEXT NOT NULL,
+      UNIQUE(user_id, month_key)
+    );
   `);
 }
 

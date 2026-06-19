@@ -91,6 +91,61 @@ function httpPostJson(pathName, payload, headers = {}) {
   });
 }
 
+// GET JSON générique vers BACKEND_URL, même contrat que httpPostJson.
+function httpGetJson(pathName, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(pathName, BACKEND_URL);
+    const lib = url.protocol === 'https:' ? https : http;
+    const req = lib.request({
+      hostname: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? 443 : 80),
+      path: url.pathname,
+      method: 'GET',
+      headers,
+    }, (res) => {
+      let data = '';
+      res.on('data', c => { data += c; });
+      res.on('end', () => {
+        let parsed = {};
+        try { parsed = data ? JSON.parse(data) : {}; } catch(_) {}
+        resolve({ statusCode: res.statusCode, body: parsed });
+      });
+    });
+    req.on('error', e => reject(Object.assign(new Error(friendlyNetworkError(e)), { code: e.code })));
+    req.end();
+  });
+}
+
+// Requête authentifiée générique (GET ou POST) vers le backend — factorise la
+// traduction des codes HTTP 401/403/429 en erreurs typées, réutilisée par
+// tout endpoint backend protégé au-delà du seul chat IA.
+async function backendAuthedRequest(method, pathName, payload) {
+  const token = getAuthToken();
+  if (!token) throw Object.assign(new Error('Non authentifié'), { code: 'UNAUTHENTICATED' });
+
+  const { statusCode, body } = method === 'GET'
+    ? await httpGetJson(pathName, { Authorization: `Bearer ${token}` })
+    : await httpPostJson(pathName, payload, { Authorization: `Bearer ${token}` });
+
+  if (statusCode === 401) {
+    clearAuthToken();
+    mainWindow?.webContents.send('auth:sessionExpired');
+    throw Object.assign(new Error(body.message || 'Session expirée'), { code: 'UNAUTHENTICATED' });
+  }
+  if (statusCode === 403) {
+    throw Object.assign(new Error(body.message || 'Abonnement inactif'), { code: 'SUBSCRIPTION_INACTIVE' });
+  }
+  if (statusCode === 429) {
+    throw Object.assign(new Error(body.message || 'Quota dépassé'), {
+      code: 'QUOTA_EXCEEDED', resetDate: body.resetDate, used: body.used, limit: body.limit,
+    });
+  }
+  if (statusCode >= 400) {
+    throw new Error(body.message || body.error || `HTTP ${statusCode}`);
+  }
+  return body;
+}
+
 async function backendAuthRequest(pathName, payload) {
   const { statusCode, body } = await httpPostJson(pathName, payload);
   if (statusCode >= 400) throw new Error(body.message || body.error || `HTTP ${statusCode}`);
@@ -1074,6 +1129,30 @@ function registerHandlers() {
       if (e.code === 'SUBSCRIPTION_INACTIVE')  return { ok: false, error: 'subscription_inactive', message: e.message };
       if (e.code === 'QUOTA_EXCEEDED')         return { ok: false, error: 'quota_exceeded', message: e.message, resetDate: e.resetDate, used: e.used, limit: e.limit };
       return { ok: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('globalProfile:getLatest', async () => {
+    try {
+      const body = await backendAuthedRequest('GET', '/api/global-profile/latest');
+      return { ok: true, data: body.profile ?? null };
+    } catch(e) {
+      if (e.code === 'UNAUTHENTICATED')       return { ok: false, error: 'unauthenticated', message: e.message };
+      if (e.code === 'SUBSCRIPTION_INACTIVE')  return { ok: false, error: 'subscription_inactive', message: e.message };
+      if (e.code === 'QUOTA_EXCEEDED')         return { ok: false, error: 'quota_exceeded', message: e.message, resetDate: e.resetDate, used: e.used, limit: e.limit };
+      return { ok: false, error: e.message || 'Erreur lors du chargement du profil.' };
+    }
+  });
+
+  ipcMain.handle('globalProfile:generate', async (_, stats, force) => {
+    try {
+      const body = await backendAuthedRequest('POST', '/api/global-profile/generate', { stats, force: !!force });
+      return { ok: true, data: body.profile ?? null };
+    } catch(e) {
+      if (e.code === 'UNAUTHENTICATED')       return { ok: false, error: 'unauthenticated', message: e.message };
+      if (e.code === 'SUBSCRIPTION_INACTIVE')  return { ok: false, error: 'subscription_inactive', message: e.message };
+      if (e.code === 'QUOTA_EXCEEDED')         return { ok: false, error: 'quota_exceeded', message: e.message, resetDate: e.resetDate, used: e.used, limit: e.limit };
+      return { ok: false, error: e.message || 'Erreur lors de la génération du profil.' };
     }
   });
 
