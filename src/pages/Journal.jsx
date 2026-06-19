@@ -1130,6 +1130,222 @@ function GraphiquesTab({ trades, loading }) {
   );
 }
 
+// ── DRAWDOWN ANALYSIS MODULE ───────────────────────────────────
+function ddFilterByPeriod(trades, period) {
+  if (period === 'all') return trades;
+  const days   = period === '30' ? 30 : 90;
+  const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  return trades.filter(t => (t.date ?? '') >= cutoff);
+}
+
+function computeDrawdownMetrics(trades) {
+  const sorted = [...trades]
+    .filter(t => getNet(t) != null)
+    .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '') || a.id - b.id);
+
+  let cum = 0, peak = 0, peakDate = null, inDrawdown = false;
+  let maxDD = 0, maxDDPeak = 0;
+  const recoveries = [];
+  const series = [];
+
+  sorted.forEach(t => {
+    const pnl = getNet(t) ?? 0;
+    cum += pnl;
+    series.push({ i: series.length + 1, cum: Math.round(cum * 100) / 100 });
+
+    if (cum > peak) {
+      if (inDrawdown && peakDate) {
+        const days = (new Date(t.date) - new Date(peakDate)) / 86400000;
+        if (days >= 0) recoveries.push(days);
+      }
+      peak = cum;
+      peakDate = t.date;
+      inDrawdown = false;
+    } else if (cum < peak) {
+      inDrawdown = true;
+      const dd = peak - cum;
+      if (dd > maxDD) { maxDD = dd; maxDDPeak = peak; }
+    }
+  });
+
+  const maxDDPct        = maxDDPeak > 0 ? (maxDD / maxDDPeak) * 100 : 0;
+  const avgRecoveryDays = recoveries.length ? recoveries.reduce((a, b) => a + b, 0) / recoveries.length : null;
+
+  let losingStreaks = 0, curStreak = 0;
+  sorted.forEach(t => {
+    const pnl = getNet(t) ?? 0;
+    if (pnl < 0) { curStreak++; }
+    else { if (curStreak >= 2) losingStreaks++; curStreak = 0; }
+  });
+  if (curStreak >= 2) losingStreaks++;
+
+  const fragile = maxDDPct > 10 || losingStreaks > 3;
+  const pnlSeries = sorted.map(t => Math.round((getNet(t) ?? 0) * 100) / 100);
+
+  return { maxDD, maxDDPct, avgRecoveryDays, losingStreaks, fragile, series, pnlSeries };
+}
+
+function ddParseRecommendations(text) {
+  if (!text) return [];
+  const lines    = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const numbered = lines.filter(l => /^\d+[.):]/.test(l));
+  const source   = numbered.length >= 3 ? numbered : lines;
+  return source.slice(0, 3).map(l => l.replace(/^\d+[.):]\s*/, '').replace(/^[-*]\s*/, ''));
+}
+
+function DDMiniBarChart({ data }) {
+  if (!data.length) return null;
+  const maxAbs = Math.max(1, ...data.map(d => Math.abs(d.cum)));
+  return (
+    <div style={{ position:'relative', height:'120px', display:'flex', alignItems:'stretch', gap:'1px', background:`${T.bg}0.40)`, border:`1px solid ${T.border}0.08)`, borderRadius:'6px', padding:'10px 8px', boxSizing:'border-box' }}>
+      <div style={{ position:'absolute', left:'8px', right:'8px', top:'50%', height:'1px', background:`${T.border}0.20)` }} />
+      {data.map((d, i) => {
+        const h     = Math.max(1, (Math.abs(d.cum) / maxAbs) * 50);
+        const color = d.cum >= 0 ? '#00cc77' : '#ff3344';
+        return (
+          <div key={i} title={`#${d.i}: ${fmt(d.cum, true)}`} style={{ flex:1, position:'relative', minWidth:'1px' }}>
+            <div style={{ position:'absolute', left:0, right:0, [d.cum >= 0 ? 'bottom' : 'top']:'50%', height:`${h}%`, background:color, opacity:0.85, borderRadius:'1px' }} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DrawdownAnalysisModule({ trades, loading }) {
+  const [period,          setPeriod]          = useState('30');
+  const [metrics,         setMetrics]         = useState(null);
+  const [aiLoading,       setAiLoading]       = useState(false);
+  const [aiError,         setAiError]         = useState(null);
+  const [quotaResetDate,  setQuotaResetDate]  = useState(null);
+  const [recommendations, setRecommendations] = useState(null);
+
+  async function handleAnalyze() {
+    const filtered = ddFilterByPeriod(trades, period);
+    const m = computeDrawdownMetrics(filtered);
+    setMetrics(m);
+    setRecommendations(null);
+    setAiError(null);
+    setQuotaResetDate(null);
+
+    if (m.series.length < 2) return;
+
+    setAiLoading(true);
+    const prompt = `Voici la séquence de P&L d'une série de trades, dans l'ordre chronologique (en $) :\n[${m.pnlSeries.join(', ')}]\n\nMétriques calculées :\n- Drawdown maximum : -${m.maxDD.toFixed(2)}$ (${m.maxDDPct.toFixed(1)}% du pic d'équité)\n- Durée moyenne de recovery : ${m.avgRecoveryDays != null ? m.avgRecoveryDays.toFixed(1) + ' jours' : 'aucune recovery complète observée'}\n- Séquences perdantes consécutives (≥2 trades) : ${m.losingStreaks}\n\nRéponds avec exactement 3 recommandations, une par ligne, au format :\n1. ...\n2. ...\n3. ...`;
+
+    try {
+      const res = await window.ai.chat(
+        [{ role: 'user', content: prompt }],
+        'Tu es un analyste de risque trading. À partir de ces données réelles, génère exactement 3 recommandations concrètes et chiffrées pour réduire le drawdown. Sois direct, pas de généralités.'
+      );
+      if (!res.ok) {
+        if (['unauthenticated', 'subscription_inactive', 'quota_exceeded'].includes(res.error)) {
+          setAiError(res.error);
+          if (res.error === 'quota_exceeded') setQuotaResetDate(res.resetDate ?? null);
+        } else {
+          setAiError(res.error || res.message || 'Erreur lors de la génération des recommandations.');
+        }
+        return;
+      }
+      setRecommendations(ddParseRecommendations(res.data));
+    } catch (e) {
+      setAiError(e.message || 'Erreur lors de la génération des recommandations.');
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  if (loading) return null;
+
+  return (
+    <div style={{ background:`${T.bg}0.55)`, border:`1px solid ${T.border}0.10)`, borderRadius:'10px', padding:'18px 20px' }}>
+      <style>{`@keyframes ddPulse{0%,80%,100%{opacity:.25;transform:scale(0.8)}40%{opacity:1;transform:scale(1)}}`}</style>
+
+      <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px', flexWrap:'wrap' }}>
+        <select value={period} onChange={e => setPeriod(e.target.value)}
+          style={{ background:'rgba(14,15,22,0.7)', border:`1px solid ${T.border}0.20)`, color:T.text1, padding:'7px 10px', borderRadius:'6px', fontSize:'12px', fontFamily:'inherit', cursor:'pointer', outline:'none' }}>
+          <option value="30">30 derniers jours</option>
+          <option value="90">90 derniers jours</option>
+          <option value="all">Tout l'historique</option>
+        </select>
+        <button onClick={handleAnalyze} disabled={aiLoading}
+          style={{ background:`${T.border}0.12)`, border:`1px solid ${T.border}0.35)`, color:T.accentL, padding:'8px 16px', borderRadius:'6px', fontSize:'12px', fontFamily:'inherit', letterSpacing:'1px', cursor:aiLoading?'default':'pointer', fontWeight:'700', opacity:aiLoading?0.6:1 }}>
+          Analyser les drawdowns
+        </button>
+        {metrics && (
+          <span style={{ marginLeft:'auto', fontSize:'11px', fontWeight:'700', padding:'3px 10px', borderRadius:'4px', letterSpacing:'1px', color: metrics.fragile?'#ff3344':'#00cc77', background: metrics.fragile?'rgba(255,51,68,0.10)':'rgba(0,204,119,0.10)', border:`1px solid ${metrics.fragile?'rgba(255,51,68,0.30)':'rgba(0,204,119,0.30)'}` }}>
+            {metrics.fragile ? 'FRAGILE' : 'ROBUSTE'}
+          </span>
+        )}
+      </div>
+
+      {metrics && metrics.series.length < 2 && (
+        <div style={{ textAlign:'center', color:T.text4, fontSize:'12px', padding:'30px' }}>Pas assez de données sur cette période.</div>
+      )}
+
+      {metrics && metrics.series.length >= 2 && (<>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'10px', marginBottom:'16px' }}>
+          <div style={{ padding:'12px 14px', background:`${T.bg}0.65)`, border:'1px solid rgba(255,51,68,0.18)', borderRadius:'7px' }}>
+            <div style={{ fontSize:'10px', color:T.text3, letterSpacing:'1.5px', marginBottom:'4px' }}>DRAWDOWN MAX</div>
+            <div style={{ fontSize:'18px', fontWeight:'700', color:'#ff3344' }}>-{metrics.maxDD.toFixed(2)}$</div>
+            <div style={{ fontSize:'11px', color:T.text3, marginTop:'2px' }}>{metrics.maxDDPct.toFixed(1)}% du pic</div>
+          </div>
+          <div style={{ padding:'12px 14px', background:`${T.bg}0.65)`, border:'1px solid rgba(240,160,32,0.18)', borderRadius:'7px' }}>
+            <div style={{ fontSize:'10px', color:T.text3, letterSpacing:'1.5px', marginBottom:'4px' }}>RECOVERY MOYEN</div>
+            <div style={{ fontSize:'18px', fontWeight:'700', color:'#f0a020' }}>{metrics.avgRecoveryDays != null ? `${metrics.avgRecoveryDays.toFixed(1)}j` : '—'}</div>
+            <div style={{ fontSize:'11px', color:T.text3, marginTop:'2px' }}>temps pour retrouver le pic</div>
+          </div>
+          <div style={{ padding:'12px 14px', background:`${T.bg}0.65)`, border:`1px solid ${T.border}0.12)`, borderRadius:'7px' }}>
+            <div style={{ fontSize:'10px', color:T.text3, letterSpacing:'1.5px', marginBottom:'4px' }}>SÉQUENCES PERDANTES</div>
+            <div style={{ fontSize:'18px', fontWeight:'700', color:T.text1 }}>{metrics.losingStreaks}</div>
+            <div style={{ fontSize:'11px', color:T.text3, marginTop:'2px' }}>≥2 trades consécutifs</div>
+          </div>
+        </div>
+
+        <DDMiniBarChart data={metrics.series} />
+
+        {aiLoading && (
+          <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'16px 0 4px' }}>
+            {[0,1,2].map(i => (
+              <span key={i} style={{ width:'6px', height:'6px', borderRadius:'50%', background:T.accent, display:'inline-block', animation:`ddPulse 1.2s ease ${i*0.18}s infinite` }} />
+            ))}
+            <span style={{ fontSize:'12px', color:T.text3, marginLeft:'6px' }}>Claude analyse les drawdowns...</span>
+          </div>
+        )}
+
+        {aiError && (
+          <div style={{ marginTop:'16px', padding:'16px', background:'rgba(245,158,11,0.07)', border:'1px solid rgba(245,158,11,0.22)', borderRadius:'10px', fontSize:'13px', color:'#f59e0b', lineHeight:'1.7' }}>
+            <div style={{ fontWeight:'700', marginBottom:'4px' }}>
+              {aiError === 'unauthenticated'      ? 'Connexion requise'
+                : aiError === 'subscription_inactive' ? 'Abonnement requis'
+                : aiError === 'quota_exceeded'        ? 'Quota atteint'
+                : 'Erreur'}
+            </div>
+            {aiError === 'unauthenticated'
+              ? "Connecte-toi pour activer l'analyse IA des drawdowns."
+              : aiError === 'subscription_inactive'
+              ? "Abonnement requis pour activer l'analyse IA des drawdowns."
+              : aiError === 'quota_exceeded'
+              ? `Quota IA mensuel atteint${quotaResetDate ? `, réessaie après le ${quotaResetDate}` : ''}.`
+              : aiError}
+          </div>
+        )}
+
+        {recommendations && recommendations.length > 0 && (
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'10px', marginTop:'16px' }}>
+            {recommendations.map((rec, i) => (
+              <div key={i} style={{ padding:'14px', background:`${T.bg}0.65)`, border:`1px solid ${T.border}0.12)`, borderRadius:'7px' }}>
+                <div style={{ fontSize:'11px', fontWeight:'700', color:T.accentL, marginBottom:'6px' }}>#{i + 1}</div>
+                <div style={{ fontSize:'12.5px', color:T.text1, lineHeight:'1.6' }}>{rec}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </>)}
+    </div>
+  );
+}
+
 // ── ANALYTICS SECTION (Heat Map + Pattern Recognition) ────────
 const HM_DAYS     = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 const HM_HOURS    = Array.from({ length: 24 }, (_, i) => i);
@@ -2266,6 +2482,13 @@ export default function Journal() {
           <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
         </div>
         <GraphiquesTab trades={trades} loading={loading} />
+
+        <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'28px 0 16px' }}>
+          <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+          <span style={{ fontSize:'12px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>DRAWDOWN ANALYSIS</span>
+          <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
+        </div>
+        <DrawdownAnalysisModule trades={trades} loading={loading} />
       </div>
 
       {/* Risk Manager */}
