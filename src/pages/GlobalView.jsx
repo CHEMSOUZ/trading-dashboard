@@ -783,6 +783,8 @@ function OverviewTab({
 function AnalyseTab({ byDow, bySessions, hourDataFull, byHour, pairArr, emotionArr, allTrades, openDow, openSession, openHour }) {
   return (
     <>
+      <GlobalTraderProfileSection allTrades={allTrades} />
+
       {/* ── CHARTS ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
 
@@ -931,8 +933,6 @@ function AnalyseTab({ byDow, bySessions, hourDataFull, byHour, pairArr, emotionA
           </div>
         </Section>
       </div>
-
-      <GlobalTraderProfileSection allTrades={allTrades} />
     </>
   );
 }
@@ -943,9 +943,9 @@ const DOW_FR_FULL = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','S
 function currentMonthKey() { return new Date().toISOString().slice(0, 7); }
 
 function wrColor(wr) {
-  if (wr < 50) return '#ff4455';
-  if (wr < 60) return '#f0a020';
-  return '#00cc77';
+  if (wr < 50) return '#E24B4A';
+  if (wr < 60) return '#BA7517';
+  return '#1D9E75';
 }
 
 function computeGlobalStats(allTrades) {
@@ -1013,194 +1013,195 @@ function computeGlobalStats(allTrades) {
   };
 }
 
+const GTP = {
+  border:        'rgba(136,153,187,0.14)',
+  surfPrimary:   'rgba(9,10,16,0.55)',
+  surfSecondary: 'rgba(20,23,34,0.75)',
+  textPrimary:   '#dde4ef',
+  textSecondary: '#9aa7bd',
+  textTertiary:  '#5a6a82',
+  accent:        '#7F77DD',
+  success:       '#0F6E56',
+  danger:        '#A32D2D',
+  warnText:      '#BA7517',
+  warnBg:        'rgba(186,117,23,0.08)',
+  warnBorder:    'rgba(186,117,23,0.35)',
+};
+
+function gtpFmtDate(iso) {
+  return new Date(iso).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
+}
+
+function gtpNextMonthLabel(monthKey) {
+  const [y, m] = (monthKey || currentMonthKey()).split('-').map(Number);
+  return new Date(y, m, 1).toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
+}
+
+// Met en évidence les chiffres/pourcentages d'un point fort/faible (le reste
+// du texte reste en couleur secondaire, plus discrète).
+function gtpHighlightNumbers(text) {
+  return text.split(/(\d+[.,]?\d*\s?%?)/g).map((part, i) =>
+    /\d/.test(part)
+      ? <span key={i} style={{ fontWeight: 500, color: GTP.textPrimary }}>{part}</span>
+      : <span key={i}>{part}</span>
+  );
+}
+
 function GlobalTraderProfileSection({ allTrades }) {
-  const [profile,       setProfile]       = useState(null);
-  const [loading,       setLoading]       = useState(true);
-  const [generating,    setGenerating]    = useState(false);
-  const [lastGenerated, setLastGenerated] = useState(null);
-  const [tradeCount,    setTradeCount]    = useState(0);
-  const [authError,     setAuthError]     = useState(null);
-  const [quotaResetDate,setQuotaResetDate]= useState(null);
+  const [profile, setProfile] = useState(null);
+  const [busy,    setBusy]    = useState(true);
 
   async function runGenerate(force) {
     const stats = computeGlobalStats(allTrades);
-    if (!stats) { setLoading(false); return; }
-    setGenerating(true);
-    setAuthError(null);
-    setQuotaResetDate(null);
+    if (!stats) { setBusy(false); return; }
+    setBusy(true);
     const res = await window.globalProfile.generate(stats, force);
-    if (res.ok && res.data) {
-      setProfile(res.data);
-      setLastGenerated(res.data.generatedAt);
-      setTradeCount(res.data.tradeCount);
-    } else if (!res.ok) {
-      if (['unauthenticated','subscription_inactive','quota_exceeded'].includes(res.error)) {
-        setAuthError(res.error);
-        if (res.error === 'quota_exceeded') setQuotaResetDate(res.resetDate ?? null);
-      } else {
-        setAuthError(res.error || 'Erreur lors de la génération du profil.');
-      }
-    }
-    setGenerating(false);
-    setLoading(false);
+    if (res.ok && res.data) setProfile(res.data);
+    setBusy(false);
   }
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      setLoading(true);
+      setBusy(true);
       const res = await window.globalProfile.getLatest();
       if (!alive) return;
       if (res.ok && res.data) {
         setProfile(res.data);
-        setLastGenerated(res.data.generatedAt);
-        setTradeCount(res.data.tradeCount);
         if (res.data.monthKey !== currentMonthKey()) {
           await runGenerate(false);
-        } else {
-          setLoading(false);
+          return;
         }
-      } else if (!res.ok) {
-        if (['unauthenticated','subscription_inactive','quota_exceeded'].includes(res.error)) {
-          setAuthError(res.error);
-          if (res.error === 'quota_exceeded') setQuotaResetDate(res.resetDate ?? null);
-        }
-        setLoading(false);
-      } else {
-        setLoading(false);
       }
+      setBusy(false);
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleRefresh() {
-    if (!window.confirm('Régénérer le profil trader global ? Cela remplacera la synthèse actuelle pour ce mois.')) return;
+    if (!window.confirm('Régénérer la synthèse globale ? Un appel IA sera effectué.')) return;
     runGenerate(true);
   }
 
-  const card = (bg, border) => ({ background: bg, border: `1px solid ${border}`, borderRadius: '8px', padding: '16px 18px' });
-  const label = { fontSize: '11px', color: '#5a6a82', letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: '700', marginBottom: '8px' };
+  const labelStyle = { fontSize: '11px', fontWeight: 500, color: GTP.textTertiary, textTransform: 'uppercase', letterSpacing: '0.05em' };
 
   return (
-    <div style={{ marginTop: '16px' }}>
-      <Section title="🧠 PROFIL TRADER GLOBAL">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+    <div style={{ overflow: 'hidden', border: `0.5px solid ${GTP.border}`, borderRadius: '12px', marginBottom: '16px' }}>
+      <style>{`@keyframes gtpPulse{0%,80%,100%{opacity:.3}40%{opacity:1}}`}</style>
+
+      {/* Header */}
+      <div style={{ background: GTP.surfSecondary, borderBottom: `0.5px solid ${GTP.border}`, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: GTP.accent, flexShrink: 0 }} />
           <div>
-            <div style={{ fontSize: '15px', fontWeight: '700', color: '#dde4ef' }}>🧠 Profil trader global</div>
+            <div style={{ fontSize: '13px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: GTP.textPrimary }}>PROFIL TRADER GLOBAL</div>
             {profile && (
-              <div style={{ fontSize: '12px', color: '#5868a0', marginTop: '2px' }}>
-                {tradeCount} trades analysés · Généré le {new Date(lastGenerated).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' })}
+              <div style={{ fontSize: '11px', color: GTP.textTertiary, marginTop: '2px' }}>
+                {profile.tradeCount} trades analysés · Généré le {gtpFmtDate(profile.generatedAt)}
               </div>
             )}
           </div>
-          {profile && (
-            <button onClick={handleRefresh} disabled={generating} style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.30)', color: '#aabbd0', padding: '7px 14px', borderRadius: '6px', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: generating ? 'default' : 'pointer', opacity: generating ? 0.6 : 1 }}>
-              Actualiser
-            </button>
-          )}
         </div>
+        <button onClick={handleRefresh} disabled={busy} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', border: `0.5px solid ${GTP.border}`, background: 'transparent', color: GTP.textSecondary, padding: '5px 10px', borderRadius: '6px', fontFamily: 'inherit', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+          <span style={{ fontSize: '12px' }}>↻</span> Actualiser
+        </button>
+      </div>
 
-        {authError && (
-          <div style={{ padding: '14px 16px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.22)', borderRadius: '8px', fontSize: '12px', color: '#f59e0b', lineHeight: '1.6' }}>
-            {authError === 'unauthenticated'      ? 'Connecte-toi pour générer ton profil trader global.'
-              : authError === 'subscription_inactive' ? 'Abonnement requis pour générer ton profil trader global.'
-              : authError === 'quota_exceeded'        ? `Quota IA mensuel atteint${quotaResetDate ? `, réessaie après le ${quotaResetDate}` : ''}.`
-              : authError}
-          </div>
-        )}
-
-        {(loading || generating) && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '24px 0', justifyContent: 'center' }}>
-            <style>{`@keyframes gtpPulse{0%,80%,100%{opacity:.25;transform:scale(0.8)}40%{opacity:1;transform:scale(1)}}`}</style>
+      {/* Body */}
+      {busy ? (
+        <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '10px' }}>
             {[0,1,2].map(i => (
-              <span key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#8899bb', display: 'inline-block', animation: `gtpPulse 1.2s ease ${i*0.18}s infinite` }} />
+              <span key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: GTP.accent, display: 'inline-block', animation: `gtpPulse 1.2s ease ${i*0.2}s infinite` }} />
             ))}
-            <span style={{ fontSize: '12px', color: '#5a6a82', marginLeft: '6px' }}>Analyse de l'historique complet…</span>
           </div>
-        )}
-
-        {!loading && !generating && !profile && !authError && (
-          <div style={{ textAlign: 'center', padding: '32px 0' }}>
-            <div style={{ fontSize: '13px', color: '#5868a0', marginBottom: '14px' }}>
-              Aucune synthèse générée — clique sur Actualiser pour analyser tout ton historique.
-            </div>
-            <button onClick={() => runGenerate(false)} style={{ background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.30)', color: '#aabbd0', padding: '8px 18px', borderRadius: '6px', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', letterSpacing: '1px', cursor: 'pointer' }}>
-              Générer maintenant
-            </button>
+          <div style={{ fontSize: '13px', color: GTP.textSecondary }}>Analyse de l'historique complet…</div>
+        </div>
+      ) : !profile ? (
+        <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+          <div style={{ fontSize: '13px', color: GTP.textSecondary, marginBottom: '14px' }}>Aucune synthèse générée.</div>
+          <button onClick={() => runGenerate(false)} style={{ background: 'transparent', border: `0.5px solid ${GTP.border}`, color: GTP.textSecondary, padding: '7px 16px', borderRadius: '6px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>
+            Générer maintenant
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* Identité */}
+          <div style={{ background: GTP.surfPrimary, borderBottom: `0.5px solid ${GTP.border}`, padding: '20px' }}>
+            <div style={{ ...labelStyle, marginBottom: '8px' }}>IDENTITÉ DE TRADING</div>
+            <div style={{ fontSize: '14px', lineHeight: '1.7', color: GTP.textPrimary, borderLeft: `2px solid ${GTP.accent}`, paddingLeft: '12px' }}>{profile.identity}</div>
           </div>
-        )}
 
-        {!loading && !generating && profile && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {/* Identité */}
-            <div style={card('rgba(14,15,22,0.4)', 'rgba(136,153,187,0.10)')}>
-              <div style={label}>Identité de trading</div>
-              <div style={{ fontSize: '14px', color: '#dde4ef', lineHeight: '1.6' }}>{profile.identity}</div>
-            </div>
-
-            {/* Forces / Faiblesses */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <div style={card('rgba(0,204,119,0.05)', 'rgba(0,204,119,0.20)')}>
-                <div style={{ ...label, color: '#00cc77' }}>↗ Points forts</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {profile.strengths.map((s, i) => (
-                    <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                      <span style={{ color: '#00cc77', marginTop: '6px', fontSize: '8px' }}>●</span>
-                      <span style={{ fontSize: '13px', color: '#dde4ef', lineHeight: '1.5' }}>{s}</span>
-                    </div>
-                  ))}
-                </div>
+          {/* Forces / Faiblesses */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+            <div style={{ borderRight: `0.5px solid ${GTP.border}`, padding: '20px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', color: GTP.success, display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '14px' }}>↗</span> POINTS FORTS
               </div>
-              <div style={card('rgba(255,68,85,0.05)', 'rgba(255,68,85,0.20)')}>
-                <div style={{ ...label, color: '#ff4455' }}>↘ Points faibles</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {profile.weaknesses.map((w, i) => (
-                    <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                      <span style={{ color: '#ff4455', marginTop: '6px', fontSize: '8px' }}>●</span>
-                      <span style={{ fontSize: '13px', color: '#dde4ef', lineHeight: '1.5' }}>{w}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Priorité */}
-            <div style={card('rgba(240,160,32,0.06)', 'rgba(240,160,32,0.25)')}>
-              <div style={{ ...label, color: '#f0a020' }}>⚠ Priorité n°1</div>
-              <div style={{ fontSize: '14px', color: '#dde4ef', lineHeight: '1.6' }}>{profile.priority}</div>
-            </div>
-
-            {/* Évolution WR mensuel */}
-            <div style={card('rgba(14,15,22,0.4)', 'rgba(136,153,187,0.10)')}>
-              <div style={label}>Évolution WR mensuel</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-                {profile.wrEvolution.map(m => (
-                  <div key={m.month} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '11px', color: '#5868a0', width: '64px', flexShrink: 0 }}>{m.month}</span>
-                    <div style={{ flex: 1, height: '6px', background: 'rgba(136,153,187,0.10)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${Math.min(m.wr, 100)}%`, background: wrColor(m.wr), borderRadius: '3px' }} />
-                    </div>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: wrColor(m.wr), width: '40px', textAlign: 'right' }}>{m.wr}%</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {profile.strengths.map((s, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: GTP.success, marginTop: '6px', flexShrink: 0 }} />
+                    <span style={{ fontSize: '12px', color: GTP.textSecondary, lineHeight: '1.55' }}>{gtpHighlightNumbers(s)}</span>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Footer */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#4a5a72' }}>
-              <span>
-                {(() => {
-                  const now = new Date();
-                  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-                  return `Prochaine génération auto : 1er ${next.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`;
-                })()}
-              </span>
-              <span style={{ fontSize: '10px', fontWeight: '700', letterSpacing: '1px', padding: '2px 8px', borderRadius: '4px', background: 'rgba(136,153,187,0.12)', border: '1px solid rgba(136,153,187,0.25)', color: '#aabbd0' }}>MENSUEL</span>
+            <div style={{ padding: '20px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', color: GTP.danger, display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '14px' }}>↘</span> POINTS FAIBLES
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {profile.weaknesses.map((w, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: GTP.danger, marginTop: '6px', flexShrink: 0 }} />
+                    <span style={{ fontSize: '12px', color: GTP.textSecondary, lineHeight: '1.55' }}>{gtpHighlightNumbers(w)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        )}
-      </Section>
+
+          {/* Séparateur */}
+          <div style={{ height: '0.5px', background: GTP.border, margin: '0 20px' }} />
+
+          {/* Priorité */}
+          <div style={{ margin: '0 20px 20px', borderRadius: '8px', border: `0.5px solid ${GTP.warnBorder}`, background: GTP.warnBg, padding: '12px 14px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', color: GTP.warnText, display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
+              <span style={{ fontSize: '13px' }}>⚠</span> PRIORITÉ N°1
+            </div>
+            <div style={{ fontSize: '13px', color: GTP.textPrimary, lineHeight: '1.6' }}>{profile.priority}</div>
+          </div>
+
+          {/* Évolution WR mensuel */}
+          <div style={{ padding: '0 20px 20px' }}>
+            <div style={{ ...labelStyle, marginBottom: '10px' }}>ÉVOLUTION WR MENSUEL</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {profile.wrEvolution.map(m => {
+                const c = wrColor(m.wr);
+                return (
+                  <div key={m.month} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', color: GTP.textSecondary, minWidth: '60px' }}>{m.month}</span>
+                    <div style={{ flex: 1, height: '5px', borderRadius: '99px', background: 'rgba(136,153,187,0.10)', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.min(m.wr, 100)}%`, borderRadius: '99px', background: c }} />
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: 500, color: c, width: '40px', textAlign: 'right' }}>{m.wr}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Footer */}
+      <div style={{ borderTop: `0.5px solid ${GTP.border}`, background: GTP.surfSecondary, padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: GTP.textTertiary }}>
+          <span style={{ fontSize: '12px' }}>📅</span> Prochaine génération auto : 1er {gtpNextMonthLabel(profile?.monthKey)}
+        </div>
+        <span style={{ fontSize: '11px', background: GTP.surfPrimary, border: `0.5px solid ${GTP.border}`, borderRadius: '99px', padding: '2px 8px', color: GTP.textSecondary }}>Mensuel</span>
+      </div>
     </div>
   );
 }
