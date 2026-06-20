@@ -46,6 +46,49 @@ const T = {
   accentL: '#aabbd0',
 };
 
+// ── Redesign tokens (header / vue d'ensemble / trades / drawdown / risk manager) ──
+const JT = {
+  border:          'rgba(136,153,187,0.14)',   // border-tertiary
+  borderSecondary: 'rgba(136,153,187,0.35)',
+  surfSecondary:   'rgba(20,23,34,0.75)',      // background-secondary
+  textPrimary:     '#dde4ef',
+  textTertiary:    '#5a6a82',
+  success:         '#1D9E75',
+  danger:          '#E24B4A',
+  warn:            '#BA7517',
+  warnBg:          'rgba(186,117,23,0.12)',
+  warnBorder:      'rgba(186,117,23,0.35)',
+  radiusLg:        '10px',
+  radiusMd:        '8px',
+};
+
+function JtIconUpload({ color, size = 13 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
+      <path d="M7 9l5 -5l5 5" />
+      <path d="M12 4l0 12" />
+    </svg>
+  );
+}
+function JtIconAlertTriangle({ color, size = 13 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 9v4" />
+      <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.871l-8.106 -13.534a1.914 1.914 0 0 0 -3.274 0z" />
+      <path d="M12 16h.01" />
+    </svg>
+  );
+}
+function JtIconX({ color, size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 6l-12 12" />
+      <path d="M6 6l12 12" />
+    </svg>
+  );
+}
+
 // ── Helpers ───────────────────────────────────────────────────
 function getNet(t) {
   if (t.result_net != null) return t.result_net;
@@ -129,11 +172,11 @@ function PnlCell({ trade }) {
   const net       = getNet(trade);
   const hasFees   = (trade.fees ?? 0) > 0 || (trade.commissions ?? 0) > 0;
   const totalFees = (trade.fees ?? 0) + (trade.commissions ?? 0);
-  const color     = pnlColor(net ?? 0);
+  const color     = (net ?? 0) >= 0 ? JT.success : (net ?? 0) < 0 ? JT.danger : pnlColor(0);
 
   return (
-    <div style={{ position:'relative' }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
-      <span style={{ fontSize:'14px', fontWeight:'700', color, cursor: hasFees ? 'help' : 'default', letterSpacing:'-0.3px' }}>
+    <div style={{ position:'relative', textAlign:'right' }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      <span style={{ fontSize:'13px', fontWeight:'500', color, cursor: hasFees ? 'help' : 'default' }}>
         {fmt(net, true)}
         {hasFees && <span style={{ fontSize:'11px', color: T.text3, marginLeft:'2px' }}>net</span>}
       </span>
@@ -470,69 +513,82 @@ function SyntheseTab({ trades, loading }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
 
-      {/* Stat cards */}
-      <div>
-        <SectionTitle>INDICATEURS CLÉS</SectionTitle>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:'10px' }}>
-          <StatCard label="P&L NET TOTAL"    value={fmt(total,true)}           color={pnlColor(total)} featured />
-          <StatCard label="TRADES"           value={String(trades.length)}     color={T.text1} sub={`${wins.length}W · ${losses.length}L`} />
-          <StatCard label="WIN RATE"         value={`${winrate}%`}             color={winrate>=50?'#00cc77':'#ff3344'} />
-          <StatCard label="PROFIT FACTOR"    value={pf===99?'∞':pf.toFixed(2)} color={pf>=1.5?'#00cc77':pf>=1?T.text1:'#ff3344'} />
-          <StatCard label="MOY. WIN"         value={fmt(avgWin,true)}          color='#00cc77' />
-          <StatCard label="MOY. LOSS"        value={avgLoss>0?`-${avgLoss.toFixed(2)}$`:'—'} color='#ff3344' />
-          <StatCard label="MEILLEUR TRADE"   value={bestT!=null?fmt(bestT,true):'—'} color='#00cc77' />
-          <StatCard label="PIRE TRADE"       value={worstT!=null?fmt(worstT,true):'—'} color='#ff3344' />
-          <StatCard label={`SÉRIE ${streakType??'—'}`} value={streak>0?`${streak}j`:'—'} color={streakType==='W'?'#00cc77':streakType==='L'?'#ff3344':T.text2} />
-          <StatCard label="FRAIS PAYÉS"      value={fees>0?`-${fees.toFixed(2)}$`:'0$'} color='#f0a020' />
+      {/* Hero */}
+      <div style={{ display:'grid', gridTemplateColumns:'1.4fr 1fr 1fr', gap:'10px' }}>
+        <div style={{ background:'#120808', border:'0.5px solid #3a1212', borderLeft:'3px solid #E24B4A', borderRadius:JT.radiusLg, padding:'14px 16px' }}>
+          <div style={{ fontSize:'11px', color:'#9a6060', textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'6px' }}>P&L NET TOTAL</div>
+          <div style={{ fontSize:'30px', fontWeight:'500', color:'#E24B4A', lineHeight:1 }}>{fmt(total,true)}</div>
+          <div style={{ fontSize:'11px', color:'#9a6060', marginTop:'6px' }}>{wins.length}W · {losses.length}L</div>
         </div>
+        <div style={{ background:JT.surfSecondary, border:`1px solid ${JT.border}`, borderRadius:JT.radiusLg, padding:'12px 14px' }}>
+          <div style={{ fontSize:'11px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'6px' }}>{`SÉRIE ${streakType??'—'}`}</div>
+          <div style={{ fontSize:'20px', fontWeight:'500', color:streakType==='W'?JT.success:streakType==='L'?JT.danger:JT.textPrimary, lineHeight:1 }}>{streak>0?`${streak}j`:'—'}</div>
+        </div>
+        <div style={{ background:JT.surfSecondary, border:`1px solid ${JT.border}`, borderRadius:JT.radiusLg, padding:'12px 14px' }}>
+          <div style={{ fontSize:'11px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'6px' }}>FRAIS PAYÉS</div>
+          <div style={{ fontSize:'20px', fontWeight:'500', color:JT.warn, lineHeight:1 }}>{fees>0?`-${fees.toFixed(2)}$`:'0$'}</div>
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'10px' }}>
+        {[
+          { label:'TRADES',         value:String(trades.length),       color:JT.textPrimary },
+          { label:'WR',             value:`${winrate}%`,               color:winrate>=50?JT.success:JT.danger },
+          { label:'PROFIT FACTOR',  value:pf===99?'∞':pf.toFixed(2),   color:pf>=1.5?JT.success:pf>=1?JT.textPrimary:JT.danger },
+          { label:'MOY. WIN',       value:fmt(avgWin,true),            color:JT.success },
+          { label:'MOY. LOSS',      value:avgLoss>0?`-${avgLoss.toFixed(2)}$`:'—', color:JT.danger },
+          { label:'MEILLEUR TRADE', value:bestT!=null?fmt(bestT,true):'—', color:bestT!=null&&bestT<0?JT.danger:JT.success },
+        ].map(k => (
+          <div key={k.label} style={{ background:JT.surfSecondary, border:`1px solid ${JT.border}`, borderRadius:JT.radiusMd, padding:'10px 12px' }}>
+            <div style={{ fontSize:'10px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'4px' }}>{k.label}</div>
+            <div style={{ fontSize:'16px', fontWeight:'500', color:k.color }}>{k.value}</div>
+          </div>
+        ))}
       </div>
 
       {/* Long vs Short */}
       {dirStats.length > 0 && (
-        <>
-          <SectionTitle>LONG vs SHORT</SectionTitle>
-          <div style={{ display:'grid', gridTemplateColumns:`repeat(${dirStats.length},1fr)`, gap:'10px' }}>
-            {dirStats.map(({ dir, n, pnl, wr, avg, wins, losses, pf, avgWin, avgLoss, bestT, worstT }) => {
-              const isLong = dir === 'LONG';
-              const dirCol = isLong ? '#00cc77' : '#ff3344';
-              const dirRgb = isLong ? '0,204,119' : '255,51,68';
-              const metrics = [
-                { label:'P&L TOTAL',  value:fmt(pnl,true),                                color:pnlColor(pnl) },
-                { label:'MOY./TRADE', value:fmt(avg,true),                                color:pnlColor(avg) },
-                { label:'PF',         value:pf===99?'∞':pf.toFixed(2),                   color:pf>=1.5?'#00cc77':pf>=1?T.text1:'#ff3344' },
-                { label:'MOY. WIN',   value:avgWin>0?fmt(avgWin,true):'—',               color:'#00cc77' },
-                { label:'MOY. LOSS',  value:avgLoss>0?`-${avgLoss.toFixed(2)}$`:'—',     color:'#ff3344' },
-                { label:'MEILLEUR',   value:bestT>0?fmt(bestT,true):'—',                  color:'#00cc77' },
-                { label:'PIRE',       value:worstT<0?fmt(worstT,true):'—',               color:'#ff3344' },
-              ];
-              return (
-                <div key={dir} style={{ background:`rgba(${dirRgb},0.04)`, border:`1px solid rgba(${dirRgb},0.18)`, borderRadius:'8px', padding:'14px 16px' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px' }}>
-                    <span style={{ fontSize:'22px', lineHeight:1 }}>{isLong ? '↑' : '↓'}</span>
-                    <span style={{ fontSize:'14px', fontWeight:'700', color:dirCol, letterSpacing:'2px' }}>{dir}</span>
-                    <span style={{ fontSize:'12px', color:T.text3 }}>{n} trade{n>1?'s':''}</span>
-                    <span style={{ marginLeft:'auto', fontSize:'13px', fontWeight:'700', color:wr>=50?'#00cc77':'#ff3344' }}>{wr}% WR</span>
-                    <span style={{ fontSize:'12px', color:T.text3 }}>{wins}W / {losses}L</span>
-                  </div>
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))', gap:'6px' }}>
-                    {metrics.map(({ label, value, color }) => (
-                      <div key={label} style={{ background:`${T.bg}0.60)`, borderRadius:'5px', padding:'6px 8px' }}>
-                        <div style={{ fontSize:'10px', color:T.text4, letterSpacing:'1px', marginBottom:'2px' }}>{label}</div>
-                        <div style={{ fontSize:'13px', fontWeight:'700', color }}>{value}</div>
-                      </div>
-                    ))}
-                  </div>
+        <div style={{ display:'grid', gridTemplateColumns:`repeat(${dirStats.length},1fr)`, gap:'10px' }}>
+          {dirStats.map(({ dir, n, pnl, wr, avg, avgWin, avgLoss }) => {
+            const isLong = dir === 'LONG';
+            const dirCol = isLong ? JT.success : JT.danger;
+            const stats = [
+              { label:'P&L TOTAL', value:fmt(pnl,true) },
+              { label:'MOY/TRADE', value:fmt(avg,true) },
+              { label:'MOY. WIN',  value:avgWin>0?fmt(avgWin,true):'—' },
+              { label:'MOY. LOSS', value:avgLoss>0?`-${avgLoss.toFixed(2)}$`:'—' },
+            ];
+            return (
+              <div key={dir} style={{ border:`0.5px solid ${JT.border}`, borderRadius:JT.radiusLg, overflow:'hidden' }}>
+                <div style={{ background:JT.surfSecondary, borderBottom:`0.5px solid ${JT.border}`, padding:'8px 14px', display:'flex', alignItems:'center', gap:'8px' }}>
+                  <span style={{ fontSize:'14px', color:dirCol, lineHeight:1 }}>{isLong ? '↑' : '↓'}</span>
+                  <span style={{ fontSize:'13px', fontWeight:'500', color:dirCol }}>{isLong ? 'Long' : 'Short'}</span>
+                  <span style={{ fontSize:'12px', color:JT.textTertiary }}>{n} trade{n>1?'s':''}</span>
+                  <span style={{ marginLeft:'auto', fontSize:'12px', fontWeight:'500', color:wr<40?JT.danger:JT.textTertiary }}>{wr}% WR</span>
                 </div>
-              );
-            })}
-          </div>
-        </>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)' }}>
+                  {stats.map(({ label, value }, i) => {
+                    const numeric = parseFloat(String(value).replace(/[^-0-9.]/g, ''));
+                    const valColor = value === '—' ? JT.textTertiary : numeric < 0 ? JT.danger : numeric > 0 ? JT.success : JT.textPrimary;
+                    return (
+                      <div key={label} style={{ padding:'10px 12px', borderRight:i<stats.length-1?`0.5px solid ${JT.border}`:'none' }}>
+                        <div style={{ fontSize:'10px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'4px' }}>{label}</div>
+                        <div style={{ fontSize:'12px', fontWeight:'500', color:valColor }}>{value}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {/* Equity curve */}
       <div>
-        <SectionTitle>COURBE D'ÉQUITÉ</SectionTitle>
-        <div style={{ background:`${T.bg}0.60)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'16px', height:'200px' }}>
+        <div style={{ fontSize:'11px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'10px' }}>COURBE D'ÉQUITÉ</div>
+        <div style={{ background:JT.surfSecondary, border:`1px solid ${JT.border}`, borderRadius:JT.radiusLg, padding:'1rem', height:'200px', boxSizing:'border-box' }}>
           {equityData.length > 1 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={equityData} margin={{ top:5, right:10, left:0, bottom:0 }}>
@@ -646,32 +702,20 @@ function SyntheseTab({ trades, loading }) {
 function DayHeader({ date, dayTrades }) {
   const dayPnl = dayTrades.reduce((s,t) => s+(getNet(t)??0), 0);
   const wins   = dayTrades.filter(t => (getNet(t)??0) > 0).length;
-  const losses = dayTrades.filter(t => (getNet(t)??0) < 0).length;
   const wr     = dayTrades.length > 0 ? Math.round((wins/dayTrades.length)*100) : 0;
-  const best   = dayTrades.reduce((m,t) => (getNet(t)??0)>(getNet(m)??0)?t:m, dayTrades[0]);
-  const worst  = dayTrades.reduce((m,t) => (getNet(t)??0)<(getNet(m)??0)?t:m, dayTrades[0]);
   const fees   = dayTrades.reduce((s,t) => s+(t.fees??0)+(t.commissions??0), 0);
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:'12px', padding:'7px 16px', borderRadius:'5px', background:`${T.bg}0.65)`, border:`1px solid ${T.border}0.08)`, marginBottom:'4px', marginTop:'14px' }}>
-      <div style={{ flex:1, display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
-        <span style={{ fontSize:'13px', fontWeight:'700', color:T.text1, textTransform:'capitalize' }}>{fmtDayLabel(date)}</span>
-        <span style={{ fontSize:'12px', color:T.text3 }}>{dayTrades.length} trade{dayTrades.length>1?'s':''}</span>
-        {dayTrades.length > 1 && (
-          <span style={{ fontSize:'11px', color:wr>=50?'#00cc77':'#ff3344', background:`rgba(${wr>=50?'0,204,119':'255,51,68'},0.07)`, border:`1px solid rgba(${wr>=50?'0,204,119':'255,51,68'},0.18)`, padding:'1px 5px', borderRadius:'3px', fontWeight:'600' }}>{wr}%</span>
-        )}
-        {fees > 0 && <span style={{ fontSize:'11px', color:'#f0a020', opacity:0.7 }}>-{fees.toFixed(2)}$ frais</span>}
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px', padding:'7px 16px', borderRadius:'5px', background:JT.surfSecondary, border:`1px solid ${JT.border}`, marginBottom:'4px', marginTop:'14px' }}>
+      <div style={{ display:'flex', alignItems:'baseline', gap:'8px' }}>
+        <span style={{ fontSize:'12px', fontWeight:'500', color:JT.textPrimary, textTransform:'capitalize' }}>{fmtDayLabel(date)}</span>
+        <span style={{ fontSize:'11px', color:JT.textTertiary }}>
+          {dayTrades.length} trade{dayTrades.length>1?'s':''}{fees > 0 ? ` · ${fees.toFixed(2)}$` : ''}
+        </span>
       </div>
-      <div style={{ display:'flex', gap:'5px', alignItems:'center' }}>
-        {wins   > 0 && <span style={{ fontSize:'12px', color:'#00cc77', fontWeight:'600', background:'rgba(0,204,119,0.08)', border:'1px solid rgba(0,204,119,0.18)', padding:'1px 5px', borderRadius:'3px' }}>{wins}W</span>}
-        {losses > 0 && <span style={{ fontSize:'12px', color:'#ff3344', fontWeight:'600', background:'rgba(255,51,68,0.08)', border:'1px solid rgba(255,51,68,0.18)', padding:'1px 5px', borderRadius:'3px' }}>{losses}L</span>}
-        {dayTrades.length > 1 && (getNet(best)??0) > 0 && (
-          <span title={`Best: ${best.pair} ${fmt(getNet(best),true)}`} style={{ fontSize:'11px', color:'#00cc77', opacity:0.7 }}>↑{fmt(getNet(best),true)}</span>
-        )}
-        {dayTrades.length > 1 && (getNet(worst)??0) < 0 && (
-          <span title={`Worst: ${worst.pair} ${fmt(getNet(worst),true)}`} style={{ fontSize:'11px', color:'#ff3344', opacity:0.7 }}>↓{fmt(getNet(worst),true)}</span>
-        )}
+      <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+        <span style={{ fontSize:'11px', fontWeight:'500', color:wr>=50?JT.success:JT.danger, background:wr>=50?'rgba(29,158,117,0.12)':'rgba(226,75,74,0.12)', padding:'2px 8px', borderRadius:'99px' }}>{wr}% WR</span>
+        <div style={{ fontWeight:'500', fontSize:'13px', color:dayPnl>=0?JT.success:JT.danger, minWidth:'75px', textAlign:'right' }}>{fmt(dayPnl,true)}</div>
       </div>
-      <div style={{ fontWeight:'700', fontSize:'14px', color:pnlColor(dayPnl), letterSpacing:'-0.3px', minWidth:'85px', textAlign:'right' }}>{fmt(dayPnl,true)}</div>
     </div>
   );
 }
@@ -684,15 +728,19 @@ function TradeRow({ trade, onDelete, onFeeUpdate, onNoteUpdate, onClick, onRepla
   if (trade.notes) { const m=trade.notes.match(/\[(\d+)\/(\d+)\]/); if(m) checklistScore=`${m[1]}/${m[2]}`; }
   const notesClean = trade.notes ? trade.notes.replace(/\nChecklist:.*$/s,'').trim() : '';
   const entryTime = trade.entered_at ? new Date(trade.entered_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : null;
-  const exitTime  = trade.exited_at  ? new Date(trade.exited_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})  : null;
+
+  const isLong  = trade.direction === 'LONG';
+  const dirCol  = isLong ? JT.success : JT.danger;
+  const dirBg   = isLong ? 'rgba(29,158,117,0.12)' : 'rgba(226,75,74,0.12)';
+  const durR    = [trade.duration, trade.rr ? `R ${trade.rr}` : null].filter(Boolean).join(' · ');
 
   return (
     <div onClick={onClick}
-      style={{ display:'grid', gridTemplateColumns:'3px 1fr auto', borderRadius:'6px', overflow:'hidden', background:`${T.bg}0.55)`, border:`1px solid ${T.border}0.07)`, cursor:'pointer', transition:'background 0.15s', marginBottom:'3px' }}
-      onMouseEnter={e => e.currentTarget.style.background=`${T.bgHov}0.65)`}
-      onMouseLeave={e => e.currentTarget.style.background=`${T.bg}0.55)`}>
+      style={{ display:'grid', gridTemplateColumns:'3px 1fr auto', borderRadius:'6px', overflow:'hidden', background:'transparent', border:`1px solid ${JT.border}`, cursor:'pointer', transition:'background 0.15s', marginBottom:'3px' }}
+      onMouseEnter={e => e.currentTarget.style.background=JT.surfSecondary}
+      onMouseLeave={e => e.currentTarget.style.background='transparent'}>
       <div style={{ background:color, opacity:0.75 }} />
-      <div style={{ padding:'10px 14px', display:'grid', gridTemplateColumns:'110px 72px 68px 90px 90px 60px 1fr 115px 85px 56px', gap:'8px', alignItems:'center' }}>
+      <div style={{ padding:'8px 10px', display:'grid', gridTemplateColumns:'110px 72px 68px 140px 1fr 115px 85px 56px', gap:'8px', alignItems:'center' }}>
         <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
           <span style={{ fontSize:'13px', fontWeight:'700', color:T.text1 }}>{trade.pair}</span>
           {trade.size != null && <span style={{ fontSize:'12px', color:T.text3 }}>{trade.size} contrat{trade.size>1?'s':''}</span>}
@@ -706,21 +754,11 @@ function TradeRow({ trade, onDelete, onFeeUpdate, onNoteUpdate, onClick, onRepla
             : <span style={{ fontSize:'12px', color:T.text4 }}>—</span>
           }
         </div>
-        <span style={{ fontSize:'12px', fontWeight:'700', letterSpacing:'0.5px', color:trade.direction==='LONG'?'#00cc77':'#ff3344', background:`rgba(${trade.direction==='LONG'?'0,204,119':'255,51,68'},0.10)`, border:`1px solid rgba(${trade.direction==='LONG'?'0,204,119':'255,51,68'},0.22)`, padding:'3px 7px', borderRadius:'3px', textAlign:'center', width:'fit-content' }}>{trade.direction}</span>
-        {/* ENTRÉE */}
+        <span style={{ fontSize:'12px', fontWeight:'500', color:dirCol, background:dirBg, padding:'3px 7px', borderRadius:'4px', textAlign:'center', width:'fit-content' }}>{trade.direction}</span>
+        {/* PRIX (entrée → sortie, durée / R) */}
         <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
-          <span style={{ fontSize:'13px', color:T.text2, fontWeight:'600' }}>{trade.entry??'—'}</span>
-          {entryTime && <span style={{ fontSize:'12px', color:T.text3 }}>{entryTime}</span>}
-        </div>
-        {/* SORTIE */}
-        <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
-          <span style={{ fontSize:'13px', color:T.text2, fontWeight:'600' }}>{trade.exit_price??trade.tp??'—'}</span>
-          {exitTime && <span style={{ fontSize:'12px', color:T.text3 }}>{exitTime}</span>}
-        </div>
-        {/* DURÉE / R */}
-        <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
-          {trade.duration && <span style={{ fontSize:'12px', color:T.text3 }}>{trade.duration}</span>}
-          {trade.rr && <span style={{ fontSize:'12px', color:T.text3 }}>R {trade.rr}</span>}
+          <span style={{ fontSize:'13px', color:T.text2, fontWeight:'600' }}>{trade.entry??'—'} → {trade.exit_price??trade.tp??'—'}</span>
+          {(entryTime || durR) && <span style={{ fontSize:'11px', color:T.text3 }}>{[entryTime, durR].filter(Boolean).join(' · ')}</span>}
         </div>
         <div style={{ overflow:'hidden', display:'flex', flexDirection:'column', gap:'3px', minWidth:0 }}>
           <div onClick={e => e.stopPropagation()}>
@@ -817,13 +855,13 @@ function TradesTab({ trades, loading, navigate, onDelete, onFeeUpdate, onNoteUpd
       <div style={{ display:'flex', alignItems:'center', gap:'16px', marginBottom:'14px', flexWrap:'wrap' }}>
         <div style={{ display:'flex', gap:'4px' }}>
           {[['ALL','Tout'],['TODAY',"Auj."],['WEEK','7j'],['MONTH','Ce mois']].map(([v,l]) => (
-            <button key={v} onClick={() => setTimeRange(v)} style={{ padding:'5px 12px', borderRadius:'20px', border:`1px solid ${timeRange===v?`${T.border}0.50)`:`${T.border}0.12)`}`, background:timeRange===v?`${T.border}0.12)`:'transparent', color:timeRange===v?T.text1:T.text3, fontSize:'12px', fontFamily:'inherit', cursor:'pointer', transition:'all 0.15s', fontWeight:timeRange===v?'700':'400' }}>{l}</button>
+            <button key={v} onClick={() => setTimeRange(v)} style={{ padding:'5px 12px', borderRadius:'99px', border:`1px solid ${timeRange===v?JT.borderSecondary:JT.border}`, background:timeRange===v?JT.surfSecondary:'transparent', color:timeRange===v?JT.textPrimary:JT.textTertiary, fontSize:'12px', fontFamily:'inherit', cursor:'pointer', transition:'all 0.15s' }}>{l}</button>
           ))}
         </div>
-        <div style={{ width:'1px', height:'18px', background:`${T.border}0.15)` }} />
+        <div style={{ width:'1px', height:'18px', background:JT.border }} />
         <div style={{ display:'flex', gap:'4px' }}>
-          {[['ALL','Tous','#8899bb'],['WIN','Wins','#00cc77'],['LOSS','Losses','#ff3344'],['BE','BE','#f0a020']].map(([v,l,c]) => (
-            <button key={v} onClick={() => setFilter(v)} style={{ padding:'5px 12px', borderRadius:'20px', border:`1px solid ${filter===v?c:`${T.border}0.12)`}`, background:filter===v?`${c}1a`:'transparent', color:filter===v?c:T.text3, fontSize:'12px', fontFamily:'inherit', cursor:'pointer', transition:'all 0.15s', display:'flex', gap:'5px', alignItems:'center' }}>
+          {[['ALL','Tous'],['WIN','Wins'],['LOSS','Losses'],['BE','BE']].map(([v,l]) => (
+            <button key={v} onClick={() => setFilter(v)} style={{ padding:'5px 12px', borderRadius:'99px', border:`1px solid ${filter===v?JT.borderSecondary:JT.border}`, background:filter===v?JT.surfSecondary:'transparent', color:filter===v?JT.textPrimary:JT.textTertiary, fontSize:'12px', fontFamily:'inherit', cursor:'pointer', transition:'all 0.15s', display:'flex', gap:'5px', alignItems:'center' }}>
               {l}<span style={{ fontSize:'12px', opacity:0.65 }}>({counts[v]})</span>
             </button>
           ))}
@@ -868,7 +906,7 @@ function TradesTab({ trades, loading, navigate, onDelete, onFeeUpdate, onNoteUpd
 
       {/* Search bar */}
       <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px' }}>
-        <div style={{ position:'relative', maxWidth:'320px', flex:1 }}>
+        <div style={{ position:'relative', flex:1 }}>
           <input
             type="text"
             placeholder="Rechercher paire, notes, tags..."
@@ -896,10 +934,10 @@ function TradesTab({ trades, loading, navigate, onDelete, onFeeUpdate, onNoteUpd
               <div key={date}>
                 <DayHeader date={date} dayTrades={dayTrades} />
                 {/* En-têtes directement au-dessus des trades */}
-                <div style={{ display:'grid', gridTemplateColumns:'3px 1fr auto', borderBottom:`1px solid ${T.border}0.12)`, marginBottom:'2px' }}>
+                <div style={{ display:'grid', gridTemplateColumns:'3px 1fr auto', borderBottom:`1px solid ${JT.border}`, marginBottom:'2px' }}>
                   <div />
-                  <div style={{ padding:'4px 14px', display:'grid', gridTemplateColumns:'110px 72px 68px 90px 90px 60px 1fr 115px 85px 56px', gap:'8px', fontSize:'11px', color:T.text3, letterSpacing:'1.5px' }}>
-                    <span>PAIRE</span><span>DATE</span><span>DIR.</span><span>ENTRÉE</span><span>SORTIE</span><span>DURÉE</span><span>NOTES</span><span>P&L NET</span><span>FRAIS</span><span>TAGS</span>
+                  <div style={{ padding:'4px 10px', display:'grid', gridTemplateColumns:'110px 72px 68px 140px 1fr 115px 85px 56px', gap:'8px', fontSize:'10px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.04em' }}>
+                    <span>Paire</span><span>Date</span><span>Dir.</span><span>Prix</span><span>Notes</span><span>P&L net</span><span>Frais</span><span></span>
                   </div>
                   <div style={{ width:'40px' }} />
                 </div>
@@ -1258,22 +1296,24 @@ function DrawdownAnalysisModule({ trades, loading }) {
   if (loading) return null;
 
   return (
-    <div style={{ background:`${T.bg}0.55)`, border:`1px solid ${T.border}0.10)`, borderRadius:'10px', padding:'18px 20px' }}>
+    <div style={{ background:JT.surfSecondary, border:`1px solid ${JT.border}`, borderRadius:JT.radiusLg, padding:'1rem 1.25rem' }}>
       <style>{`@keyframes ddPulse{0%,80%,100%{opacity:.25;transform:scale(0.8)}40%{opacity:1;transform:scale(1)}}`}</style>
+
+      <div style={{ fontSize:'11px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'12px' }}>DRAWDOWN ANALYSIS</div>
 
       <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px', flexWrap:'wrap' }}>
         <select value={period} onChange={e => setPeriod(e.target.value)}
-          style={{ background:'rgba(14,15,22,0.7)', border:`1px solid ${T.border}0.20)`, color:T.text1, padding:'7px 10px', borderRadius:'6px', fontSize:'12px', fontFamily:'inherit', cursor:'pointer', outline:'none' }}>
+          style={{ background:'rgba(14,15,22,0.7)', border:`1px solid ${JT.border}`, color:T.text1, padding:'7px 10px', borderRadius:'6px', fontSize:'12px', fontFamily:'inherit', cursor:'pointer', outline:'none' }}>
           <option value="30">30 derniers jours</option>
           <option value="90">90 derniers jours</option>
           <option value="all">Tout l'historique</option>
         </select>
         <button onClick={handleAnalyze} disabled={aiLoading}
-          style={{ background:`${T.border}0.12)`, border:`1px solid ${T.border}0.35)`, color:T.accentL, padding:'8px 16px', borderRadius:'6px', fontSize:'12px', fontFamily:'inherit', letterSpacing:'1px', cursor:aiLoading?'default':'pointer', fontWeight:'700', opacity:aiLoading?0.6:1 }}>
-          Analyser les drawdowns
+          style={{ background:JT.textPrimary, border:'none', color:'#0c0d16', padding:'8px 16px', borderRadius:'6px', fontSize:'12px', fontFamily:'inherit', fontWeight:'500', cursor:aiLoading?'default':'pointer', opacity:aiLoading?0.6:1 }}>
+          Analyser ↗
         </button>
         {metrics && (
-          <span style={{ marginLeft:'auto', fontSize:'11px', fontWeight:'700', padding:'3px 10px', borderRadius:'4px', letterSpacing:'1px', color: metrics.fragile?'#ff3344':'#00cc77', background: metrics.fragile?'rgba(255,51,68,0.10)':'rgba(0,204,119,0.10)', border:`1px solid ${metrics.fragile?'rgba(255,51,68,0.30)':'rgba(0,204,119,0.30)'}` }}>
+          <span style={{ marginLeft:'auto', fontSize:'11px', fontWeight:'500', padding:'3px 10px', borderRadius:'99px', color: metrics.fragile?JT.danger:JT.success, background: metrics.fragile?'rgba(226,75,74,0.10)':'rgba(29,158,117,0.10)', border:`1px solid ${metrics.fragile?'rgba(226,75,74,0.30)':'rgba(29,158,117,0.30)'}` }}>
             {metrics.fragile ? 'FRAGILE' : 'ROBUSTE'}
           </span>
         )}
@@ -1285,20 +1325,20 @@ function DrawdownAnalysisModule({ trades, loading }) {
 
       {metrics && metrics.series.length >= 2 && (<>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'10px', marginBottom:'16px' }}>
-          <div style={{ padding:'12px 14px', background:`${T.bg}0.65)`, border:'1px solid rgba(255,51,68,0.18)', borderRadius:'7px' }}>
-            <div style={{ fontSize:'10px', color:T.text3, letterSpacing:'1.5px', marginBottom:'4px' }}>DRAWDOWN MAX</div>
-            <div style={{ fontSize:'18px', fontWeight:'700', color:'#ff3344' }}>-{metrics.maxDD.toFixed(2)}$</div>
-            <div style={{ fontSize:'11px', color:T.text3, marginTop:'2px' }}>{metrics.maxDDPct.toFixed(1)}% du pic</div>
+          <div style={{ padding:'10px 12px', background:JT.surfSecondary, border:`1px solid ${JT.border}`, borderRadius:JT.radiusMd }}>
+            <div style={{ fontSize:'10px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'4px' }}>Drawdown max</div>
+            <div style={{ fontSize:'16px', fontWeight:'500', color:JT.danger }}>-{metrics.maxDD.toFixed(2)}$</div>
+            <div style={{ fontSize:'11px', color:JT.textTertiary, marginTop:'2px' }}>{metrics.maxDDPct.toFixed(1)}% du pic</div>
           </div>
-          <div style={{ padding:'12px 14px', background:`${T.bg}0.65)`, border:'1px solid rgba(240,160,32,0.18)', borderRadius:'7px' }}>
-            <div style={{ fontSize:'10px', color:T.text3, letterSpacing:'1.5px', marginBottom:'4px' }}>RECOVERY MOYEN</div>
-            <div style={{ fontSize:'18px', fontWeight:'700', color:'#f0a020' }}>{metrics.avgRecoveryDays != null ? `${metrics.avgRecoveryDays.toFixed(1)}j` : '—'}</div>
-            <div style={{ fontSize:'11px', color:T.text3, marginTop:'2px' }}>temps pour retrouver le pic</div>
+          <div style={{ padding:'10px 12px', background:JT.surfSecondary, border:`1px solid ${JT.border}`, borderRadius:JT.radiusMd }}>
+            <div style={{ fontSize:'10px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'4px' }}>Recovery moyen</div>
+            <div style={{ fontSize:'16px', fontWeight:'500', color:JT.warn }}>{metrics.avgRecoveryDays != null ? `${metrics.avgRecoveryDays.toFixed(1)}j` : '—'}</div>
+            <div style={{ fontSize:'11px', color:JT.textTertiary, marginTop:'2px' }}>temps pour retrouver le pic</div>
           </div>
-          <div style={{ padding:'12px 14px', background:`${T.bg}0.65)`, border:`1px solid ${T.border}0.12)`, borderRadius:'7px' }}>
-            <div style={{ fontSize:'10px', color:T.text3, letterSpacing:'1.5px', marginBottom:'4px' }}>SÉQUENCES PERDANTES</div>
-            <div style={{ fontSize:'18px', fontWeight:'700', color:T.text1 }}>{metrics.losingStreaks}</div>
-            <div style={{ fontSize:'11px', color:T.text3, marginTop:'2px' }}>≥2 trades consécutifs</div>
+          <div style={{ padding:'10px 12px', background:JT.surfSecondary, border:`1px solid ${JT.border}`, borderRadius:JT.radiusMd }}>
+            <div style={{ fontSize:'10px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'4px' }}>Séquences perdantes</div>
+            <div style={{ fontSize:'16px', fontWeight:'500', color:JT.textPrimary }}>{metrics.losingStreaks}</div>
+            <div style={{ fontSize:'11px', color:JT.textTertiary, marginTop:'2px' }}>≥2 trades consécutifs</div>
           </div>
         </div>
 
@@ -1314,20 +1354,23 @@ function DrawdownAnalysisModule({ trades, loading }) {
         )}
 
         {aiError && (
-          <div style={{ marginTop:'16px', padding:'16px', background:'rgba(245,158,11,0.07)', border:'1px solid rgba(245,158,11,0.22)', borderRadius:'10px', fontSize:'13px', color:'#f59e0b', lineHeight:'1.7' }}>
-            <div style={{ fontWeight:'700', marginBottom:'4px' }}>
-              {aiError === 'unauthenticated'      ? 'Connexion requise'
-                : aiError === 'subscription_inactive' ? 'Abonnement requis'
-                : aiError === 'quota_exceeded'        ? 'Quota atteint'
-                : 'Erreur'}
+          <div style={{ marginTop:'16px', padding:'10px 12px', background:JT.warnBg, border:`1px solid ${JT.warnBorder}`, borderRadius:JT.radiusMd, fontSize:'13px', color:JT.warn, lineHeight:'1.7', display:'flex', gap:'8px', alignItems:'flex-start' }}>
+            <span style={{ marginTop:'2px', flexShrink:0 }}><JtIconAlertTriangle color={JT.warn} /></span>
+            <div>
+              <div style={{ fontWeight:'700', marginBottom:'4px' }}>
+                {aiError === 'unauthenticated'      ? 'Connexion requise'
+                  : aiError === 'subscription_inactive' ? 'Abonnement requis'
+                  : aiError === 'quota_exceeded'        ? 'Quota atteint'
+                  : 'Erreur'}
+              </div>
+              {aiError === 'unauthenticated'
+                ? "Connecte-toi pour activer l'analyse IA des drawdowns."
+                : aiError === 'subscription_inactive'
+                ? "Abonnement requis pour activer l'analyse IA des drawdowns."
+                : aiError === 'quota_exceeded'
+                ? `Quota IA mensuel atteint${quotaResetDate ? `, réessaie après le ${quotaResetDate}` : ''}.`
+                : aiError}
             </div>
-            {aiError === 'unauthenticated'
-              ? "Connecte-toi pour activer l'analyse IA des drawdowns."
-              : aiError === 'subscription_inactive'
-              ? "Abonnement requis pour activer l'analyse IA des drawdowns."
-              : aiError === 'quota_exceeded'
-              ? `Quota IA mensuel atteint${quotaResetDate ? `, réessaie après le ${quotaResetDate}` : ''}.`
-              : aiError}
           </div>
         )}
 
@@ -1883,20 +1926,20 @@ const RM_CONTRACTS = {
   AUTRE:{ label:'Autre/Forex', tickSize:1,    tickValue:1,     pointValue:1    },
 };
 
-function RmGauge({ label, value, max, color, warning = 0.7 }) {
+function RmGauge({ label, value, max, warning = 0.7 }) {
   if (!max) return null;
   const pct = Math.min(1, Math.max(0, value / max));
-  const barC = pct >= 0.9 ? '#ff3344' : pct >= warning ? '#f59e0b' : color;
+  const barC = pct >= 0.9 ? JT.danger : pct >= warning ? JT.warn : JT.success;
   return (
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'4px' }}>
-        <span style={{ fontSize:'11px', color:T.text3 }}>{label}</span>
-        <span style={{ fontSize:'11px', fontWeight:'700', color:barC }}>{value.toFixed(0)}$ / {max.toFixed(0)}$</span>
+        <span style={{ fontSize:'11px', color:JT.textTertiary }}>{label}</span>
+        <span style={{ fontSize:'11px', fontWeight:'500', color:barC }}>{value.toFixed(0)}$ / {max.toFixed(0)}$</span>
       </div>
-      <div style={{ height:'5px', background:`${T.border}0.10)`, borderRadius:'3px', overflow:'hidden', marginBottom:'2px' }}>
-        <div style={{ height:'100%', width:`${pct*100}%`, background:barC, borderRadius:'3px', transition:'width 0.5s', boxShadow:`0 0 6px ${barC}55` }} />
+      <div style={{ height:'4px', background:JT.border, borderRadius:'2px', overflow:'hidden', marginBottom:'2px' }}>
+        <div style={{ height:'100%', width:`${pct*100}%`, background:barC, borderRadius:'2px', transition:'width 0.5s' }} />
       </div>
-      <div style={{ fontSize:'10px', color:pct>=0.9?'#ff3344':T.text4, textAlign:'right' }}>
+      <div style={{ fontSize:'10px', color:pct>=0.9?JT.danger:JT.textTertiary, textAlign:'right' }}>
         {(max-value).toFixed(0)}$ restants · {((1-pct)*100).toFixed(0)}%
       </div>
     </div>
@@ -1906,17 +1949,17 @@ function RmGauge({ label, value, max, color, warning = 0.7 }) {
 function RmTradeBar({ label, value, max }) {
   if (!max) return null;
   const pct = Math.min(1, value / max);
-  const barC = pct >= 0.9 ? '#ff3344' : pct >= 0.7 ? '#f59e0b' : '#00cc77';
+  const barC = pct >= 0.9 ? JT.danger : pct >= 0.7 ? JT.warn : JT.success;
   return (
     <div>
       <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'4px' }}>
-        <span style={{ fontSize:'11px', color:T.text3 }}>{label}</span>
-        <span style={{ fontSize:'11px', fontWeight:'700', color:barC }}>{value} / {max}</span>
+        <span style={{ fontSize:'11px', color:JT.textTertiary }}>{label}</span>
+        <span style={{ fontSize:'11px', fontWeight:'500', color:barC }}>{value} / {max}</span>
       </div>
-      <div style={{ height:'5px', background:`${T.border}0.10)`, borderRadius:'3px', overflow:'hidden', marginBottom:'2px' }}>
-        <div style={{ height:'100%', width:`${pct*100}%`, background:barC, borderRadius:'3px', transition:'width 0.5s' }} />
+      <div style={{ height:'4px', background:JT.border, borderRadius:'2px', overflow:'hidden', marginBottom:'2px' }}>
+        <div style={{ height:'100%', width:`${pct*100}%`, background:barC, borderRadius:'2px', transition:'width 0.5s' }} />
       </div>
-      <div style={{ fontSize:'10px', color:T.text4, textAlign:'right' }}>{max-value} trades restants</div>
+      <div style={{ fontSize:'10px', color:JT.textTertiary, textAlign:'right' }}>{max-value} trades restants</div>
     </div>
   );
 }
@@ -2029,20 +2072,20 @@ function RiskManager({ trades, account, loading }) {
   const lbl = { fontSize:'10px', color:T.text3, letterSpacing:'1px', display:'block', marginBottom:'4px' };
 
   return (
-    <div style={{ background:`${T.bg}0.55)`, border:`1px solid ${T.border}0.10)`, borderRadius:'10px', overflow:'hidden' }}>
+    <div style={{ background:JT.surfSecondary, border:`1px solid ${JT.border}`, borderRadius:JT.radiusLg, overflow:'hidden' }}>
 
       {/* ── Header ── */}
-      <div style={{ padding:'11px 18px', borderBottom:`1px solid ${T.border}0.08)`, display:'flex', alignItems:'center', gap:'10px' }}>
-        <span style={{ fontSize:'11px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>RISK MANAGER</span>
+      <div style={{ padding:'11px 18px', borderBottom:`1px solid ${JT.border}`, display:'flex', alignItems:'center', gap:'10px' }}>
+        <span style={{ fontSize:'11px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', fontWeight:'500' }}>RISK MANAGER</span>
         <div style={{ marginLeft:'auto', display:'flex', gap:'8px', alignItems:'center' }}>
-          <div style={{ padding:'3px 12px', borderRadius:'20px', fontSize:'11px', fontWeight:'700', letterSpacing:'1px',
-            background:shouldStop?'rgba(255,51,68,0.12)':'rgba(0,204,119,0.08)',
-            border:`1px solid ${shouldStop?'rgba(255,51,68,0.35)':'rgba(0,204,119,0.28)'}`,
-            color:shouldStop?'#ff3344':'#00cc77' }}>
-            {shouldStop?'⛔ STOP TRADING':'✓ CONTINUER'}
+          <div style={{ padding:'4px 12px', borderRadius:'99px', fontSize:'11px', fontWeight:'500',
+            background:shouldStop?'rgba(226,75,74,0.12)':'rgba(29,158,117,0.10)',
+            border:`1px solid ${shouldStop?'rgba(226,75,74,0.35)':'rgba(29,158,117,0.30)'}`,
+            color:shouldStop?JT.danger:JT.success }}>
+            {shouldStop?'⛔ Stop trading':'✓ Continuer'}
           </div>
           <button onClick={() => { setDraft(settings); setEditing(e => !e); }}
-            style={{ background:'transparent', border:`1px solid ${T.border}0.18)`, color:T.text3, padding:'4px 9px', borderRadius:'4px', fontSize:'11px', cursor:'pointer', fontFamily:'inherit' }}>
+            style={{ background:'transparent', border:`1px solid ${JT.border}`, color:JT.textTertiary, padding:'4px 9px', borderRadius:'4px', fontSize:'11px', cursor:'pointer', fontFamily:'inherit' }}>
             ⚙ Réglages
           </button>
         </div>
@@ -2074,15 +2117,14 @@ function RiskManager({ trades, account, loading }) {
 
       <div style={{ padding:'16px 18px', display:'flex', flexDirection:'column', gap:'16px' }}>
 
-        {/* ── Row 1 : Health + Today + Week + Sizing ── */}
-        <div style={{ display:'grid', gridTemplateColumns:'130px 1fr 1fr 1fr', gap:'12px', alignItems:'stretch' }}>
+        {/* ── Ligne du haut : Score santé + Limites + Alertes ── */}
+        <div style={{ display:'grid', gridTemplateColumns:'auto 1fr 1fr', gap:'12px', alignItems:'stretch' }}>
 
-          {/* Health Score */}
-          <div style={{ background:`rgba(${health>=70?'0,204,119':health>=40?'240,160,32':'255,51,68'},0.05)`, border:`1px solid ${healthC}28`, borderRadius:'8px', padding:'12px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'6px' }}>
-            <div style={{ fontSize:'9px', color:T.text3, letterSpacing:'2px' }}>SANTÉ</div>
+          {/* Score santé */}
+          <div style={{ background:'#120808', border:'0.5px solid #3a1212', borderRadius:JT.radiusLg, padding:'16px 20px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'8px' }}>
             <div style={{ position:'relative', width:'72px', height:'72px' }}>
               <svg width="72" height="72" viewBox="0 0 72 72">
-                <circle cx="36" cy="36" r="28" fill="none" stroke={`${T.border}0.10)`} strokeWidth="7"/>
+                <circle cx="36" cy="36" r="28" fill="none" stroke="rgba(154,96,96,0.18)" strokeWidth="7"/>
                 <circle cx="36" cy="36" r="28" fill="none" stroke={healthC}
                   strokeWidth="7" strokeLinecap="round"
                   strokeDasharray={`${2*Math.PI*28}`}
@@ -2091,109 +2133,82 @@ function RiskManager({ trades, account, loading }) {
                   style={{ filter:`drop-shadow(0 0 4px ${healthC})`, transition:'stroke-dashoffset 0.8s ease' }}
                 />
               </svg>
-              <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
-                <div style={{ fontSize:'18px', fontWeight:'700', color:healthC, lineHeight:1 }}>{health}</div>
-                <div style={{ fontSize:'8px', color:healthC, letterSpacing:'1px' }}>{healthL}</div>
+              <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ fontSize:'28px', fontWeight:'500', color:healthC, lineHeight:1 }}>{health}</div>
               </div>
+            </div>
+            <div style={{ fontSize:'11px', color:healthC, textTransform:'uppercase', letterSpacing:'0.06em' }}>{healthL}</div>
+          </div>
+
+          {/* Limites */}
+          <div style={{ border:`1px solid ${JT.border}`, borderRadius:JT.radiusLg, padding:'14px' }}>
+            <div style={{ fontSize:'11px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'12px' }}>UTILISATION DES LIMITES</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+              <RmGauge label="Max Drawdown utilisé" value={maxDD} max={settings.maxDD} />
+              <RmGauge label="Perte du jour" value={dailyLossUsed} max={settings.dailyLimit} warning={0.6} />
+              {settings.maxTrades>0 && <RmTradeBar label="Trades du jour" value={todayTrades.length} max={settings.maxTrades} />}
             </div>
           </div>
 
-          {/* Today */}
-          <div style={{ background:`${T.bg}0.40)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'12px' }}>
-            <div style={{ fontSize:'9px', color:T.text3, letterSpacing:'2px', marginBottom:'6px' }}>AUJOURD'HUI</div>
-            <div style={{ fontSize:'20px', fontWeight:'700', color:pnlColor(todayPnl), lineHeight:1, marginBottom:'6px' }}>
-              {todayPnl>=0?'+':''}{todayPnl.toFixed(2)}<span style={{ fontSize:'12px' }}>$</span>
+          {/* Alertes */}
+          <div style={{ background:'#120808', border:'0.5px solid #3a1212', borderRadius:JT.radiusLg, padding:'14px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'10px' }}>
+              <JtIconAlertTriangle color="#9a6060" />
+              <span style={{ fontSize:'11px', color:'#9a6060', textTransform:'uppercase', letterSpacing:'0.06em' }}>ALERTES</span>
             </div>
-            <div style={{ fontSize:'11px', color:T.text3, marginBottom:'6px' }}>
-              {todayTrades.length}T aujourd'hui
-              {settings.maxTrades>0 && <span style={{ color:T.text4 }}> / {settings.maxTrades} max</span>}
+            <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+              {shouldStop && <div style={{ display:'flex', alignItems:'center', gap:'6px', fontSize:'12px', color:JT.textPrimary }}><JtIconX color={JT.danger} /> Limite de perte journalière atteinte</div>}
+              {consLosses>=2 && <div style={{ display:'flex', alignItems:'center', gap:'6px', fontSize:'12px', color:JT.textPrimary }}><JtIconX color={JT.danger} /> {consLosses} pertes consécutives</div>}
+              {wr<40 && <div style={{ display:'flex', alignItems:'center', gap:'6px', fontSize:'12px', color:JT.textPrimary }}><JtIconX color={JT.danger} /> Winrate bas : {wr}%</div>}
+              {!shouldStop && consLosses<2 && wr>=40 && <div style={{ fontSize:'12px', color:'#9a6060' }}>Aucune alerte active</div>}
             </div>
-            {settings.dailyLimit>0 && (
-              <div style={{ height:'3px', background:`${T.border}0.08)`, borderRadius:'2px', overflow:'hidden' }}>
-                <div style={{ height:'100%', width:`${Math.min(100,(dailyLossUsed/settings.dailyLimit)*100)}%`, background:dailyLossUsed/settings.dailyLimit>=0.8?'#ff3344':dailyLossUsed/settings.dailyLimit>=0.5?'#f59e0b':'#00cc77', borderRadius:'2px', transition:'width 0.5s' }} />
-              </div>
-            )}
-          </div>
-
-          {/* Week */}
-          <div style={{ background:`${T.bg}0.40)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'12px' }}>
-            <div style={{ fontSize:'9px', color:T.text3, letterSpacing:'2px', marginBottom:'6px' }}>SEMAINE</div>
-            <div style={{ fontSize:'20px', fontWeight:'700', color:pnlColor(weekPnl), lineHeight:1, marginBottom:'4px' }}>
-              {weekPnl>=0?'+':''}{weekPnl.toFixed(2)}<span style={{ fontSize:'12px' }}>$</span>
-            </div>
-            <div style={{ fontSize:'11px', color:T.text3 }}>{weekTrades.length} trades</div>
-            {weekTrades.length>0 && (
-              <div style={{ fontSize:'11px', color:weekWR>=50?'#00cc77':'#ff3344', fontWeight:'600', marginTop:'3px' }}>{weekWR}% WR</div>
-            )}
-          </div>
-
-          {/* Sizing */}
-          <div style={{ background:`${T.bg}0.40)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'12px' }}>
-            <div style={{ fontSize:'9px', color:T.text3, letterSpacing:'2px', marginBottom:'6px' }}>SIZING</div>
-            <div style={{ fontSize:'20px', fontWeight:'700', color:T.accent, lineHeight:1, marginBottom:'4px' }}>
-              {((parseFloat(accountSz)||50000)*(settings.riskPct/100)).toFixed(0)}<span style={{ fontSize:'12px' }}>$</span>
-            </div>
-            <div style={{ fontSize:'11px', color:T.text3 }}>{settings.riskPct}% / trade</div>
-            {kellyPct>0 && (
-              <div style={{ fontSize:'11px', color:T.text3, marginTop:'3px' }}>
-                Kelly : <span style={{ color:T.accentL, fontWeight:'600' }}>{Math.min(kellyPct,25)}%</span>
-              </div>
-            )}
           </div>
         </div>
-
-        {/* ── Row 2 : Jauges limites ── */}
-        {(settings.maxDD>0 || settings.dailyLimit>0 || settings.maxTrades>0) && (
-          <div style={{ background:`${T.bg}0.40)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'14px', display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:'14px' }}>
-            <div style={{ fontSize:'9px', color:T.text3, letterSpacing:'2px', marginBottom:'2px', gridColumn:'1/-1' }}>UTILISATION DES LIMITES</div>
-            <RmGauge label="Max Drawdown utilisé" value={maxDD} max={settings.maxDD} color="#7c3aed" />
-            <RmGauge label="Perte du jour" value={dailyLossUsed} max={settings.dailyLimit} color="#f59e0b" warning={0.6} />
-            {settings.maxTrades>0 && <RmTradeBar label="Trades du jour" value={todayTrades.length} max={settings.maxTrades} />}
-          </div>
-        )}
 
         {/* ── Row 3 : Calculateur + Stats ── */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px', alignItems:'start' }}>
 
           {/* Calculateur */}
-          <div style={{ background:`${T.bg}0.40)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'14px' }}>
-            <div style={{ fontSize:'10px', color:T.text3, letterSpacing:'2px', marginBottom:'12px' }}>CALCULATEUR DE POSITION</div>
-
-            {/* Instrument */}
-            <div style={{ marginBottom:'10px' }}>
-              <div style={lbl}>INSTRUMENT</div>
-              <div style={{ display:'flex', flexWrap:'wrap', gap:'4px' }}>
-                {Object.keys(RM_CONTRACTS).map(k => (
-                  <button key={k} onClick={() => setInstrument(k)} style={{
-                    padding:'3px 9px', borderRadius:'4px', fontSize:'10px', cursor:'pointer', fontFamily:'inherit',
-                    fontWeight:instrument===k?'700':'400', transition:'all 0.15s',
-                    background:instrument===k?'rgba(124,58,237,0.18)':'transparent',
-                    border:`1px solid ${instrument===k?'rgba(124,58,237,0.45)':T.border+'0.14)'}`,
-                    color:instrument===k?'#a78bfa':T.text3,
-                  }}>{k}</button>
-                ))}
-              </div>
+          <div style={{ border:`1px solid ${JT.border}`, borderRadius:JT.radiusLg, padding:'14px' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:'12px', flexWrap:'wrap', gap:'6px' }}>
+              <div style={{ fontSize:'11px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em' }}>Calculateur de position</div>
               {instrument && (
-                <div style={{ fontSize:'10px', color:T.text4, marginTop:'4px' }}>
+                <div style={{ fontSize:'10px', color:JT.textTertiary }}>
                   {RM_CONTRACTS[instrument].label} · {RM_CONTRACTS[instrument].pointValue}$/pt · tick {RM_CONTRACTS[instrument].tickSize}={RM_CONTRACTS[instrument].tickValue}$
                 </div>
               )}
             </div>
 
-            {/* Direction */}
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px', marginBottom:'10px' }}>
-              {['LONG','SHORT'].map(d => (
-                <button key={d} onClick={() => setDirection(d)} style={{
-                  padding:'6px', borderRadius:'5px', fontSize:'11px', cursor:'pointer', fontFamily:'inherit', fontWeight:'700',
-                  background:direction===d?(d==='LONG'?'rgba(0,204,119,0.10)':'rgba(255,51,68,0.10)'):'transparent',
-                  border:`1px solid ${direction===d?(d==='LONG'?'rgba(0,204,119,0.32)':'rgba(255,51,68,0.32)'):T.border+'0.14)'}`,
-                  color:direction===d?(d==='LONG'?'#00cc77':'#ff3344'):T.text3,
-                }}>{d==='LONG'?'▲ LONG':'▼ SHORT'}</button>
-              ))}
-            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
+              {/* Instrument pills */}
+              <div style={{ gridColumn:'1 / -1' }}>
+                <div style={lbl}>INSTRUMENT</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:'4px' }}>
+                  {Object.keys(RM_CONTRACTS).map(k => (
+                    <button key={k} onClick={() => setInstrument(k)} style={{
+                      padding:'3px 9px', borderRadius:'99px', fontSize:'10px', cursor:'pointer', fontFamily:'inherit',
+                      fontWeight:instrument===k?'500':'400', transition:'all 0.15s',
+                      background:instrument===k?JT.surfSecondary:'transparent',
+                      border:`1px solid ${instrument===k?JT.borderSecondary:JT.border}`,
+                      color:instrument===k?JT.textPrimary:JT.textTertiary,
+                    }}>{k}</button>
+                  ))}
+                </div>
+              </div>
 
-            {/* Inputs */}
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', marginBottom:'10px' }}>
+              {/* Direction */}
+              <div style={{ gridColumn:'1 / -1', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px' }}>
+                {['LONG','SHORT'].map(d => (
+                  <button key={d} onClick={() => setDirection(d)} style={{
+                    padding:'6px', borderRadius:'5px', fontSize:'11px', cursor:'pointer', fontFamily:'inherit', fontWeight:'500',
+                    background:direction===d?(d==='LONG'?'rgba(29,158,117,0.10)':'rgba(226,75,74,0.10)'):'transparent',
+                    border:`1px solid ${direction===d?(d==='LONG'?'rgba(29,158,117,0.32)':'rgba(226,75,74,0.32)'):JT.border}`,
+                    color:direction===d?(d==='LONG'?JT.success:JT.danger):JT.textTertiary,
+                  }}>{d==='LONG'?'▲ LONG':'▼ SHORT'}</button>
+                ))}
+              </div>
+
+              {/* Inputs */}
               <div>
                 <label style={lbl}>TAILLE COMPTE ($)</label>
                 <input type="number" value={accountSz} onChange={e=>setAccountSz(e.target.value)} placeholder="50000" style={inp} />
@@ -2223,73 +2238,60 @@ function RiskManager({ trades, account, loading }) {
 
             {/* Résultat */}
             {calc ? (
-              <div style={{ padding:'12px', background:'rgba(0,204,119,0.05)', border:'1px solid rgba(0,204,119,0.18)', borderRadius:'8px' }}>
+              <div style={{ marginTop:'10px', padding:'12px', background:'rgba(29,158,117,0.06)', border:'1px solid rgba(29,158,117,0.20)', borderRadius:JT.radiusMd }}>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'10px' }}>
                   <div>
-                    <div style={{ fontSize:'9px', color:T.text3 }}>CONTRATS</div>
-                    <div style={{ fontSize:'24px', fontWeight:'700', color:'#00cc77', lineHeight:1 }}>{calc.contractsF}</div>
-                    <div style={{ fontSize:'9px', color:T.text4 }}>exact: {calc.contracts.toFixed(2)}</div>
+                    <div style={{ fontSize:'9px', color:JT.textTertiary }}>CONTRATS</div>
+                    <div style={{ fontSize:'22px', fontWeight:'500', color:JT.success, lineHeight:1 }}>{calc.contractsF}</div>
+                    <div style={{ fontSize:'9px', color:JT.textTertiary }}>exact: {calc.contracts.toFixed(2)}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize:'9px', color:T.text3 }}>$ RISQUÉS</div>
-                    <div style={{ fontSize:'24px', fontWeight:'700', color:'#f59e0b', lineHeight:1 }}>{calc.actualRisk.toFixed(0)}</div>
-                    <div style={{ fontSize:'9px', color:T.text4 }}>{(calc.actualRisk/calc.accSz*100).toFixed(2)}% du compte</div>
+                    <div style={{ fontSize:'9px', color:JT.textTertiary }}>$ RISQUÉS</div>
+                    <div style={{ fontSize:'22px', fontWeight:'500', color:JT.warn, lineHeight:1 }}>{calc.actualRisk.toFixed(0)}</div>
+                    <div style={{ fontSize:'9px', color:JT.textTertiary }}>{(calc.actualRisk/calc.accSz*100).toFixed(2)}% du compte</div>
                   </div>
                 </div>
-                <div style={{ fontSize:'10px', color:T.text4, marginBottom:'8px' }}>
+                <div style={{ fontSize:'10px', color:JT.textTertiary, marginBottom:'8px' }}>
                   SL: {calc.dist.toFixed(2)} pts · {calc.ticks} ticks · {calc.dolPerContract.toFixed(2)}$/contrat
                 </div>
-                <div style={{ fontSize:'9px', color:T.text3, marginBottom:'6px', letterSpacing:'1px' }}>OBJECTIFS TP</div>
+                <div style={{ fontSize:'10px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'6px' }}>Objectifs TP</div>
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'5px' }}>
                   {calc.rrTargets.map(({ rr, tpPrice, profit }) => (
-                    <div key={rr} style={{ padding:'6px 4px', background:'rgba(0,204,119,0.06)', border:'1px solid rgba(0,204,119,0.14)', borderRadius:'5px', textAlign:'center' }}>
-                      <div style={{ fontSize:'9px', color:'#00cc77', fontWeight:'700' }}>1:{rr}</div>
-                      <div style={{ fontSize:'10px', color:T.text2, fontWeight:'600' }}>{tpPrice.toFixed(2)}</div>
-                      <div style={{ fontSize:'9px', color:'#00aa66' }}>+{profit.toFixed(0)}$</div>
+                    <div key={rr} style={{ padding:'6px 4px', background:JT.surfSecondary, border:`1px solid ${JT.border}`, borderRadius:'5px', textAlign:'center' }}>
+                      <div style={{ fontSize:'9px', color:JT.success, fontWeight:'500' }}>1:{rr}</div>
+                      <div style={{ fontSize:'10px', color:JT.textPrimary, fontWeight:'500' }}>{tpPrice.toFixed(2)}</div>
+                      <div style={{ fontSize:'9px', color:JT.success }}>+{profit.toFixed(0)}$</div>
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <div style={{ padding:'10px', background:`${T.border}0.04)`, border:`1px solid ${T.border}0.08)`, borderRadius:'6px', fontSize:'11px', color:T.text4, textAlign:'center' }}>
+              <div style={{ marginTop:'10px', padding:'10px', background:JT.surfSecondary, border:`1px solid ${JT.border}`, borderRadius:'6px', fontSize:'11px', color:JT.textTertiary, textAlign:'center' }}>
                 Renseigne l'entrée et le stop loss pour calculer
               </div>
             )}
           </div>
 
           {/* Stats globales */}
-          <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
-            {/* Stats grid */}
-            <div style={{ background:`${T.bg}0.40)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'14px' }}>
-              <div style={{ fontSize:'10px', color:T.text3, letterSpacing:'2px', marginBottom:'10px' }}>STATISTIQUES DU COMPTE</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
-                {[
-                  ['PnL TOTAL',      totalPnl>=0?`+${totalPnl.toFixed(2)}$`:`${totalPnl.toFixed(2)}$`, pnlColor(totalPnl)],
-                  ['WIN RATE',       `${wr}%`,                                 wr>=50?'#00cc77':'#ff3344'],
-                  ['PROFIT FACTOR',  pf===99?'∞':pf.toFixed(2),               pf>=1.5?'#00cc77':pf>=1?T.text1:'#ff3344'],
-                  ['R:R MOYEN',      avgRR!=null?avgRR.toFixed(2):'—',        avgRR!=null?(avgRR>=settings.targetRR?'#00cc77':'#f59e0b'):T.text3],
-                  ['MOY. WIN',       `+${avgWin.toFixed(2)}$`,                '#00cc77'],
-                  ['MOY. LOSS',      avgLoss>0?`-${avgLoss.toFixed(2)}$`:'—', '#ff3344'],
-                  ['MAX DRAWDOWN',   `${maxDD.toFixed(2)}$`,                  maxDD>settings.maxDD*0.8?'#ff3344':'#f59e0b'],
-                  ['TOTAL TRADES',   String(trades.length),                    T.text2],
-                ].map(([l,v,c]) => (
-                  <div key={l} style={{ padding:'8px 10px', background:`${T.bg}0.60)`, borderRadius:'5px', border:`1px solid ${T.border}0.08)` }}>
-                    <div style={{ fontSize:'9px', color:T.text4, marginBottom:'2px', letterSpacing:'1px' }}>{l}</div>
-                    <div style={{ fontSize:'14px', fontWeight:'700', color:c }}>{v}</div>
-                  </div>
-                ))}
-              </div>
+          <div style={{ background:JT.surfSecondary, border:`1px solid ${JT.border}`, borderRadius:JT.radiusLg, padding:'14px' }}>
+            <div style={{ fontSize:'11px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'10px' }}>Statistiques du compte</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
+              {[
+                ['PnL TOTAL',      totalPnl>=0?`+${totalPnl.toFixed(2)}$`:`${totalPnl.toFixed(2)}$`, totalPnl>=0?JT.success:JT.danger],
+                ['WIN RATE',       `${wr}%`,                                 wr>=50?JT.success:JT.danger],
+                ['PROFIT FACTOR',  pf===99?'∞':pf.toFixed(2),               pf>=1.5?JT.success:pf>=1?JT.textPrimary:JT.danger],
+                ['R:R MOYEN',      avgRR!=null?avgRR.toFixed(2):'—',        avgRR!=null?(avgRR>=settings.targetRR?JT.success:JT.warn):JT.textTertiary],
+                ['MOY. WIN',       `+${avgWin.toFixed(2)}$`,                JT.success],
+                ['MOY. LOSS',      avgLoss>0?`-${avgLoss.toFixed(2)}$`:'—', JT.danger],
+                ['MAX DRAWDOWN',   `${maxDD.toFixed(2)}$`,                  maxDD>settings.maxDD*0.8?JT.danger:JT.warn],
+                ['TOTAL TRADES',   String(trades.length),                    JT.textPrimary],
+              ].map(([l,v,c]) => (
+                <div key={l} style={{ padding:'8px 10px', background:'rgba(0,0,0,0.15)', borderRadius:JT.radiusMd, border:`1px solid ${JT.border}` }}>
+                  <div style={{ fontSize:'10px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'4px' }}>{l}</div>
+                  <div style={{ fontSize:'16px', fontWeight:'500', color:c }}>{v}</div>
+                </div>
+              ))}
             </div>
-
-            {/* Alertes */}
-            {(consLosses>=2 || shouldStop || wr<40) && (
-              <div style={{ background:`${T.bg}0.40)`, border:`1px solid ${T.border}0.10)`, borderRadius:'8px', padding:'12px', display:'flex', flexDirection:'column', gap:'6px' }}>
-                <div style={{ fontSize:'10px', color:T.text3, letterSpacing:'2px', marginBottom:'2px' }}>ALERTES</div>
-                {shouldStop && <div style={{ fontSize:'12px', color:'#ff3344', padding:'5px 10px', background:'rgba(255,51,68,0.07)', borderRadius:'4px', border:'1px solid rgba(255,51,68,0.20)' }}>⛔ Limite de perte journalière atteinte</div>}
-                {consLosses>=2 && <div style={{ fontSize:'12px', color:'#f59e0b', padding:'5px 10px', background:'rgba(240,160,32,0.07)', borderRadius:'4px', border:'1px solid rgba(240,160,32,0.20)' }}>⚠ {consLosses} pertes consécutives</div>}
-                {wr<40 && <div style={{ fontSize:'12px', color:'#f59e0b', padding:'5px 10px', background:'rgba(240,160,32,0.07)', borderRadius:'4px', border:'1px solid rgba(240,160,32,0.20)' }}>⚠ Winrate bas : {wr}%</div>}
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -2353,22 +2355,22 @@ export default function Journal() {
       {/* Header */}
       <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:'20px' }}>
         <div>
-          <div style={{ fontSize:'12px', color:T.text3, letterSpacing:'3px', marginBottom:'5px' }}>HUB TRADING</div>
-          <h1 style={{ fontSize:'22px', fontWeight:'700', color:T.text1, margin:0, letterSpacing:'-0.5px' }}>Journal</h1>
+          <div style={{ fontSize:'11px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'6px' }}>HUB TRADING</div>
+          <h1 style={{ fontSize:'22px', fontWeight:'500', color:T.text1, margin:0 }}>Journal</h1>
         </div>
         <div style={{ display:'flex', gap:'8px' }}>
           <button
             onClick={() => navigate('/import')}
-            style={{ background:'transparent', border:`1px solid ${T.border}0.20)`, color:T.text3, padding:'9px 14px', borderRadius:'6px', fontSize:'12px', fontFamily:'inherit', letterSpacing:'1.5px', cursor:'pointer', fontWeight:'700', transition:'all 0.2s', display:'flex', alignItems:'center', gap:'6px' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor=`${T.border}0.40)`; e.currentTarget.style.color=T.text1; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor=`${T.border}0.20)`; e.currentTarget.style.color=T.text3; }}
-          >↑ IMPORT CSV</button>
+            style={{ background:'transparent', border:`1px solid ${JT.border}`, color:JT.textTertiary, padding:'9px 14px', borderRadius:'6px', fontSize:'12px', fontFamily:'inherit', cursor:'pointer', transition:'all 0.2s', display:'flex', alignItems:'center', gap:'6px' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor=JT.borderSecondary; e.currentTarget.style.color=JT.textPrimary; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor=JT.border; e.currentTarget.style.color=JT.textTertiary; }}
+          ><JtIconUpload color="currentColor" /> Import CSV</button>
           <button
             onClick={() => navigate('/journal/new')}
-            style={{ background:`${T.border}0.12)`, border:`1px solid ${T.border}0.35)`, color:T.accentL, padding:'9px 18px', borderRadius:'6px', fontSize:'12px', fontFamily:'inherit', letterSpacing:'1.5px', cursor:'pointer', fontWeight:'700', transition:'all 0.2s' }}
-            onMouseEnter={e => { e.currentTarget.style.background=`${T.border}0.22)`; e.currentTarget.style.boxShadow='0 0 16px rgba(136,153,187,0.15)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background=`${T.border}0.12)`; e.currentTarget.style.boxShadow='none'; }}
-          >+ NOUVEAU TRADE</button>
+            style={{ background:JT.textPrimary, border:'none', color:'#0c0d16', padding:'9px 18px', borderRadius:'6px', fontSize:'12px', fontFamily:'inherit', fontWeight:'500', cursor:'pointer', transition:'all 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.opacity='0.85'; }}
+            onMouseLeave={e => { e.currentTarget.style.opacity='1'; }}
+          >+ Nouveau trade</button>
         </div>
       </div>
 
@@ -2470,7 +2472,9 @@ export default function Journal() {
 
       {/* Analyse */}
       <div style={{ display: activeTab === 'analyse' ? 'block' : 'none' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'0 0 16px' }}>
+        <DrawdownAnalysisModule trades={trades} loading={loading} />
+
+        <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'24px 0 16px' }}>
           <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
           <span style={{ fontSize:'12px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>PATTERNS & HEAT MAP</span>
           <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
@@ -2483,13 +2487,6 @@ export default function Journal() {
           <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
         </div>
         <GraphiquesTab trades={trades} loading={loading} />
-
-        <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'28px 0 16px' }}>
-          <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
-          <span style={{ fontSize:'12px', color:T.text3, letterSpacing:'2.5px', fontWeight:'700' }}>DRAWDOWN ANALYSIS</span>
-          <div style={{ height:'1px', flex:1, background:`${T.border}0.10)` }} />
-        </div>
-        <DrawdownAnalysisModule trades={trades} loading={loading} />
       </div>
 
       {/* Risk Manager */}

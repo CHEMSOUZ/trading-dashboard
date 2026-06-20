@@ -1,5 +1,170 @@
 import { useState, useEffect } from 'react';
 
+// ── Redesign tokens (header / nav / créneaux / 5-steps / routine / règles) ──
+const ST = {
+  border:          'rgba(136,153,187,0.14)',
+  borderSecondary: 'rgba(136,153,187,0.35)',
+  surfSecondary:   'rgba(20,23,34,0.75)',
+  textPrimary:     '#dde4ef',
+  textSecondary:   '#8898aa',
+  textTertiary:    '#5a6a82',
+  success:         '#1D9E75',
+  danger:          '#E24B4A',
+  warn:            '#BA7517',
+  radiusLg:        '10px',
+  radiusMd:        '8px',
+};
+
+function IconX({ color, size = 13 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 6l-12 12" />
+      <path d="M6 6l12 12" />
+    </svg>
+  );
+}
+function IconAlertTriangle({ color, size = 13 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 9v4" />
+      <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.871l-8.106 -13.534a1.914 1.914 0 0 0 -3.274 0z" />
+      <path d="M12 16h.01" />
+    </svg>
+  );
+}
+function IconTrophy({ color, size = 13 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 21l8 0" />
+      <path d="M12 17l0 4" />
+      <path d="M7 4l10 0" />
+      <path d="M17 4v8a5 5 0 0 1 -10 0v-8" />
+      <path d="M5 9a2 2 0 0 1 -2 -2v-1a2 2 0 0 1 2 -2h2" />
+      <path d="M19 9a2 2 0 0 0 2 -2v-1a2 2 0 0 0 -2 -2h-2" />
+    </svg>
+  );
+}
+function IconFlame({ color, size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 12c2 -2.96 0 -7 -1 -8c0 3.038 -1.773 4.741 -3 6c-1.226 1.26 -2 3.24 -2 5a6 6 0 1 0 12 0c0 -1.532 -1.056 -3.94 -2 -5c-1.786 3 -2.791 1.79 -4 2z" />
+    </svg>
+  );
+}
+
+// ── Créneaux horaires (grille 4 colonnes) — utilisé par les 2 tabs ──
+function SessionsQuickGrid({ sessions }) {
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px' }}>
+      {sessions.map(s => {
+        const featured = s.label === 'London Open' || s.label.includes('Silver Bullet');
+        const badgeStyle = s.badge === 'MANIPULATION'
+          ? { background:'rgba(186,117,23,0.14)', color:ST.warn, border:'none' }
+          : s.badge === 'FENETRE PRINCIPALE'
+          ? { background:'#1a1230', color:'#9F95E8', border:'1px solid #534AB7' }
+          : { background:ST.surfSecondary, color:ST.textTertiary, border:`1px solid ${ST.border}` };
+        return (
+          <div key={s.id} style={{
+            border: featured ? '2px solid #534AB7' : `0.5px solid ${ST.border}`,
+            background: featured ? '#0d0b1a' : 'transparent',
+            borderRadius: ST.radiusLg, padding:'10px 12px',
+          }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'4px' }}>
+              <span style={{ fontSize:'16px' }}>{s.emoji}</span>
+              <span style={{ fontSize:'13px', fontWeight:'500', color: featured ? '#9F95E8' : ST.textPrimary }}>{s.label}</span>
+            </div>
+            <div style={{ fontSize:'11px', color:ST.textTertiary }}>{s.time}</div>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:'4px', marginTop:'6px' }}>
+              {s.badge && (
+                <span style={{ fontSize:'10px', padding:'2px 6px', borderRadius:'4px', fontWeight:'500', ...badgeStyle }}>{s.badge}</span>
+              )}
+              {s.danger && (
+                <span style={{ fontSize:'10px', padding:'2px 6px', borderRadius:'4px', fontWeight:'500', background:'rgba(226,75,74,0.12)', color:ST.danger }}>DANGER</span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Modèle d'entrée ICT 5 étapes — utilisé par les 2 tabs ──
+function EntrySteps({ steps, mantra }) {
+  return (
+    <div style={{ border:`0.5px solid ${ST.border}`, borderRadius:ST.radiusLg, overflow:'hidden' }}>
+      <div style={{ background:ST.surfSecondary, borderBottom:`1px solid ${ST.border}`, padding:'10px 16px' }}>
+        <span style={{ fontSize:'11px', fontWeight:'500', color:ST.textSecondary, textTransform:'uppercase', letterSpacing:'0.06em' }}>MODÈLE D'ENTRÉE ICT — 5 ÉTAPES</span>
+      </div>
+      {steps.map((s, i) => {
+        const isEarly = s.step <= 2;
+        return (
+          <div key={i} style={{ display:'flex', gap:'14px', padding:'14px 16px', borderBottom: i < steps.length - 1 ? `1px solid ${ST.border}` : 'none' }}>
+            <div style={{
+              width:'24px', height:'24px', borderRadius:'50%', flexShrink:0,
+              background: isEarly ? '#1a1230' : ST.surfSecondary,
+              border: `1px solid ${isEarly ? '#534AB7' : ST.border}`,
+              color: isEarly ? '#9F95E8' : ST.textSecondary,
+              display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px', fontWeight:'500',
+            }}>{s.step}</div>
+            <div>
+              <div style={{ fontSize:'13px', fontWeight:'500', color:ST.textPrimary, marginBottom:'3px' }}>{s.label}</div>
+              <div style={{ fontSize:'12px', color:ST.textSecondary, lineHeight:'1.55' }}>{s.desc}</div>
+            </div>
+          </div>
+        );
+      })}
+      <div style={{ padding:'12px 16px', background:'#120a00', borderTop:'1px solid #3a2500', display:'flex', alignItems:'center', gap:'8px' }}>
+        <IconFlame color={ST.warn} />
+        <span style={{ fontSize:'13px', fontWeight:'500', color:ST.warn }}>{mantra}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Colonne Routine (bas de page) ──
+function RoutineColumn({ title, routine }) {
+  return (
+    <div style={{ border:`1px solid ${ST.border}`, borderRadius:ST.radiusLg, overflow:'hidden' }}>
+      <div style={{ background:ST.surfSecondary, borderBottom:`1px solid ${ST.border}`, padding:'10px 16px' }}>
+        <span style={{ fontSize:'11px', fontWeight:'500', color:ST.textSecondary, textTransform:'uppercase', letterSpacing:'0.06em' }}>{title}</span>
+      </div>
+      {routine.map((r, i) => (
+        <div key={i} style={{ display:'flex', gap:'12px', padding:'10px 14px', borderBottom: i < routine.length - 1 ? `1px solid ${ST.border}` : 'none' }}>
+          <span style={{ fontSize:'12px', fontWeight:'500', color: r.time === '11h00' ? '#E24B4A' : '#7F77DD', minWidth:'48px', flexShrink:0 }}>{r.time}</span>
+          <div>
+            <div style={{ fontSize:'12px', fontWeight:'500', color:ST.textPrimary }}>{r.action}</div>
+            <div style={{ fontSize:'11px', color:ST.textTertiary, marginTop:'2px' }}>{r.detail}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Colonne Interdictions & Risk Management (bas de page) ──
+function RulesColumn({ rules }) {
+  return (
+    <div style={{ border:`1px solid ${ST.border}`, borderRadius:ST.radiusLg, overflow:'hidden' }}>
+      <div style={{ background:ST.surfSecondary, borderBottom:`1px solid ${ST.border}`, padding:'10px 16px' }}>
+        <span style={{ fontSize:'11px', fontWeight:'500', color:ST.textSecondary, textTransform:'uppercase', letterSpacing:'0.06em' }}>INTERDICTIONS & RISK MANAGEMENT</span>
+      </div>
+      {rules.map((r, i) => {
+        const isProhibition = r.icon === '❌';
+        const isPositive    = r.icon === '🏆';
+        const Icon  = isProhibition ? IconX : isPositive ? IconTrophy : IconAlertTriangle;
+        const color = isProhibition ? ST.danger : isPositive ? ST.success : ST.warn;
+        return (
+          <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:'10px', padding:'9px 14px', borderBottom: i < rules.length - 1 ? `1px solid ${ST.border}` : 'none' }}>
+            <span style={{ marginTop:'2px', flexShrink:0 }}><Icon color={color} /></span>
+            <span style={{ fontSize:'12px', color: r.critical ? ST.textPrimary : ST.textSecondary, fontWeight: r.critical ? '500' : '400', lineHeight:'1.5' }}>{r.text}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // -- ICT Sessions (New York) ------------------------------------
 const ICT_SESSIONS = [
   {
@@ -332,65 +497,18 @@ function SessionCard({ session }) {
 function LondonTab() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '6px' }}>
-        {ICT_LONDON_SESSIONS.map(s => (
-          <div key={s.id} style={{ padding: '10px 12px', background: `${s.color}08`, border: `1px solid ${s.color}20`, borderRadius: '6px', borderTop: `2px solid ${s.color}` }}>
-            <div style={{ fontSize: '16px', marginBottom: '4px' }}>{s.emoji}</div>
-            <div style={{ fontSize:'13px', color: s.color, fontWeight: '700', marginBottom: '2px' }}>{s.label}</div>
-            <div style={{ fontSize:'12px', color: '#5a6a82' }}>{s.time}</div>
-            {s.badge && <div style={{ fontSize:'12px', color: s.color, marginTop: '3px', opacity: 0.8 }}>{s.badge}</div>}
-          </div>
-        ))}
-      </div>
+      <SessionsQuickGrid sessions={ICT_LONDON_SESSIONS} />
 
       <div>
         <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>SESSIONS ICT — LONDON (HEURE FRANÇAISE)</div>
         {ICT_LONDON_SESSIONS.map(s => <SessionCard key={s.id} session={s} />)}
       </div>
 
-      <div>
-        <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>MODELE D'ENTREE ICT — 5 ETAPES</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {ICT_LONDON_STEPS.map((s, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '28px 28px 120px 1fr', gap: '10px', alignItems: 'center', padding: '10px 14px', background: s.critical ? 'rgba(255,68,85,0.04)' : 'rgba(14,15,22,0.3)', border: `1px solid ${s.critical ? 'rgba(255,68,85,0.1)' : 'rgba(136,153,187,0.06)'}`, borderLeft: `2px solid ${s.color}`, borderRadius: '5px' }}>
-              <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: `${s.color}15`, border: `1px solid ${s.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize:'12px', color: s.color, fontWeight: '700' }}>{s.step}</div>
-              <span style={{ fontSize: '16px' }}>{s.icon}</span>
-              <span style={{ fontSize:'13px', color: s.color, fontWeight: '700' }}>{s.label}</span>
-              <span style={{ fontSize:'13px', color: s.critical ? '#e8c8c8' : '#7888a0', lineHeight: '1.5' }}>{s.desc}</span>
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: '10px', padding: '10px 14px', background: 'rgba(240,160,32,0.06)', border: '1px solid rgba(240,160,32,0.2)', borderRadius: '6px', fontSize:'13px', color: '#f0a020', fontWeight: '700', textAlign: 'center', letterSpacing: '0.5px' }}>
-          🔥 La liquidité d'abord. Le déplacement ensuite.
-        </div>
-      </div>
+      <EntrySteps steps={ICT_LONDON_STEPS} mantra="La liquidité d'abord. Le déplacement ensuite." />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <div>
-          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>ROUTINE IDEALE LONDON</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {ICT_LONDON_ROUTINE.map((r, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '55px 1fr', gap: '10px', alignItems: 'center', padding: '9px 12px', background: 'rgba(14,15,22,0.4)', border: `1px solid ${r.color}15`, borderLeft: `2px solid ${r.color}`, borderRadius: '5px' }}>
-                <span style={{ fontSize:'13px', color: r.color, fontWeight: '700' }}>{r.time}</span>
-                <div>
-                  <div style={{ fontSize:'13px', color: '#dde4ef', fontWeight: '600', marginBottom: '2px' }}>{r.action}</div>
-                  <div style={{ fontSize:'12px', color: '#5a6a82' }}>{r.detail}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>INTERDICTIONS & RISK MANAGEMENT</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {ICT_LONDON_RULES.map((r, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '8px 12px', background: r.critical ? 'rgba(255,68,85,0.04)' : 'rgba(14,15,22,0.3)', border: `1px solid ${r.critical ? 'rgba(255,68,85,0.1)' : 'rgba(136,153,187,0.06)'}`, borderLeft: `2px solid ${r.critical ? '#ff4455' : '#3c4c64'}`, borderRadius: '4px' }}>
-                <span style={{ fontSize: '13px', flexShrink: 0 }}>{r.icon}</span>
-                <span style={{ fontSize:'13px', color: r.critical ? '#e8c8c8' : '#7888a0', lineHeight: '1.5' }}>{r.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <RoutineColumn title="ROUTINE IDÉALE LONDON" routine={ICT_LONDON_ROUTINE} />
+        <RulesColumn rules={ICT_LONDON_RULES} />
       </div>
 
       <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(0,255,136,0.07)', borderRadius: '8px', padding: '14px 16px' }}>
@@ -438,66 +556,18 @@ function LondonTab() {
 function NewYorkTab() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '6px' }}>
-        {ICT_SESSIONS.map(s => (
-          <div key={s.id} style={{ padding: '10px 12px', background: `${s.color}08`, border: `1px solid ${s.color}20`, borderRadius: '6px', borderTop: `2px solid ${s.color}` }}>
-            <div style={{ fontSize: '16px', marginBottom: '4px' }}>{s.emoji}</div>
-            <div style={{ fontSize:'13px', color: s.color, fontWeight: '700', marginBottom: '2px' }}>{s.label}</div>
-            <div style={{ fontSize:'12px', color: '#5a6a82' }}>{s.time}</div>
-            {s.badge && <div style={{ fontSize:'12px', color: s.color, marginTop: '3px', opacity: 0.8 }}>{s.badge}</div>}
-            {s.danger && <div style={{ fontSize:'12px', color: '#ff4455', marginTop: '3px' }}>⚠ DANGER</div>}
-          </div>
-        ))}
-      </div>
+      <SessionsQuickGrid sessions={ICT_SESSIONS} />
 
       <div>
         <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>SESSIONS ICT — NEW YORK (HEURE FRANÇAISE)</div>
         {ICT_SESSIONS.map(s => <SessionCard key={s.id} session={s} />)}
       </div>
 
-      <div>
-        <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>MODELE D'ENTREE ICT — 5 ETAPES</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {ICT_NY_STEPS.map((s, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '28px 28px 120px 1fr', gap: '10px', alignItems: 'center', padding: '10px 14px', background: s.critical ? 'rgba(255,68,85,0.04)' : 'rgba(14,15,22,0.3)', border: `1px solid ${s.critical ? 'rgba(255,68,85,0.1)' : 'rgba(136,153,187,0.06)'}`, borderLeft: `2px solid ${s.color}`, borderRadius: '5px' }}>
-              <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: `${s.color}15`, border: `1px solid ${s.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize:'12px', color: s.color, fontWeight: '700' }}>{s.step}</div>
-              <span style={{ fontSize: '16px' }}>{s.icon}</span>
-              <span style={{ fontSize:'13px', color: s.color, fontWeight: '700' }}>{s.label}</span>
-              <span style={{ fontSize:'13px', color: s.critical ? '#e8c8c8' : '#7888a0', lineHeight: '1.5' }}>{s.desc}</span>
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: '10px', padding: '10px 14px', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.22)', borderRadius: '6px', fontSize:'13px', color: '#8899bb', fontWeight: '700', textAlign: 'center', letterSpacing: '0.5px' }}>
-          🔥 La liquidité d'abord. Le déplacement ensuite.
-        </div>
-      </div>
+      <EntrySteps steps={ICT_NY_STEPS} mantra="La liquidité d'abord. Le déplacement ensuite." />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <div>
-          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>ROUTINE IDEALE NEW YORK</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {ICT_NY_ROUTINE.map((r, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '55px 1fr', gap: '10px', alignItems: 'center', padding: '9px 12px', background: 'rgba(14,15,22,0.4)', border: `1px solid ${r.color}15`, borderLeft: `2px solid ${r.color}`, borderRadius: '5px' }}>
-                <span style={{ fontSize:'13px', color: r.color, fontWeight: '700' }}>{r.time}</span>
-                <div>
-                  <div style={{ fontSize:'13px', color: '#dde4ef', fontWeight: '600', marginBottom: '2px' }}>{r.action}</div>
-                  <div style={{ fontSize:'12px', color: '#5a6a82' }}>{r.detail}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '10px' }}>INTERDICTIONS & RISK MANAGEMENT</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {ICT_NY_RULES.map((r, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '8px 12px', background: r.critical ? 'rgba(255,68,85,0.04)' : 'rgba(14,15,22,0.3)', border: `1px solid ${r.critical ? 'rgba(255,68,85,0.1)' : 'rgba(136,153,187,0.06)'}`, borderLeft: `2px solid ${r.critical ? '#ff4455' : '#3c4c64'}`, borderRadius: '4px' }}>
-                <span style={{ fontSize: '13px', flexShrink: 0 }}>{r.icon}</span>
-                <span style={{ fontSize:'13px', color: r.critical ? '#e8c8c8' : '#7888a0', lineHeight: '1.5' }}>{r.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <RoutineColumn title="ROUTINE IDÉALE NEW YORK" routine={ICT_NY_ROUTINE} />
+        <RulesColumn rules={ICT_NY_RULES} />
       </div>
 
       <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(0,255,136,0.07)', borderRadius: '8px', padding: '14px 16px' }}>
@@ -544,22 +614,20 @@ export default function StrategieDiscipline() {
   return (
     <div style={{ padding: '24px 28px', width: '100%', boxSizing: 'border-box', fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>
       <div style={{ marginBottom: '24px' }}>
-        <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>SESSIONS ICT</div>
-        <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8edf8', margin: '0 0 4px' }}>Stratégie et Discipline</h1>
-        <div style={{ fontSize:'13px', color: '#5a6a82' }}>Sessions de trading · Modèles d'entrée ICT · Routines</div>
+        <div style={{ fontSize:'11px', color: ST.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom: '6px' }}>SESSIONS ICT</div>
+        <h1 style={{ fontSize: '22px', fontWeight: '500', color: '#e8edf8', margin: '0 0 4px' }}>Stratégie et Discipline</h1>
+        <div style={{ fontSize:'12px', color: ST.textTertiary }}>Sessions de trading · Modèles d'entrée ICT · Routines</div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '6px', marginBottom: '22px', background: 'rgba(14,15,22,0.4)', padding: '5px', borderRadius: '8px', border: '1px solid rgba(0,255,136,0.07)' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '22px' }}>
         <button onClick={() => { setActiveTab('newyork'); localStorage.setItem('strategie_tab', 'newyork'); }}
-          style={{ flex: 1, padding: '10px 6px', borderRadius: '5px', border: activeTab === 'newyork' ? '1px solid #8899bb40' : '1px solid transparent', background: activeTab === 'newyork' ? '#8899bb12' : 'transparent', color: activeTab === 'newyork' ? '#8899bb' : '#5a6a82', fontSize:'13px', fontFamily: 'inherit', fontWeight: activeTab === 'newyork' ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s' }}>
-          <div style={{ fontSize: '13px', marginBottom: '2px' }}>🇺🇸</div>
-          <div style={{ fontSize:'12px', opacity: 0.8 }}>US New York</div>
+          style={{ padding: '8px 18px', borderRadius: '99px', display:'flex', alignItems:'center', gap:'6px', border: activeTab === 'newyork' ? `1px solid ${ST.borderSecondary}` : `1px solid ${ST.border}`, background: activeTab === 'newyork' ? ST.surfSecondary : 'transparent', color: activeTab === 'newyork' ? ST.textPrimary : ST.textSecondary, fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s' }}>
+          🇺🇸 US New York
         </button>
         <button onClick={() => { setActiveTab('london'); localStorage.setItem('strategie_tab', 'london'); }}
-          style={{ flex: 1, padding: '10px 6px', borderRadius: '5px', border: activeTab === 'london' ? '1px solid #4488ff40' : '1px solid transparent', background: activeTab === 'london' ? '#4488ff12' : 'transparent', color: activeTab === 'london' ? '#4488ff' : '#5a6a82', fontSize:'13px', fontFamily: 'inherit', fontWeight: activeTab === 'london' ? '700' : '400', cursor: 'pointer', transition: 'all 0.15s' }}>
-          <div style={{ fontSize: '13px', marginBottom: '2px' }}>🇬🇧</div>
-          <div style={{ fontSize:'12px', opacity: 0.8 }}>GB London</div>
+          style={{ padding: '8px 18px', borderRadius: '99px', display:'flex', alignItems:'center', gap:'6px', border: activeTab === 'london' ? `1px solid ${ST.borderSecondary}` : `1px solid ${ST.border}`, background: activeTab === 'london' ? ST.surfSecondary : 'transparent', color: activeTab === 'london' ? ST.textPrimary : ST.textSecondary, fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s' }}>
+          🇬🇧 GB London
         </button>
       </div>
 

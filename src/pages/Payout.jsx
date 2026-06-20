@@ -57,6 +57,32 @@ const PY = {
   radiusMd:      '8px',
 };
 
+// ── Icons (tabler-style inline SVG) ─────────────────────────────
+function IconTrendingDown({ color, size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7l6 6l4 -4l8 8" />
+      <path d="M14 17l7 0l0 -7" />
+    </svg>
+  );
+}
+function IconTrendingUp({ color, size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 17l6 -6l4 4l8 -8" />
+      <path d="M14 7l7 0l0 7" />
+    </svg>
+  );
+}
+function IconPlus({ color, size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 5l0 14" />
+      <path d="M5 12l14 0" />
+    </svg>
+  );
+}
+
 // ── Small components ──────────────────────────────────────────
 function SectionHeader({ icon, label, total, children }) {
   return (
@@ -208,12 +234,16 @@ function EditModal({ entry, section, onSave, onClose }) {
 }
 
 function AddButton({ label, onClick }) {
+  const [hover, setHover] = useState(false);
   return (
     <button onClick={onClick}
-      style={{ width: '100%', padding: '10px', background: 'transparent', border: 'none', borderTop: `1px solid ${PY.border}`, color: PY.textTertiary, fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s' }}
-      onMouseEnter={e => { e.currentTarget.style.color = '#8899bb'; }}
-      onMouseLeave={e => { e.currentTarget.style.color = PY.textTertiary; }}
-    >+ {label}</button>
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{ width: '100%', padding: '10px', background: 'transparent', border: 'none', borderTop: `1px solid ${PY.border}`, color: hover ? '#8899bb' : PY.textTertiary, fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+    >
+      <IconPlus color={hover ? '#8899bb' : PY.textTertiary} />
+      {label}
+    </button>
   );
 }
 
@@ -330,7 +360,7 @@ export default function Payout() {
         <div style={{ border: `0.5px solid ${PY.border}`, borderRadius: PY.radiusLg, overflow: 'hidden' }}>
           <div style={{ background: PY.surfSecondary, borderBottom: `1px solid ${PY.border}`, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: PY.danger, fontSize: '14px', lineHeight: 1 }}>↓</span>
+              <IconTrendingDown color={PY.danger} />
               <span style={{ fontSize: '13px', fontWeight: '500', color: PY.textPrimary }}>Dépenses</span>
             </div>
             <span style={{ fontSize: '14px', fontWeight: '500', color: PY.danger }}>{fmt(totalInvested)} €</span>
@@ -369,7 +399,7 @@ export default function Payout() {
         <div style={{ border: `0.5px solid ${PY.border}`, borderRadius: PY.radiusLg, overflow: 'hidden' }}>
           <div style={{ background: PY.surfSecondary, borderBottom: `1px solid ${PY.border}`, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: PY.success, fontSize: '14px', lineHeight: 1 }}>↑</span>
+              <IconTrendingUp color={PY.success} />
               <span style={{ fontSize: '13px', fontWeight: '500', color: PY.textPrimary }}>Revenus</span>
             </div>
             <span style={{ fontSize: '14px', fontWeight: '500', color: PY.success }}>{fmt(totalPayouts)} €</span>

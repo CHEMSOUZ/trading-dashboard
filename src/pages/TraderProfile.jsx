@@ -13,6 +13,21 @@ const P = {
   red:     '#ff3344',
 };
 
+// ── Redesign tokens (header / summary row / bloc bilan IA) ────
+const PT = {
+  border:          'rgba(136,153,187,0.14)',
+  borderSecondary: 'rgba(136,153,187,0.35)',
+  surfSecondary:   'rgba(20,23,34,0.75)',
+  textPrimary:     '#dde4ef',
+  textSecondary:   '#8898aa',
+  textTertiary:    '#5a6a82',
+  success:         '#1D9E75',
+  danger:          '#E24B4A',
+  warn:            '#BA7517',
+  radiusLg:        '10px',
+  radiusMd:        '8px',
+};
+
 const WEEKDAY_LABELS = ['LUN','MAR','MER','JEU','VEN','SAM','DIM'];
 
 function monthLabel(year, month) {
@@ -704,8 +719,14 @@ export default function TraderProfile() {
     }
   }
 
-  const dominantColor = dominant ? (EMOTION_COLORS[dominant] ?? P.text2) : P.text2;
-  const dominantRgb   = emotionRgb(dominantColor);
+  // Trades/WR agrégés sur les jours du mois où le trait dominant était actif (summary row).
+  let domTrades = 0, domWins = 0;
+  for (const e of monthEntries) {
+    if (e.emotion !== dominant) continue;
+    const s = tradeStats[e.date];
+    if (s) { domTrades += s.count; domWins += s.wins; }
+  }
+  const domWR = domTrades > 0 ? Math.round(domWins / domTrades * 100) : null;
 
   const badgeColor = report ? (EMOTION_COLORS[report.emotion] ?? P.text2) : P.text3;
   const badgeRgb    = emotionRgb(badgeColor);
@@ -729,9 +750,29 @@ export default function TraderProfile() {
       <style>{`@keyframes pulse{0%,100%{opacity:.35}50%{opacity:.9}}`}</style>
 
       <div style={{ marginBottom:'24px' }}>
-        <div style={{ fontSize:'11px', color:P.text3, letterSpacing:'3px', marginBottom:'5px' }}>TRADING PSYCHOLOGY</div>
-        <h1 style={{ fontSize:'22px', fontWeight:'700', color:P.text1, margin:'0 0 3px', letterSpacing:'-0.5px' }}>Profil Trader</h1>
-        <div style={{ fontSize:'13px', color:P.text3 }}>Bilan IA · {fmtDate(referenceDay)}</div>
+        <div style={{ fontSize:'11px', color:PT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'6px' }}>TRADING PSYCHOLOGY</div>
+        <h1 style={{ fontSize:'22px', fontWeight:'500', color:P.text1, margin:'0 0 3px' }}>Profil Trader</h1>
+        <div style={{ fontSize:'12px', color:PT.textTertiary }}>Bilan IA · {fmtDate(referenceDay)}</div>
+      </div>
+
+      {/* ── Summary row ── */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'1.25rem' }}>
+        <div style={{ background:'#1a0808', border:'0.5px solid #3a1212', borderLeft:'3px solid #E24B4A', borderRadius:PT.radiusLg, padding:'12px 16px' }}>
+          <div style={{ fontSize:'11px', color:'#9a6060', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'6px' }}>TRAIT DOMINANT CE MOIS</div>
+          <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+            {dominant && <ToneIcon tone={emotionTone(dominant)} color="#E24B4A" size={18} />}
+            <span style={{ fontSize:'20px', fontWeight:'500', color:'#E24B4A' }}>{dominant ?? '—'}</span>
+          </div>
+          <div style={{ fontSize:'11px', color:'#9a6060', marginTop:'6px' }}>
+            {domTrades > 0 ? `${domTrades} trade${domTrades > 1 ? 's' : ''} · ${domWR}% WR` : 'Aucun trade associé'}
+          </div>
+        </div>
+
+        <div style={{ background:PT.surfSecondary, border:`1px solid ${PT.border}`, borderRadius:PT.radiusLg, padding:'12px 16px' }}>
+          <div style={{ fontSize:'11px', color:PT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'6px' }}>SÉRIE ACTUELLE</div>
+          <div style={{ fontSize:'20px', fontWeight:'500', color:PT.textPrimary }}>{streak} jour{streak > 1 ? 's' : ''} stable{streak > 1 ? 's' : ''}</div>
+          <div style={{ fontSize:'11px', color:PT.textTertiary, marginTop:'6px' }}>Série N° {streak}</div>
+        </div>
       </div>
 
       {/* ── Auth / abonnement / quota ── */}
@@ -750,30 +791,38 @@ export default function TraderProfile() {
         </div>
       )}
 
-      {/* ── Aucun trade : synthèse locale (sans appel IA) basée sur l'historique mental_reports ── */}
+      {/* ── Aucun trade : bloc bilan IA hebdomadaire (sans appel IA si déjà généré cette semaine) ── */}
       {noTrades && !authError && !generating && (
         noTradeSynthesis ? (() => {
-          const { dominantOverall, trend, totalDays } = noTradeSynthesis;
-          const trendLabel = trend === 'amelioration' ? "Ta tendance récente s'améliore"
-            : trend === 'degradation' ? 'Ta tendance récente montre des signes de dégradation'
-            : 'Ta tendance récente reste stable';
-          const trendColor = trend === 'amelioration' ? P.green : trend === 'degradation' ? P.red : P.text2;
+          const trend       = weeklyReport?.trend ?? '';
+          const trendLower  = trend.toLowerCase();
+          const verdictColor = trendLower.includes('dégrad')                                  ? PT.danger
+            : trendLower.includes('progress') || trendLower.includes('amélior')               ? PT.success
+            : PT.warn;
           return (
-            <div style={{ marginBottom:'20px', padding:'20px', background:`${P.bg}0.40)`, border:`1px solid ${P.border}0.10)`, borderRadius:'10px' }}>
-              <div style={{ fontSize:'13px', color:P.text2, marginBottom:'14px' }}>
-                Aucun trade enregistré le {fmtDate(referenceDay)} — voici la synthèse de ton évolution récente :
+            <div style={{ marginBottom:'1.25rem', border:`0.5px solid ${PT.border}`, borderRadius:PT.radiusLg, overflow:'hidden' }}>
+              {/* Header */}
+              <div style={{ background:PT.surfSecondary, borderBottom:`1px solid ${PT.border}`, padding:'10px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'6px' }}>
+                <span style={{ fontSize:'11px', fontWeight:'500', color:PT.textSecondary, textTransform:'uppercase', letterSpacing:'0.06em' }}>BILAN IA HEBDOMADAIRE</span>
+                {weeklyReport && (
+                  <span style={{ fontSize:'11px', color:PT.textTertiary }}>
+                    Semaine du {fmtDate(weeklyReport.weekStart)} · Généré par Claude
+                  </span>
+                )}
               </div>
-              <div style={{ display:'flex', gap:'8px', marginBottom:'14px' }}>
-                <MiniStat label="TRAIT DOMINANT" value={dominantOverall ?? '—'} />
-                <MiniStat label="JOURS ANALYSÉS" value={totalDays} />
-              </div>
-              <div style={{ fontSize:'13px', color:trendColor, fontWeight:'700' }}>{trendLabel}.</div>
 
-              <div style={{ marginTop:'18px', paddingTop:'16px', borderTop:`1px solid ${P.border}0.08)` }}>
-                <div style={{ fontSize:'10px', color:P.text3, letterSpacing:'2px', fontWeight:'700', marginBottom:'10px' }}>BILAN IA HEBDOMADAIRE</div>
+              {/* Verdict strip */}
+              {weeklyReport && (
+                <div style={{ padding:'12px 16px', background:'#120808', borderBottom:'0.5px solid #3a1212' }}>
+                  <div style={{ fontSize:'11px', color:'#9a6060', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'4px' }}>VERDICT</div>
+                  <div style={{ fontSize:'15px', fontWeight:'500', color:verdictColor }}>{weeklyReport.trend}</div>
+                </div>
+              )}
 
+              {/* Body */}
+              <div style={{ padding:'16px' }}>
                 {weeklyAuthError && (
-                  <div style={{ fontSize:'12px', color:'#f59e0b', lineHeight:'1.6' }}>
+                  <div style={{ fontSize:'13px', color:'#f59e0b', lineHeight:'1.6' }}>
                     {weeklyAuthError === 'unauthenticated'      ? 'Connecte-toi pour activer le bilan hebdomadaire.'
                       : weeklyAuthError === 'subscription_inactive' ? 'Abonnement requis pour activer le bilan hebdomadaire.'
                       : `Quota IA mensuel atteint${weeklyQuotaReset ? `, réessaie après le ${weeklyQuotaReset}` : ''}.`}
@@ -781,31 +830,28 @@ export default function TraderProfile() {
                 )}
 
                 {weeklyGenerating && !weeklyReport && (
-                  <div style={{ fontSize:'12px', color:P.text3, display:'flex', alignItems:'center', gap:'8px' }}>
+                  <div style={{ fontSize:'13px', color:PT.textSecondary, display:'flex', alignItems:'center', gap:'8px' }}>
                     <span style={{ animation:'pulse 1.5s ease infinite', fontSize:'8px' }}>●</span>
                     Claude analyse ta semaine...
                   </div>
                 )}
 
                 {weeklyInsufficient && !weeklyGenerating && (
-                  <div style={{ fontSize:'12px', color:P.text3 }}>Historique encore trop court pour un bilan hebdomadaire.</div>
+                  <div style={{ fontSize:'13px', color:PT.textSecondary }}>Historique encore trop court pour un bilan hebdomadaire.</div>
                 )}
 
                 {weeklyError && !weeklyGenerating && (
-                  <div style={{ fontSize:'12px', color:P.red }}>{weeklyError}</div>
+                  <div style={{ fontSize:'13px', color:PT.danger }}>{weeklyError}</div>
                 )}
 
-                {weeklyReport && (
-                  <>
-                    <div style={{ fontSize:'14px', fontWeight:'700', color:P.text1, marginBottom:'10px' }}>{weeklyReport.trend}</div>
-                    {weeklyReport.description.split(/\n\n+/).map((p, i) => (
-                      <div key={i} style={{ fontSize:'14px', color:P.text1, lineHeight:'1.8', marginBottom:'10px' }}>{p.trim()}</div>
-                    ))}
-                    <div style={{ fontSize:'11px', color:P.text4, marginTop:'4px' }}>
-                      Semaine du {fmtDate(weeklyReport.weekStart)} · Généré par Claude
-                    </div>
-                  </>
-                )}
+                {weeklyReport && weeklyReport.description.split(/\n\n+/).map((p, i) => (
+                  <p key={i} style={{ fontSize:'13px', color:PT.textSecondary, lineHeight:'1.75', maxWidth:'680px', margin: i === 0 ? '0 0 12px' : '0 0 12px' }}>{p.trim()}</p>
+                ))}
+              </div>
+
+              {/* Footer */}
+              <div style={{ padding:'8px 16px', background:PT.surfSecondary, borderTop:`1px solid ${PT.border}`, fontSize:'11px', color:PT.textTertiary }}>
+                Aucun trade enregistré le {fmtDate(referenceDay)}.
               </div>
             </div>
           );
@@ -879,29 +925,6 @@ export default function TraderProfile() {
           </div>
         </div>
       )}
-
-      {/* Bandeau */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px', marginBottom:'24px' }}>
-        <div style={{ padding:'18px 20px', borderRadius:'12px', background:`linear-gradient(135deg, rgba(${dominantRgb},0.20), rgba(${dominantRgb},0.05))`, border:`1px solid rgba(${dominantRgb},0.30)`, display:'flex', alignItems:'center', gap:'14px' }}>
-          <div style={{ width:'44px', height:'44px', borderRadius:'10px', background:`rgba(${dominantRgb},0.18)`, border:`1px solid rgba(${dominantRgb},0.45)`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            {dominant && <ToneIcon tone={emotionTone(dominant)} color={dominantColor} size={22} />}
-          </div>
-          <div>
-            <div style={{ fontSize:'10px', color:P.text3, letterSpacing:'2px', marginBottom:'3px' }}>TRAIT DOMINANT CE MOIS</div>
-            <div style={{ fontSize:'18px', fontWeight:'800', color:dominantColor }}>{dominant ?? '—'}</div>
-          </div>
-        </div>
-
-        <div style={{ padding:'18px 20px', borderRadius:'12px', background:`${P.bg}0.5)`, border:`1px solid ${P.border}0.12)`, display:'flex', alignItems:'center', gap:'14px' }}>
-          <div style={{ width:'44px', height:'44px', borderRadius:'10px', background:'rgba(136,153,187,0.10)', border:'1px solid rgba(136,153,187,0.25)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'18px', fontWeight:'800', color:P.text1 }}>
-            {streak}
-          </div>
-          <div>
-            <div style={{ fontSize:'10px', color:P.text3, letterSpacing:'2px', marginBottom:'3px' }}>SÉRIE ACTUELLE</div>
-            <div style={{ fontSize:'16px', fontWeight:'700', color:P.text1 }}>{streak} jour{streak > 1 ? 's' : ''} stable{streak > 1 ? 's' : ''}</div>
-          </div>
-        </div>
-      </div>
 
       {/* Calendrier */}
       <div style={{ marginBottom:'16px' }}>
