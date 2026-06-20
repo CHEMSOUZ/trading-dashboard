@@ -59,18 +59,30 @@ const PHASE_OPTIONS = [
   ]},
 ];
 
-const PHASE_COLORS = {
-  combine:        '#8899bb',
-  ef_standard:    '#f0c020',
-  ef_consistency: '#aa88ff',
-  live:           '#00cc77',
-};
 const PHASE_LABELS = {
   combine:        '🎯 Trading Combine',
   ef_standard:    '💰 Express Funded Standard',
   ef_consistency: '⚡ Express Funded Consistency',
   live:           '🌟 Live Funded Account',
 };
+
+// ── Design tokens ────────────────────────────────────────────────
+const PF = {
+  border:        'rgba(136,153,187,0.14)',   // border-tertiary
+  surfSecondary: 'rgba(20,23,34,0.75)',       // background-secondary
+  textPrimary:   '#dde4ef',
+  textTertiary:  '#5a6a82',
+  success:       '#1D9E75',
+  successBg:     'rgba(29,158,117,0.12)',
+  successBorder: 'rgba(29,158,117,0.35)',
+  danger:        '#E24B4A',
+  warn:          '#BA7517',
+  radiusLg:      '10px',
+  radiusMd:      '8px',
+};
+function firmName(type) {
+  return type?.startsWith('lucid') ? 'LucidFlex' : 'Topstep';
+}
 
 // ── Helpers ────────────────────────────────────────────────────
 const getNet   = t => t.result_net ?? t.result ?? 0;
@@ -125,22 +137,12 @@ function CTooltip({ active, payload, label }) {
   );
 }
 
-function MetricCard({ label, value, sub, color='#dde4ef', alert=false, featured=false }) {
-  if (featured) {
-    const rgb = color === '#00cc77' ? '0,204,119' : color === '#ff3344' ? '255,51,68' : '136,153,187';
-    return (
-      <div style={{ gridColumn:'span 2', minWidth:0, background:`linear-gradient(135deg, rgba(${rgb},0.22), rgba(${rgb},0.05))`, border:`1px solid rgba(${rgb},0.35)`, borderRadius:'8px', padding:'18px 20px' }}>
-        <div style={{ fontSize:'14px', color:'#8898aa', letterSpacing:'1.5px', marginBottom:'8px' }}>{label}</div>
-        <div style={{ fontSize:'34px', fontWeight:'800', color, letterSpacing:'-0.8px', lineHeight:1, overflowWrap:'anywhere' }}>{value}</div>
-        {sub && <div style={{ fontSize:'13px', color:'#8898aa', marginTop:'7px' }}>{sub}</div>}
-      </div>
-    );
-  }
+function MetricCard({ label, value, sub, color='#dde4ef', alert=false }) {
   return (
-    <div style={{ background:alert?'rgba(255,68,85,0.06)':'rgba(14,15,22,0.5)', border:`1px solid ${alert?'rgba(255,68,85,0.30)':'rgba(136,153,187,0.10)'}`, borderTop:`2px solid ${color}`, borderRadius:'6px', padding:'14px 16px' }}>
-      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'1.5px', marginBottom:'6px' }}>{label}</div>
-      <div style={{ fontSize:'16px', fontWeight:'700', color, lineHeight:1 }}>{value}</div>
-      {sub && <div style={{ fontSize:'13px', color:alert?'#ff8888':'#5a6a82', marginTop:'5px' }}>{sub}</div>}
+    <div style={{ background:PF.surfSecondary, border:`1px solid ${alert?'rgba(226,75,74,0.35)':PF.border}`, borderRadius:PF.radiusMd, padding:'10px 12px' }}>
+      <div style={{ fontSize:'11px', color:PF.textTertiary, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'5px' }}>{label}</div>
+      <div style={{ fontSize:'16px', fontWeight:'500', color, lineHeight:1 }}>{value}</div>
+      {sub && <div style={{ fontSize:'11px', color:alert?PF.danger:PF.textTertiary, marginTop:'5px' }}>{sub}</div>}
     </div>
   );
 }
@@ -155,8 +157,8 @@ function ProgressBar({ label, current, max, color, displayText, note }) {
           {displayText && <span style={{ fontSize:'13px', color, fontWeight:'700' }}>{displayText}</span>}
         </div>
       )}
-      <div style={{ height:'6px', background:'rgba(136,153,187,0.08)', borderRadius:'3px', overflow:'hidden' }}>
-        <div style={{ height:'100%', width:`${pct}%`, background:color, borderRadius:'3px', transition:'width 0.5s ease', boxShadow:`0 0 6px ${color}60` }} />
+      <div style={{ height:'4px', background:'rgba(136,153,187,0.08)', borderRadius:'2px', overflow:'hidden' }}>
+        <div style={{ height:'100%', width:`${pct}%`, background:color, borderRadius:'2px', transition:'width 0.5s ease' }} />
       </div>
       {note && <div style={{ fontSize:'12px', color:'#5a6a82' }}>{note}</div>}
     </div>
@@ -164,12 +166,13 @@ function ProgressBar({ label, current, max, color, displayText, note }) {
 }
 
 function ObjRow({ ok, pending, label, detail, children }) {
-  const icon  = ok ? '✅' : pending ? '⏳' : '❌';
-  const border= ok ? 'rgba(0,204,119,0.18)' : pending ? 'rgba(136,153,187,0.10)' : 'rgba(255,68,85,0.28)';
-  const bg    = ok ? 'rgba(0,204,119,0.04)'  : pending ? 'rgba(14,15,22,0.4)'     : 'rgba(255,68,85,0.05)';
+  const icon  = ok ? '✓' : pending ? '⏳' : '✕';
+  const accent= ok ? PF.success : pending ? PF.warn : PF.danger;
+  const border= ok ? 'rgba(29,158,117,0.20)' : pending ? PF.border : 'rgba(226,75,74,0.28)';
+  const bg    = ok ? 'rgba(29,158,117,0.04)'  : pending ? 'rgba(14,15,22,0.4)'     : 'rgba(226,75,74,0.05)';
   return (
     <div style={{ background:bg, border:`1px solid ${border}`, borderRadius:'6px', padding:'14px 16px', display:'flex', gap:'12px', alignItems:'flex-start' }}>
-      <span style={{ fontSize:'18px', flexShrink:0, marginTop:'1px' }}>{icon}</span>
+      <span style={{ width:'20px', height:'20px', borderRadius:'50%', background:`${accent}22`, border:`1px solid ${accent}55`, color:accent, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px', fontWeight:'700', flexShrink:0, marginTop:'1px' }}>{icon}</span>
       <div style={{ flex:1 }}>
         <div style={{ fontSize:'13px', color:'#dde4ef', fontWeight:'600', marginBottom:(children||detail)?'8px':0 }}>{label}</div>
         {detail && <div style={{ fontSize:'13px', color:'#5868a0', marginBottom:children?'8px':0 }}>{detail}</div>}
@@ -181,11 +184,12 @@ function ObjRow({ ok, pending, label, detail, children }) {
 
 function WinDayBadge({ date, pnl, minAmount }) {
   const qual  = pnl >= minAmount;
-  const color = pnl > 0 ? (qual ? '#00cc77' : '#f0a020') : '#ff4455';
+  const color = pnl > 0 ? (qual ? PF.success : PF.textTertiary) : PF.danger;
+  const rgb   = pnl > 0 ? (qual ? '29,158,117' : '90,106,130') : '226,75,74';
   return (
     <div title={`${date}: ${fmt(pnl,true)}${qual?' ✓ qualifiant':''}`}
-      style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'2px', minWidth:'38px' }}>
-      <div style={{ width:'36px', height:'36px', borderRadius:'50%', background:`rgba(${pnl>0?(qual?'0,204,119':'240,160,32'):'255,68,85'},0.12)`, border:`2px solid ${color}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', color, fontWeight:'700' }}>
+      style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'2px', minWidth:'32px' }}>
+      <div style={{ width:'28px', height:'28px', borderRadius:'50%', background:`rgba(${rgb},0.12)`, border:`2px solid ${color}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px', color, fontWeight:'700' }}>
         {pnl > 0 ? (qual ? '✓' : '+') : '✗'}
       </div>
       <span style={{ fontSize:'11px', color:'#5a6a82', textAlign:'center' }}>{date.slice(5)}</span>
@@ -193,51 +197,58 @@ function WinDayBadge({ date, pnl, minAmount }) {
   );
 }
 
-function MLLSection({ mll, size, maxLoss, balance, isLocked, postPayout }) {
+function MLLSection({ mll, size, maxLoss, balance, isLocked, postPayout, phaseLabel }) {
   const dist      = balance - mll;
-  const alert     = dist < 500 && !postPayout;
+  const critical  = dist < 500 && !postPayout;
+  const safe      = postPayout || dist > 2000;
   const lockLevel = size + maxLoss;
+  const mllMin    = size - maxLoss;
+
+  const statusText  = critical ? 'Marge critique' : safe ? 'Compte sécurisé' : 'Surveiller';
+  const statusColor = critical ? PF.danger : safe ? PF.success : PF.warn;
+  const borderColor = critical ? '#3a1212' : '#0a2a1a';
+
+  const pct = Math.min(Math.max(((balance - mllMin) / Math.max(lockLevel - mllMin, 1)) * 100, 0), 100);
+
   return (
-    <div style={{ background:alert?'rgba(255,68,85,0.06)':'rgba(14,15,22,0.4)', border:`1px solid ${alert?'rgba(255,68,85,0.30)':'rgba(136,153,187,0.10)'}`, borderRadius:'8px', padding:'16px' }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px', flexWrap:'wrap', gap:'8px' }}>
-        <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>MAXIMUM LOSS LIMIT (MLL)</div>
-        <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
-          {postPayout
-            ? <span style={{ background:'rgba(0,204,119,0.12)', border:'1px solid rgba(0,204,119,0.35)', borderRadius:'4px', padding:'3px 10px', fontSize:'12px', color:'#00cc77', fontWeight:'700' }}>🔒 FIXÉE À 0$ — APRÈS PAYOUT</span>
-            : isLocked
-              ? <span style={{ background:'rgba(136,153,187,0.12)', border:'1px solid rgba(136,153,187,0.35)', borderRadius:'4px', padding:'3px 10px', fontSize:'12px', color:'#8899bb', fontWeight:'700' }}>🔒 VERROUILLÉE À {size.toLocaleString()}$</span>
-              : <span style={{ background:'rgba(240,160,32,0.08)', border:'1px solid rgba(240,160,32,0.25)', borderRadius:'4px', padding:'3px 10px', fontSize:'12px', color:'#f0a020' }}>⚡ Verrou dès {lockLevel.toLocaleString()}$ → MLL = {size.toLocaleString()}$</span>
-          }
+    <div style={{ background:'#120808', border:`0.5px solid ${borderColor}`, borderRadius:PF.radiusLg, padding:'1.25rem' }}>
+      <style>{'@keyframes pfBlinkDot{0%,100%{opacity:1}50%{opacity:0.3}}'}</style>
+
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px', flexWrap:'wrap', gap:'8px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+          <span style={{ width:'8px', height:'8px', borderRadius:'50%', background:statusColor, display:'inline-block', animation:'pfBlinkDot 1.5s ease-in-out infinite' }} />
+          <span style={{ fontSize:'13px', fontWeight:'500', textTransform:'uppercase', color:statusColor }}>{statusText}</span>
         </div>
+        {phaseLabel && <span style={{ fontSize:'12px', color:'#9a6060' }}>{phaseLabel}</span>}
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))', gap:'8px', marginBottom:'12px' }}>
-        <MetricCard label="MLL ACTUEL" value={`${mll.toLocaleString()}$`}
-          color={postPayout?'#00cc77':isLocked?'#8899bb':'#ff4455'}
-          sub={postPayout?'Fixée à 0$ à vie':isLocked?'Verrouillée définitivement':'Trailing ↑ jamais ↓'} />
-        <MetricCard label="MARGE RESTANTE" value={`${dist.toFixed(0)}$`}
-          color={alert?'#ff4455':dist<1000?'#f0a020':'#8899bb'}
-          alert={alert} sub="Balance − MLL" />
+      <div style={{ display:'grid', gridTemplateColumns: (!isLocked && !postPayout) ? 'repeat(3,1fr)' : 'repeat(2,1fr)', gap:'12px', marginBottom:'14px' }}>
+        <div>
+          <div style={{ fontSize:'11px', color:'#9a6060', textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'4px' }}>MARGE RESTANTE</div>
+          <div style={{ fontSize:'32px', fontWeight:'500', color: critical ? PF.danger : PF.textPrimary, lineHeight:1 }}>{dist.toFixed(0)}$</div>
+        </div>
+        <div>
+          <div style={{ fontSize:'11px', color:'#9a6060', textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'4px' }}>MLL ACTUEL</div>
+          <div style={{ fontSize:'22px', fontWeight:'500', color:PF.textPrimary, lineHeight:1 }}>{mll.toLocaleString()}$</div>
+        </div>
         {!isLocked && !postPayout && (
-          <MetricCard label="VERROU À" value={`${lockLevel.toLocaleString()}$`} color="#f0a020"
-            sub={`+ ${(lockLevel-balance).toFixed(0)}$ restant`} />
+          <div>
+            <div style={{ fontSize:'11px', color:'#9a6060', textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'4px' }}>VERROU À</div>
+            <div style={{ fontSize:'22px', fontWeight:'500', color:PF.textPrimary, lineHeight:1 }}>{lockLevel.toLocaleString()}$</div>
+          </div>
         )}
       </div>
 
-      <div style={{ height:'16px', background:'rgba(0,0,0,0.3)', borderRadius:'4px', overflow:'hidden', position:'relative' }}>
-        <div style={{ height:'100%', width:`${Math.min((dist/Math.max(maxLoss,1))*100,100)}%`, background:alert?'linear-gradient(90deg,#ff4455,#ff6677)':dist<1000?'linear-gradient(90deg,#f0a020,#f0c040)':'linear-gradient(90deg,#566880,#8899bb)', borderRadius:'4px', transition:'width 0.5s ease' }} />
-        <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px', color:'rgba(255,255,255,0.80)', fontWeight:'700' }}>
-          Marge: {dist.toFixed(0)}$ · MLL: {mll.toLocaleString()}$
-        </div>
+      <div style={{ height:'6px', background:'#2a1010', borderRadius:'3px', overflow:'hidden', marginBottom:'8px' }}>
+        <div style={{ height:'100%', width:`${pct}%`, background:PF.danger, borderRadius:'3px', transition:'width 0.5s ease' }} />
+      </div>
+      <div style={{ display:'flex', justifyContent:'space-between', fontSize:'11px', color:'#9a6060', marginBottom:'12px', flexWrap:'wrap', gap:'6px' }}>
+        <span>MLL : {mll.toLocaleString()}$</span>
+        <span style={{ color: critical ? PF.danger : '#9a6060' }}>Balance : {balance.toFixed(0)}$ · {dist.toFixed(0)}$ de marge</span>
+        <span>{(!isLocked && !postPayout) ? `Verrou : ${lockLevel.toLocaleString()}$` : '🔒 Verrouillée'}</span>
       </div>
 
-      {isLocked && !postPayout && (
-        <div style={{ marginTop:'10px', background:'rgba(136,153,187,0.08)', border:'1px solid rgba(136,153,187,0.20)', borderRadius:'4px', padding:'8px 12px', fontSize:'13px', color:'#8899bb' }}>
-          🔒 MLL verrouillée à {size.toLocaleString()}$ — ton capital de départ est protégé définitivement.
-        </div>
-      )}
-
-      <div style={{ marginTop:'10px', background:'rgba(0,170,255,0.05)', border:'1px solid rgba(0,170,255,0.12)', borderRadius:'4px', padding:'8px 12px', fontSize:'12px', color:'#5a6a82' }}>
+      <div style={{ background:'#1a0808', border:'1px solid #3a1212', borderRadius:PF.radiusMd, padding:'6px 10px', fontSize:'11px', color:'#9a6060' }}>
         ℹ La MLL peut augmenter mais ne diminue jamais · Se verrouille définitivement au solde de départ · Après 1er payout → fixée à 0$
       </div>
     </div>
@@ -346,16 +357,11 @@ function DailyBarChart({ dailyArr, consistencyLine, winDayMin }) {
 }
 
 // ── Phase Selector ─────────────────────────────────────────────
-function PhaseSelector({ account, onChanged }) {
-  const [open, setOpen] = useState(false);
+function PhaseSelector({ account, onChanged, open, setOpen }) {
   const [sel, setSel]   = useState(account?.type ?? '');
   const [saving, setSaving] = useState(false);
 
-  const allOpts = PHASE_OPTIONS.flatMap(g => g.options.map(o => ({ ...o, groupColor:g.color })));
-  const current = allOpts.find(o => o.value === account?.type);
-  const cfg     = ACCOUNT_CONFIGS[account?.type] ?? DEFAULT_CFG;
-  const phColor = PHASE_COLORS[cfg.phase] ?? '#5a6a82';
-  const phLabel = PHASE_LABELS[cfg.phase]  ?? 'Non défini';
+  useEffect(() => { if (open) setSel(account?.type ?? ''); }, [open, account?.type]);
 
   async function confirm() {
     if (!account || sel === account?.type) { setOpen(false); return; }
@@ -367,26 +373,7 @@ function PhaseSelector({ account, onChanged }) {
   }
 
   return (
-    <div>
-      <div style={{ background:'rgba(0,0,0,0.25)', border:`1px solid ${phColor}22`, borderLeft:`3px solid ${phColor}`, borderRadius:'6px', padding:'10px 14px', display:'flex', alignItems:'center', gap:'12px', flexWrap:'wrap' }}>
-        <div style={{ flex:1 }}>
-          <div style={{ fontSize:'12px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'3px' }}>PHASE DU COMPTE</div>
-          {current ? (
-            <div style={{ display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap' }}>
-              <span style={{ fontSize:'14px', fontWeight:'700', color:'#e8edf8' }}>{phLabel}</span>
-              <span style={{ fontSize:'13px', color:phColor, fontWeight:'600' }}>{current.label}</span>
-              <span style={{ fontSize:'12px', color:'#5a6a82' }}>{current.sub}</span>
-            </div>
-          ) : (
-            <div style={{ fontSize:'13px', color:'#f0a020' }}>⚠ Phase non définie — configurer →</div>
-          )}
-        </div>
-        <button onClick={() => { setSel(account?.type ?? ''); setOpen(true); }}
-          style={{ background:'rgba(0,170,255,0.10)', border:'1px solid rgba(0,170,255,0.25)', color:'#00aaff', padding:'7px 14px', borderRadius:'4px', fontSize:'13px', fontFamily:'inherit', cursor:'pointer', letterSpacing:'1px', fontWeight:'600', whiteSpace:'nowrap' }}>
-          Changer →
-        </button>
-      </div>
-
+    <>
       {open && (
         <div style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }} onClick={() => setOpen(false)}>
           <div onClick={e => e.stopPropagation()} style={{ background:'#0c0d16', border:'1px solid rgba(136,153,187,0.35)', borderRadius:'10px', padding:'24px', width:'620px', maxWidth:'100%', maxHeight:'85vh', overflowY:'auto' }}>
@@ -434,7 +421,7 @@ function PhaseSelector({ account, onChanged }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -474,6 +461,8 @@ function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput,
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
+      <MLLSection mll={mll} size={size} maxLoss={maxLoss} balance={balance} isLocked={isLocked} postPayout={false} phaseLabel={PHASE_LABELS[cfg.phase]} />
+
       <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLE</div>
       <ObjRow ok={!lost} pending={!lost}
         label={`Ne pas descendre sous la MLL — trailing depuis ${(size-maxLoss).toLocaleString()}$`}
@@ -494,7 +483,7 @@ function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput,
         </div>
       )}
 
-      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIFS</div>
+      <div style={{ fontSize:'11px', color:PF.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em' }}>OBJECTIFS</div>
 
       <ObjRow ok={targetOk} pending={!targetOk&&!lost}
         label={`Profit Target — atteindre et maintenir +${dynTarget.toLocaleString()}$${consBreach?' ⚡ ajusté':''}`}>
@@ -510,12 +499,9 @@ function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput,
         label={`Jours tradés minimum — ${minDays} jours requis`}
         detail={`${tradeDays} jour${tradeDays>1?'s':''} tradé${tradeDays>1?'s':''} · Requis : ${minDays}`} />
 
-      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>DRAWDOWN — MLL TRAILING</div>
-      <MLLSection mll={mll} size={size} maxLoss={maxLoss} balance={balance} isLocked={isLocked} postPayout={false} />
-
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:'8px' }}>
         <MetricCard label="BALANCE" value={`${balance.toFixed(0)}$`} color={targetOk?'#00cc77':'#dde4ef'} sub={manualBalance>0?'Manuelle':'Calculée'} />
-        <MetricCard label="PROFIT NET" value={fmt(totalNet,true)} color={pnlColor(totalNet)} sub={`Objectif +${dynTarget.toLocaleString()}$`} featured />
+        <MetricCard label="PROFIT NET" value={fmt(totalNet,true)} color={pnlColor(totalNet)} sub={`Objectif +${dynTarget.toLocaleString()}$`} />
         <MetricCard label="MLL" value={`${mll.toLocaleString()}$`} color={isLocked?'#8899bb':'#ff4455'} alert={dist<500} sub={isLocked?'🔒 Verrouillée':'Trailing ↑'} />
         <MetricCard label="MEILLEUR JOUR" value={bestDay>0?fmt(bestDay,true):'—'} color={consBreach?'#f0a020':'#8899bb'} sub={`< ${dynLimit.toFixed(0)}$ requis`} />
       </div>
@@ -565,15 +551,14 @@ function ExpressStdTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
-      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLE</div>
-      <MLLSection mll={mll} size={size} maxLoss={maxLoss} balance={balance} isLocked={isLocked} postPayout={postPayout} />
+      <MLLSection mll={mll} size={size} maxLoss={maxLoss} balance={balance} isLocked={isLocked} postPayout={postPayout} phaseLabel={PHASE_LABELS[cfg.phase]} />
 
       <div style={{ display:'flex', gap:'10px', alignItems:'center', flexWrap:'wrap' }}>
         <BalanceRow balanceInput={balanceInput} setBalanceInput={setBalanceInput} onSave={onSaveBalance} status={status} />
         <PostPayoutToggle value={postPayout} onChange={setPostPayout} />
       </div>
 
-      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIFS</div>
+      <div style={{ fontSize:'11px', color:PF.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em' }}>OBJECTIFS</div>
 
       <ObjRow ok={payoutOk} pending={!payoutOk&&!lost}
         label={`5 jours gagnants ≥ ${winDayMin}$ chacun (éligibilité payout)`}
@@ -591,7 +576,7 @@ function ExpressStdTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:'8px' }}>
         <MetricCard label="BALANCE" value={`${balance.toFixed(0)}$`} color={isLocked?'#8899bb':'#dde4ef'} sub={manualBalance>0?'Manuelle':'Calculée'} />
-        <MetricCard label="P&L NET" value={fmt(totalNet,true)} color={pnlColor(totalNet)} featured />
+        <MetricCard label="P&L NET" value={fmt(totalNet,true)} color={pnlColor(totalNet)} />
         <MetricCard label="MLL" value={`${mll.toLocaleString()}$`} color={postPayout?'#00cc77':isLocked?'#8899bb':'#ff4455'} sub={postPayout?'0$ à vie':isLocked?'🔒 Verrouillée':'Trailing ↑'} />
         <MetricCard label="JOURS QUALIFIANTS" value={`${qualDays.length}/${winDaysNeeded}`} color={payoutOk?'#00cc77':'#f0a020'} sub={`≥${winDayMin}$ net/jour`} />
         <MetricCard label="MARGE MLL" value={`${dist.toFixed(0)}$`} color={dist<500?'#ff4455':dist<1000?'#f0a020':'#8899bb'} alert={dist<500} />
@@ -651,15 +636,14 @@ function ExpressConsTab({ trades, cfg, manualBalance, balanceInput, setBalanceIn
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
-      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>RÈGLE</div>
-      <MLLSection mll={mll} size={size} maxLoss={maxLoss} balance={balance} isLocked={isLocked} postPayout={postPayout} />
+      <MLLSection mll={mll} size={size} maxLoss={maxLoss} balance={balance} isLocked={isLocked} postPayout={postPayout} phaseLabel={PHASE_LABELS[cfg.phase]} />
 
       <div style={{ display:'flex', gap:'10px', alignItems:'center', flexWrap:'wrap' }}>
         <BalanceRow balanceInput={balanceInput} setBalanceInput={setBalanceInput} onSave={onSaveBalance} status={status} />
         <PostPayoutToggle value={postPayout} onChange={setPostPayout} />
       </div>
 
-      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIFS</div>
+      <div style={{ fontSize:'11px', color:PF.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em' }}>OBJECTIFS</div>
 
       <ObjRow ok={daysOk} pending={!daysOk} label={`Trader au moins ${minTradeDays} jours — 1 trade minimum par jour`} detail={`${tradeDays} jour(s) tradés sur ${minTradeDays} requis`}>
         <ProgressBar current={tradeDays} max={minTradeDays} color={daysOk?'#00cc77':'#f0a020'}
@@ -769,7 +753,7 @@ function LiveFundedTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
         </div>
       )}
 
-      <div style={{ fontSize:'13px', color:'#5a6a82', letterSpacing:'2px' }}>OBJECTIF — PAYOUT</div>
+      <div style={{ fontSize:'11px', color:PF.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em' }}>OBJECTIF — PAYOUT</div>
 
       <ObjRow ok={payoutOk} pending={!payoutOk&&!bust}
         label={`5 jours gagnants ≥ ${winDayMin}$ chacun`}
@@ -789,7 +773,7 @@ function LiveFundedTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:'8px' }}>
         <MetricCard label="BALANCE" value={`${balance.toFixed(0)}$`} color={bust?'#ff4455':'#00cc77'} sub={manualBalance>0?'Manuelle':'Calculée'} />
-        <MetricCard label="P&L NET" value={fmt(totalNet,true)} color={pnlColor(totalNet)} featured />
+        <MetricCard label="P&L NET" value={fmt(totalNet,true)} color={pnlColor(totalNet)} />
         <MetricCard label="FLOOR ABSOLU" value="0$" color="#ff4455" sub="Compte perdu si atteint" />
         {dailyLoss!=null && <MetricCard label="DAILY LIMIT" value={`-${dailyLoss.toLocaleString()}$`} color={dailyLimHit?'#ff4455':'#f0a020'} sub={dailyLimHit?"⛔ Atteint auj.":'Par jour de trading'} />}
         <MetricCard label="JOURS QUALIFIANTS" value={`${qualDays.length}/${winDaysNeeded}`} color={payoutOk?'#00cc77':'#f0a020'} sub={`≥${winDayMin}$ net/jour`} />
@@ -850,6 +834,7 @@ export default function PropFirm() {
   const [balLive,    setBalLive]    = useState(() => parseFloat(localStorage.getItem('pf_bal_live')      || '0') || 0);
   const [ppStd,  setPpStd]  = useState(() => localStorage.getItem('pf_pp_std')  === 'true');
   const [ppCons, setPpCons] = useState(() => localStorage.getItem('pf_pp_cons') === 'true');
+  const [phaseModalOpen, setPhaseModalOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -862,8 +847,6 @@ export default function PropFirm() {
 
   const cfg     = ACCOUNT_CONFIGS[account?.type] ?? DEFAULT_CFG;
   const phase   = cfg.phase;
-  const phColor = PHASE_COLORS[phase]  ?? '#5a6a82';
-  const phLabel = PHASE_LABELS[phase]  ?? '—';
   const sizeK   = `${(cfg.size/1000).toFixed(0)}K`;
 
   function saveBalance(key, setFn) {
@@ -882,26 +865,35 @@ export default function PropFirm() {
 
   return (
     <div style={{ padding:'24px 28px', maxWidth:'none', fontFamily:"'JetBrains Mono','Fira Code',monospace" }}>
-      <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:'16px', flexWrap:'wrap', gap:'12px' }}>
+      <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:'20px', flexWrap:'wrap', gap:'12px' }}>
         <div>
-          <div style={{ fontSize:'12px', color:'#5a6a82', letterSpacing:'3px', marginBottom:'4px' }}>PROPFIRM — TOPSTEP</div>
-          <h1 style={{ fontSize:'22px', fontWeight:'700', color:'#e8edf8', margin:0 }}>
-            <span style={{ color:phColor }}>{phLabel}</span>
-            <span style={{ fontSize:'15px', color:'#5a6a82', marginLeft:'12px' }}>{sizeK}</span>
+          <div style={{ fontSize:'11px', color:PF.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'6px' }}>PROPFIRM — {firmName(account?.type)}</div>
+          <h1 style={{ fontSize:'22px', fontWeight:'500', color:'#e8edf8', margin:0, display:'flex', alignItems:'center', gap:'10px' }}>
+            <span style={{ color:PF.warn }}>⚡</span>
+            <span>{account?.name || 'Compte'}</span>
+            <span style={{ fontSize:'15px', color:PF.textTertiary }}>{sizeK}</span>
+            {phase === 'live' && (
+              <span style={{ background:PF.successBg, color:PF.success, border:`1px solid ${PF.successBorder}`, borderRadius:'99px', padding:'2px 10px', fontSize:'11px', fontWeight:'600' }}>LIVE</span>
+            )}
           </h1>
         </div>
-        <button onClick={() => navigate('/journal')}
-          style={{ background:'transparent', border:'1px solid #1e2c40', color:'#5868a0', padding:'8px 16px', borderRadius:'5px', fontSize:'13px', fontFamily:'inherit', letterSpacing:'1px', cursor:'pointer', transition:'all 0.15s' }}
-          onMouseEnter={e => { e.currentTarget.style.color='#8899bb'; e.currentTarget.style.borderColor='#8899bb'; }}
-          onMouseLeave={e => { e.currentTarget.style.color='#5868a0'; e.currentTarget.style.borderColor='#1e2c40'; }}>
-          ← Journal
-        </button>
+        <div style={{ display:'flex', gap:'8px' }}>
+          <button onClick={() => navigate('/journal')}
+            style={{ background:'transparent', border:'1px solid #1e2c40', color:'#5868a0', padding:'8px 16px', borderRadius:'5px', fontSize:'13px', fontFamily:'inherit', letterSpacing:'1px', cursor:'pointer', transition:'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.color='#8899bb'; e.currentTarget.style.borderColor='#8899bb'; }}
+            onMouseLeave={e => { e.currentTarget.style.color='#5868a0'; e.currentTarget.style.borderColor='#1e2c40'; }}>
+            + Journal
+          </button>
+          <button onClick={() => setPhaseModalOpen(true)}
+            style={{ background:'rgba(0,170,255,0.10)', border:'1px solid rgba(0,170,255,0.25)', color:'#00aaff', padding:'8px 16px', borderRadius:'5px', fontSize:'13px', fontFamily:'inherit', cursor:'pointer', letterSpacing:'1px', fontWeight:'600' }}>
+            Changer →
+          </button>
+        </div>
       </div>
 
       {account && (
-        <div style={{ marginBottom:'20px' }}>
-          <PhaseSelector account={account} onChanged={t => setAccount(prev => ({ ...prev, type:t }))} />
-        </div>
+        <PhaseSelector account={account} onChanged={t => setAccount(prev => ({ ...prev, type:t }))}
+          open={phaseModalOpen} setOpen={setPhaseModalOpen} />
       )}
 
       {phase === 'combine' && (

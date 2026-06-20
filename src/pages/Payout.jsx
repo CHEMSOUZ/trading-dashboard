@@ -44,16 +44,29 @@ function pnlColor(n) {
   return '#7888a0';
 }
 
+// ── Design tokens ────────────────────────────────────────────────
+const PY = {
+  border:        'rgba(136,153,187,0.14)',   // border-tertiary
+  surfSecondary: 'rgba(20,23,34,0.75)',       // background-secondary
+  textPrimary:   '#dde4ef',
+  textTertiary:  '#5a6a82',
+  success:       '#1D9E75',
+  danger:        '#E24B4A',
+  warn:          '#BA7517',
+  radiusLg:      '10px',
+  radiusMd:      '8px',
+};
+
 // ── Small components ──────────────────────────────────────────
-function SectionHeader({ icon, label, total, color, children }) {
+function SectionHeader({ icon, label, total, children }) {
   return (
-    <div style={{ marginBottom: '20px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '16px' }}>{icon}</span>
-          <span style={{ fontSize:'12px', color: color ?? '#5a6a82', letterSpacing: '2.5px', fontWeight: '700' }}>{label}</span>
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: 'rgba(0,0,0,0.15)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '12px' }}>{icon}</span>
+          <span style={{ fontSize:'10px', color: PY.textTertiary, letterSpacing: '0.06em', fontWeight: '600', textTransform: 'uppercase' }}>{label}</span>
         </div>
-        <span style={{ fontSize: '15px', fontWeight: '700', color: pnlColor(total) }}>
+        <span style={{ fontSize: '12px', fontWeight: '500', color: pnlColor(total) }}>
           {fmt(total)} €
         </span>
       </div>
@@ -62,44 +75,42 @@ function SectionHeader({ icon, label, total, color, children }) {
   );
 }
 
-function EntryRow({ entry, onEdit, onDelete, accentColor }) {
+function EntryRow({ entry, onEdit, onDelete }) {
   const [hover, setHover] = useState(false);
   return (
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr auto auto auto',
-        gap: '10px',
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
+        gap: '10px',
         padding: '10px 14px',
-        background: hover ? 'rgba(0,255,136,0.03)' : 'rgba(14,15,22,0.4)',
-        border: `1px solid ${hover ? 'rgba(136,153,187,0.12)' : 'rgba(136,153,187,0.05)'}`,
-        borderLeft: `2px solid ${accentColor ?? pnlColor(entry.amount)}`,
-        borderRadius: '5px',
-        transition: 'all 0.15s',
-        marginBottom: '4px',
+        borderBottom: `1px solid ${PY.border}`,
       }}
     >
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: '13px', color: '#dde4ef', fontWeight: '500', marginBottom: '2px' }}>{entry.label}</div>
-        {entry.note && <div style={{ fontSize:'12px', color: '#5a6a82' }}>{entry.note}</div>}
-        {entry.date && <div style={{ fontSize:'12px', color: '#3c4c64' }}>{entry.date}</div>}
+        <div style={{ fontSize: '13px', fontWeight: '500', color: PY.textPrimary, marginBottom: '2px' }}>{entry.label}</div>
+        {(entry.note || entry.date) && (
+          <div style={{ fontSize: '11px', color: PY.textTertiary }}>{[entry.note, entry.date].filter(Boolean).join(' · ')}</div>
+        )}
       </div>
-      <span style={{ fontSize: '14px', fontWeight: '700', color: pnlColor(entry.amount), letterSpacing: '0.5px' }}>
-        {fmt(entry.amount)} {entry.currency}
-      </span>
-      <button onClick={() => onEdit(entry)}
-        style={{ background: 'none', border: '1px solid #1e2c40', color: '#5a6a82', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize:'13px', fontFamily: 'inherit', transition: 'all 0.15s', opacity: hover ? 1 : 0 }}
-        onMouseEnter={e => { e.currentTarget.style.borderColor = '#8899bb'; e.currentTarget.style.color = '#8899bb'; }}
-        onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e2c40'; e.currentTarget.style.color = '#5a6a82'; }}
-      >✏</button>
-      <button onClick={() => onDelete(entry.id)}
-        style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '16px', padding: '0 2px', transition: 'color 0.15s', opacity: hover ? 1 : 0 }}
-        onMouseEnter={e => e.currentTarget.style.color = '#ff4455'}
-        onMouseLeave={e => e.currentTarget.style.color = '#1a3a20'}
-      >×</button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+        <span style={{ fontSize: '13px', fontWeight: '500', color: pnlColor(entry.amount) }}>
+          {fmt(entry.amount)} {entry.currency}
+        </span>
+        <button onClick={() => onEdit(entry)}
+          style={{ background: 'none', border: '1px solid #1e2c40', color: '#5a6a82', padding: '3px 7px', borderRadius: '4px', cursor: 'pointer', fontSize:'12px', fontFamily: 'inherit', transition: 'all 0.15s', opacity: hover ? 1 : 0 }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = '#8899bb'; e.currentTarget.style.color = '#8899bb'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e2c40'; e.currentTarget.style.color = '#5a6a82'; }}
+        >✏</button>
+        <button onClick={() => onDelete(entry.id)}
+          style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '15px', padding: '0 2px', transition: 'color 0.15s', opacity: hover ? 1 : 0 }}
+          onMouseEnter={e => e.currentTarget.style.color = '#ff4455'}
+          onMouseLeave={e => e.currentTarget.style.color = '#1a3a20'}
+        >×</button>
+      </div>
     </div>
   );
 }
@@ -199,9 +210,9 @@ function EditModal({ entry, section, onSave, onClose }) {
 function AddButton({ label, onClick }) {
   return (
     <button onClick={onClick}
-      style={{ width: '100%', padding: '9px', background: 'transparent', border: '1px dashed #1e2c40', borderRadius: '5px', color: '#3c4c64', fontSize:'13px', fontFamily: 'inherit', letterSpacing: '1.5px', cursor: 'pointer', transition: 'all 0.15s', marginTop: '4px' }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = '#8899bb'; e.currentTarget.style.color = '#8899bb'; e.currentTarget.style.background = 'rgba(0,255,136,0.03)'; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e2c40'; e.currentTarget.style.color = '#3c4c64'; e.currentTarget.style.background = 'transparent'; }}
+      style={{ width: '100%', padding: '10px', background: 'transparent', border: 'none', borderTop: `1px solid ${PY.border}`, color: PY.textTertiary, fontSize:'12px', fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s' }}
+      onMouseEnter={e => { e.currentTarget.style.color = '#8899bb'; }}
+      onMouseLeave={e => { e.currentTarget.style.color = PY.textTertiary; }}
     >+ {label}</button>
   );
 }
@@ -252,11 +263,11 @@ export default function Payout() {
     <div style={{ padding: '24px 28px', maxWidth: 'none', width: '100%', boxSizing: 'border-box', fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>
 
       {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '4px' }}>FINANCES</div>
-          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#e8edf8', margin: '0 0 4px' }}>Investissements & Payouts</h1>
-          <div style={{ fontSize:'13px', color: '#5a6a82' }}>Toutes les dépenses et revenus depuis le début</div>
+          <div style={{ fontSize:'11px', color: PY.textTertiary, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>FINANCES</div>
+          <h1 style={{ fontSize: '22px', fontWeight: '500', color: '#e8edf8', margin: '0 0 4px' }}>Investissements & Payouts</h1>
+          <div style={{ fontSize:'12px', color: PY.textTertiary }}>Toutes les dépenses et revenus depuis le début</div>
         </div>
         <button onClick={resetAll}
           style={{ background: 'none', border: '1px solid #1e2c40', color: '#3a1818', padding: '7px 14px', borderRadius: '5px', cursor: 'pointer', fontSize:'12px', fontFamily: 'inherit', letterSpacing: '1px', transition: 'all 0.15s' }}
@@ -265,123 +276,117 @@ export default function Payout() {
         >↺ Reset</button>
       </div>
 
-      {/* ── Summary cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: '10px', marginBottom: '28px' }}>
-        {[
-          { label: 'TOTAL INVESTI',    value: totalInvested, sub: 'PropFirm + frais' },
-          { label: 'TOTAL PAYOUTS',    value: totalPayouts,  sub: `${data.payouts.length} payout${data.payouts.length > 1 ? 's' : ''}` },
-          { label: 'RÉSULTAT NET',     value: netResult,     sub: 'Après payouts' },
-          { label: 'ROI',              value: null,          sub: 'Payouts / investi', special: `${roi}%`, specialColor: parseFloat(roi) >= 100 ? '#00cc77' : parseFloat(roi) >= 50 ? '#f0a020' : '#ff3344' },
-        ].map(({ label, value, sub, special, specialColor }) => (
-          <div key={label} style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '8px', padding: '14px 16px', borderTop: `2px solid ${value != null ? pnlColor(value) : (specialColor ?? '#5a6a82')}` }}>
-            <div style={{ fontSize:'12px', color: '#3c4c64', letterSpacing: '1.5px', marginBottom: '6px' }}>{label}</div>
-            <div style={{ fontSize: '18px', fontWeight: '700', color: value != null ? pnlColor(value) : (specialColor ?? '#dde4ef'), lineHeight: 1 }}>
-              {value != null ? `${fmt(value)} €` : special}
-            </div>
-            <div style={{ fontSize:'12px', color: '#3c4c64', marginTop: '4px' }}>{sub}</div>
+      {/* ── Hero metrics ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+        <div style={{ background: '#120808', border: '0.5px solid #3a1212', borderLeft: '3px solid #E24B4A', borderRadius: PY.radiusLg, padding: '1rem 1.25rem' }}>
+          <div style={{ fontSize: '11px', color: '#9a6060', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>RÉSULTAT NET APRÈS PAYOUTS</div>
+          <div style={{ fontSize: '32px', fontWeight: '500', color: '#E24B4A', lineHeight: 1 }}>{fmt(netResult)} €</div>
+          <div style={{ fontSize: '11px', marginTop: '6px', color: netResult >= 0 ? PY.success : '#9a6060' }}>
+            {netResult >= 0 ? 'Rentabilisé ✓' : `Il manque ${fmt(Math.abs(netResult), false)} € pour rentabiliser`}
           </div>
-        ))}
+        </div>
+        <div style={{ background: PY.surfSecondary, border: `1px solid ${PY.border}`, borderRadius: PY.radiusLg, padding: '12px 14px' }}>
+          <div style={{ fontSize: '11px', color: PY.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>TOTAL INVESTI</div>
+          <div style={{ fontSize: '20px', fontWeight: '500', color: PY.danger, lineHeight: 1 }}>{fmt(totalInvested)} €</div>
+          <div style={{ fontSize: '11px', color: PY.textTertiary, marginTop: '5px' }}>PropFirm + frais</div>
+        </div>
+        <div style={{ background: PY.surfSecondary, border: `1px solid ${PY.border}`, borderRadius: PY.radiusLg, padding: '12px 14px' }}>
+          <div style={{ fontSize: '11px', color: PY.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>TOTAL PAYOUTS</div>
+          <div style={{ fontSize: '20px', fontWeight: '500', color: PY.success, lineHeight: 1 }}>{fmt(totalPayouts)} €</div>
+          <div style={{ fontSize: '11px', color: PY.textTertiary, marginTop: '5px' }}>{data.payouts.length} payout{data.payouts.length > 1 ? 's' : ''}</div>
+        </div>
+        <div style={{ background: PY.surfSecondary, border: `1px solid ${PY.border}`, borderRadius: PY.radiusLg, padding: '12px 14px' }}>
+          <div style={{ fontSize: '11px', color: PY.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>ROI</div>
+          <div style={{ fontSize: '20px', fontWeight: '500', color: parseFloat(roi) < 50 ? PY.warn : parseFloat(roi) > 100 ? PY.success : PY.textPrimary, lineHeight: 1 }}>{roi}%</div>
+          <div style={{ fontSize: '11px', color: PY.textTertiary, marginTop: '5px' }}>Payouts / investi</div>
+        </div>
       </div>
 
-      {/* ── Progress bar ── */}
-      <div style={{ marginBottom: '28px', background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.08)', borderRadius: '8px', padding: '14px 16px' }}>
+      {/* ── Barre de récupération ── */}
+      <div style={{ marginBottom: '20px', background: PY.surfSecondary, border: `1px solid ${PY.border}`, borderRadius: PY.radiusLg, padding: '1rem 1.25rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-          <span style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px' }}>RÉCUPÉRATION</span>
-          <span style={{ fontSize:'13px', color: parseFloat(roi) >= 100 ? '#8899bb' : '#f0a020', fontWeight: '700' }}>{roi}% récupéré</span>
+          <span style={{ fontSize:'11px', color: PY.textTertiary, textTransform: 'uppercase', letterSpacing: '0.06em' }}>RÉCUPÉRATION DE L'INVESTISSEMENT</span>
+          <span style={{ fontSize:'13px', color: parseFloat(roi) < 50 ? PY.warn : parseFloat(roi) > 100 ? PY.success : PY.textPrimary, fontWeight: '600' }}>{roi}% récupéré</span>
         </div>
-        <div style={{ height: '6px', background: 'rgba(136,153,187,0.10)', borderRadius: '3px', overflow: 'hidden' }}>
+        <div style={{ height: '8px', background: PY.border, borderRadius: '4px', overflow: 'hidden' }}>
           <div style={{
             height: '100%',
             width: `${Math.min(100, Math.max(0, parseFloat(roi)))}%`,
-            background: parseFloat(roi) >= 100 ? 'linear-gradient(90deg,#566880,#8899bb)' : parseFloat(roi) >= 50 ? 'linear-gradient(90deg,#f0a020,#ffcc44)' : 'linear-gradient(90deg,#ff4455,#ff7755)',
-            borderRadius: '3px',
+            background: PY.success,
+            borderRadius: '4px',
             transition: 'width 0.5s ease',
-            boxShadow: `0 0 8px ${parseFloat(roi) >= 100 ? 'rgba(136,153,187,0.45)' : 'rgba(240,160,32,0.4)'}`,
           }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize:'12px', color: '#3c4c64' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize:'11px', color: PY.textTertiary }}>
           <span>0€</span>
-          <span style={{ color: '#ff4455' }}>{fmt(totalInvested)} € invested</span>
-          <span style={{ color: '#8899bb' }}>{fmt(totalPayouts, false)} € payouts</span>
+          <span style={{ color: PY.success }}>{fmt(totalPayouts, false)} € payouts reçus</span>
+          <span>{fmt(Math.abs(totalInvested), false)} € investis</span>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '24px' }}>
 
         {/* ── LEFT: Dépenses ── */}
-        <div>
-          <div style={{ fontSize:'12px', color: '#ff4455', letterSpacing: '2.5px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ff4455' }} />
-            DÉPENSES — {fmt(totalInvested)} €
+        <div style={{ border: `0.5px solid ${PY.border}`, borderRadius: PY.radiusLg, overflow: 'hidden' }}>
+          <div style={{ background: PY.surfSecondary, borderBottom: `1px solid ${PY.border}`, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: PY.danger, fontSize: '14px', lineHeight: 1 }}>↓</span>
+              <span style={{ fontSize: '13px', fontWeight: '500', color: PY.textPrimary }}>Dépenses</span>
+            </div>
+            <span style={{ fontSize: '14px', fontWeight: '500', color: PY.danger }}>{fmt(totalInvested)} €</span>
           </div>
 
           {/* PropFirm */}
-          <SectionHeader icon="🏆" label="PROPFIRM" total={totalPropfirm} color="#f0a020">
+          <SectionHeader icon="🏆" label="PropFirm" total={totalPropfirm}>
             {data.propfirm.map(e => (
-              <EntryRow key={e.id} entry={e} accentColor="#f0a020"
+              <EntryRow key={e.id} entry={e}
                 onEdit={entry => openEdit('propfirm', entry)}
                 onDelete={id => handleDelete('propfirm', id)}
               />
             ))}
-            <AddButton label="AJOUTER PROPFIRM" onClick={() => openAdd('propfirm')} />
+            <AddButton label="Ajouter PropFirm" onClick={() => openAdd('propfirm')} />
           </SectionHeader>
 
           {/* Frais fixes */}
-          <SectionHeader icon="💼" label="FRAIS FIXES" total={totalFixed} color="#ff4455">
+          <SectionHeader icon="💼" label="Frais fixes" total={totalFixed}>
             {data.fixed.map(e => (
-              <EntryRow key={e.id} entry={e} accentColor="#ff4455"
+              <EntryRow key={e.id} entry={e}
                 onEdit={entry => openEdit('fixed', entry)}
                 onDelete={id => handleDelete('fixed', id)}
               />
             ))}
-            <AddButton label="AJOUTER FRAIS" onClick={() => openAdd('fixed')} />
+            <AddButton label="Ajouter Frais" onClick={() => openAdd('fixed')} />
           </SectionHeader>
 
-          {/* Total dépenses */}
-          <div style={{ padding: '10px 14px', background: 'rgba(255,68,85,0.06)', border: '1px solid rgba(255,68,85,0.15)', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize:'12px', color: '#ff4455', letterSpacing: '2px' }}>TOTAL DÉPENSES</span>
-            <span style={{ fontSize: '17px', fontWeight: '700', color: '#ff4455' }}>{fmt(totalInvested)} €</span>
+          {/* Footer */}
+          <div style={{ background: PY.surfSecondary, borderTop: `1px solid ${PY.border}`, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize:'12px', color: PY.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em' }}>TOTAL DÉPENSES</span>
+            <span style={{ fontSize: '15px', fontWeight: '500', color: PY.danger }}>{fmt(totalInvested)} €</span>
           </div>
         </div>
 
-        {/* ── RIGHT: Payouts ── */}
-        <div>
-          <div style={{ fontSize:'12px', color: '#8899bb', letterSpacing: '2.5px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#8899bb', boxShadow: '0 0 6px #8899bb' }} />
-            REVENUS — {fmt(totalPayouts)} €
+        {/* ── RIGHT: Revenus ── */}
+        <div style={{ border: `0.5px solid ${PY.border}`, borderRadius: PY.radiusLg, overflow: 'hidden' }}>
+          <div style={{ background: PY.surfSecondary, borderBottom: `1px solid ${PY.border}`, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: PY.success, fontSize: '14px', lineHeight: 1 }}>↑</span>
+              <span style={{ fontSize: '13px', fontWeight: '500', color: PY.textPrimary }}>Revenus</span>
+            </div>
+            <span style={{ fontSize: '14px', fontWeight: '500', color: PY.success }}>{fmt(totalPayouts)} €</span>
           </div>
 
-          <SectionHeader icon="💸" label="PAYOUTS" total={totalPayouts} color="#8899bb">
-            {data.payouts.map(e => (
-              <EntryRow key={e.id} entry={e} accentColor="#8899bb"
-                onEdit={entry => openEdit('payouts', entry)}
-                onDelete={id => handleDelete('payouts', id)}
-              />
-            ))}
-            <AddButton label="AJOUTER PAYOUT" onClick={() => openAdd('payouts')} />
-          </SectionHeader>
+          {data.payouts.map(e => (
+            <EntryRow key={e.id} entry={e}
+              onEdit={entry => openEdit('payouts', entry)}
+              onDelete={id => handleDelete('payouts', id)}
+            />
+          ))}
+          <AddButton label="Ajouter Payout" onClick={() => openAdd('payouts')} />
 
-          {/* Total payouts */}
-          <div style={{ padding: '10px 14px', background: 'rgba(136,153,187,0.08)', border: '1px solid rgba(136,153,187,0.18)', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <span style={{ fontSize:'12px', color: '#8899bb', letterSpacing: '2px' }}>TOTAL PAYOUTS</span>
-            <span style={{ fontSize: '17px', fontWeight: '700', color: '#8899bb' }}>{fmt(totalPayouts)} €</span>
-          </div>
-
-          {/* Net result box */}
-          <div style={{
-            padding: '16px',
-            background: netResult >= 0 ? 'rgba(136,153,187,0.10)' : 'rgba(255,68,85,0.08)',
-            border: `1px solid ${netResult >= 0 ? 'rgba(136,153,187,0.28)' : 'rgba(255,68,85,0.25)'}`,
-            borderRadius: '8px',
-            boxShadow: `0 0 20px ${netResult >= 0 ? 'rgba(136,153,187,0.10)' : 'rgba(255,68,85,0.08)'}`,
-          }}>
-            <div style={{ fontSize:'12px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>RÉSULTAT NET APRÈS PAYOUTS</div>
-            <div style={{ fontSize: '26px', fontWeight: '700', color: pnlColor(netResult), letterSpacing: '-0.5px' }}>
-              {fmt(netResult)} €
-            </div>
-            <div style={{ fontSize:'12px', color: '#5a6a82', marginTop: '6px' }}>
-              {netResult >= 0 ? '✓ En bénéfice' : `Il manque ${fmt(Math.abs(netResult), false)} € pour rentabiliser`}
-            </div>
+          {/* Footer */}
+          <div style={{ background: PY.surfSecondary, borderTop: `1px solid ${PY.border}`, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize:'12px', color: PY.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em' }}>TOTAL PAYOUTS</span>
+            <span style={{ fontSize: '15px', fontWeight: '500', color: PY.success }}>{fmt(totalPayouts)} €</span>
           </div>
         </div>
       </div>

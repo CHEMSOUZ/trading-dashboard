@@ -49,56 +49,12 @@ function CTooltip({ active, payload, label }) {
   );
 }
 
-// ── StatCard ──────────────────────────────────────────────────
-function StatCard({ label, value, sub, color = '#dde4ef', featured = false }) {
-  if (featured) {
-    const rgb = color === '#00cc77' ? '0,204,119' : color === '#ff3344' ? '255,51,68' : '136,153,187';
-    return (
-      <div style={{ minWidth:0, background:`linear-gradient(135deg, rgba(${rgb},0.22), rgba(${rgb},0.05))`, border:`1px solid rgba(${rgb},0.35)`, borderRadius:'8px', padding:'18px 20px' }}>
-        <div style={{ fontSize:'14px', color:'#8898aa', letterSpacing:'2px', marginBottom:'8px' }}>{label}</div>
-        <div style={{ fontSize:'34px', fontWeight:'800', color, letterSpacing:'-0.8px', lineHeight:1, overflowWrap:'anywhere' }}>{value}</div>
-        {sub && <div style={{ fontSize:'13px', color:'#8898aa', marginTop:'7px' }}>{sub}</div>}
-      </div>
-    );
-  }
-  return (
-    <div style={{ background: 'rgba(14,15,22,0.5)', border: '1px solid rgba(136,153,187,0.10)', borderTop: `2px solid ${color}`, borderRadius: '6px', padding: '14px 16px' }}>
-      <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', marginBottom: '6px' }}>{label}</div>
-      <div style={{ fontSize: '16px', fontWeight: '700', color, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize:'13px', color: '#5868a0', marginTop: '5px' }}>{sub}</div>}
-    </div>
-  );
-}
-
 // ── Section ───────────────────────────────────────────────────
 function Section({ title, children }) {
   return (
     <div style={{ background: 'rgba(14,15,22,0.4)', border: '1px solid rgba(136,153,187,0.10)', borderRadius: '8px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '2px', fontWeight: '700' }}>{title}</div>
       {children}
-    </div>
-  );
-}
-
-// ── Insight Card ──────────────────────────────────────────────
-function InsightCard({ icon, title, value, desc, color, onClick }) {
-  const rgb = color === '#8899bb' ? '0,255,136'
-    : color === '#ff4455' ? '255,68,85'
-    : color === '#00aaff' ? '0,170,255'
-    : color === '#aa88ff' ? '170,136,255'
-    : '240,160,32';
-  return (
-    <div onClick={onClick} style={{ background: `rgba(${rgb},0.06)`, border: `1px solid ${color}25`, borderRadius: '8px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: onClick ? 'pointer' : 'default', transition: 'all 0.15s' }}
-      onMouseEnter={e => { if (onClick) e.currentTarget.style.background = `rgba(${rgb},0.12)`; }}
-      onMouseLeave={e => { if (onClick) e.currentTarget.style.background = `rgba(${rgb},0.06)`; }}
-    >
-      <div style={{ fontSize: '28px', flexShrink: 0 }}>{icon}</div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '1px', marginBottom: '3px' }}>{title}</div>
-        <div style={{ fontSize: '16px', fontWeight: '700', color, marginBottom: '3px' }}>{value}</div>
-        <div style={{ fontSize:'13px', color: '#5868a0' }}>{desc}</div>
-      </div>
-      {onClick && <div style={{ fontSize: '16px', color: `${color}80`, flexShrink: 0 }}>›</div>}
     </div>
   );
 }
@@ -687,6 +643,38 @@ const GLOBALVIEW_TABS = [
   { key: 'trades',   label: 'TRADES' },
 ];
 
+// ── Vue d'ensemble — design tokens ─────────────────────────────
+const OV = {
+  border:        'rgba(136,153,187,0.14)',   // border-tertiary
+  surfSecondary: 'rgba(20,23,34,0.75)',      // background-secondary
+  textPrimary:   '#dde4ef',                  // color-text-primary
+  textTertiary:  '#5a6a82',                  // color-text-tertiary
+  success:       '#1D9E75',
+  danger:        '#E24B4A',
+  radiusLg:      '10px',
+  radiusMd:      '8px',
+};
+
+function OvHeroCard({ label, value, color, sub }) {
+  return (
+    <div style={{ background: OV.surfSecondary, border: `1px solid ${OV.border}`, borderRadius: OV.radiusLg, padding: '12px 14px' }}>
+      <div style={{ fontSize: '11px', color: OV.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>{label}</div>
+      <div style={{ fontSize: '20px', fontWeight: '500', color, lineHeight: 1 }}>{value}</div>
+      {sub && <div style={{ fontSize: '11px', color: OV.textTertiary, marginTop: '5px' }}>{sub}</div>}
+    </div>
+  );
+}
+
+function OvPointCard({ subLabel, title, value, accent }) {
+  return (
+    <div style={{ background: OV.surfSecondary, border: `1px solid ${OV.border}`, borderTop: `2px solid ${accent}`, borderRadius: OV.radiusMd, padding: '10px 12px' }}>
+      <div style={{ fontSize: '10px', color: OV.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>{subLabel}</div>
+      <div style={{ fontSize: '13px', fontWeight: '500', color: OV.textPrimary, marginBottom: '3px' }}>{title}</div>
+      <div style={{ fontSize: '11px', color: accent }}>{value}</div>
+    </div>
+  );
+}
+
 // ── Vue d'ensemble ────────────────────────────────────────────
 function OverviewTab({
   pnl, fees, winrate, wins, losses, pf, total, accountsCount,
@@ -694,49 +682,54 @@ function OverviewTab({
   bestDow, worstDow, bestSession, worstSession, bestHour, worstHour, bestPair, worstPair, bestEmotion, worstEmotion,
   openDow, openSession, openHour,
 }) {
+  const avgPerTrade = pnl / Math.max(total, 1);
+
   return (
     <>
-      {/* KPI */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: '10px', marginBottom: '20px' }}>
-        <StatCard label="P&L NET TOTAL"  value={fmt(pnl, true)}                color={pnlColor(pnl)}                  sub={`Frais: -${fees.toFixed(2)}$`} featured />
-        <StatCard label="WINRATE GLOBAL" value={`${winrate.toFixed(1)}%`}       color={winrate>=50?'#8899bb':'#ff4455'} sub={`${wins}W / ${losses}L`} />
-        <StatCard label="PROFIT FACTOR"  value={pf===999?'∞':pf.toFixed(2)}     color={pf>=1.5?'#8899bb':'#f0a020'} />
-        <StatCard label="TOTAL TRADES"   value={total}                          color="#dde4ef"                        sub={`${accountsCount} compte${accountsCount>1?'s':''}`} />
-        <StatCard label="MOY / TRADE"    value={fmt(pnl/Math.max(total,1),true)} color={pnlColor(pnl/Math.max(total,1))} />
+      {/* ── HERO METRICS ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr repeat(4,1fr)', gap: '10px', marginBottom: '20px' }}>
+        <div style={{ background: '#120808', border: '0.5px solid #3a1212', borderLeft: '3px solid #E24B4A', borderRadius: OV.radiusLg, padding: '14px 16px' }}>
+          <div style={{ fontSize: '11px', color: '#9a6060', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>P&L NET TOTAL</div>
+          <div style={{ fontSize: '28px', fontWeight: '500', color: '#E24B4A', lineHeight: 1 }}>{fmt(pnl, true)}</div>
+          <div style={{ fontSize: '11px', color: '#9a6060', marginTop: '6px' }}>Frais : -{fees.toFixed(2)}$</div>
+        </div>
+        <OvHeroCard label="WR GLOBAL"     value={`${winrate.toFixed(1)}%`}                        color={winrate < 50 ? OV.danger : OV.textPrimary} sub={`${wins}W / ${losses}L`} />
+        <OvHeroCard label="PROFIT FACTOR" value={pf === 999 ? '∞' : pf.toFixed(2)}                 color={pf < 1 ? OV.danger : OV.textPrimary} />
+        <OvHeroCard label="TOTAL TRADES"  value={total}                                            color={OV.textPrimary} sub={`${accountsCount} compte${accountsCount > 1 ? 's' : ''}`} />
+        <OvHeroCard label="MOY / TRADE"   value={fmt(avgPerTrade, true)}                           color={avgPerTrade < 0 ? OV.danger : OV.textPrimary} />
       </div>
 
-      {/* ── LONG vs SHORT ── */}
+      {/* ── LONG / SHORT ── */}
       {dirStats.length > 0 && (
-        <div style={{ display:'grid', gridTemplateColumns:`repeat(${dirStats.length},1fr)`, gap:'12px', marginBottom:'20px' }}>
-          {dirStats.map(({ dir, n, pnl, wr, avg, wins, losses, pf, avgWin, avgLoss, bestT, worstT }) => {
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '10px', marginBottom: '20px' }}>
+          {dirStats.map(({ dir, n, pnl, wr, avg, avgWin, avgLoss }) => {
             const isLong = dir === 'LONG';
-            const dirCol = isLong ? '#00cc77' : '#ff3344';
-            const dirRgb = isLong ? '0,204,119' : '255,51,68';
-            const metrics = [
-              { label:'P&L TOTAL',  value:fmt(pnl,true),                              color:pnlColor(pnl) },
-              { label:'MOY./TRADE', value:fmt(avg,true),                              color:pnlColor(avg) },
-              { label:'PF',         value:pf===999?'∞':pf.toFixed(2),                color:pf>=1.5?'#00cc77':pf>=1?'#dde4ef':'#ff3344' },
-              { label:'MOY. WIN',   value:avgWin>0?fmt(avgWin,true):'—',             color:'#00cc77' },
-              { label:'MOY. LOSS',  value:avgLoss>0?`-${avgLoss.toFixed(2)}$`:'—',   color:'#ff3344' },
-              { label:'MEILLEUR',   value:bestT>0?fmt(bestT,true):'—',               color:'#00cc77' },
-              { label:'PIRE',       value:worstT<0?fmt(worstT,true):'—',             color:'#ff3344' },
+            const dirCol = isLong ? '#1D9E75' : '#E24B4A';
+            const stats = [
+              { label: 'P&L TOTAL',  value: fmt(pnl, true) },
+              { label: 'MOY/TRADE',  value: fmt(avg, true) },
+              { label: 'MOY. WIN',   value: avgWin > 0 ? fmt(avgWin, true) : '—' },
+              { label: 'MOY. LOSS',  value: avgLoss > 0 ? `-${avgLoss.toFixed(2)}$` : '—' },
             ];
             return (
-              <div key={dir} style={{ background:`rgba(${dirRgb},0.04)`, border:`1px solid rgba(${dirRgb},0.20)`, borderRadius:'8px', padding:'14px 18px' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px' }}>
-                  <span style={{ fontSize:'22px', lineHeight:1 }}>{isLong ? '↑' : '↓'}</span>
-                  <span style={{ fontSize:'14px', fontWeight:'700', color:dirCol, letterSpacing:'2px' }}>{dir}</span>
-                  <span style={{ fontSize:'12px', color:'#5a6a82' }}>{n} trade{n>1?'s':''}</span>
-                  <span style={{ marginLeft:'auto', fontSize:'13px', fontWeight:'700', color:wr>=50?'#00cc77':'#ff3344' }}>{wr}% WR</span>
-                  <span style={{ fontSize:'12px', color:'#5a6a82' }}>{wins}W / {losses}L</span>
+              <div key={dir} style={{ border: `0.5px solid ${OV.border}`, borderRadius: OV.radiusLg, overflow: 'hidden' }}>
+                <div style={{ background: OV.surfSecondary, borderBottom: `0.5px solid ${OV.border}`, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '14px', color: dirCol, lineHeight: 1 }}>{isLong ? '↑' : '↓'}</span>
+                  <span style={{ fontSize: '13px', fontWeight: '500', color: dirCol }}>{isLong ? 'Long' : 'Short'}</span>
+                  <span style={{ fontSize: '12px', color: OV.textTertiary }}>{n} trade{n > 1 ? 's' : ''}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: '12px', fontWeight: '500', color: wr < 40 ? OV.danger : OV.textTertiary }}>{wr}% WR</span>
                 </div>
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))', gap:'6px' }}>
-                  {metrics.map(({ label, value, color }) => (
-                    <div key={label} style={{ background:'rgba(14,15,22,0.6)', borderRadius:'5px', padding:'6px 8px' }}>
-                      <div style={{ fontSize:'10px', color:'#3a4a60', letterSpacing:'1px', marginBottom:'2px' }}>{label}</div>
-                      <div style={{ fontSize:'13px', fontWeight:'700', color }}>{value}</div>
-                    </div>
-                  ))}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
+                  {stats.map(({ label, value }, i) => {
+                    const numeric = parseFloat(String(value).replace(/[^-0-9.]/g, ''));
+                    const valColor = value === '—' ? OV.textTertiary : numeric < 0 ? OV.danger : numeric > 0 ? OV.success : OV.textPrimary;
+                    return (
+                      <div key={label} style={{ padding: '10px 12px', borderRight: i < stats.length - 1 ? `0.5px solid ${OV.border}` : 'none' }}>
+                        <div style={{ fontSize: '10px', color: OV.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>{label}</div>
+                        <div style={{ fontSize: '12px', fontWeight: '500', color: valColor }}>{value}</div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -745,35 +738,29 @@ function OverviewTab({
       )}
 
       {/* ── POINTS FORTS ── */}
-      <div style={{ background: 'linear-gradient(90deg,rgba(0,204,119,0.10) 0%,rgba(0,204,119,0.04) 100%)', border: '1px solid rgba(0,204,119,0.25)', borderLeft: '3px solid #00cc77', borderRadius: '6px', padding: '10px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span style={{ fontSize: '18px' }}>✅</span>
-        <div>
-          <div style={{ fontSize:'13px', color: '#00cc77', letterSpacing: '2px', fontWeight: '700' }}>POINTS FORTS</div>
-          <div style={{ fontSize:'12px', color: 'rgba(0,204,119,0.6)', marginTop: '1px' }}>Tes atouts — à exploiter davantage</div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+        <span style={{ fontSize: '13px' }}>🛡️</span>
+        <span style={{ fontSize: '11px', color: OV.success, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '500' }}>POINTS FORTS — À EXPLOITER</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '10px', marginBottom: '20px' }}>
-        {bestDow     && <InsightCard icon="📅" title="MEILLEUR JOUR"          value={bestDow.label}     desc={`${fmt(bestDow.pnl,true)} · ${bestDow.wr}% WR`}        color="#00cc77" onClick={() => openDow(bestDow)} />}
-        {bestSession && <InsightCard icon="⏰" title="MEILLEURE SESSION (P&L)" value={bestSession.label} desc={`${fmt(bestSession.pnl,true)} · ${bestSession.wr}% WR · ${bestSession.count}T`} color={bestSession.color} onClick={() => openSession(bestSession)} />}
-        {bestHour    && <InsightCard icon="🎯" title="HEURE OPTIMALE"          value={bestHour.label}    desc={`${fmt(bestHour.pnl,true)} · ${bestHour.wr}% WR`}       color="#00cc77" onClick={() => openHour(bestHour)} />}
-        {bestPair    && <InsightCard icon="📈" title="INSTRUMENT PHARE"        value={bestPair.pair}     desc={`${fmt(bestPair.pnl,true)} · ${bestPair.wr}% WR`}       color="#00aaff" />}
-        {bestEmotion && <InsightCard icon="🧠" title="MEILLEUR ÉTAT MENTAL"    value={bestEmotion.em}    desc={`${fmt(bestEmotion.pnl,true)} · ${bestEmotion.total}T`} color="#aa88ff" />}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '8px', marginBottom: '20px' }}>
+        {bestDow     && <div onClick={() => openDow(bestDow)} style={{ cursor: 'pointer' }}><OvPointCard accent={OV.success} subLabel="Meilleur jour"             title={bestDow.label}     value={`${fmt(bestDow.pnl, true)} · ${bestDow.wr}% WR`} /></div>}
+        {bestSession && <div onClick={() => openSession(bestSession)} style={{ cursor: 'pointer' }}><OvPointCard accent={OV.success} subLabel="Meilleure session (P&L)" title={bestSession.label} value={`${fmt(bestSession.pnl, true)} · ${bestSession.wr}% WR`} /></div>}
+        {bestHour    && <div onClick={() => openHour(bestHour)} style={{ cursor: 'pointer' }}><OvPointCard accent={OV.success} subLabel="Heure optimale"            title={bestHour.label}    value={`${fmt(bestHour.pnl, true)} · ${bestHour.wr}% WR`} /></div>}
+        {bestPair    && <OvPointCard accent={OV.success} subLabel="Instrument phare"          title={bestPair.pair}     value={`${fmt(bestPair.pnl, true)} · ${bestPair.wr}% WR`} />}
+        {bestEmotion && <OvPointCard accent={OV.success} subLabel="Meilleur état mental"       title={bestEmotion.em}    value={`${fmt(bestEmotion.pnl, true)} · ${bestEmotion.total}T`} />}
       </div>
 
       {/* ── POINTS FAIBLES ── */}
-      <div style={{ background: 'linear-gradient(90deg,rgba(255,68,85,0.10) 0%,rgba(255,68,85,0.04) 100%)', border: '1px solid rgba(255,68,85,0.25)', borderLeft: '3px solid #ff4455', borderRadius: '6px', padding: '10px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span style={{ fontSize: '18px' }}>❌</span>
-        <div>
-          <div style={{ fontSize:'13px', color: '#ff4455', letterSpacing: '2px', fontWeight: '700' }}>POINTS FAIBLES</div>
-          <div style={{ fontSize:'12px', color: 'rgba(255,68,85,0.6)', marginTop: '1px' }}>À corriger — pièges récurrents à éviter</div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+        <span style={{ fontSize: '13px' }}>⚠️</span>
+        <span style={{ fontSize: '11px', color: OV.danger, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '500' }}>POINTS FAIBLES — À CORRIGER</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '10px', marginBottom: '24px' }}>
-        {worstDow     && <InsightCard icon="📅" title="PIRE JOUR"              value={worstDow.label}     desc={`${fmt(worstDow.pnl,true)} · ${worstDow.wr}% WR`}         color="#ff4455" onClick={() => openDow(worstDow)} />}
-        {worstSession && <InsightCard icon="⏰" title="PIRE SESSION (P&L)"      value={worstSession.label} desc={`${fmt(worstSession.pnl,true)} · ${worstSession.wr}% WR · ${worstSession.count}T`} color="#ff4455" onClick={() => openSession(worstSession)} />}
-        {worstHour    && <InsightCard icon="🕐" title="HEURE À ÉVITER"          value={worstHour.label}    desc={`${fmt(worstHour.pnl,true)} · ${worstHour.wr}% WR`}        color="#ff4455" onClick={() => openHour(worstHour)} />}
-        {worstPair    && <InsightCard icon="📉" title="INSTRUMENT À REVOIR"     value={worstPair.pair}     desc={`${fmt(worstPair.pnl,true)} · ${worstPair.wr}% WR`}        color="#ff4455" />}
-        {worstEmotion && <InsightCard icon="😟" title="PIRE ÉTAT MENTAL"        value={worstEmotion.em}    desc={`${fmt(worstEmotion.pnl,true)} · ${worstEmotion.total}T`}  color="#ff4455" />}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '8px', marginBottom: '24px' }}>
+        {worstDow     && <div onClick={() => openDow(worstDow)} style={{ cursor: 'pointer' }}><OvPointCard accent={OV.danger} subLabel="Pire jour"             title={worstDow.label}     value={`${fmt(worstDow.pnl, true)} · ${worstDow.wr}% WR`} /></div>}
+        {worstSession && <div onClick={() => openSession(worstSession)} style={{ cursor: 'pointer' }}><OvPointCard accent={OV.danger} subLabel="Pire session (P&L)" title={worstSession.label} value={`${fmt(worstSession.pnl, true)} · ${worstSession.wr}% WR`} /></div>}
+        {worstHour    && <div onClick={() => openHour(worstHour)} style={{ cursor: 'pointer' }}><OvPointCard accent={OV.danger} subLabel="Heure à éviter"        title={worstHour.label}    value={`${fmt(worstHour.pnl, true)} · ${worstHour.wr}% WR`} /></div>}
+        {worstPair    && <OvPointCard accent={OV.danger} subLabel="Instrument à revoir"      title={worstPair.pair}     value={`${fmt(worstPair.pnl, true)} · ${worstPair.wr}% WR`} />}
+        {worstEmotion && <OvPointCard accent={OV.danger} subLabel="Pire état mental"          title={worstEmotion.em}    value={`${fmt(worstEmotion.pnl, true)} · ${worstEmotion.total}T`} />}
       </div>
     </>
   );
@@ -1466,10 +1453,10 @@ export default function GlobalView() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ fontSize:'13px', color: '#5a6a82', letterSpacing: '3px', marginBottom: '6px' }}>ANALYSE GLOBALE</div>
-          <h1 style={{ fontSize: '23px', fontWeight: '700', color: '#e8edf8', margin: 0 }}>Vue Globale</h1>
+          <div style={{ fontSize:'11px', color: '#5a6a82', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>ANALYSE GLOBALE</div>
+          <h1 style={{ fontSize: '22px', fontWeight: '500', color: '#e8edf8', margin: 0 }}>Vue Globale</h1>
           <div style={{ fontSize:'13px', color: '#5a6a82', marginTop: '3px' }}>
-            {accounts.length} compte{accounts.length > 1 ? 's' : ''} · {total} trades · <span style={{ color: pnlColor(pnl), fontWeight: '700' }}>{fmt(pnl, true)}</span>
+            {accounts.length} compte{accounts.length > 1 ? 's' : ''} · {total} trades · <span style={{ color: '#E24B4A', fontWeight: '500' }}>{fmt(pnl, true)}</span>
           </div>
         </div>
         <button onClick={load} style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.22)', color: '#8899bb', padding: '8px 14px', borderRadius: '5px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>🔄 Actualiser</button>
