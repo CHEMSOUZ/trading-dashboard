@@ -1026,6 +1026,16 @@ function gtpNextMonthLabel(monthKey) {
 
 // Met en évidence les chiffres/pourcentages d'un point fort/faible (le reste
 // du texte reste en couleur secondaire, plus discrète).
+function GtpIconArrowRight({ color, size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14" />
+      <path d="M13 18l6 -6" />
+      <path d="M13 6l6 6" />
+    </svg>
+  );
+}
+
 function gtpHighlightNumbers(text) {
   return text.split(/(\d+[.,]?\d*\s?%?)/g).map((part, i) =>
     /\d/.test(part)
@@ -1117,7 +1127,7 @@ function GlobalTraderProfileSection({ allTrades }) {
           {/* Identité */}
           <div style={{ background: GTP.surfPrimary, borderBottom: `0.5px solid ${GTP.border}`, padding: '20px' }}>
             <div style={{ ...labelStyle, marginBottom: '8px' }}>IDENTITÉ DE TRADING</div>
-            <div style={{ fontSize: '14px', lineHeight: '1.7', color: GTP.textPrimary, borderLeft: `2px solid ${GTP.accent}`, paddingLeft: '12px' }}>{profile.identity}</div>
+            <div style={{ fontSize: '14px', lineHeight: '1.75', color: GTP.textPrimary, borderLeft: `2px solid ${GTP.accent}`, paddingLeft: '12px', maxWidth: '640px' }}>{gtpHighlightNumbers(profile.identity)}</div>
           </div>
 
           {/* Forces / Faiblesses */}
@@ -1156,7 +1166,7 @@ function GlobalTraderProfileSection({ allTrades }) {
           {/* Priorité */}
           <div style={{ margin: '0 20px 20px', borderRadius: '8px', border: `0.5px solid ${GTP.warnBorder}`, background: GTP.warnBg, padding: '12px 14px' }}>
             <div style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', color: GTP.warnText, display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
-              <span style={{ fontSize: '13px' }}>⚠</span> PRIORITÉ N°1
+              <GtpIconArrowRight color={GTP.warnText} /> RECOMMANDATION PRIORITAIRE
             </div>
             <div style={{ fontSize: '13px', color: GTP.textPrimary, lineHeight: '1.6' }}>{profile.priority}</div>
           </div>
