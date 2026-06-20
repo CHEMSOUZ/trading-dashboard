@@ -870,11 +870,11 @@ export default function TraderProfile() {
                 )}
               </div>
 
-              {/* Verdict strip */}
-              {weeklyReport && weeklyReport.verdict_label && (
+              {/* Verdict strip — fallback sur trend si verdict_label absent (anciennes entrées) */}
+              {weeklyReport && (weeklyReport.verdict_label || weeklyReport.trend) && (
                 <div style={{ padding:'12px 16px', background:verdictBg, borderBottom:'0.5px solid #3a1212' }}>
                   <div style={{ fontSize:'11px', color:'#9a6060', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'4px' }}>VERDICT</div>
-                  <div style={{ fontSize:'15px', fontWeight:'500', color:verdictColor }}>{weeklyReport.verdict_label}</div>
+                  <div style={{ fontSize:'15px', fontWeight:'500', color:verdictColor }}>{weeklyReport.verdict_label || weeklyReport.trend}</div>
                 </div>
               )}
 
@@ -919,7 +919,7 @@ export default function TraderProfile() {
                 )}
 
                 {weeklyReport && weeklyReport.paragraphes.map((p, i) => (
-                  <p key={i} style={{ fontSize:'13px', color:PT.textSecondary, lineHeight:'1.75', maxWidth:'640px', margin:'0 0 12px' }}>{highlightNumbers(p.trim())}</p>
+                  <p key={i} style={{ fontSize:'13px', color:PT.textSecondary, lineHeight:'1.75', maxWidth:'640px', textAlign:'left', margin:'0 0 12px' }}>{highlightNumbers(p.trim())}</p>
                 ))}
               </div>
 
