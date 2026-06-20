@@ -1114,8 +1114,8 @@ function registerHandlers() {
 
   // Bilan psychologique hebdomadaire (global DB — agrège des mental_reports, 1 ligne max par semaine)
   globalDbHandle('db:getWeeklyReport',  (db, _, weekStart) => dbModule.getWeeklyReport(db, weekStart));
-  globalDbHandle('db:saveWeeklyReport', (db, dbp, weekStart, trend, description) =>
-    dbModule.saveWeeklyReport(db, dbp, { week_start: weekStart, trend, description }));
+  globalDbHandle('db:saveWeeklyReport', (db, dbp, weekStart, trend, description, extra) =>
+    dbModule.saveWeeklyReport(db, dbp, { week_start: weekStart, trend, description, ...(extra || {}) }));
 
   // ── AI Coach handlers ─────────────────────────────────────────
   ipcMain.handle('ai:hasKey', () => ({ ok: true, data: !!process.env.ANTHROPIC_API_KEY }));

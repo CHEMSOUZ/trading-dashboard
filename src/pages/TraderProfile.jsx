@@ -30,6 +30,40 @@ const PT = {
 
 const WEEKDAY_LABELS = ['LUN','MAR','MER','JEU','VEN','SAM','DIM'];
 
+// ── Bilan IA hebdomadaire : system prompt JSON structuré ──────
+const WEEKLY_SYSTEM_PROMPT = `Tu es un expert en psychologie du trading. Tu reçois les données de trading et états mentaux d'un trader sur une semaine. Génère une synthèse structurée en JSON avec exactement ces clés :
+- trend : string, un mot parmi : 'En progression' | 'Stable' | 'En dégradation' | 'Critique'
+- verdict_label : string, 1 phrase courte et directe résumant la semaine (max 15 mots)
+- patterns : array de 2 strings max, patterns comportementaux identifiés avec chiffres
+- recommandation : string, 1 règle concrète et non négociable pour la semaine suivante (max 3 phrases)
+- paragraphes : array de 2-3 strings, analyse détaillée découpée en paragraphes courts (max 3 lignes chacun), chiffres inclus
+Réponds uniquement en JSON valide, sans markdown, sans backticks, sans préambule.`;
+
+function parseJsonArray(raw) {
+  if (!raw) return [];
+  try { const v = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+
+// Met en évidence les chiffres dans un texte libre — même logique que
+// gtpHighlightNumbers (GlobalView.jsx), dupliquée localement (pas d'utilitaire partagé entre pages).
+function highlightNumbers(text) {
+  return text.split(/(\d+[.,]?\d*\s?%?)/g).map((part, i) =>
+    /\d/.test(part)
+      ? <span key={i} style={{ fontWeight: 500, color: PT.textPrimary }}>{part}</span>
+      : <span key={i}>{part}</span>
+  );
+}
+
+function IconArrowRight({ color, size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14" />
+      <path d="M13 18l6 -6" />
+      <path d="M13 6l6 6" />
+    </svg>
+  );
+}
+
 function monthLabel(year, month) {
   return new Date(year, month, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 }
@@ -441,7 +475,7 @@ export default function TraderProfile() {
   const [stats,          setStats]          = useState(null); // winrate/profitFactor/streak
 
   // ── Bilan IA hebdomadaire (complément du bloc "aucun trade") ──
-  const [weeklyReport,       setWeeklyReport]       = useState(null); // { weekStart, trend, description, generatedAt }
+  const [weeklyReport,       setWeeklyReport]       = useState(null); // { weekStart, trend, verdict_label, patterns[], recommandation, paragraphes[], generatedAt }
   const [weeklyGenerating,   setWeeklyGenerating]   = useState(false);
   const [weeklyAuthError,    setWeeklyAuthError]    = useState(null);
   const [weeklyQuotaReset,   setWeeklyQuotaReset]   = useState(null);
@@ -548,11 +582,18 @@ export default function TraderProfile() {
       const weekStart = getCurrentWeekStart();
       const existingRes = await window.db.getWeeklyReport(weekStart);
       if (existingRes.ok && existingRes.data) {
+        const d = existingRes.data;
+        const structured = d.paragraphes != null;
         setWeeklyReport({
-          weekStart:   existingRes.data.week_start,
-          trend:       existingRes.data.trend,
-          description: existingRes.data.description,
-          generatedAt: existingRes.data.generated_at,
+          weekStart:      d.week_start,
+          trend:          d.trend,
+          verdict_label:  d.verdict_label ?? '',
+          patterns:       structured ? parseJsonArray(d.patterns) : [],
+          recommandation: d.recommandation ?? '',
+          // Fallback : anciennes entrées sans colonnes structurées — on retrouve le
+          // découpage en paragraphes via la colonne description historique.
+          paragraphes:    structured ? parseJsonArray(d.paragraphes) : d.description.split(/\n\n+/),
+          generatedAt:    d.generated_at,
         });
         return; // déjà généré cette semaine — aucun appel IA
       }
@@ -573,7 +614,7 @@ export default function TraderProfile() {
       const prompt = buildWeeklyPrompt(source, weekStart);
       const res    = await window.ai.chat(
         [{ role: 'user', content: prompt }],
-        'Tu es un expert en psychologie du trading. Réponds uniquement en JSON valide, sans markdown ni backticks.'
+        WEEKLY_SYSTEM_PROMPT
       );
 
       if (!res.ok) {
@@ -592,20 +633,38 @@ export default function TraderProfile() {
         parsed = JSON.parse(txt);
       } catch {
         const m = res.data.match(/\{[\s\S]*\}/);
-        parsed  = m ? JSON.parse(m[0]) : { trend: 'Analysé', description: res.data };
+        parsed = m ? JSON.parse(m[0]) : {
+          trend: 'Analysé',
+          verdict_label: '',
+          patterns: [],
+          recommandation: res.data,
+          paragraphes: [res.data]
+        };
       }
 
-      const trend       = parsed.trend       ?? 'Analysé';
-      const description = parsed.description ?? res.data;
+      const trend          = parsed.trend ?? 'Analysé';
+      const verdict_label  = parsed.verdict_label ?? '';
+      const patterns       = Array.isArray(parsed.patterns) ? parsed.patterns : [];
+      const recommandation = parsed.recommandation ?? '';
+      const paragraphes    = Array.isArray(parsed.paragraphes) ? parsed.paragraphes : [parsed.description ?? res.data];
+      const description    = paragraphes.join('\n\n'); // conservé pour la colonne NOT NULL existante
 
-      const saveRes = await window.db.saveWeeklyReport(weekStart, trend, description);
-      const saved   = saveRes.ok ? saveRes.data : null;
+      const saveRes = await window.db.saveWeeklyReport(weekStart, trend, description, {
+        verdict_label,
+        patterns:    JSON.stringify(patterns),
+        recommandation,
+        paragraphes: JSON.stringify(paragraphes),
+      });
+      const saved = saveRes.ok ? saveRes.data : null;
 
       setWeeklyReport({
-        weekStart:   saved?.week_start   ?? weekStart,
-        trend:       saved?.trend        ?? trend,
-        description: saved?.description ?? description,
-        generatedAt: saved?.generated_at ?? new Date().toISOString(),
+        weekStart:      saved?.week_start      ?? weekStart,
+        trend:          saved?.trend           ?? trend,
+        verdict_label:  saved?.verdict_label   ?? verdict_label,
+        patterns:       saved?.patterns        ? parseJsonArray(saved.patterns) : patterns,
+        recommandation: saved?.recommandation  ?? recommandation,
+        paragraphes:    saved?.paragraphes     ? parseJsonArray(saved.paragraphes) : paragraphes,
+        generatedAt:    saved?.generated_at    ?? new Date().toISOString(),
       });
     } catch (e) {
       console.error('Weekly AI report error:', e);
@@ -794,16 +853,16 @@ export default function TraderProfile() {
       {/* ── Aucun trade : bloc bilan IA hebdomadaire (sans appel IA si déjà généré cette semaine) ── */}
       {noTrades && !authError && !generating && (
         noTradeSynthesis ? (() => {
-          const trend       = weeklyReport?.trend ?? '';
-          const trendLower  = trend.toLowerCase();
-          const verdictColor = trendLower.includes('dégrad')                                  ? PT.danger
-            : trendLower.includes('progress') || trendLower.includes('amélior')               ? PT.success
-            : PT.warn;
+          const trend        = weeklyReport?.trend ?? '';
+          const verdictColor = trend === 'En progression'                    ? PT.success
+            : trend === 'En dégradation' || trend === 'Critique'             ? PT.danger
+            : PT.textSecondary; // 'Stable' ou valeur inconnue
+          const verdictBg    = trend === 'Critique' ? '#1a0000' : '#120808';
           return (
             <div style={{ marginBottom:'1.25rem', border:`0.5px solid ${PT.border}`, borderRadius:PT.radiusLg, overflow:'hidden' }}>
               {/* Header */}
               <div style={{ background:PT.surfSecondary, borderBottom:`1px solid ${PT.border}`, padding:'10px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'6px' }}>
-                <span style={{ fontSize:'11px', fontWeight:'500', color:PT.textSecondary, textTransform:'uppercase', letterSpacing:'0.06em' }}>BILAN IA HEBDOMADAIRE</span>
+                <span style={{ fontSize:'11px', fontWeight:'500', color:PT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em' }}>BILAN IA HEBDOMADAIRE</span>
                 {weeklyReport && (
                   <span style={{ fontSize:'11px', color:PT.textTertiary }}>
                     Semaine du {fmtDate(weeklyReport.weekStart)} · Généré par Claude
@@ -812,14 +871,29 @@ export default function TraderProfile() {
               </div>
 
               {/* Verdict strip */}
-              {weeklyReport && (
-                <div style={{ padding:'12px 16px', background:'#120808', borderBottom:'0.5px solid #3a1212' }}>
+              {weeklyReport && weeklyReport.verdict_label && (
+                <div style={{ padding:'12px 16px', background:verdictBg, borderBottom:'0.5px solid #3a1212' }}>
                   <div style={{ fontSize:'11px', color:'#9a6060', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'4px' }}>VERDICT</div>
-                  <div style={{ fontSize:'15px', fontWeight:'500', color:verdictColor }}>{weeklyReport.trend}</div>
+                  <div style={{ fontSize:'15px', fontWeight:'500', color:verdictColor }}>{weeklyReport.verdict_label}</div>
                 </div>
               )}
 
-              {/* Body */}
+              {/* Patterns identifiés */}
+              {weeklyReport && weeklyReport.patterns.length > 0 && (
+                <div style={{ background:PT.surfSecondary, borderBottom:`1px solid ${PT.borderSecondary}`, padding:'12px 16px' }}>
+                  <div style={{ fontSize:'11px', color:PT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'8px' }}>PATTERNS IDENTIFIÉS</div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+                    {weeklyReport.patterns.map((p, i) => (
+                      <div key={i} style={{ display:'flex', gap:'8px', alignItems:'flex-start' }}>
+                        <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#7F77DD', marginTop:'5px', flexShrink:0 }} />
+                        <span style={{ fontSize:'12px', color:PT.textSecondary, lineHeight:'1.5' }}>{highlightNumbers(p)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Body : analyse détaillée */}
               <div style={{ padding:'16px' }}>
                 {weeklyAuthError && (
                   <div style={{ fontSize:'13px', color:'#f59e0b', lineHeight:'1.6' }}>
@@ -844,10 +918,20 @@ export default function TraderProfile() {
                   <div style={{ fontSize:'13px', color:PT.danger }}>{weeklyError}</div>
                 )}
 
-                {weeklyReport && weeklyReport.description.split(/\n\n+/).map((p, i) => (
-                  <p key={i} style={{ fontSize:'13px', color:PT.textSecondary, lineHeight:'1.75', maxWidth:'680px', margin: i === 0 ? '0 0 12px' : '0 0 12px' }}>{p.trim()}</p>
+                {weeklyReport && weeklyReport.paragraphes.map((p, i) => (
+                  <p key={i} style={{ fontSize:'13px', color:PT.textSecondary, lineHeight:'1.75', maxWidth:'640px', margin:'0 0 12px' }}>{highlightNumbers(p.trim())}</p>
                 ))}
               </div>
+
+              {/* Recommandation prioritaire */}
+              {weeklyReport && weeklyReport.recommandation && (
+                <div style={{ margin:'0 16px 16px', borderRadius:PT.radiusMd, border:'0.5px solid rgba(186,117,23,0.35)', background:'rgba(186,117,23,0.08)', padding:'12px 14px' }}>
+                  <div style={{ fontSize:'11px', fontWeight:'500', textTransform:'uppercase', color:PT.warn, display:'flex', alignItems:'center', gap:'5px', marginBottom:'6px' }}>
+                    <IconArrowRight color={PT.warn} /> RECOMMANDATION SEMAINE SUIVANTE
+                  </div>
+                  <div style={{ fontSize:'13px', color:PT.textPrimary, lineHeight:'1.6' }}>{weeklyReport.recommandation}</div>
+                </div>
+              )}
 
               {/* Footer */}
               <div style={{ padding:'8px 16px', background:PT.surfSecondary, borderTop:`1px solid ${PT.border}`, fontSize:'11px', color:PT.textTertiary }}>

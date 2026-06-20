@@ -142,6 +142,12 @@ function initSchema(db) {
     "ALTER TABLE trades ADD COLUMN source TEXT DEFAULT 'manual'",
     "ALTER TABLE trades ADD COLUMN rating INTEGER",
     "ALTER TABLE trades ADD COLUMN tags TEXT",
+    // weekly_reports : passage du bilan IA hebdomadaire de texte libre à JSON structuré.
+    // La colonne description existante est conservee comme fallback pour les entrees anterieures.
+    "ALTER TABLE weekly_reports ADD COLUMN verdict_label TEXT",
+    "ALTER TABLE weekly_reports ADD COLUMN patterns TEXT",
+    "ALTER TABLE weekly_reports ADD COLUMN recommandation TEXT",
+    "ALTER TABLE weekly_reports ADD COLUMN paragraphes TEXT",
   ];
   for (const sql of migrations) { try { db.exec(sql); } catch (_) {} }
 }
@@ -516,15 +522,29 @@ function getWeeklyReport(db, weekStart) {
 }
 function saveWeeklyReport(db, dbPath, report) {
   const existing = getWeeklyReport(db, report.week_start);
+  const params = {
+    ':trend': report.trend,
+    ':description': report.description,
+    ':verdict_label': report.verdict_label ?? null,
+    ':patterns': report.patterns ?? null,
+    ':recommandation': report.recommandation ?? null,
+    ':paragraphes': report.paragraphes ?? null,
+    ':week_start': report.week_start,
+  };
   if (existing) {
     runQ(db, dbPath, `
-      UPDATE weekly_reports SET trend=:trend, description=:description, generated_at=datetime('now')
+      UPDATE weekly_reports SET
+        trend=:trend, description=:description,
+        verdict_label=:verdict_label, patterns=:patterns,
+        recommandation=:recommandation, paragraphes=:paragraphes,
+        generated_at=datetime('now')
       WHERE week_start=:week_start
-    `, { ':trend': report.trend, ':description': report.description, ':week_start': report.week_start });
+    `, params);
   } else {
     runQ(db, dbPath, `
-      INSERT INTO weekly_reports (week_start, trend, description) VALUES (:week_start, :trend, :description)
-    `, { ':week_start': report.week_start, ':trend': report.trend, ':description': report.description });
+      INSERT INTO weekly_reports (week_start, trend, description, verdict_label, patterns, recommandation, paragraphes)
+      VALUES (:week_start, :trend, :description, :verdict_label, :patterns, :recommandation, :paragraphes)
+    `, params);
   }
   return getWeeklyReport(db, report.week_start);
 }
