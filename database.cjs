@@ -126,6 +126,33 @@ function initSchema(db) {
       description  TEXT NOT NULL,
       generated_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS budget_categories (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      name             TEXT NOT NULL,
+      color            TEXT NOT NULL,
+      allocated_amount REAL NOT NULL DEFAULT 0,
+      pocket           TEXT,
+      sort_order       INTEGER DEFAULT 0,
+      created_at       TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS budget_transactions (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      category_id INTEGER NOT NULL,
+      amount      REAL NOT NULL,
+      label       TEXT NOT NULL,
+      date        TEXT NOT NULL,
+      month_key   TEXT NOT NULL,
+      FOREIGN KEY (category_id) REFERENCES budget_categories(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS budget_settings (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      month_key      TEXT NOT NULL UNIQUE,
+      monthly_income REAL NOT NULL DEFAULT 0,
+      pocket_targets TEXT NOT NULL DEFAULT '{"essentials":50,"growth":25,"stability":15,"rewards":10}'
+    );
   `);
 
   // Migrations for existing DBs
@@ -549,6 +576,75 @@ function saveWeeklyReport(db, dbPath, report) {
   return getWeeklyReport(db, report.week_start);
 }
 
+// ── BUDGET CATEGORIES ─────────────────────────────────────────
+function getBudgetCategories(db) {
+  return getAll(db, 'SELECT * FROM budget_categories ORDER BY sort_order, created_at');
+}
+function addBudgetCategory(db, dbPath, cat) {
+  runQ(db, dbPath, `INSERT INTO budget_categories (name, color, allocated_amount, pocket, sort_order) VALUES (:name, :color, :allocated_amount, :pocket, :sort_order)`, {
+    ':name': cat.name, ':color': cat.color, ':allocated_amount': cat.allocated_amount ?? 0,
+    ':pocket': cat.pocket ?? null, ':sort_order': cat.sort_order ?? 0,
+  });
+  return getOne(db, 'SELECT * FROM budget_categories WHERE id=?', [lastId(db)]);
+}
+function updateBudgetCategory(db, dbPath, id, cat) {
+  runQ(db, dbPath, `UPDATE budget_categories SET name=:name, color=:color, allocated_amount=:allocated_amount, pocket=:pocket WHERE id=:id`, {
+    ':name': cat.name, ':color': cat.color, ':allocated_amount': cat.allocated_amount ?? 0,
+    ':pocket': cat.pocket ?? null, ':id': id,
+  });
+  return getOne(db, 'SELECT * FROM budget_categories WHERE id=?', [id]);
+}
+function deleteBudgetCategory(db, dbPath, id) {
+  runQ(db, dbPath, 'DELETE FROM budget_transactions WHERE category_id=?', [id]);
+  runQ(db, dbPath, 'DELETE FROM budget_categories WHERE id=?', [id]);
+}
+
+// ── BUDGET TRANSACTIONS ────────────────────────────────────────
+function getBudgetTransactions(db, monthKey) {
+  return getAll(db, `SELECT bt.*, bc.name as category_name, bc.color as category_color
+    FROM budget_transactions bt
+    LEFT JOIN budget_categories bc ON bt.category_id = bc.id
+    WHERE bt.month_key = ?
+    ORDER BY bt.date DESC, bt.id DESC`, [monthKey]);
+}
+function addBudgetTransaction(db, dbPath, tx) {
+  runQ(db, dbPath, `INSERT INTO budget_transactions (category_id, amount, label, date, month_key) VALUES (:category_id, :amount, :label, :date, :month_key)`, {
+    ':category_id': tx.category_id, ':amount': tx.amount, ':label': tx.label,
+    ':date': tx.date, ':month_key': tx.month_key,
+  });
+  return getOne(db, 'SELECT * FROM budget_transactions WHERE id=?', [lastId(db)]);
+}
+function deleteBudgetTransaction(db, dbPath, id) {
+  runQ(db, dbPath, 'DELETE FROM budget_transactions WHERE id=?', [id]);
+}
+
+// ── BUDGET SETTINGS ────────────────────────────────────────────
+function parseBudgetSettings(row) {
+  if (!row) return null;
+  try { row.pocket_targets = typeof row.pocket_targets === 'string' ? JSON.parse(row.pocket_targets) : row.pocket_targets; } catch(_) {}
+  return row;
+}
+function getBudgetSettings(db, monthKey) {
+  return parseBudgetSettings(getOne(db, 'SELECT * FROM budget_settings WHERE month_key=?', [monthKey]));
+}
+function getLatestBudgetSettings(db) {
+  return parseBudgetSettings(getOne(db, 'SELECT * FROM budget_settings ORDER BY month_key DESC LIMIT 1'));
+}
+function updateBudgetSettings(db, dbPath, monthKey, monthly_income, pocket_targets) {
+  const targets = typeof pocket_targets === 'string' ? pocket_targets : JSON.stringify(pocket_targets);
+  const existing = getOne(db, 'SELECT id FROM budget_settings WHERE month_key=?', [monthKey]);
+  if (existing) {
+    runQ(db, dbPath, `UPDATE budget_settings SET monthly_income=:income, pocket_targets=:targets WHERE month_key=:mk`, {
+      ':income': monthly_income, ':targets': targets, ':mk': monthKey,
+    });
+  } else {
+    runQ(db, dbPath, `INSERT INTO budget_settings (month_key, monthly_income, pocket_targets) VALUES (:mk, :income, :targets)`, {
+      ':mk': monthKey, ':income': monthly_income, ':targets': targets,
+    });
+  }
+  return getBudgetSettings(db, monthKey);
+}
+
 // ── AI CONVERSATIONS ──────────────────────────────────────────
 function getAiMessages(db) {
   return getAll(db, 'SELECT * FROM ai_conversations ORDER BY created_at ASC');
@@ -573,4 +669,7 @@ module.exports = {
   getMentalReport, getMentalReportsRange, saveMentalReport,
   getWeeklyReport, saveWeeklyReport,
   getAiMessages, insertAiMessage, clearAiConversations,
+  getBudgetCategories, addBudgetCategory, updateBudgetCategory, deleteBudgetCategory,
+  getBudgetTransactions, addBudgetTransaction, deleteBudgetTransaction,
+  getBudgetSettings, getLatestBudgetSettings, updateBudgetSettings,
 };

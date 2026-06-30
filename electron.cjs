@@ -1117,6 +1117,18 @@ function registerHandlers() {
   globalDbHandle('db:saveWeeklyReport', (db, dbp, weekStart, trend, description, extra) =>
     dbModule.saveWeeklyReport(db, dbp, { week_start: weekStart, trend, description, ...(extra || {}) }));
 
+  // ── Budget handlers (global DB — finances personnelles, séparées des comptes de trading)
+  globalDbHandle('budget:getCategories',    (db) => dbModule.getBudgetCategories(db));
+  globalDbHandle('budget:addCategory',      (db, dbp, cat) => dbModule.addBudgetCategory(db, dbp, cat));
+  globalDbHandle('budget:updateCategory',   (db, dbp, id, cat) => dbModule.updateBudgetCategory(db, dbp, id, cat));
+  globalDbHandle('budget:deleteCategory',   (db, dbp, id) => dbModule.deleteBudgetCategory(db, dbp, id));
+  globalDbHandle('budget:getTransactions',  (db, _, mk) => dbModule.getBudgetTransactions(db, mk));
+  globalDbHandle('budget:addTransaction',   (db, dbp, tx) => dbModule.addBudgetTransaction(db, dbp, tx));
+  globalDbHandle('budget:deleteTransaction',(db, dbp, id) => dbModule.deleteBudgetTransaction(db, dbp, id));
+  globalDbHandle('budget:getSettings',      (db, _, mk) => dbModule.getBudgetSettings(db, mk));
+  globalDbHandle('budget:getLatestSettings',(db) => dbModule.getLatestBudgetSettings(db));
+  globalDbHandle('budget:updateSettings',   (db, dbp, mk, income, targets) => dbModule.updateBudgetSettings(db, dbp, mk, income, targets));
+
   // ── AI Coach handlers ─────────────────────────────────────────
   ipcMain.handle('ai:hasKey', () => ({ ok: true, data: !!process.env.ANTHROPIC_API_KEY }));
 

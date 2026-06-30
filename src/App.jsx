@@ -21,6 +21,7 @@ const EconomicCalendar  = lazy(() => import('./pages/EconomicCalendar'));
 const Payout            = lazy(() => import('./pages/Payout'));
 const TradingPlan       = lazy(() => import('./pages/TradingPlan'));
 const StrategieDiscipline = lazy(() => import('./pages/StrategieDiscipline'));
+const Budget            = lazy(() => import('./pages/Budget'));
 const FitnessSante      = lazy(() => import('./pages/FitnessSante'));
 const Bot               = lazy(() => import('./pages/Bot'));
 const AiCoachPanel      = lazy(() => import('./features/ai-coach/AiCoachPanel'));
@@ -219,6 +220,7 @@ export default function App() {
               <Route path="/payout"        element={<Payout />} />
               <Route path="/plan"          element={<TradingPlan />} />
               <Route path="/strategie"     element={<StrategieDiscipline />} />
+              <Route path="/budget"        element={<Budget />} />
               <Route path="/fitness"       element={<FitnessSante />} />
               <Route path="/bot"           element={<Bot />} />
               <Route path="/journal"       element={<Journal />} />

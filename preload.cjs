@@ -87,6 +87,19 @@ contextBridge.exposeInMainWorld('market', {
   onAnalysisGenerated: (cb)             => ipcRenderer.on('market:analysisGenerated', (_, d) => cb(d)),
 });
 
+contextBridge.exposeInMainWorld('budget', {
+  getCategories:    ()                         => ipcRenderer.invoke('budget:getCategories'),
+  addCategory:      (cat)                      => ipcRenderer.invoke('budget:addCategory', cat),
+  updateCategory:   (id, cat)                  => ipcRenderer.invoke('budget:updateCategory', id, cat),
+  deleteCategory:   (id)                       => ipcRenderer.invoke('budget:deleteCategory', id),
+  getTransactions:  (monthKey)                 => ipcRenderer.invoke('budget:getTransactions', monthKey),
+  addTransaction:   (tx)                       => ipcRenderer.invoke('budget:addTransaction', tx),
+  deleteTransaction:(id)                       => ipcRenderer.invoke('budget:deleteTransaction', id),
+  getSettings:      (monthKey)                 => ipcRenderer.invoke('budget:getSettings', monthKey),
+  getLatestSettings:()                         => ipcRenderer.invoke('budget:getLatestSettings'),
+  updateSettings:   (monthKey, income, targets)=> ipcRenderer.invoke('budget:updateSettings', monthKey, income, targets),
+});
+
 contextBridge.exposeInMainWorld('bot', {
   getSignals:   ()       => ipcRenderer.invoke('bot:getSignals'),
   clearSignals: ()       => ipcRenderer.invoke('bot:clearSignals'),
