@@ -27,6 +27,7 @@ function migrate() {
       user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       code       TEXT NOT NULL,
       expires_at TEXT NOT NULL,
+      attempts   INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -44,6 +45,11 @@ function migrate() {
       UNIQUE(user_id, month_key)
     );
   `);
+
+  // Migration installs existantes : colonne attempts absente avant cette version
+  try {
+    db.exec('ALTER TABLE password_reset_tokens ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0');
+  } catch (_) {}
 }
 
 module.exports = migrate;

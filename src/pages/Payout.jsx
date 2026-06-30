@@ -348,9 +348,9 @@ export default function Payout() {
 
       {/* ── Hero metrics ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: '10px', marginBottom: '20px' }}>
-        <div style={{ background: '#120808', border: '0.5px solid #3a1212', borderLeft: '3px solid #E24B4A', borderRadius: PY.radiusLg, padding: '1rem 1.25rem' }}>
-          <div style={{ fontSize: '11px', color: '#9a6060', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>RÉSULTAT NET APRÈS PAYOUTS</div>
-          <div style={{ fontSize: '32px', fontWeight: '500', color: '#E24B4A', lineHeight: 1 }}>{fmt(netResult)} €</div>
+        <div style={{ background: netResult >= 0 ? '#081208' : '#120808', border: `0.5px solid ${netResult >= 0 ? '#123a12' : '#3a1212'}`, borderLeft: `3px solid ${netResult >= 0 ? PY.success : PY.danger}`, borderRadius: PY.radiusLg, padding: '1rem 1.25rem' }}>
+          <div style={{ fontSize: '11px', color: netResult >= 0 ? '#609a60' : '#9a6060', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>RÉSULTAT NET APRÈS PAYOUTS</div>
+          <div style={{ fontSize: '32px', fontWeight: '500', color: netResult >= 0 ? PY.success : PY.danger, lineHeight: 1 }}>{fmt(netResult)} €</div>
           <div style={{ fontSize: '11px', marginTop: '6px', color: netResult >= 0 ? PY.success : '#9a6060' }}>
             {netResult >= 0 ? 'Rentabilisé ✓' : `Il manque ${fmt(Math.abs(netResult), false)} € pour rentabiliser`}
           </div>

@@ -34,15 +34,30 @@ function createResetToken(email) {
   return code;
 }
 
+const MAX_RESET_ATTEMPTS = 5;
+
 function verifyAndConsumeResetToken(email, code) {
   const user = getUserByEmail(email);
   if (!user) throw new Error('INVALID_CODE');
-  const row = db.prepare('SELECT * FROM password_reset_tokens WHERE user_id = ? AND code = ?').get(user.id, code);
+
+  const row = db.prepare('SELECT * FROM password_reset_tokens WHERE user_id = ?').get(user.id);
   if (!row) throw new Error('INVALID_CODE');
+
   if (new Date(row.expires_at) < new Date()) {
     db.prepare('DELETE FROM password_reset_tokens WHERE id = ?').run(row.id);
     throw new Error('CODE_EXPIRED');
   }
+
+  if (row.attempts >= MAX_RESET_ATTEMPTS) {
+    db.prepare('DELETE FROM password_reset_tokens WHERE id = ?').run(row.id);
+    throw new Error('MAX_ATTEMPTS');
+  }
+
+  if (row.code !== code.trim()) {
+    db.prepare('UPDATE password_reset_tokens SET attempts = attempts + 1 WHERE id = ?').run(row.id);
+    throw new Error('INVALID_CODE');
+  }
+
   db.prepare('DELETE FROM password_reset_tokens WHERE id = ?').run(row.id);
   return user;
 }

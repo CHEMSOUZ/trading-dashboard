@@ -515,10 +515,10 @@ function SyntheseTab({ trades, loading }) {
 
       {/* Hero */}
       <div style={{ display:'grid', gridTemplateColumns:'1.4fr 1fr 1fr', gap:'10px' }}>
-        <div style={{ background:'#120808', border:'0.5px solid #3a1212', borderLeft:'3px solid #E24B4A', borderRadius:JT.radiusLg, padding:'14px 16px' }}>
-          <div style={{ fontSize:'11px', color:'#9a6060', textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'6px' }}>P&L NET TOTAL</div>
-          <div style={{ fontSize:'30px', fontWeight:'500', color:'#E24B4A', lineHeight:1 }}>{fmt(total,true)}</div>
-          <div style={{ fontSize:'11px', color:'#9a6060', marginTop:'6px' }}>{wins.length}W · {losses.length}L</div>
+        <div style={{ background: total >= 0 ? '#081208' : '#120808', border: `0.5px solid ${total >= 0 ? '#123a12' : '#3a1212'}`, borderLeft: `3px solid ${total >= 0 ? JT.success : JT.danger}`, borderRadius:JT.radiusLg, padding:'14px 16px' }}>
+          <div style={{ fontSize:'11px', color: total >= 0 ? '#609a60' : '#9a6060', textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'6px' }}>P&L NET TOTAL</div>
+          <div style={{ fontSize:'30px', fontWeight:'500', color: total >= 0 ? JT.success : JT.danger, lineHeight:1 }}>{fmt(total,true)}</div>
+          <div style={{ fontSize:'11px', color: total >= 0 ? '#609a60' : '#9a6060', marginTop:'6px' }}>{wins.length}W · {losses.length}L</div>
         </div>
         <div style={{ background:JT.surfSecondary, border:`1px solid ${JT.border}`, borderRadius:JT.radiusLg, padding:'12px 14px' }}>
           <div style={{ fontSize:'11px', color:JT.textTertiary, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'6px' }}>{`SÉRIE ${streakType??'—'}`}</div>

@@ -25,8 +25,10 @@ function validate(mode, email, password, confirmPassword) {
   if (!EMAIL_RE.test(email.trim())) return 'Adresse email invalide.';
   if (!password) return 'Mot de passe requis.';
   if (mode === 'register') {
-    if (password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.';
-    if (password !== confirmPassword) return 'Les mots de passe ne correspondent pas.';
+    if (password.length < 8)          return 'Le mot de passe doit contenir au moins 8 caractères.';
+    if (!/[a-zA-Z]/.test(password))   return 'Le mot de passe doit contenir au moins une lettre.';
+    if (!/\d/.test(password))          return 'Le mot de passe doit contenir au moins un chiffre.';
+    if (password !== confirmPassword)  return 'Les mots de passe ne correspondent pas.';
   }
   return null;
 }
@@ -94,8 +96,10 @@ function ResetPasswordScreen({ email, onSuccess, onResend }) {
   async function handleSubmit(e) {
     e.preventDefault();
     if (code.trim().length !== 6) { setError('Le code doit contenir 6 chiffres.'); return; }
-    if (newPassword.length < 8)   { setError('Le mot de passe doit contenir au moins 8 caractères.'); return; }
-    if (newPassword !== confirmPassword) { setError('Les mots de passe ne correspondent pas.'); return; }
+    if (newPassword.length < 8)          { setError('Le mot de passe doit contenir au moins 8 caractères.'); return; }
+    if (!/[a-zA-Z]/.test(newPassword))   { setError('Le mot de passe doit contenir au moins une lettre.'); return; }
+    if (!/\d/.test(newPassword))          { setError('Le mot de passe doit contenir au moins un chiffre.'); return; }
+    if (newPassword !== confirmPassword)  { setError('Les mots de passe ne correspondent pas.'); return; }
     setError(''); setLoading(true);
     const res = await window.auth.resetPassword(email, code.trim(), newPassword);
     setLoading(false);

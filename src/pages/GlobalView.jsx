@@ -688,10 +688,10 @@ function OverviewTab({
     <>
       {/* ── HERO METRICS ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.4fr repeat(4,1fr)', gap: '10px', marginBottom: '20px' }}>
-        <div style={{ background: '#120808', border: '0.5px solid #3a1212', borderLeft: '3px solid #E24B4A', borderRadius: OV.radiusLg, padding: '14px 16px' }}>
-          <div style={{ fontSize: '11px', color: '#9a6060', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>P&L NET TOTAL</div>
-          <div style={{ fontSize: '28px', fontWeight: '500', color: '#E24B4A', lineHeight: 1 }}>{fmt(pnl, true)}</div>
-          <div style={{ fontSize: '11px', color: '#9a6060', marginTop: '6px' }}>Frais : -{fees.toFixed(2)}$</div>
+        <div style={{ background: pnl >= 0 ? '#081208' : '#120808', border: `0.5px solid ${pnl >= 0 ? '#123a12' : '#3a1212'}`, borderLeft: `3px solid ${pnl >= 0 ? OV.success : OV.danger}`, borderRadius: OV.radiusLg, padding: '14px 16px' }}>
+          <div style={{ fontSize: '11px', color: pnl >= 0 ? '#609a60' : '#9a6060', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>P&L NET TOTAL</div>
+          <div style={{ fontSize: '28px', fontWeight: '500', color: pnl >= 0 ? OV.success : OV.danger, lineHeight: 1 }}>{fmt(pnl, true)}</div>
+          <div style={{ fontSize: '11px', color: pnl >= 0 ? '#609a60' : '#9a6060', marginTop: '6px' }}>Frais : -{fees.toFixed(2)}$</div>
         </div>
         <OvHeroCard label="WR GLOBAL"     value={`${winrate.toFixed(1)}%`}                        color={winrate < 50 ? OV.danger : OV.textPrimary} sub={`${wins}W / ${losses}L`} />
         <OvHeroCard label="PROFIT FACTOR" value={pf === 999 ? '∞' : pf.toFixed(2)}                 color={pf < 1 ? OV.danger : OV.textPrimary} />
@@ -1509,7 +1509,7 @@ export default function GlobalView() {
           <div style={{ fontSize:'11px', color: '#5a6a82', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>ANALYSE GLOBALE</div>
           <h1 style={{ fontSize: '22px', fontWeight: '500', color: '#e8edf8', margin: 0 }}>Vue Globale</h1>
           <div style={{ fontSize:'13px', color: '#5a6a82', marginTop: '3px' }}>
-            {accounts.length} compte{accounts.length > 1 ? 's' : ''} · {total} trades · <span style={{ color: '#E24B4A', fontWeight: '500' }}>{fmt(pnl, true)}</span>
+            {accounts.length} compte{accounts.length > 1 ? 's' : ''} · {total} trades · <span style={{ color: pnl >= 0 ? OV.success : OV.danger, fontWeight: '500' }}>{fmt(pnl, true)}</span>
           </div>
         </div>
         <button onClick={load} style={{ background: 'rgba(136,153,187,0.10)', border: '1px solid rgba(136,153,187,0.22)', color: '#8899bb', padding: '8px 14px', borderRadius: '5px', fontSize:'13px', fontFamily: 'inherit', cursor: 'pointer' }}>🔄 Actualiser</button>

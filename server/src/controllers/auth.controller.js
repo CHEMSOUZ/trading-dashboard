@@ -3,6 +3,13 @@ const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/env');
 const userService  = require('../services/userService');
 const emailService = require('../services/emailService');
 
+function validatePassword(password) {
+  if (!password || password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.';
+  if (!/[a-zA-Z]/.test(password)) return 'Le mot de passe doit contenir au moins une lettre.';
+  if (!/\d/.test(password))       return 'Le mot de passe doit contenir au moins un chiffre.';
+  return null;
+}
+
 function signToken(user) {
   return jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
@@ -19,12 +26,11 @@ function sanitizeUser(user) {
 async function register(req, res, next) {
   try {
     const { email, password } = req.body || {};
-    if (!email || !password || password.length < 8) {
-      return res.status(400).json({
-        error: 'INVALID_INPUT',
-        message: 'Email et mot de passe (8 caracteres minimum) requis.',
-      });
+    if (!email || !password) {
+      return res.status(400).json({ error: 'INVALID_INPUT', message: 'Email et mot de passe requis.' });
     }
+    const pwError = validatePassword(password);
+    if (pwError) return res.status(400).json({ error: 'INVALID_INPUT', message: pwError });
 
     const user = await userService.createUser(email.toLowerCase().trim(), password);
     const token = signToken(user);
@@ -84,14 +90,14 @@ async function resetPassword(req, res, next) {
     if (!email || !code || !newPassword) {
       return res.status(400).json({ error: 'INVALID_INPUT', message: 'Email, code et nouveau mot de passe requis.' });
     }
-    if (newPassword.length < 8) {
-      return res.status(400).json({ error: 'INVALID_INPUT', message: 'Le mot de passe doit contenir au moins 8 caractères.' });
-    }
+    const pwError = validatePassword(newPassword);
+    if (pwError) return res.status(400).json({ error: 'INVALID_INPUT', message: pwError });
     let user;
     try {
       user = userService.verifyAndConsumeResetToken(email.toLowerCase().trim(), code.trim());
     } catch(e) {
-      if (e.message === 'CODE_EXPIRED') return res.status(400).json({ error: 'CODE_EXPIRED', message: 'Ce code a expiré. Faites une nouvelle demande.' });
+      if (e.message === 'CODE_EXPIRED')  return res.status(400).json({ error: 'CODE_EXPIRED',  message: 'Ce code a expiré. Faites une nouvelle demande.' });
+      if (e.message === 'MAX_ATTEMPTS')  return res.status(400).json({ error: 'MAX_ATTEMPTS',  message: 'Trop de tentatives incorrectes. Faites une nouvelle demande de code.' });
       return res.status(400).json({ error: 'INVALID_CODE', message: 'Code incorrect.' });
     }
     await userService.updatePassword(user.id, newPassword);
