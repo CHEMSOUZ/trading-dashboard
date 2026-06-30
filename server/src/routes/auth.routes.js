@@ -12,7 +12,17 @@ const authLimiter = rateLimit({
   message: { error: 'TOO_MANY_REQUESTS', message: 'Trop de tentatives, reessayez plus tard.' },
 });
 
-router.post('/register', authLimiter, authController.register);
-router.post('/login', authLimiter, authController.login);
+const resetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'TOO_MANY_REQUESTS', message: 'Trop de tentatives, reessayez dans 15 minutes.' },
+});
+
+router.post('/register',         authLimiter,  authController.register);
+router.post('/login',            authLimiter,  authController.login);
+router.post('/forgot-password',  resetLimiter, authController.forgotPassword);
+router.post('/reset-password',   resetLimiter, authController.resetPassword);
 
 module.exports = router;

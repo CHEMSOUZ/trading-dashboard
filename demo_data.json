@@ -20,95 +20,39 @@
     "description": "ÉTAT ÉMOTIONNEL\nSur l'ensemble du mois, le trading reflète une approche calme et maîtrisée : les pertes restent contenues (perte moyenne de 175$) tandis que les gains sont laissés courir (gain moyen de 201$), signe d'un bon contrôle émotionnel plutôt que de décisions impulsives.\n\nPATTERNS IDENTIFIÉS\nLe winrate de 60% combiné à un profit factor de 1.72 montre une exécution cohérente sur le MNQ, sans signe de revenge trading après les journées négatives ni d'overtrading — une seule prise de position par jour, jamais de précipitation après une perte.\n\nFOCUS POUR DEMAIN\nContinue à respecter ce ratio gain/perte en laissant courir les trades gagnants, tout en maintenant la même rigueur sur la taille de position lors des prochaines séances."
   },
   "traitCalendar": [
-    {
-      "date": "2026-06-01",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-02",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-03",
-      "emotion": "Impulsif"
-    },
-    {
-      "date": "2026-06-04",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-05",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-08",
-      "emotion": "Focalisé"
-    },
-    {
-      "date": "2026-06-09",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-10",
-      "emotion": "Impulsif"
-    },
-    {
-      "date": "2026-06-11",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-12",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-15",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-16",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-17",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-18",
-      "emotion": "Impulsif"
-    },
-    {
-      "date": "2026-06-19",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-22",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-23",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-24",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-25",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-26",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-29",
-      "emotion": "Discipliné"
-    },
-    {
-      "date": "2026-06-30",
-      "emotion": "Discipliné"
-    }
+    { "date": "2026-06-01", "emotion": "Discipliné" },
+    { "date": "2026-06-02", "emotion": "Discipliné" },
+    { "date": "2026-06-03", "emotion": "Impulsif"   },
+    { "date": "2026-06-04", "emotion": "Discipliné" },
+    { "date": "2026-06-05", "emotion": "Discipliné" },
+    { "date": "2026-06-08", "emotion": "Focalisé"   },
+    { "date": "2026-06-09", "emotion": "Discipliné" },
+    { "date": "2026-06-10", "emotion": "Impulsif"   },
+    { "date": "2026-06-11", "emotion": "Discipliné" },
+    { "date": "2026-06-12", "emotion": "Discipliné" },
+    { "date": "2026-06-15", "emotion": "Discipliné" },
+    { "date": "2026-06-16", "emotion": "Discipliné" }
   ],
+  "payout": {
+    "propfirm": [
+      { "id": 1, "label": "Combine Topstep 50K (×3)",           "amount": -1500, "currency": "EUR", "note": "Trois passages du combine" },
+      { "id": 2, "label": "Challenge Apex 100K (×2)",           "amount": -1100, "currency": "EUR", "note": "Apex Trader Funding" },
+      { "id": 3, "label": "Funded Topstep — frais mensuels",    "amount": -600,  "currency": "EUR", "note": "10 mois de compte funded" }
+    ],
+    "fixed": [
+      { "id": 1, "label": "TradingView Pro+",      "amount": -456,  "currency": "EUR", "note": "Abonnement annuel" },
+      { "id": 2, "label": "Formation ICT",          "amount": -1200, "currency": "EUR", "note": "Mentorship avancé" },
+      { "id": 3, "label": "NinjaTrader Licence",    "amount": -600,  "currency": "EUR", "note": "Plateforme de trading" },
+      { "id": 4, "label": "VPS dédié trading",      "amount": -288,  "currency": "EUR", "note": "Hébergement distant" },
+      { "id": 5, "label": "Matériel bureau",        "amount": -1660, "currency": "EUR", "note": "Écrans, setup" },
+      { "id": 6, "label": "Livres & ressources",    "amount": -200,  "currency": "EUR", "note": "Amazon, Udemy" },
+      { "id": 7, "label": "Abonnement data marché", "amount": -600,  "currency": "EUR", "note": "CME + feed NQ" }
+    ],
+    "payouts": [
+      { "id": 1, "label": "Payout Topstep #1", "amount": 1800, "currency": "EUR", "note": "Compte funded 50K", "date": "2025-09-12" },
+      { "id": 2, "label": "Payout Apex #1",    "amount": 1600, "currency": "EUR", "note": "Compte funded 100K", "date": "2025-12-04" }
+    ]
+  },
   "budget": {
     "monthlySettings": {
       "id": 1,

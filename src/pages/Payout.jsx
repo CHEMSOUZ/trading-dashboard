@@ -101,7 +101,7 @@ function SectionHeader({ icon, label, total, children }) {
   );
 }
 
-function EntryRow({ entry, onEdit, onDelete }) {
+function EntryRow({ entry, onEdit, onDelete, disabled }) {
   const [hover, setHover] = useState(false);
   return (
     <div
@@ -126,16 +126,20 @@ function EntryRow({ entry, onEdit, onDelete }) {
         <span style={{ fontSize: '13px', fontWeight: '500', color: pnlColor(entry.amount) }}>
           {fmt(entry.amount)} {entry.currency}
         </span>
-        <button onClick={() => onEdit(entry)}
-          style={{ background: 'none', border: '1px solid #1e2c40', color: '#5a6a82', padding: '3px 7px', borderRadius: '4px', cursor: 'pointer', fontSize:'12px', fontFamily: 'inherit', transition: 'all 0.15s', opacity: hover ? 1 : 0 }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#8899bb'; e.currentTarget.style.color = '#8899bb'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e2c40'; e.currentTarget.style.color = '#5a6a82'; }}
-        >✏</button>
-        <button onClick={() => onDelete(entry.id)}
-          style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '15px', padding: '0 2px', transition: 'color 0.15s', opacity: hover ? 1 : 0 }}
-          onMouseEnter={e => e.currentTarget.style.color = '#ff4455'}
-          onMouseLeave={e => e.currentTarget.style.color = '#1a3a20'}
-        >×</button>
+        {!disabled && (
+          <>
+            <button onClick={() => onEdit(entry)}
+              style={{ background: 'none', border: '1px solid #1e2c40', color: '#5a6a82', padding: '3px 7px', borderRadius: '4px', cursor: 'pointer', fontSize:'12px', fontFamily: 'inherit', transition: 'all 0.15s', opacity: hover ? 1 : 0 }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#8899bb'; e.currentTarget.style.color = '#8899bb'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e2c40'; e.currentTarget.style.color = '#5a6a82'; }}
+            >✏</button>
+            <button onClick={() => onDelete(entry.id)}
+              style={{ background: 'none', border: 'none', color: '#1a3a20', cursor: 'pointer', fontSize: '15px', padding: '0 2px', transition: 'color 0.15s', opacity: hover ? 1 : 0 }}
+              onMouseEnter={e => e.currentTarget.style.color = '#ff4455'}
+              onMouseLeave={e => e.currentTarget.style.color = '#1a3a20'}
+            >×</button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -249,11 +253,36 @@ function AddButton({ label, onClick }) {
 
 // ── Main ──────────────────────────────────────────────────────
 export default function Payout() {
-  const [data, setData] = useState(load);
-  const [modal, setModal] = useState(null); // { section, entry? }
+  const [ready,      setReady]      = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [data,       setData]       = useState(null);
+  const [modal,      setModal]      = useState(null); // { section, entry? }
 
-  // Persist on every change
-  useEffect(() => { save(data); }, [data]);
+  useEffect(() => {
+    (async () => {
+      const res  = await window.auth.getSession();
+      const user = res?.data?.user;
+      const demo = !!user && user.subscription_status !== 'active';
+      setIsDemoMode(demo);
+      if (demo) {
+        const pRes = await window.demo.getPayoutData();
+        setData(pRes?.ok ? pRes.data : DEFAULT_DATA);
+      } else {
+        setData(load());
+      }
+      setReady(true);
+    })();
+  }, []);
+
+  // Persist on every change — JAMAIS en mode démo
+  useEffect(() => {
+    if (!ready || isDemoMode || !data) return;
+    save(data);
+  }, [data, isDemoMode, ready]);
+
+  if (!ready || !data) {
+    return <div style={{ padding: '24px 28px', color: PY.textTertiary, fontSize: '13px' }}>Chargement...</div>;
+  }
 
   // ── Computed totals ──────────────────────────────────────────
   const totalPropfirm = data.propfirm.reduce((s, e) => s + e.amount, 0);
@@ -292,6 +321,17 @@ export default function Payout() {
   return (
     <div style={{ padding: '24px 28px', maxWidth: 'none', width: '100%', boxSizing: 'border-box', fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>
 
+      {/* ── Bannière démo ── */}
+      {isDemoMode && (
+        <div style={{ marginBottom: '16px', padding: '10px 16px', background: 'rgba(136,153,187,0.07)', border: '1px solid rgba(136,153,187,0.20)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '14px' }}>🔒</span>
+          <div style={{ fontSize: '12px', color: '#8899bb', lineHeight: '1.5' }}>
+            <strong style={{ color: '#dde4ef' }}>Mode démo</strong> — Données fictives à titre d'exemple.
+            Les modifications sont désactivées. Activez votre abonnement pour saisir vos données réelles.
+          </div>
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
@@ -299,10 +339,10 @@ export default function Payout() {
           <h1 style={{ fontSize: '22px', fontWeight: '500', color: '#e8edf8', margin: '0 0 4px' }}>Investissements & Payouts</h1>
           <div style={{ fontSize:'12px', color: PY.textTertiary }}>Toutes les dépenses et revenus depuis le début</div>
         </div>
-        <button onClick={resetAll}
-          style={{ background: 'none', border: '1px solid #1e2c40', color: '#3a1818', padding: '7px 14px', borderRadius: '5px', cursor: 'pointer', fontSize:'12px', fontFamily: 'inherit', letterSpacing: '1px', transition: 'all 0.15s' }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff4455'; e.currentTarget.style.color = '#ff4455'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e2c40'; e.currentTarget.style.color = '#3a1818'; }}
+        <button onClick={isDemoMode ? undefined : resetAll} disabled={isDemoMode}
+          style={{ background: 'none', border: '1px solid #1e2c40', color: isDemoMode ? '#2a3a50' : '#3a1818', padding: '7px 14px', borderRadius: '5px', cursor: isDemoMode ? 'not-allowed' : 'pointer', fontSize:'12px', fontFamily: 'inherit', letterSpacing: '1px', transition: 'all 0.15s', opacity: isDemoMode ? 0.4 : 1 }}
+          onMouseEnter={e => { if (!isDemoMode) { e.currentTarget.style.borderColor = '#ff4455'; e.currentTarget.style.color = '#ff4455'; } }}
+          onMouseLeave={e => { if (!isDemoMode) { e.currentTarget.style.borderColor = '#1e2c40'; e.currentTarget.style.color = '#3a1818'; } }}
         >↺ Reset</button>
       </div>
 
@@ -370,22 +410,24 @@ export default function Payout() {
           <SectionHeader icon="🏆" label="PropFirm" total={totalPropfirm}>
             {data.propfirm.map(e => (
               <EntryRow key={e.id} entry={e}
-                onEdit={entry => openEdit('propfirm', entry)}
-                onDelete={id => handleDelete('propfirm', id)}
+                onEdit={isDemoMode ? () => {} : entry => openEdit('propfirm', entry)}
+                onDelete={isDemoMode ? () => {} : id => handleDelete('propfirm', id)}
+                disabled={isDemoMode}
               />
             ))}
-            <AddButton label="Ajouter PropFirm" onClick={() => openAdd('propfirm')} />
+            {!isDemoMode && <AddButton label="Ajouter PropFirm" onClick={() => openAdd('propfirm')} />}
           </SectionHeader>
 
           {/* Frais fixes */}
           <SectionHeader icon="💼" label="Frais fixes" total={totalFixed}>
             {data.fixed.map(e => (
               <EntryRow key={e.id} entry={e}
-                onEdit={entry => openEdit('fixed', entry)}
-                onDelete={id => handleDelete('fixed', id)}
+                onEdit={isDemoMode ? () => {} : entry => openEdit('fixed', entry)}
+                onDelete={isDemoMode ? () => {} : id => handleDelete('fixed', id)}
+                disabled={isDemoMode}
               />
             ))}
-            <AddButton label="Ajouter Frais" onClick={() => openAdd('fixed')} />
+            {!isDemoMode && <AddButton label="Ajouter Frais" onClick={() => openAdd('fixed')} />}
           </SectionHeader>
 
           {/* Footer */}
@@ -407,11 +449,12 @@ export default function Payout() {
 
           {data.payouts.map(e => (
             <EntryRow key={e.id} entry={e}
-              onEdit={entry => openEdit('payouts', entry)}
-              onDelete={id => handleDelete('payouts', id)}
+              onEdit={isDemoMode ? () => {} : entry => openEdit('payouts', entry)}
+              onDelete={isDemoMode ? () => {} : id => handleDelete('payouts', id)}
+              disabled={isDemoMode}
             />
           ))}
-          <AddButton label="Ajouter Payout" onClick={() => openAdd('payouts')} />
+          {!isDemoMode && <AddButton label="Ajouter Payout" onClick={() => openAdd('payouts')} />}
 
           {/* Footer */}
           <div style={{ background: PY.surfSecondary, borderTop: `1px solid ${PY.border}`, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

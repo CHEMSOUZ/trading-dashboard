@@ -201,21 +201,23 @@ function SubcategoryModal({ initial, onSave, onClose }) {
   );
 }
 
-// ── TransactionModal ───────────────────────────────────────────
-function TransactionModal({ subcategories, onSave, onClose }) {
+// ── TransactionModal (add + edit) ─────────────────────────────
+function TransactionModal({ subcategories, initial, onSave, onClose }) {
   const [form, setForm] = useState({
-    subcategory_id: subcategories[0]?.id ?? '',
-    amount: '', label: '',
-    date: new Date().toISOString().slice(0, 10),
+    subcategory_id: initial?.subcategory_id ?? subcategories[0]?.id ?? '',
+    amount:         initial?.amount ?? '',
+    label:          initial?.label  ?? '',
+    date:           initial?.date   ?? new Date().toISOString().slice(0, 10),
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const valid = form.subcategory_id && parseFloat(form.amount) > 0 && form.date;
+  const isEdit = !!initial;
 
   return (
     <div style={S.modal} onClick={onClose}>
       <div style={S.modalBox} onClick={e => e.stopPropagation()}>
         <div style={{ fontSize: '13px', fontWeight: 700, color: '#dde4ef', marginBottom: '20px', letterSpacing: '1px' }}>
-          NOUVELLE DÉPENSE
+          {isEdit ? 'MODIFIER LA DÉPENSE' : 'NOUVELLE DÉPENSE'}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div>
@@ -249,7 +251,7 @@ function TransactionModal({ subcategories, onSave, onClose }) {
         <div style={{ display: 'flex', gap: '10px', marginTop: '22px', justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={S.cancelBtn}>Annuler</button>
           <button disabled={!valid} onClick={() => valid && onSave(form)} style={S.btn('#00cc77')}>
-            Enregistrer
+            {isEdit ? 'Sauvegarder' : 'Enregistrer'}
           </button>
         </div>
       </div>
@@ -417,6 +419,7 @@ export default function Budget() {
 
   const [modalSubcat, setModalSubcat]     = useState(null);
   const [modalTx, setModalTx]             = useState(false);
+  const [modalEditTx, setModalEditTx]     = useState(null); // transaction à éditer
   const [modalTargets, setModalTargets]   = useState(false);
   const [txExpanded, setTxExpanded]       = useState(false);
 
@@ -506,6 +509,17 @@ export default function Budget() {
       month_key: currentMonth,
     });
     setModalTx(false);
+    load(currentMonth);
+  }
+
+  async function handleUpdateTx(form) {
+    await window.budget.updateTransaction(modalEditTx.id, {
+      subcategory_id: parseInt(form.subcategory_id),
+      amount: parseFloat(form.amount),
+      label: form.label.trim(),
+      date: form.date,
+    });
+    setModalEditTx(null);
     load(currentMonth);
   }
 
@@ -670,7 +684,12 @@ export default function Budget() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
             {(txExpanded ? transactions : transactions.slice(0, 5)).map(tx => (
-              <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 4px', borderTop: '1px solid rgba(136,153,187,0.09)' }}>
+              <div key={tx.id}
+                onClick={() => setModalEditTx(tx)}
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 4px', borderTop: '1px solid rgba(136,153,187,0.09)', cursor: 'pointer', borderRadius: '4px', transition: 'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(136,153,187,0.05)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: tx.subcategory_color || '#3a4a5a', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '13px', color: '#dde4ef', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -681,7 +700,9 @@ export default function Budget() {
                   </div>
                 </div>
                 <div style={{ fontSize: '13px', color: '#dde4ef', fontWeight: 700, flexShrink: 0 }}>{fmtEur(tx.amount)}</div>
-                <button onClick={() => handleDeleteTx(tx.id)}
+                <button onClick={e => { e.stopPropagation(); setModalEditTx(tx); }} title="Modifier"
+                  style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', padding: '2px 4px', fontSize: '12px' }}>✎</button>
+                <button onClick={e => { e.stopPropagation(); handleDeleteTx(tx.id); }} title="Supprimer"
                   style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', padding: '2px 4px', fontSize: '12px' }}>✕</button>
               </div>
             ))}
@@ -704,6 +725,9 @@ export default function Budget() {
       )}
       {modalTx && subcategories.length > 0 && (
         <TransactionModal subcategories={subcategories} onSave={handleSaveTx} onClose={() => setModalTx(false)} />
+      )}
+      {modalEditTx && subcategories.length > 0 && (
+        <TransactionModal subcategories={subcategories} initial={modalEditTx} onSave={handleUpdateTx} onClose={() => setModalEditTx(null)} />
       )}
       {modalTargets && (
         <TargetsModal settings={settings} onSave={handleSaveTargets} onClose={() => setModalTargets(false)} />

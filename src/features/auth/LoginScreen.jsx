@@ -37,6 +37,117 @@ const inputStyle = {
   fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s',
 };
 
+function ForgotPasswordScreen({ onBack, onCodeSent }) {
+  const [email,   setEmail]   = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState('');
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!EMAIL_RE.test(email.trim())) { setError('Adresse email invalide.'); return; }
+    setError(''); setLoading(true);
+    const res = await window.auth.forgotPassword(email.trim());
+    setLoading(false);
+    if (res.ok) onCodeSent(email.trim());
+    else setError(res.error || 'Une erreur est survenue.');
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div style={{ fontSize: '11px', color: C.text3, letterSpacing: '1.5px', marginBottom: '6px', textAlign: 'center' }}>MOT DE PASSE OUBLIÉ</div>
+      <div style={{ fontSize: '12px', color: C.text2, marginBottom: '18px', textAlign: 'center', lineHeight: '1.5' }}>
+        Entrez votre email. Un code à 6 chiffres vous sera envoyé.
+      </div>
+      <label style={{ display: 'block', fontSize: '11px', color: C.text3, marginBottom: '6px', letterSpacing: '0.5px' }}>EMAIL</label>
+      <input type="email" value={email} onChange={e => setEmail(e.target.value)} autoFocus style={inputStyle} />
+      {error && (
+        <div style={{ marginTop: '12px', padding: '8px 10px', background: 'rgba(255,51,68,0.08)', border: '1px solid rgba(255,51,68,0.25)', borderRadius: '6px', color: C.red, fontSize: '12px' }}>
+          {error}
+        </div>
+      )}
+      <button type="submit" disabled={loading} style={{
+        width: '100%', marginTop: '18px', padding: '11px 0',
+        background: loading ? 'rgba(0,204,119,0.15)' : `linear-gradient(135deg,${C.green},${C.greenD})`,
+        border: `1px solid rgba(0,204,119,0.5)`, borderRadius: '7px',
+        color: '#04200f', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700',
+        letterSpacing: '1px', cursor: loading ? 'wait' : 'pointer',
+        boxShadow: loading ? 'none' : '0 0 16px rgba(0,204,119,0.30)', transition: 'all 0.15s',
+      }}>
+        {loading ? 'ENVOI...' : 'ENVOYER LE CODE'}
+      </button>
+      <div style={{ marginTop: '16px', textAlign: 'center' }}>
+        <button type="button" onClick={onBack} style={{ background: 'none', border: 'none', color: C.text3, cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit', padding: 0 }}>
+          ← Retour à la connexion
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function ResetPasswordScreen({ email, onSuccess, onResend }) {
+  const [code,            setCode]            = useState('');
+  const [newPassword,     setNewPassword]     = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading,         setLoading]         = useState(false);
+  const [error,           setError]           = useState('');
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (code.trim().length !== 6) { setError('Le code doit contenir 6 chiffres.'); return; }
+    if (newPassword.length < 8)   { setError('Le mot de passe doit contenir au moins 8 caractères.'); return; }
+    if (newPassword !== confirmPassword) { setError('Les mots de passe ne correspondent pas.'); return; }
+    setError(''); setLoading(true);
+    const res = await window.auth.resetPassword(email, code.trim(), newPassword);
+    setLoading(false);
+    if (res.ok) onSuccess();
+    else setError(res.error || 'Une erreur est survenue.');
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div style={{ fontSize: '11px', color: C.text3, letterSpacing: '1.5px', marginBottom: '6px', textAlign: 'center' }}>NOUVEAU MOT DE PASSE</div>
+      <div style={{ fontSize: '12px', color: C.text2, marginBottom: '18px', textAlign: 'center', lineHeight: '1.5' }}>
+        Code envoyé à <span style={{ color: C.green }}>{email}</span>
+      </div>
+
+      <label style={{ display: 'block', fontSize: '11px', color: C.text3, marginBottom: '6px', letterSpacing: '0.5px' }}>CODE À 6 CHIFFRES</label>
+      <input
+        type="text" inputMode="numeric" maxLength={6} value={code}
+        onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
+        autoFocus placeholder="000000"
+        style={{ ...inputStyle, textAlign: 'center', fontSize: '22px', letterSpacing: '8px', fontWeight: '700' }}
+      />
+
+      <label style={{ display: 'block', fontSize: '11px', color: C.text3, marginTop: '14px', marginBottom: '6px', letterSpacing: '0.5px' }}>NOUVEAU MOT DE PASSE</label>
+      <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={inputStyle} />
+
+      <label style={{ display: 'block', fontSize: '11px', color: C.text3, marginTop: '14px', marginBottom: '6px', letterSpacing: '0.5px' }}>CONFIRMER</label>
+      <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={inputStyle} />
+
+      {error && (
+        <div style={{ marginTop: '12px', padding: '8px 10px', background: 'rgba(255,51,68,0.08)', border: '1px solid rgba(255,51,68,0.25)', borderRadius: '6px', color: C.red, fontSize: '12px' }}>
+          {error}
+        </div>
+      )}
+      <button type="submit" disabled={loading} style={{
+        width: '100%', marginTop: '18px', padding: '11px 0',
+        background: loading ? 'rgba(0,204,119,0.15)' : `linear-gradient(135deg,${C.green},${C.greenD})`,
+        border: `1px solid rgba(0,204,119,0.5)`, borderRadius: '7px',
+        color: '#04200f', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700',
+        letterSpacing: '1px', cursor: loading ? 'wait' : 'pointer',
+        boxShadow: loading ? 'none' : '0 0 16px rgba(0,204,119,0.30)', transition: 'all 0.15s',
+      }}>
+        {loading ? 'RÉINITIALISATION...' : 'RÉINITIALISER LE MOT DE PASSE'}
+      </button>
+      <div style={{ marginTop: '16px', textAlign: 'center' }}>
+        <button type="button" onClick={onResend} style={{ background: 'none', border: 'none', color: C.text3, cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit', padding: 0 }}>
+          ← Renvoyer un code
+        </button>
+      </div>
+    </form>
+  );
+}
+
 // Aperçu décoratif du badge "Portrait IA" (État Mental) — flouté en arrière-plan,
 // jamais interactif, jamais une vraie donnée (cf. TEASER_EMOTION ci-dessus).
 function BackgroundTeaser() {
@@ -79,14 +190,16 @@ function BackgroundTeaser() {
 }
 
 export default function LoginScreen({ onAuthenticated }) {
-  const [mode,            setMode]            = useState('login'); // 'login' | 'register'
+  const [mode,            setMode]            = useState('login'); // 'login' | 'register' | 'forgot' | 'reset' | 'success'
   const [email,           setEmail]           = useState('');
   const [password,        setPassword]        = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading,         setLoading]         = useState(false);
   const [error,           setError]           = useState('');
+  const [resetEmail,      setResetEmail]      = useState('');
 
-  const isRegister = mode === 'register';
+  const isRegister     = mode === 'register';
+  const isAuthMode     = mode === 'login' || mode === 'register';
 
   function switchMode(next) {
     setMode(next);
@@ -117,7 +230,6 @@ export default function LoginScreen({ onAuthenticated }) {
     <div style={{ position: 'relative', height: '100vh', overflow: 'hidden', background: C.bg, fontFamily: "'JetBrains Mono','Fira Code',monospace" }}>
       <BackgroundTeaser />
 
-      {/* Vignette sombre : plus clair au centre (où repose le formulaire), plus sombre vers les bords */}
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none',
         background: 'radial-gradient(circle at 50% 45%, rgba(9,10,16,0.25) 0%, rgba(9,10,16,0.72) 55%, rgba(9,10,16,0.92) 100%)',
@@ -147,82 +259,138 @@ export default function LoginScreen({ onAuthenticated }) {
           <div style={{ fontSize: '15px', fontWeight: '800', color: C.text1, letterSpacing: '2px' }}>TRADING DASHBOARD</div>
         </div>
 
-        {/* Titre accrocheur + sous-titre */}
-        <div style={{ textAlign: 'center', maxWidth: '380px' }}>
-          <h1 style={{ fontSize: '22px', fontWeight: '800', color: C.text1, margin: '0 0 8px', letterSpacing: '-0.3px', lineHeight: '1.3' }}>
-            Découvre ton profil psychologique de trading
-          </h1>
-          <div style={{ fontSize: '13px', color: C.text2, lineHeight: '1.5' }}>
-            Chaque jour, l'IA analyse tes trades et révèle l'état d'esprit derrière tes décisions.
+        {/* Titre accrocheur — masqué sur les écrans forgot/reset/success */}
+        {isAuthMode && (
+          <div style={{ textAlign: 'center', maxWidth: '380px' }}>
+            <h1 style={{ fontSize: '22px', fontWeight: '800', color: C.text1, margin: '0 0 8px', letterSpacing: '-0.3px', lineHeight: '1.3' }}>
+              Découvre ton profil psychologique de trading
+            </h1>
+            <div style={{ fontSize: '13px', color: C.text2, lineHeight: '1.5' }}>
+              Chaque jour, l'IA analyse tes trades et révèle l'état d'esprit derrière tes décisions.
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Formulaire */}
+        {/* Panneau principal */}
         <div style={{
           width: '360px', background: C.panel, backdropFilter: 'blur(6px)',
           border: `1px solid ${C.border}`, borderRadius: '14px', padding: '28px 30px',
           boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
         }}>
-          <div style={{ fontSize: '11px', color: C.text3, letterSpacing: '1.5px', marginBottom: '18px', textAlign: 'center' }}>
-            {isRegister ? 'CRÉER UN COMPTE' : 'CONNEXION'}
-          </div>
 
-          <form onSubmit={handleSubmit}>
-            <label style={{ display: 'block', fontSize: '11px', color: C.text3, marginBottom: '6px', letterSpacing: '0.5px' }}>EMAIL</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              autoFocus
-              style={inputStyle}
+          {/* ── Étape 1 : saisie de l'email ── */}
+          {mode === 'forgot' && (
+            <ForgotPasswordScreen
+              onBack={() => switchMode('login')}
+              onCodeSent={(em) => { setResetEmail(em); switchMode('reset'); }}
             />
+          )}
 
-            <label style={{ display: 'block', fontSize: '11px', color: C.text3, marginTop: '14px', marginBottom: '6px', letterSpacing: '0.5px' }}>MOT DE PASSE</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              style={inputStyle}
+          {/* ── Étape 2 : saisie du code + nouveau mdp ── */}
+          {mode === 'reset' && (
+            <ResetPasswordScreen
+              email={resetEmail}
+              onSuccess={() => switchMode('success')}
+              onResend={() => switchMode('forgot')}
             />
+          )}
 
-            {isRegister && (
-              <>
-                <label style={{ display: 'block', fontSize: '11px', color: C.text3, marginTop: '14px', marginBottom: '6px', letterSpacing: '0.5px' }}>CONFIRMER LE MOT DE PASSE</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  style={inputStyle}
-                />
-              </>
-            )}
-
-            {error && (
-              <div style={{ marginTop: '14px', padding: '8px 10px', background: 'rgba(255,51,68,0.08)', border: '1px solid rgba(255,51,68,0.25)', borderRadius: '6px', color: C.red, fontSize: '12px', lineHeight: '1.5' }}>
-                {error}
+          {/* ── Étape 3 : succès ── */}
+          {mode === 'success' && (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '36px', color: C.green, marginBottom: '12px' }}>✓</div>
+              <div style={{ fontSize: '11px', color: C.green, fontWeight: '700', letterSpacing: '1.5px', marginBottom: '10px' }}>
+                MOT DE PASSE RÉINITIALISÉ
               </div>
-            )}
-
-            <button type="submit" disabled={loading}
-              style={{
-                width: '100%', marginTop: '20px', padding: '11px 0',
-                background: loading ? 'rgba(0,204,119,0.15)' : `linear-gradient(135deg,${C.green},${C.greenD})`,
+              <div style={{ fontSize: '12px', color: C.text2, marginBottom: '22px', lineHeight: '1.6' }}>
+                Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.
+              </div>
+              <button onClick={() => switchMode('login')} style={{
+                width: '100%', padding: '11px 0',
+                background: `linear-gradient(135deg,${C.green},${C.greenD})`,
                 border: `1px solid rgba(0,204,119,0.5)`, borderRadius: '7px',
                 color: '#04200f', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700',
-                letterSpacing: '1px', cursor: loading ? 'wait' : 'pointer',
-                boxShadow: loading ? 'none' : '0 0 16px rgba(0,204,119,0.30)', transition: 'all 0.15s',
+                letterSpacing: '1px', cursor: 'pointer', boxShadow: '0 0 16px rgba(0,204,119,0.30)',
               }}>
-              {loading ? (isRegister ? 'CRÉATION...' : 'CONNEXION...') : (isRegister ? 'CRÉER LE COMPTE' : 'SE CONNECTER')}
-            </button>
-          </form>
+                SE CONNECTER
+              </button>
+            </div>
+          )}
 
-          <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '12px', color: C.text3 }}>
-            {isRegister ? 'Déjà un compte ?' : 'Pas encore de compte ?'}{' '}
-            <button onClick={() => switchMode(isRegister ? 'login' : 'register')}
-              style={{ background: 'none', border: 'none', color: C.green, cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', padding: 0 }}>
-              {isRegister ? 'Se connecter' : 'Créer un compte'}
-            </button>
-          </div>
+          {/* ── Connexion / Inscription ── */}
+          {isAuthMode && (
+            <>
+              <div style={{ fontSize: '11px', color: C.text3, letterSpacing: '1.5px', marginBottom: '18px', textAlign: 'center' }}>
+                {isRegister ? 'CRÉER UN COMPTE' : 'CONNEXION'}
+              </div>
+
+              <form onSubmit={handleSubmit}>
+                <label style={{ display: 'block', fontSize: '11px', color: C.text3, marginBottom: '6px', letterSpacing: '0.5px' }}>EMAIL</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  autoFocus
+                  style={inputStyle}
+                />
+
+                <label style={{ display: 'block', fontSize: '11px', color: C.text3, marginTop: '14px', marginBottom: '6px', letterSpacing: '0.5px' }}>MOT DE PASSE</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  style={inputStyle}
+                />
+
+                {isRegister && (
+                  <>
+                    <label style={{ display: 'block', fontSize: '11px', color: C.text3, marginTop: '14px', marginBottom: '6px', letterSpacing: '0.5px' }}>CONFIRMER LE MOT DE PASSE</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      style={inputStyle}
+                    />
+                  </>
+                )}
+
+                {error && (
+                  <div style={{ marginTop: '14px', padding: '8px 10px', background: 'rgba(255,51,68,0.08)', border: '1px solid rgba(255,51,68,0.25)', borderRadius: '6px', color: C.red, fontSize: '12px', lineHeight: '1.5' }}>
+                    {error}
+                  </div>
+                )}
+
+                <button type="submit" disabled={loading}
+                  style={{
+                    width: '100%', marginTop: '20px', padding: '11px 0',
+                    background: loading ? 'rgba(0,204,119,0.15)' : `linear-gradient(135deg,${C.green},${C.greenD})`,
+                    border: `1px solid rgba(0,204,119,0.5)`, borderRadius: '7px',
+                    color: '#04200f', fontSize: '13px', fontFamily: 'inherit', fontWeight: '700',
+                    letterSpacing: '1px', cursor: loading ? 'wait' : 'pointer',
+                    boxShadow: loading ? 'none' : '0 0 16px rgba(0,204,119,0.30)', transition: 'all 0.15s',
+                  }}>
+                  {loading ? (isRegister ? 'CRÉATION...' : 'CONNEXION...') : (isRegister ? 'CRÉER LE COMPTE' : 'SE CONNECTER')}
+                </button>
+              </form>
+
+              {!isRegister && (
+                <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                  <button onClick={() => switchMode('forgot')}
+                    style={{ background: 'none', border: 'none', color: C.text3, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit', padding: 0 }}>
+                    Mot de passe oublié ?
+                  </button>
+                </div>
+              )}
+
+              <div style={{ marginTop: isRegister ? '20px' : '14px', textAlign: 'center', fontSize: '12px', color: C.text3 }}>
+                {isRegister ? 'Déjà un compte ?' : 'Pas encore de compte ?'}{' '}
+                <button onClick={() => switchMode(isRegister ? 'login' : 'register')}
+                  style={{ background: 'none', border: 'none', color: C.green, cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit', fontWeight: '700', padding: 0 }}>
+                  {isRegister ? 'Se connecter' : 'Créer un compte'}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

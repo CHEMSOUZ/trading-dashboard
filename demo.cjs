@@ -81,9 +81,12 @@ function getDemoBudgetTransactions(mk)   { return DATA.budget.transactions.filte
 function getDemoBudgetSettings()         { return null; } // toujours null → Budget.jsx tombe sur getLatestSettings
 function getDemoLatestBudgetSettings()   { return DATA.budget.monthlySettings; }
 
+function getDemoPayoutData()             { return DATA.payout; }
+
 module.exports = {
   getDemoTrades, getDemoAccount, getDemoAccountsList, getDemoStats,
   getDemoEmotionalReport, getDemoTraitCalendar,
   getDemoBudgetSubcategories, getDemoBudgetTransactions,
   getDemoBudgetSettings, getDemoLatestBudgetSettings,
+  getDemoPayoutData,
 };

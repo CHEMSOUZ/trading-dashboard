@@ -1052,6 +1052,7 @@ function registerHandlers() {
   // Contenu statique du portrait psychologique démo (jamais d'appel IA facturé)
   ipcMain.handle('demo:getEmotionalReport', () => ({ ok: true, data: demoModule.getDemoEmotionalReport() }));
   ipcMain.handle('demo:getTraitCalendar',   () => ({ ok: true, data: demoModule.getDemoTraitCalendar() }));
+  ipcMain.handle('demo:getPayoutData',      () => ({ ok: true, data: demoModule.getDemoPayoutData() }));
 
   // ── DB handlers ───────────────────────────────────────────
   // demoFn: si le compte n'est pas abonné, sert ce dataset démo au lieu de lire la vraie DB.
@@ -1192,6 +1193,20 @@ function registerHandlers() {
       authStore.set('token', res.token);
       authStore.set('user', res.user);
       return { ok: true, data: res.user };
+    } catch(e) { return { ok: false, error: e.message }; }
+  });
+
+  ipcMain.handle('auth:forgotPassword', async (_, email) => {
+    try {
+      const res = await backendAuthRequest('/api/auth/forgot-password', { email });
+      return { ok: true, data: res };
+    } catch(e) { return { ok: false, error: e.message }; }
+  });
+
+  ipcMain.handle('auth:resetPassword', async (_, email, code, newPassword) => {
+    try {
+      const res = await backendAuthRequest('/api/auth/reset-password', { email, code, newPassword });
+      return { ok: true, data: res };
     } catch(e) { return { ok: false, error: e.message }; }
   });
 

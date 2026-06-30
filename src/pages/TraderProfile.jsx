@@ -382,11 +382,12 @@ function TraitCalendar({ calendar, tradeStats, referenceDay, onMonthChange, onDa
             ...week.map((day, di) => {
               if (!day) return <div key={`e-${wi}-${di}`} style={{ minHeight:'64px', borderRadius:'6px', background:'rgba(14,15,22,0.15)', border:'1px solid rgba(136,153,187,0.03)' }} />;
               const date    = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-              const emotion = byDay[date];
-              const color   = emotion ? (EMOTION_COLORS[emotion] ?? P.text2) : null;
-              const cellRgb = color ? emotionRgb(color) : null;
               const stats   = tradeStats[date];
               const wr      = stats && stats.count > 0 ? Math.round(stats.wins / stats.count * 100) : null;
+              // garde : ne jamais afficher un trait si aucun trade n'existe ce jour-là
+              const emotion = stats?.count > 0 ? byDay[date] : null;
+              const color   = emotion ? (EMOTION_COLORS[emotion] ?? P.text2) : null;
+              const cellRgb = color ? emotionRgb(color) : null;
               const isRef   = date === referenceDay;
               const isHov   = hovered === date;
               const clickable = !!emotion;
@@ -436,10 +437,11 @@ function TraitCalendar({ calendar, tradeStats, referenceDay, onMonthChange, onDa
       </div>
 
       {/* Hover tooltip */}
-      {hovered && byDay[hovered] && (() => {
-        const emotion = byDay[hovered];
-        const color   = EMOTION_COLORS[emotion] ?? P.text2;
+      {hovered && (() => {
         const stats   = tradeStats[hovered];
+        const emotion = stats?.count > 0 ? byDay[hovered] : null;
+        if (!emotion) return null;
+        const color   = EMOTION_COLORS[emotion] ?? P.text2;
         const wr      = stats && stats.count > 0 ? Math.round(stats.wins / stats.count * 100) : null;
         return (
           <div style={{ position:'fixed', bottom:'22px', right:'22px', background:'rgba(8,9,16,0.97)', border:'1px solid rgba(136,153,187,0.22)', borderRadius:'8px', padding:'12px 16px', boxShadow:'0 8px 32px rgba(0,0,0,0.65)', zIndex:9999, minWidth:'200px', pointerEvents:'none', display:'flex', alignItems:'center', gap:'10px' }}>

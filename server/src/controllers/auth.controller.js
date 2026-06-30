@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/env');
-const userService = require('../services/userService');
+const userService  = require('../services/userService');
+const emailService = require('../services/emailService');
 
 function signToken(user) {
   return jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
@@ -56,4 +57,46 @@ async function login(req, res, next) {
   }
 }
 
-module.exports = { register, login };
+async function forgotPassword(req, res, next) {
+  try {
+    const { email } = req.body || {};
+    if (!email) return res.status(400).json({ error: 'INVALID_INPUT', message: 'Email requis.' });
+
+    const code = userService.createResetToken(email.toLowerCase().trim());
+    if (code) {
+      try {
+        await emailService.sendResetCode(email.toLowerCase().trim(), code);
+      } catch(e) {
+        if (e.message === 'EMAIL_NOT_CONFIGURED') {
+          return res.status(503).json({ error: 'EMAIL_NOT_CONFIGURED', message: 'Le service email n\'est pas configuré sur le serveur.' });
+        }
+        return res.status(500).json({ error: 'EMAIL_SEND_FAILED', message: 'Impossible d\'envoyer l\'email. Vérifiez la configuration SMTP.' });
+      }
+    }
+    // Toujours renvoyer 200 même si l'email n'existe pas (évite l'énumération)
+    res.json({ ok: true, message: 'Si un compte existe avec cet email, un code a été envoyé.' });
+  } catch(e) { next(e); }
+}
+
+async function resetPassword(req, res, next) {
+  try {
+    const { email, code, newPassword } = req.body || {};
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ error: 'INVALID_INPUT', message: 'Email, code et nouveau mot de passe requis.' });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'INVALID_INPUT', message: 'Le mot de passe doit contenir au moins 8 caractères.' });
+    }
+    let user;
+    try {
+      user = userService.verifyAndConsumeResetToken(email.toLowerCase().trim(), code.trim());
+    } catch(e) {
+      if (e.message === 'CODE_EXPIRED') return res.status(400).json({ error: 'CODE_EXPIRED', message: 'Ce code a expiré. Faites une nouvelle demande.' });
+      return res.status(400).json({ error: 'INVALID_CODE', message: 'Code incorrect.' });
+    }
+    await userService.updatePassword(user.id, newPassword);
+    res.json({ ok: true, message: 'Mot de passe mis à jour avec succès.' });
+  } catch(e) { next(e); }
+}
+
+module.exports = { register, login, forgotPassword, resetPassword };

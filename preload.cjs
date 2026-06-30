@@ -65,16 +65,19 @@ contextBridge.exposeInMainWorld('globalProfile', {
 });
 
 contextBridge.exposeInMainWorld('auth', {
-  register:         (email, password) => ipcRenderer.invoke('auth:register', email, password),
-  login:             (email, password) => ipcRenderer.invoke('auth:login', email, password),
-  logout:            ()                => ipcRenderer.invoke('auth:logout'),
-  getSession:        ()                => ipcRenderer.invoke('auth:getSession'),
-  onSessionExpired:  (cb)              => ipcRenderer.on('auth:sessionExpired', () => cb()),
+  register:          (email, password)              => ipcRenderer.invoke('auth:register', email, password),
+  login:             (email, password)              => ipcRenderer.invoke('auth:login', email, password),
+  logout:            ()                             => ipcRenderer.invoke('auth:logout'),
+  getSession:        ()                             => ipcRenderer.invoke('auth:getSession'),
+  forgotPassword:    (email)                        => ipcRenderer.invoke('auth:forgotPassword', email),
+  resetPassword:     (email, code, newPassword)     => ipcRenderer.invoke('auth:resetPassword', email, code, newPassword),
+  onSessionExpired:  (cb)                           => ipcRenderer.on('auth:sessionExpired', () => cb()),
 });
 
 contextBridge.exposeInMainWorld('demo', {
   getEmotionalReport: () => ipcRenderer.invoke('demo:getEmotionalReport'),
   getTraitCalendar:   () => ipcRenderer.invoke('demo:getTraitCalendar'),
+  getPayoutData:      () => ipcRenderer.invoke('demo:getPayoutData'),
 });
 
 contextBridge.exposeInMainWorld('market', {
@@ -94,6 +97,7 @@ contextBridge.exposeInMainWorld('budget', {
   deleteSubcategory: (id)                        => ipcRenderer.invoke('budget:deleteSubcategory', id),
   getTransactions:   (monthKey)                  => ipcRenderer.invoke('budget:getTransactions', monthKey),
   addTransaction:    (tx)                        => ipcRenderer.invoke('budget:addTransaction', tx),
+  updateTransaction: (id, tx)                    => ipcRenderer.invoke('budget:updateTransaction', id, tx),
   deleteTransaction: (id)                        => ipcRenderer.invoke('budget:deleteTransaction', id),
   getSettings:       (monthKey)                  => ipcRenderer.invoke('budget:getSettings', monthKey),
   getLatestSettings: ()                          => ipcRenderer.invoke('budget:getLatestSettings'),
