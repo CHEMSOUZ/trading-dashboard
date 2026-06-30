@@ -619,47 +619,60 @@ function deleteBudgetSubcategory(db, dbPath, id) {
   runQ(db, dbPath, 'DELETE FROM budget_subcategories WHERE id=?', [id]);
 }
 
-// ── BUDGET DATA MIGRATION (one-shot, budget_categories → budget_subcategories) ──
+// ── BUDGET DATA MIGRATION (budget_categories → budget_subcategories) ──
+// Deux passes indépendantes :
+//   1. Créer les sous-catégories manquantes depuis budget_categories (si budget_subcategories vide)
+//   2. Remplir subcategory_id des transactions qui l'ont encore à NULL (via mapping par nom)
 function migrateBudgetData(db, dbPath) {
   try {
     const oldExists = getOne(db, "SELECT name FROM sqlite_master WHERE type='table' AND name='budget_categories'");
     if (!oldExists) return;
-    const newCount = (getOne(db, 'SELECT COUNT(*) as n FROM budget_subcategories') ?? { n: 0 }).n;
-    if (newCount > 0) return;
     const oldCats = getAll(db, 'SELECT * FROM budget_categories ORDER BY id');
     if (oldCats.length === 0) return;
 
-    const idMap = {};
-    const defaultedCats = [];
-    const pocketCount = {};
-
-    for (const cat of oldCats) {
-      const pocket = VALID_POCKETS.has(cat.pocket) ? cat.pocket : 'essentials';
-      if (!VALID_POCKETS.has(cat.pocket)) defaultedCats.push(cat.name);
-      runQ(db, dbPath, `INSERT INTO budget_subcategories (name, color, allocated_amount, pocket, sort_order) VALUES (:name, :color, :allocated_amount, :pocket, :sort_order)`, {
-        ':name': cat.name, ':color': cat.color, ':allocated_amount': cat.allocated_amount ?? 0,
-        ':pocket': pocket, ':sort_order': cat.sort_order ?? 0,
-      });
-      const newId = lastId(db);
-      idMap[cat.id] = newId;
-      pocketCount[pocket] = (pocketCount[pocket] || 0) + 1;
-    }
-
-    const txs = getAll(db, 'SELECT id, category_id FROM budget_transactions');
-    let migratedTx = 0;
-    for (const tx of txs) {
-      const newSubId = idMap[tx.category_id];
-      if (newSubId) {
-        runQ(db, dbPath, 'UPDATE budget_transactions SET subcategory_id=? WHERE id=?', [newSubId, tx.id]);
-        migratedTx++;
+    // Passe 1 : copier les catégories → sous-catégories si la table est vide
+    const newCount = (getOne(db, 'SELECT COUNT(*) as n FROM budget_subcategories') ?? { n: 0 }).n;
+    if (newCount === 0) {
+      const pocketCount = {};
+      const defaultedCats = [];
+      for (const cat of oldCats) {
+        const pocket = VALID_POCKETS.has(cat.pocket) ? cat.pocket : 'essentials';
+        if (!VALID_POCKETS.has(cat.pocket)) defaultedCats.push(cat.name);
+        runQ(db, dbPath, `INSERT INTO budget_subcategories (name, color, allocated_amount, pocket, sort_order) VALUES (:name, :color, :allocated_amount, :pocket, :sort_order)`, {
+          ':name': cat.name, ':color': cat.color, ':allocated_amount': cat.allocated_amount ?? 0,
+          ':pocket': pocket, ':sort_order': cat.sort_order ?? 0,
+        });
+        pocketCount[pocket] = (pocketCount[pocket] || 0) + 1;
+      }
+      console.log('[Budget Migration] Sous-catégories créées par poche:', JSON.stringify(pocketCount));
+      if (defaultedCats.length > 0) {
+        console.warn('[Budget Migration] ⚠ Catégories migrées vers essentials par défaut :', defaultedCats.join(', '));
       }
     }
 
-    console.log('[Budget Migration] Sous-catégories créées par poche:', JSON.stringify(pocketCount));
-    console.log(`[Budget Migration] Transactions migrées : ${migratedTx}`);
-    if (defaultedCats.length > 0) {
-      console.warn('[Budget Migration] ⚠ Catégories migrées vers essentials par défaut :', defaultedCats.join(', '));
+    // Passe 2 : remplir subcategory_id des transactions encore à NULL (mapping par nom)
+    const orphanTxs = getAll(db, 'SELECT id, category_id FROM budget_transactions WHERE subcategory_id IS NULL OR subcategory_id = 0');
+    if (orphanTxs.length === 0) return;
+
+    const allSubs = getAll(db, 'SELECT id, name FROM budget_subcategories');
+    const subByName = {};
+    for (const s of allSubs) subByName[s.name.trim()] = s.id;
+
+    const catById = {};
+    for (const c of oldCats) catById[c.id] = c.name;
+
+    let migratedTx = 0;
+    for (const tx of orphanTxs) {
+      const catName = catById[tx.category_id];
+      const newSubId = catName ? subByName[catName.trim()] : undefined;
+      if (newSubId) {
+        runQ(db, dbPath, 'UPDATE budget_transactions SET subcategory_id=? WHERE id=?', [newSubId, tx.id]);
+        migratedTx++;
+      } else {
+        console.warn(`[Budget Migration] ⚠ tx[${tx.id}] category_id=${tx.category_id} sans correspondance`);
+      }
     }
+    if (migratedTx > 0) console.log(`[Budget Migration] Transactions rattachées : ${migratedTx}`);
   } catch(e) {
     console.error('[Budget Migration] Erreur :', e.message);
   }
