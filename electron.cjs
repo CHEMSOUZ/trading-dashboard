@@ -1072,9 +1072,14 @@ function registerHandlers() {
     });
   };
 
-  const globalDbHandle = (channel, fn) => {
+  const globalDbHandle = (channel, fn, { demoFn, blockInDemo } = {}) => {
     ipcMain.handle(channel, async (_, ...args) => {
       try {
+        if (isDemoMode()) {
+          if (demoFn)      return { ok: true, data: demoFn(...args) };
+          if (blockInDemo) return DEMO_MODE_ERROR;
+          return { ok: true, data: [] };
+        }
         if (!globalDb || !globalDbPath) return { ok: false, error: 'Global DB non initialisée' };
         return { ok: true, data: fn(globalDb, globalDbPath, ...args) };
       } catch(e) {
@@ -1087,6 +1092,7 @@ function registerHandlers() {
   dbHandle('db:getAllTrades',           (db) => dbModule.getAllTrades(db), { demoFn: () => demoModule.getDemoTrades() });
   ipcMain.handle('db:getTradesForPath', async (_, dbPath) => {
     try {
+      if (isDemoMode()) return { ok: true, data: demoModule.getDemoTrades() };
       const db = await dbModule.getDb(dbPath);
       return { ok: true, data: dbModule.getAllTrades(db) };
     } catch(e) { return { ok: false, error: e.message }; }
@@ -1119,16 +1125,17 @@ function registerHandlers() {
     dbModule.saveWeeklyReport(db, dbp, { week_start: weekStart, trend, description, ...(extra || {}) }));
 
   // ── Budget handlers (global DB — finances personnelles, séparées des comptes de trading)
-  globalDbHandle('budget:getSubcategories',  (db) => dbModule.getBudgetSubcategories(db));
-  globalDbHandle('budget:addSubcategory',    (db, dbp, sub) => dbModule.addBudgetSubcategory(db, dbp, sub));
-  globalDbHandle('budget:updateSubcategory', (db, dbp, id, sub) => dbModule.updateBudgetSubcategory(db, dbp, id, sub));
-  globalDbHandle('budget:deleteSubcategory', (db, dbp, id) => dbModule.deleteBudgetSubcategory(db, dbp, id));
-  globalDbHandle('budget:getTransactions',   (db, _, mk) => dbModule.getBudgetTransactions(db, mk));
-  globalDbHandle('budget:addTransaction',    (db, dbp, tx) => dbModule.addBudgetTransaction(db, dbp, tx));
-  globalDbHandle('budget:deleteTransaction', (db, dbp, id) => dbModule.deleteBudgetTransaction(db, dbp, id));
-  globalDbHandle('budget:getSettings',       (db, _, mk) => dbModule.getBudgetSettings(db, mk));
-  globalDbHandle('budget:getLatestSettings', (db) => dbModule.getLatestBudgetSettings(db));
-  globalDbHandle('budget:updateSettings',    (db, dbp, mk, income, targets) => dbModule.updateBudgetSettings(db, dbp, mk, income, targets));
+  globalDbHandle('budget:getSubcategories',  (db) => dbModule.getBudgetSubcategories(db),                              { demoFn: ()       => demoModule.getDemoBudgetSubcategories() });
+  globalDbHandle('budget:addSubcategory',    (db, dbp, sub) => dbModule.addBudgetSubcategory(db, dbp, sub),           { blockInDemo: true });
+  globalDbHandle('budget:updateSubcategory', (db, dbp, id, sub) => dbModule.updateBudgetSubcategory(db, dbp, id, sub),{ blockInDemo: true });
+  globalDbHandle('budget:deleteSubcategory', (db, dbp, id) => dbModule.deleteBudgetSubcategory(db, dbp, id),          { blockInDemo: true });
+  globalDbHandle('budget:getTransactions',   (db, _, mk) => dbModule.getBudgetTransactions(db, mk),                   { demoFn: (mk)     => demoModule.getDemoBudgetTransactions(mk) });
+  globalDbHandle('budget:addTransaction',    (db, dbp, tx) => dbModule.addBudgetTransaction(db, dbp, tx),             { blockInDemo: true });
+  globalDbHandle('budget:updateTransaction', (db, dbp, id, tx) => dbModule.updateBudgetTransaction(db, dbp, id, tx),  { blockInDemo: true });
+  globalDbHandle('budget:deleteTransaction', (db, dbp, id) => dbModule.deleteBudgetTransaction(db, dbp, id),          { blockInDemo: true });
+  globalDbHandle('budget:getSettings',       (db, _, mk) => dbModule.getBudgetSettings(db, mk),                       { demoFn: ()       => demoModule.getDemoBudgetSettings() });
+  globalDbHandle('budget:getLatestSettings', (db) => dbModule.getLatestBudgetSettings(db),                            { demoFn: ()       => demoModule.getDemoLatestBudgetSettings() });
+  globalDbHandle('budget:updateSettings',    (db, dbp, mk, income, targets) => dbModule.updateBudgetSettings(db, dbp, mk, income, targets), { blockInDemo: true });
 
   // ── AI Coach handlers ─────────────────────────────────────────
   ipcMain.handle('ai:hasKey', () => ({ ok: true, data: !!process.env.ANTHROPIC_API_KEY }));

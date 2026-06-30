@@ -76,7 +76,14 @@ function getDemoStats()           { return computeStats(DATA.trades); }
 function getDemoEmotionalReport() { return DATA.emotionalReport; }
 function getDemoTraitCalendar()   { return DATA.traitCalendar; }
 
+function getDemoBudgetSubcategories()    { return DATA.budget.subcategories; }
+function getDemoBudgetTransactions(mk)   { return DATA.budget.transactions.filter(t => t.month_key === mk); }
+function getDemoBudgetSettings()         { return null; } // toujours null → Budget.jsx tombe sur getLatestSettings
+function getDemoLatestBudgetSettings()   { return DATA.budget.monthlySettings; }
+
 module.exports = {
   getDemoTrades, getDemoAccount, getDemoAccountsList, getDemoStats,
   getDemoEmotionalReport, getDemoTraitCalendar,
+  getDemoBudgetSubcategories, getDemoBudgetTransactions,
+  getDemoBudgetSettings, getDemoLatestBudgetSettings,
 };

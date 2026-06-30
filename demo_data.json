@@ -109,6 +109,46 @@
       "emotion": "Discipliné"
     }
   ],
+  "budget": {
+    "monthlySettings": {
+      "id": 1,
+      "month_key": "2026-06",
+      "monthly_income": 1400,
+      "pocket_targets": { "essentials": 50, "growth": 25, "stability": 15, "rewards": 10 }
+    },
+    "subcategories": [
+      { "id": 1, "pocket": "essentials", "name": "Forfait Mobile", "color": "#4a9eff", "allocated_amount": 30,  "sort_order": 1, "created_at": "2026-06-01T00:00:00" },
+      { "id": 2, "pocket": "essentials", "name": "Transport",      "color": "#4a9eff", "allocated_amount": 140, "sort_order": 2, "created_at": "2026-06-01T00:00:00" },
+      { "id": 3, "pocket": "essentials", "name": "Courses",        "color": "#4a9eff", "allocated_amount": 280, "sort_order": 3, "created_at": "2026-06-01T00:00:00" },
+      { "id": 4, "pocket": "essentials", "name": "Cigarettes",     "color": "#4a9eff", "allocated_amount": 60,  "sort_order": 4, "created_at": "2026-06-01T00:00:00" },
+      { "id": 5, "pocket": "essentials", "name": "Crédit",         "color": "#4a9eff", "allocated_amount": 180, "sort_order": 5, "created_at": "2026-06-01T00:00:00" },
+      { "id": 6, "pocket": "essentials", "name": "BasicFit",       "color": "#4a9eff", "allocated_amount": 30,  "sort_order": 6, "created_at": "2026-06-01T00:00:00" },
+      { "id": 7, "pocket": "growth",     "name": "Investissement", "color": "#00cc77", "allocated_amount": 350, "sort_order": 1, "created_at": "2026-06-01T00:00:00" },
+      { "id": 8, "pocket": "stability",  "name": "Épargne",        "color": "#f59e0b", "allocated_amount": 210, "sort_order": 1, "created_at": "2026-06-01T00:00:00" },
+      { "id": 9, "pocket": "rewards",    "name": "Plaisir",        "color": "#a855f7", "allocated_amount": 140, "sort_order": 1, "created_at": "2026-06-01T00:00:00" }
+    ],
+    "transactions": [
+      { "id": 1,  "category_id": 1, "subcategory_id": 1, "amount": 29,  "label": "Forfait SFR",          "date": "2026-06-01", "month_key": "2026-06", "subcategory_name": "Forfait Mobile", "subcategory_color": "#4a9eff", "subcategory_pocket": "essentials" },
+      { "id": 2,  "category_id": 2, "subcategory_id": 2, "amount": 90,  "label": "Navigo Juin",          "date": "2026-06-02", "month_key": "2026-06", "subcategory_name": "Transport",      "subcategory_color": "#4a9eff", "subcategory_pocket": "essentials" },
+      { "id": 3,  "category_id": 7, "subcategory_id": 7, "amount": 100, "label": "DCA Ethereum",         "date": "2026-06-02", "month_key": "2026-06", "subcategory_name": "Investissement", "subcategory_color": "#00cc77", "subcategory_pocket": "growth"     },
+      { "id": 4,  "category_id": 8, "subcategory_id": 8, "amount": 210, "label": "Épargne mensuelle",    "date": "2026-06-02", "month_key": "2026-06", "subcategory_name": "Épargne",        "subcategory_color": "#f59e0b", "subcategory_pocket": "stability"  },
+      { "id": 5,  "category_id": 3, "subcategory_id": 3, "amount": 82,  "label": "Courses Carrefour",    "date": "2026-06-04", "month_key": "2026-06", "subcategory_name": "Courses",        "subcategory_color": "#4a9eff", "subcategory_pocket": "essentials" },
+      { "id": 6,  "category_id": 6, "subcategory_id": 6, "amount": 27,  "label": "BasicFit",             "date": "2026-06-05", "month_key": "2026-06", "subcategory_name": "BasicFit",       "subcategory_color": "#4a9eff", "subcategory_pocket": "essentials" },
+      { "id": 7,  "category_id": 5, "subcategory_id": 5, "amount": 178, "label": "Crédit voiture",       "date": "2026-06-05", "month_key": "2026-06", "subcategory_name": "Crédit",         "subcategory_color": "#4a9eff", "subcategory_pocket": "essentials" },
+      { "id": 8,  "category_id": 9, "subcategory_id": 9, "amount": 65,  "label": "Restaurant sushi",     "date": "2026-06-07", "month_key": "2026-06", "subcategory_name": "Plaisir",        "subcategory_color": "#a855f7", "subcategory_pocket": "rewards"    },
+      { "id": 9,  "category_id": 4, "subcategory_id": 4, "amount": 28,  "label": "Cigarettes",           "date": "2026-06-10", "month_key": "2026-06", "subcategory_name": "Cigarettes",     "subcategory_color": "#4a9eff", "subcategory_pocket": "essentials" },
+      { "id": 10, "category_id": 3, "subcategory_id": 3, "amount": 67,  "label": "Courses Lidl",         "date": "2026-06-11", "month_key": "2026-06", "subcategory_name": "Courses",        "subcategory_color": "#4a9eff", "subcategory_pocket": "essentials" },
+      { "id": 11, "category_id": 2, "subcategory_id": 2, "amount": 45,  "label": "Essence E10",          "date": "2026-06-13", "month_key": "2026-06", "subcategory_name": "Transport",      "subcategory_color": "#4a9eff", "subcategory_pocket": "essentials" },
+      { "id": 12, "category_id": 9, "subcategory_id": 9, "amount": 78,  "label": "Restaurant bistronomie","date": "2026-06-14", "month_key": "2026-06", "subcategory_name": "Plaisir",        "subcategory_color": "#a855f7", "subcategory_pocket": "rewards"    },
+      { "id": 13, "category_id": 7, "subcategory_id": 7, "amount": 50,  "label": "ETF World S&P",        "date": "2026-06-15", "month_key": "2026-06", "subcategory_name": "Investissement", "subcategory_color": "#00cc77", "subcategory_pocket": "growth"     },
+      { "id": 14, "category_id": 3, "subcategory_id": 3, "amount": 74,  "label": "Courses Monoprix",     "date": "2026-06-16", "month_key": "2026-06", "subcategory_name": "Courses",        "subcategory_color": "#4a9eff", "subcategory_pocket": "essentials" },
+      { "id": 15, "category_id": 4, "subcategory_id": 4, "amount": 28,  "label": "Cigarettes",           "date": "2026-06-21", "month_key": "2026-06", "subcategory_name": "Cigarettes",     "subcategory_color": "#4a9eff", "subcategory_pocket": "essentials" },
+      { "id": 16, "category_id": 9, "subcategory_id": 9, "amount": 89,  "label": "Shopping vêtements",   "date": "2026-06-21", "month_key": "2026-06", "subcategory_name": "Plaisir",        "subcategory_color": "#a855f7", "subcategory_pocket": "rewards"    },
+      { "id": 17, "category_id": 3, "subcategory_id": 3, "amount": 52,  "label": "Courses bio",          "date": "2026-06-24", "month_key": "2026-06", "subcategory_name": "Courses",        "subcategory_color": "#4a9eff", "subcategory_pocket": "essentials" },
+      { "id": 18, "category_id": 9, "subcategory_id": 9, "amount": 45,  "label": "Steam jeux vidéo",     "date": "2026-06-25", "month_key": "2026-06", "subcategory_name": "Plaisir",        "subcategory_color": "#a855f7", "subcategory_pocket": "rewards"    },
+      { "id": 19, "category_id": 1, "subcategory_id": 1, "amount": 1,   "label": "Forfait mobile (ajust)","date": "2026-06-28", "month_key": "2026-06", "subcategory_name": "Forfait Mobile", "subcategory_color": "#4a9eff", "subcategory_pocket": "essentials" }
+    ]
+  },
   "trades": [
     {
       "id": 1,

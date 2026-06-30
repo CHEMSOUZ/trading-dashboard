@@ -767,10 +767,10 @@ function OverviewTab({
 }
 
 // ── Analyse ───────────────────────────────────────────────────
-function AnalyseTab({ byDow, bySessions, hourDataFull, byHour, pairArr, emotionArr, allTrades, openDow, openSession, openHour }) {
+function AnalyseTab({ byDow, bySessions, hourDataFull, byHour, pairArr, emotionArr, allTrades, openDow, openSession, openHour, isDemoMode }) {
   return (
     <>
-      <GlobalTraderProfileSection allTrades={allTrades} />
+      <GlobalTraderProfileSection allTrades={allTrades} isDemoMode={isDemoMode} />
 
       {/* ── CHARTS ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
@@ -1044,7 +1044,31 @@ function gtpHighlightNumbers(text) {
   );
 }
 
-function GlobalTraderProfileSection({ allTrades }) {
+const GTP_DEMO_PROFILE = {
+  identity: "Scalper MNQ/NQ avec un winrate de 60% et un profit factor de 1.72 — tu captures les moves du marché rapidement (durée moyenne 20 min) en gérant tes stops serrés et en laissant tes gains courir. Ton edge repose sur la régularité d'exécution plutôt que sur des trades exceptionnels.",
+  strengths: [
+    "Winrate stable à 60% sur 5 semaines consécutives, témoignant d'un biais directionnel fiable et d'une bonne lecture du contexte macro intraday.",
+    "Gestion du risque disciplinée : ratio gain/perte moyen de 1.24, aucune journée au-delà de -220$, le stop n'est jamais déplacé contre toi.",
+    "Exécution cohérente sur MNQ et NQ — tu opères dans ton instrument de prédilection et évites le ticket-switching impulsif entre actifs.",
+  ],
+  weaknesses: [
+    "Dégradation du winrate en juin (55% vs 65-67% les mois précédents) — les sessions de New York semblent moins maîtrisées sur les deux dernières semaines.",
+    "Taille de position fixe à 2 contrats : aucune adaptation à la volatilité du jour ou à la conviction du setup, ce qui plafonne le potentiel en journée forte.",
+    "Absence de notation des trades et de screenshots — sans revue systématique, des patterns répétitifs de pertes peuvent rester invisibles.",
+  ],
+  priority: "Focus prioritaire sur juin : identifie les 5 trades perdants récents de la session New York et recherche un pattern commun (heure, contexte macro, déclencheur) avant de risquer du capital supplémentaire sur ce créneau.",
+  wrEvolution: [
+    { month: "Mar 2026", wr: 62 },
+    { month: "Avr 2026", wr: 65 },
+    { month: "Mai 2026", wr: 67 },
+    { month: "Jui 2026", wr: 55 },
+  ],
+  tradeCount: 20,
+  generatedAt: "2026-06-30T10:00:00.000Z",
+  monthKey: "2026-06",
+};
+
+function GlobalTraderProfileSection({ allTrades, isDemoMode }) {
   const [profile, setProfile] = useState(null);
   const [busy,    setBusy]    = useState(true);
 
@@ -1058,6 +1082,11 @@ function GlobalTraderProfileSection({ allTrades }) {
   }
 
   useEffect(() => {
+    if (isDemoMode) {
+      setProfile(GTP_DEMO_PROFILE);
+      setBusy(false);
+      return;
+    }
     let alive = true;
     (async () => {
       setBusy(true);
@@ -1074,9 +1103,10 @@ function GlobalTraderProfileSection({ allTrades }) {
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isDemoMode]);
 
   function handleRefresh() {
+    if (isDemoMode) return;
     if (!window.confirm('Régénérer la synthèse globale ? Un appel IA sera effectué.')) return;
     runGenerate(true);
   }
@@ -1100,7 +1130,12 @@ function GlobalTraderProfileSection({ allTrades }) {
             )}
           </div>
         </div>
-        <button onClick={handleRefresh} disabled={busy} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', border: `0.5px solid ${GTP.border}`, background: 'transparent', color: GTP.textSecondary, padding: '5px 10px', borderRadius: '6px', fontFamily: 'inherit', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+        <button
+          onClick={handleRefresh}
+          disabled={busy || isDemoMode}
+          title={isDemoMode ? 'Disponible avec un abonnement actif' : undefined}
+          style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', border: `0.5px solid ${GTP.border}`, background: 'transparent', color: GTP.textSecondary, padding: '5px 10px', borderRadius: '6px', fontFamily: 'inherit', cursor: (busy || isDemoMode) ? 'default' : 'pointer', opacity: (busy || isDemoMode) ? 0.4 : 1 }}
+        >
           <span style={{ fontSize: '12px' }}>↻</span> Actualiser
         </button>
       </div>
@@ -1267,6 +1302,14 @@ export default function GlobalView() {
   const [modal, setModal]           = useState(null); // { title, subtitle, color, trades }
   const [activeTab, setActiveTab]   = useState('overview');
   const [mentalByDay, setMentalByDay] = useState({}); // { [date]: trait IA } — bilans du Profil Trader (DB globale)
+  const [isDemoMode, setIsDemoMode] = useState(false);
+
+  useEffect(() => {
+    window.auth.getSession().then(res => {
+      const user = res?.data?.user;
+      setIsDemoMode(!!user && user.subscription_status !== 'active');
+    });
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1514,6 +1557,7 @@ export default function GlobalView() {
               byDow={byDow} bySessions={bySessions} hourDataFull={hourDataFull} byHour={byHour}
               pairArr={pairArr} emotionArr={emotionArr} allTrades={allTrades}
               openDow={openDow} openSession={openSession} openHour={openHour}
+              isDemoMode={isDemoMode}
             />
           </div>
 

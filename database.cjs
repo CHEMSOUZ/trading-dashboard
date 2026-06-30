@@ -699,6 +699,14 @@ function addBudgetTransaction(db, dbPath, tx) {
   });
   return getOne(db, 'SELECT * FROM budget_transactions WHERE id=?', [lastId(db)]);
 }
+function updateBudgetTransaction(db, dbPath, id, tx) {
+  const subId = tx.subcategory_id ?? tx.category_id;
+  runQ(db, dbPath, `UPDATE budget_transactions SET subcategory_id=:subcategory_id, category_id=:category_id, amount=:amount, label=:label, date=:date WHERE id=:id`, {
+    ':subcategory_id': subId, ':category_id': subId,
+    ':amount': tx.amount, ':label': tx.label, ':date': tx.date, ':id': id,
+  });
+  return getOne(db, 'SELECT * FROM budget_transactions WHERE id=?', [id]);
+}
 function deleteBudgetTransaction(db, dbPath, id) {
   runQ(db, dbPath, 'DELETE FROM budget_transactions WHERE id=?', [id]);
 }
@@ -757,6 +765,6 @@ module.exports = {
   migrateBudgetData,
   getBudgetCategories,
   getBudgetSubcategories, addBudgetSubcategory, updateBudgetSubcategory, deleteBudgetSubcategory,
-  getBudgetTransactions, addBudgetTransaction, deleteBudgetTransaction,
+  getBudgetTransactions, addBudgetTransaction, updateBudgetTransaction, deleteBudgetTransaction,
   getBudgetSettings, getLatestBudgetSettings, updateBudgetSettings,
 };
