@@ -263,8 +263,7 @@ function TransactionModal({ subcategories, initial, onSave, onClose }) {
 function TargetsModal({ settings, onSave, onClose }) {
   const [income, setIncome] = useState(settings?.monthly_income ?? '');
   const [targets, setTargets] = useState(() => {
-    let t = {};
-    try { t = JSON.parse(settings?.targets_json || '{}'); } catch(_) {}
+    const t = settings?.pocket_targets || {};
     return {
       essentials: t.essentials ?? 50,
       growth:     t.growth     ?? 25,
@@ -323,7 +322,7 @@ function TargetsModal({ settings, onSave, onClose }) {
 }
 
 // ── PocketAccordion ────────────────────────────────────────────
-function PocketAccordion({ pocketKey, subcategories, transactions, targetEur, targetPct, onAddSub, onEditSub, onDeleteSub }) {
+function PocketAccordion({ pocketKey, subcategories, transactions, targetEur, targetPct, onAddSub, onEditSub, onDeleteSub, isDemoMode }) {
   const [open, setOpen] = useState(pocketKey === 'essentials');
   const { label, color } = POCKETS[pocketKey];
 
@@ -392,17 +391,19 @@ function PocketAccordion({ pocketKey, subcategories, transactions, targetEur, ta
                   <span style={{ color: over ? '#ff3344' : '#dde4ef' }}>{fmtEur(s)}</span>
                   {alloc > 0 && <span style={{ color: '#3a4a5a' }}> / {fmtEur(alloc)}</span>}
                 </div>
-                <button onClick={() => onEditSub(sub)} title="Modifier"
-                  style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', padding: '2px 4px', fontSize: '12px' }}>✎</button>
-                <button onClick={() => onDeleteSub(sub.id)} title="Supprimer"
-                  style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', padding: '2px 4px', fontSize: '12px' }}>✕</button>
+                {!isDemoMode && <button onClick={() => onEditSub(sub)} title="Modifier"
+                  style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', padding: '2px 4px', fontSize: '12px' }}>✎</button>}
+                {!isDemoMode && <button onClick={() => onDeleteSub(sub.id)} title="Supprimer"
+                  style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', padding: '2px 4px', fontSize: '12px' }}>✕</button>}
               </div>
             );
           })}
-          <button onClick={() => onAddSub(pocketKey)}
-            style={{ marginTop: '8px', background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', fontSize: '12px', padding: '4px 0', fontFamily: 'inherit' }}>
-            + Ajouter une sous-catégorie à {label}
-          </button>
+          {!isDemoMode && (
+            <button onClick={() => onAddSub(pocketKey)}
+              style={{ marginTop: '8px', background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', fontSize: '12px', padding: '4px 0', fontFamily: 'inherit' }}>
+              + Ajouter une sous-catégorie à {label}
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -417,6 +418,7 @@ export default function Budget() {
   const [transactions, setTransactions] = useState([]);
   const [settings, setSettings] = useState(null);
 
+  const [isDemoMode, setIsDemoMode]       = useState(false);
   const [modalSubcat, setModalSubcat]     = useState(null);
   const [modalTx, setModalTx]             = useState(false);
   const [modalEditTx, setModalEditTx]     = useState(null); // transaction à éditer
@@ -440,14 +442,23 @@ export default function Budget() {
     }
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      const res  = await window.auth.getSession();
+      const user = res?.data?.user;
+      setIsDemoMode(!!user && user.subscription_status !== 'active');
+    })();
+  }, []);
+
   useEffect(() => { load(currentMonth); }, [currentMonth, load]);
 
   // ── Derived ───────────────────────────────────────────────────
   const income = parseFloat(settings?.monthly_income) || 0;
 
   const parsedTargets = useMemo(() => {
-    try { return JSON.parse(settings?.targets_json || '{}'); } catch(_) { return {}; }
-  }, [settings?.targets_json]);
+    const t = settings?.pocket_targets;
+    return (t && typeof t === 'object') ? t : {};
+  }, [settings?.pocket_targets]);
 
   const pocketTargetPct = pk => Number(parsedTargets[pk] ?? POCKETS[pk].default_pct);
   const pocketTargetEur = pk => income > 0 ? income * pocketTargetPct(pk) / 100 : null;
@@ -563,6 +574,12 @@ export default function Budget() {
         </div>
       </div>
 
+      {isDemoMode && (
+        <div style={{ marginBottom: '16px', padding: '10px 16px', background: 'rgba(136,153,187,0.07)', border: '1px solid rgba(136,153,187,0.20)', borderRadius: '8px', fontSize: '12px', color: '#8899bb' }}>
+          🔒 <strong style={{ color: '#dde4ef' }}>Mode démo</strong> — Données fictives à titre d'exemple. Les modifications sont désactivées.
+        </div>
+      )}
+
       {/* ── Hero cards ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: '12px', marginBottom: '20px' }}>
         {[
@@ -600,7 +617,8 @@ export default function Budget() {
       <div style={{ background: '#0f1120', border: '1px solid rgba(136,153,187,0.13)', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div style={{ fontSize: '13px', fontWeight: 700, color: '#8899bb', letterSpacing: '1px' }}>ALLOCATION PAR POCHE</div>
-          <button onClick={() => setModalTargets(true)} style={{ ...S.btn(), padding: '5px 12px', fontSize: '11px' }}>Configurer</button>
+          <button onClick={() => !isDemoMode && setModalTargets(true)} disabled={isDemoMode}
+            style={{ ...S.btn(), padding: '5px 12px', fontSize: '11px', opacity: isDemoMode ? 0.4 : 1, cursor: isDemoMode ? 'not-allowed' : 'pointer' }}>Configurer</button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {POCKET_KEYS.map(pk => {
@@ -632,8 +650,8 @@ export default function Budget() {
       <div style={{ marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
           <div style={{ fontSize: '13px', fontWeight: 700, color: '#8899bb', letterSpacing: '1px' }}>SOUS-CATÉGORIES</div>
-          <button onClick={() => setModalSubcat({ mode: 'add', pocket: 'essentials' })}
-            style={{ ...S.btn(), padding: '5px 12px', fontSize: '11px' }}>+ Ajouter</button>
+          <button onClick={() => !isDemoMode && setModalSubcat({ mode: 'add', pocket: 'essentials' })} disabled={isDemoMode}
+            style={{ ...S.btn(), padding: '5px 12px', fontSize: '11px', opacity: isDemoMode ? 0.4 : 1, cursor: isDemoMode ? 'not-allowed' : 'pointer' }}>+ Ajouter</button>
         </div>
         {POCKET_KEYS.map(pk => (
           <PocketAccordion
@@ -646,6 +664,7 @@ export default function Budget() {
             onAddSub={pocket => setModalSubcat({ mode: 'add', pocket })}
             onEditSub={sub => setModalSubcat({ mode: 'edit', sub })}
             onDeleteSub={handleDeleteSub}
+            isDemoMode={isDemoMode}
           />
         ))}
       </div>
@@ -671,8 +690,8 @@ export default function Budget() {
                 {txExpanded ? 'Réduire' : 'Tout voir'}
               </button>
             )}
-            <button onClick={() => subcategories.length > 0 && setModalTx(true)}
-              style={{ ...S.btn('#00cc77'), padding: '5px 12px', fontSize: '11px' }}>
+            <button onClick={() => !isDemoMode && subcategories.length > 0 && setModalTx(true)} disabled={isDemoMode}
+              style={{ ...S.btn('#00cc77'), padding: '5px 12px', fontSize: '11px', opacity: isDemoMode ? 0.4 : 1, cursor: isDemoMode ? 'not-allowed' : 'pointer' }}>
               + Dépense
             </button>
           </div>
@@ -685,8 +704,8 @@ export default function Budget() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
             {(txExpanded ? transactions : transactions.slice(0, 5)).map(tx => (
               <div key={tx.id}
-                onClick={() => setModalEditTx(tx)}
-                style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 4px', borderTop: '1px solid rgba(136,153,187,0.09)', cursor: 'pointer', borderRadius: '4px', transition: 'background 0.15s' }}
+                onClick={() => !isDemoMode && setModalEditTx(tx)}
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 4px', borderTop: '1px solid rgba(136,153,187,0.09)', cursor: isDemoMode ? 'default' : 'pointer', borderRadius: '4px', transition: 'background 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(136,153,187,0.05)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
@@ -700,10 +719,10 @@ export default function Budget() {
                   </div>
                 </div>
                 <div style={{ fontSize: '13px', color: '#dde4ef', fontWeight: 700, flexShrink: 0 }}>{fmtEur(tx.amount)}</div>
-                <button onClick={e => { e.stopPropagation(); setModalEditTx(tx); }} title="Modifier"
-                  style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', padding: '2px 4px', fontSize: '12px' }}>✎</button>
-                <button onClick={e => { e.stopPropagation(); handleDeleteTx(tx.id); }} title="Supprimer"
-                  style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', padding: '2px 4px', fontSize: '12px' }}>✕</button>
+                {!isDemoMode && <button onClick={e => { e.stopPropagation(); setModalEditTx(tx); }} title="Modifier"
+                  style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', padding: '2px 4px', fontSize: '12px' }}>✎</button>}
+                {!isDemoMode && <button onClick={e => { e.stopPropagation(); handleDeleteTx(tx.id); }} title="Supprimer"
+                  style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', padding: '2px 4px', fontSize: '12px' }}>✕</button>}
               </div>
             ))}
             {!txExpanded && transactions.length > 5 && (
