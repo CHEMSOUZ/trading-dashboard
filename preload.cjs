@@ -88,16 +88,16 @@ contextBridge.exposeInMainWorld('market', {
 });
 
 contextBridge.exposeInMainWorld('budget', {
-  getCategories:    ()                         => ipcRenderer.invoke('budget:getCategories'),
-  addCategory:      (cat)                      => ipcRenderer.invoke('budget:addCategory', cat),
-  updateCategory:   (id, cat)                  => ipcRenderer.invoke('budget:updateCategory', id, cat),
-  deleteCategory:   (id)                       => ipcRenderer.invoke('budget:deleteCategory', id),
-  getTransactions:  (monthKey)                 => ipcRenderer.invoke('budget:getTransactions', monthKey),
-  addTransaction:   (tx)                       => ipcRenderer.invoke('budget:addTransaction', tx),
-  deleteTransaction:(id)                       => ipcRenderer.invoke('budget:deleteTransaction', id),
-  getSettings:      (monthKey)                 => ipcRenderer.invoke('budget:getSettings', monthKey),
-  getLatestSettings:()                         => ipcRenderer.invoke('budget:getLatestSettings'),
-  updateSettings:   (monthKey, income, targets)=> ipcRenderer.invoke('budget:updateSettings', monthKey, income, targets),
+  getSubcategories:  ()                          => ipcRenderer.invoke('budget:getSubcategories'),
+  addSubcategory:    (sub)                       => ipcRenderer.invoke('budget:addSubcategory', sub),
+  updateSubcategory: (id, sub)                   => ipcRenderer.invoke('budget:updateSubcategory', id, sub),
+  deleteSubcategory: (id)                        => ipcRenderer.invoke('budget:deleteSubcategory', id),
+  getTransactions:   (monthKey)                  => ipcRenderer.invoke('budget:getTransactions', monthKey),
+  addTransaction:    (tx)                        => ipcRenderer.invoke('budget:addTransaction', tx),
+  deleteTransaction: (id)                        => ipcRenderer.invoke('budget:deleteTransaction', id),
+  getSettings:       (monthKey)                  => ipcRenderer.invoke('budget:getSettings', monthKey),
+  getLatestSettings: ()                          => ipcRenderer.invoke('budget:getLatestSettings'),
+  updateSettings:    (monthKey, income, targets) => ipcRenderer.invoke('budget:updateSettings', monthKey, income, targets),
 });
 
 contextBridge.exposeInMainWorld('bot', {

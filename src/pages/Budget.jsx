@@ -1,809 +1,713 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
-// ── Design tokens ────────────────────────────────────────────
+// ── Design tokens ──────────────────────────────────────────────
 const T = {
-  border:   'rgba(136,153,187,0.12)',
-  borderMd: 'rgba(136,153,187,0.20)',
-  bg2:      'rgba(20,23,34,0.75)',
-  text:     '#dde4ef',
-  textSub:  '#8899bb',
-  textTert: '#5a6a82',
-  success:  '#1D9E75',
-  danger:   '#E24B4A',
-  warn:     '#BA7517',
-  rLg:      '10px',
-  rMd:      '8px',
-  rSm:      '6px',
+  bg:        '#0c0d16',
+  surface:   '#0f1120',
+  border:    'rgba(136,153,187,0.13)',
+  borderHov: 'rgba(136,153,187,0.28)',
+  text:      '#dde4ef',
+  muted:     '#5a6a82',
+  faint:     '#3a4a5a',
+  accent:    '#8899bb',
 };
 
+// ── Pockets ────────────────────────────────────────────────────
 const POCKETS = {
-  essentials: { label: 'Essentials', color: '#6FA83B', bg: 'rgba(111,168,59,0.07)'  },
-  growth:     { label: 'Growth',     color: '#1D9E75', bg: 'rgba(29,158,117,0.07)'  },
-  stability:  { label: 'Stability',  color: '#3B82C4', bg: 'rgba(59,130,196,0.07)'  },
-  rewards:    { label: 'Rewards',    color: '#7F77DD', bg: 'rgba(127,119,221,0.07)' },
+  essentials: { label: 'Essentials',  color: '#4a9eff', default_pct: 50 },
+  growth:     { label: 'Growth',      color: '#00cc77', default_pct: 25 },
+  stability:  { label: 'Stability',   color: '#f59e0b', default_pct: 15 },
+  rewards:    { label: 'Rewards',     color: '#a855f7', default_pct: 10 },
 };
 const POCKET_KEYS = ['essentials', 'growth', 'stability', 'rewards'];
-const DEFAULT_TARGETS = { essentials: 50, growth: 25, stability: 15, rewards: 10 };
-const CAT_COLORS = ['#E24B4A','#1D9E75','#3B82C4','#7F77DD','#6FA83B','#BA7517','#00ddff','#8899bb','#f59e0b','#e879f9'];
 
-// ── Helpers ──────────────────────────────────────────────────
-function fmt(n) {
-  return (n ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-}
-
-function getMonthKey(date = new Date()) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function monthLabel(key) {
-  const [y, m] = key.split('-').map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-}
-
-function offsetMonth(key, delta) {
-  const [y, m] = key.split('-').map(Number);
-  const d = new Date(y, m - 1 + delta, 1);
+// ── Helpers ────────────────────────────────────────────────────
+function monthKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
+function fmtEur(n) {
+  if (!n && n !== 0) return '—';
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+}
+function fmtPct(n) { return `${Math.round(n ?? 0)} %`; }
 
-function daysRemainingInMonth(key) {
-  const [y, m] = key.split('-').map(Number);
-  const today = new Date();
-  const endOfMonth = new Date(y, m, 0);
-  const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  return Math.max(0, Math.ceil((endOfMonth - todayMid) / 86400000));
+function daysLeft() {
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return end.getDate() - now.getDate();
 }
 
-function parseTargets(raw) {
-  if (raw && typeof raw === 'object') return { ...DEFAULT_TARGETS, ...raw };
-  try { return { ...DEFAULT_TARGETS, ...JSON.parse(raw ?? '{}') }; } catch { return { ...DEFAULT_TARGETS }; }
-}
+// ── Style helpers ──────────────────────────────────────────────
+const S = {
+  input: {
+    width: '100%', padding: '8px 10px', background: 'rgba(136,153,187,0.07)',
+    border: '1px solid rgba(136,153,187,0.18)', borderRadius: '6px',
+    color: '#dde4ef', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
+  },
+  label: { fontSize: '11px', color: '#5a6a82', marginBottom: '4px', display: 'block', letterSpacing: '0.5px' },
+  btn: (col='#8899bb') => ({
+    padding: '8px 18px', background: `${col}18`, border: `1px solid ${col}55`,
+    borderRadius: '6px', color: col, fontSize: '12px', fontFamily: 'inherit',
+    fontWeight: 700, cursor: 'pointer', letterSpacing: '1px',
+  }),
+  cancelBtn: {
+    padding: '8px 18px', background: 'transparent', border: '1px solid rgba(136,153,187,0.20)',
+    borderRadius: '6px', color: '#5a6a82', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer',
+  },
+  modal: {
+    position: 'fixed', inset: 0, zIndex: 1000,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)',
+  },
+  modalBox: {
+    background: '#0f1120', border: '1px solid rgba(136,153,187,0.22)',
+    borderRadius: '14px', padding: '28px', width: '400px', maxWidth: '94vw',
+    boxShadow: '0 24px 64px rgba(0,0,0,0.85)',
+  },
+};
 
-// ── Donut SVG ────────────────────────────────────────────────
-function DonutChart({ segments, total }) {
-  const R = 54, SW = 16, cx = 80, cy = 80;
+// ── Donut SVG ──────────────────────────────────────────────────
+function DonutChart({ subcategories, transactions }) {
+  const R = 80, cx = 100, cy = 100, stroke = 20;
   const circ = 2 * Math.PI * R;
-  let acc = 0;
-  const visibleSegments = segments.filter(s => s.value > 0);
-  return (
-    <svg width="160" height="160" style={{ display: 'block', flexShrink: 0 }}>
-      <circle cx={cx} cy={cy} r={R} fill="none" stroke="rgba(136,153,187,0.10)" strokeWidth={SW} />
-      {visibleSegments.map((seg, i) => {
-        if (total <= 0) return null;
-        const len = (seg.value / total) * circ;
-        const offset = circ / 4 - acc;
-        acc += len;
-        return (
-          <circle key={i} cx={cx} cy={cy} r={R} fill="none"
-            stroke={seg.color} strokeWidth={SW}
-            strokeDasharray={`${len} ${circ}`}
-            strokeDashoffset={offset}
-          />
-        );
-      })}
-      <text x={cx} y={cy - 5} textAnchor="middle" fill={T.text} fontSize="15" fontWeight="600" fontFamily="inherit">
-        {fmt(total)}
-      </text>
-      <text x={cx} y={cy + 13} textAnchor="middle" fill={T.textTert} fontSize="9" fontFamily="inherit">
-        dépensé
-      </text>
-    </svg>
-  );
-}
 
-// ── Modal helpers ─────────────────────────────────────────────
-function ModalBackdrop({ children, onClose }) {
+  const spent = useMemo(() => {
+    const map = {};
+    for (const tx of transactions) {
+      const sid = tx.subcategory_id;
+      map[sid] = (map[sid] || 0) + tx.amount;
+    }
+    return map;
+  }, [transactions]);
+
+  const total = Object.values(spent).reduce((a, b) => a + b, 0);
+
+  const { active, zero } = useMemo(() => {
+    const act = subcategories
+      .map(sub => ({ id: sub.id, name: sub.name, color: sub.color, amount: spent[sub.id] || 0 }))
+      .filter(s => s.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+    const z = subcategories
+      .filter(sub => !spent[sub.id])
+      .map(sub => ({ id: sub.id, name: sub.name, color: '#3a4a5a', amount: 0 }));
+    return { active: act, zero: z };
+  }, [subcategories, spent]);
+
+  let offset = circ / 4;
+  const arcs = active.map(seg => {
+    const len = (seg.amount / total) * circ;
+    const arc = { ...seg, len, offset };
+    offset += len;
+    return arc;
+  });
+
   return (
-    <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 9001 }}>
-        {children}
+    <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <svg width={200} height={200} viewBox="0 0 200 200">
+          <circle cx={cx} cy={cy} r={R} fill="none" stroke="rgba(136,153,187,0.08)" strokeWidth={stroke} />
+          {arcs.map(seg => (
+            <circle key={seg.id} cx={cx} cy={cy} r={R} fill="none"
+              stroke={seg.color} strokeWidth={stroke}
+              strokeDasharray={`${seg.len} ${circ - seg.len}`}
+              strokeDashoffset={-seg.offset + circ}
+              style={{ transform: 'rotate(-90deg)', transformOrigin: `${cx}px ${cy}px` }}
+            />
+          ))}
+        </svg>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: '#dde4ef' }}>{fmtEur(total)}</div>
+          <div style={{ fontSize: '10px', color: '#5a6a82', letterSpacing: '1px' }}>dépensé</div>
+        </div>
       </div>
-    </>
-  );
-}
 
-function ModalHeader({ title, onClose }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: `1px solid ${T.border}` }}>
-      <div style={{ fontSize: '13px', fontWeight: '600', color: T.text }}>{title}</div>
-      <button onClick={onClose} style={{ background: 'none', border: 'none', color: T.textTert, cursor: 'pointer', fontSize: '16px', padding: 0, lineHeight: 1 }}>✕</button>
+      <div style={{ flex: 1, minWidth: '180px', maxHeight: '280px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {[...active, ...zero].map(seg => {
+          const pct = total > 0 ? (seg.amount / total) * 100 : 0;
+          return (
+            <div key={seg.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: seg.color, flexShrink: 0 }} />
+              <div style={{ fontSize: '12px', color: seg.amount === 0 ? '#3a4a5a' : '#5a6a82', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{seg.name}</div>
+              <div style={{ fontSize: '12px', color: seg.amount === 0 ? '#3a4a5a' : '#8899bb', flexShrink: 0 }}>
+                {seg.amount === 0 ? '0 €' : fmtEur(seg.amount)}
+              </div>
+              {seg.amount > 0 && <div style={{ fontSize: '10px', color: '#3a4a5a', flexShrink: 0 }}>{Math.round(pct)}%</div>}
+            </div>
+          );
+        })}
+        <div style={{ borderTop: '1px solid rgba(136,153,187,0.13)', marginTop: '4px', paddingTop: '6px', display: 'flex', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '12px', color: '#5a6a82', fontWeight: 700 }}>Total</span>
+          <span style={{ fontSize: '12px', color: '#dde4ef', fontWeight: 700 }}>{fmtEur(total)}</span>
+        </div>
+      </div>
     </div>
   );
 }
 
-// ── CategoryModal ─────────────────────────────────────────────
-function CategoryModal({ initial, onClose, onSave }) {
-  const [name, setName] = useState(initial?.name ?? '');
-  const [color, setColor] = useState(initial?.color ?? CAT_COLORS[0]);
-  const [amount, setAmount] = useState(initial?.allocated_amount != null ? String(initial.allocated_amount) : '');
-  const [pocket, setPocket] = useState(initial?.pocket ?? '');
-
-  async function handleSave() {
-    if (!name.trim()) return;
-    await onSave({ name: name.trim(), color, allocated_amount: parseFloat(amount) || 0, pocket: pocket || null });
-  }
+// ── SubcategoryModal ───────────────────────────────────────────
+function SubcategoryModal({ initial, onSave, onClose }) {
+  const [form, setForm] = useState({
+    name: initial?.name ?? '',
+    color: initial?.color ?? '#4a9eff',
+    allocated_amount: initial?.allocated_amount ?? '',
+    pocket: initial?.pocket ?? 'essentials',
+  });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const valid = form.name.trim() && parseFloat(form.allocated_amount) >= 0;
 
   return (
-    <ModalBackdrop onClose={onClose}>
-      <div style={modalStyle}>
-        <ModalHeader title={initial ? 'Modifier la catégorie' : 'Nouvelle catégorie'} onClose={onClose} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px' }}>
-          <label style={labelStyle}>
-            Nom
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Courses, Loyer..."
-              style={inputStyle} autoFocus onKeyDown={e => e.key === 'Enter' && handleSave()} />
-          </label>
-          <label style={labelStyle}>
-            Montant alloué (€/mois)
-            <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
-              placeholder="0" style={inputStyle} min="0" />
-          </label>
-          <label style={labelStyle}>
-            Poche budgétaire
-            <select value={pocket} onChange={e => setPocket(e.target.value)} style={inputStyle}>
-              <option value="">Aucune</option>
-              {POCKET_KEYS.map(k => <option key={k} value={k}>{POCKETS[k].label}</option>)}
-            </select>
-          </label>
+    <div style={S.modal} onClick={onClose}>
+      <div style={S.modalBox} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: '#dde4ef', marginBottom: '20px', letterSpacing: '1px' }}>
+          {initial?.id ? 'MODIFIER' : 'NOUVELLE'} SOUS-CATÉGORIE
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div>
-            <div style={{ fontSize: '11px', color: T.textTert, marginBottom: '6px' }}>Couleur</div>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {CAT_COLORS.map(c => (
-                <div key={c} onClick={() => setColor(c)} style={{
-                  width: '22px', height: '22px', borderRadius: '50%', background: c, cursor: 'pointer',
-                  border: `2px solid ${color === c ? 'white' : 'transparent'}`, boxSizing: 'border-box',
-                }} />
+            <label style={S.label}>Poche</label>
+            <select value={form.pocket} onChange={e => set('pocket', e.target.value)}
+              style={{ ...S.input, cursor: 'pointer' }}>
+              {POCKET_KEYS.map(k => (
+                <option key={k} value={k}>{POCKETS[k].label}</option>
               ))}
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
-            <button onClick={onClose} style={cancelBtnStyle}>Annuler</button>
-            <button onClick={handleSave} style={saveBtnStyle}>Enregistrer</button>
-          </div>
-        </div>
-      </div>
-    </ModalBackdrop>
-  );
-}
-
-// ── TransactionModal ──────────────────────────────────────────
-function TransactionModal({ categories, prefillCatId, monthKey, onClose, onSave }) {
-  const [catId, setCatId] = useState(prefillCatId ?? categories[0]?.id ?? '');
-  const [amount, setAmount] = useState('');
-  const [label, setLabel] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-
-  async function handleSave() {
-    if (!label.trim() || !amount || !catId) return;
-    await onSave({ category_id: Number(catId), amount: parseFloat(amount), label: label.trim(), date, month_key: monthKey });
-  }
-
-  return (
-    <ModalBackdrop onClose={onClose}>
-      <div style={modalStyle}>
-        <ModalHeader title="Ajouter une dépense" onClose={onClose} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px' }}>
-          <label style={labelStyle}>
-            Catégorie
-            <select value={catId} onChange={e => setCatId(e.target.value)} style={inputStyle}>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-          </label>
-          <label style={labelStyle}>
-            Libellé
-            <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Ex: Lidl, EDF..."
-              style={inputStyle} autoFocus onKeyDown={e => e.key === 'Enter' && handleSave()} />
-          </label>
-          <label style={labelStyle}>
-            Montant (€)
-            <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
-              placeholder="0.00" style={inputStyle} min="0" step="0.01" />
-          </label>
-          <label style={labelStyle}>
-            Date
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
-          </label>
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
-            <button onClick={onClose} style={cancelBtnStyle}>Annuler</button>
-            <button onClick={handleSave} style={saveBtnStyle}>Ajouter</button>
+          </div>
+          <div>
+            <label style={S.label}>Nom</label>
+            <input value={form.name} onChange={e => set('name', e.target.value)}
+              placeholder="ex: Loyer, Épicerie…" style={S.input} autoFocus />
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={S.label}>Budget (€ / mois)</label>
+              <input type="number" min="0" value={form.allocated_amount}
+                onChange={e => set('allocated_amount', e.target.value)}
+                placeholder="0" style={S.input} />
+            </div>
+            <div>
+              <label style={S.label}>Couleur</label>
+              <input type="color" value={form.color} onChange={e => set('color', e.target.value)}
+                style={{ ...S.input, width: '56px', padding: '4px', cursor: 'pointer', height: '36px' }} />
+            </div>
           </div>
         </div>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '22px', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={S.cancelBtn}>Annuler</button>
+          <button disabled={!valid} onClick={() => valid && onSave(form)} style={S.btn('#4a9eff')}>
+            {initial?.id ? 'Sauvegarder' : 'Ajouter'}
+          </button>
+        </div>
       </div>
-    </ModalBackdrop>
+    </div>
   );
 }
 
-// ── TargetsModal ──────────────────────────────────────────────
-function TargetsModal({ targets, onClose, onSave }) {
-  const [vals, setVals] = useState({ ...targets });
-  const total = POCKET_KEYS.reduce((s, k) => s + (parseFloat(vals[k]) || 0), 0);
-
-  async function handleSave() {
-    const t = {};
-    for (const k of POCKET_KEYS) t[k] = parseFloat(vals[k]) || 0;
-    await onSave(t);
-  }
+// ── TransactionModal ───────────────────────────────────────────
+function TransactionModal({ subcategories, onSave, onClose }) {
+  const [form, setForm] = useState({
+    subcategory_id: subcategories[0]?.id ?? '',
+    amount: '', label: '',
+    date: new Date().toISOString().slice(0, 10),
+  });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const valid = form.subcategory_id && parseFloat(form.amount) > 0 && form.date;
 
   return (
-    <ModalBackdrop onClose={onClose}>
-      <div style={modalStyle}>
-        <ModalHeader title="Modifier les cibles d'allocation" onClose={onClose} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px' }}>
-          {POCKET_KEYS.map(k => (
-            <div key={k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-              <span style={{ fontSize: '12px', color: POCKETS[k].color, fontWeight: '600', minWidth: '80px' }}>{POCKETS[k].label}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
-                <input type="number" value={vals[k]} onChange={e => setVals(v => ({ ...v, [k]: e.target.value }))}
-                  style={{ ...inputStyle, width: '70px', textAlign: 'right' }} min="0" max="100" />
-                <span style={{ fontSize: '12px', color: T.textTert }}>%</span>
-              </div>
-            </div>
-          ))}
-          <div style={{ fontSize: '11px', color: Math.abs(total - 100) < 0.1 ? T.success : T.danger, textAlign: 'right' }}>
-            Total : {total.toFixed(0)} % {Math.abs(total - 100) < 0.1 ? '✓' : '(doit être = 100 %)'}
+    <div style={S.modal} onClick={onClose}>
+      <div style={S.modalBox} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: '#dde4ef', marginBottom: '20px', letterSpacing: '1px' }}>
+          NOUVELLE DÉPENSE
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={S.label}>Sous-catégorie</label>
+            <select value={form.subcategory_id} onChange={e => set('subcategory_id', parseInt(e.target.value))}
+              style={{ ...S.input, cursor: 'pointer' }}>
+              {POCKET_KEYS.flatMap(pk =>
+                subcategories.filter(s => s.pocket === pk).map(s => (
+                  <option key={s.id} value={s.id}>{POCKETS[pk].label} › {s.name}</option>
+                ))
+              )}
+            </select>
           </div>
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
-            <button onClick={onClose} style={cancelBtnStyle}>Annuler</button>
-            <button onClick={handleSave} style={{ ...saveBtnStyle, opacity: Math.abs(total - 100) > 0.1 ? 0.5 : 1 }}
-              disabled={Math.abs(total - 100) > 0.1}>
-              Enregistrer
-            </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={S.label}>Montant (€)</label>
+              <input type="number" min="0" step="0.01" value={form.amount}
+                onChange={e => set('amount', e.target.value)} placeholder="0.00" style={S.input} autoFocus />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={S.label}>Date</label>
+              <input type="date" value={form.date} onChange={e => set('date', e.target.value)} style={S.input} />
+            </div>
+          </div>
+          <div>
+            <label style={S.label}>Libellé (optionnel)</label>
+            <input value={form.label} onChange={e => set('label', e.target.value)}
+              placeholder="ex: Courses Lidl" style={S.input} />
           </div>
         </div>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '22px', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={S.cancelBtn}>Annuler</button>
+          <button disabled={!valid} onClick={() => valid && onSave(form)} style={S.btn('#00cc77')}>
+            Enregistrer
+          </button>
+        </div>
       </div>
-    </ModalBackdrop>
+    </div>
   );
 }
 
-// ── Budget (main) ─────────────────────────────────────────────
+// ── TargetsModal ───────────────────────────────────────────────
+function TargetsModal({ settings, onSave, onClose }) {
+  const [income, setIncome] = useState(settings?.monthly_income ?? '');
+  const [targets, setTargets] = useState(() => {
+    let t = {};
+    try { t = JSON.parse(settings?.targets_json || '{}'); } catch(_) {}
+    return {
+      essentials: t.essentials ?? 50,
+      growth:     t.growth     ?? 25,
+      stability:  t.stability  ?? 15,
+      rewards:    t.rewards    ?? 10,
+    };
+  });
+  const inc = parseFloat(income) || 0;
+  const totalPct = Object.values(targets).reduce((a, b) => a + Number(b), 0);
+
+  return (
+    <div style={S.modal} onClick={onClose}>
+      <div style={S.modalBox} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: '#dde4ef', marginBottom: '20px', letterSpacing: '1px' }}>
+          CIBLES D'ALLOCATION
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={S.label}>Revenu mensuel net (€)</label>
+            <input type="number" min="0" value={income}
+              onChange={e => setIncome(e.target.value)} placeholder="ex: 3000" style={S.input} autoFocus />
+          </div>
+          {POCKET_KEYS.map(pk => {
+            const col = POCKETS[pk].color;
+            const pct = Number(targets[pk]) || 0;
+            const eur = inc > 0 ? Math.round(inc * pct / 100) : null;
+            return (
+              <div key={pk}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '11px', color: col, marginBottom: 0, display: 'block' }}>{POCKETS[pk].label}</label>
+                  <span style={{ fontSize: '11px', color: '#5a6a82' }}>
+                    {eur !== null ? `${fmtEur(eur)} · ` : ''}{pct}%
+                  </span>
+                </div>
+                <input type="number" min="0" max="100" value={targets[pk]}
+                  onChange={e => setTargets(t => ({ ...t, [pk]: e.target.value }))}
+                  style={{ ...S.input, borderColor: `${col}44` }} />
+              </div>
+            );
+          })}
+          {totalPct !== 100 && (
+            <div style={{ fontSize: '12px', color: '#f59e0b', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '6px', padding: '8px 12px' }}>
+              Total : {totalPct}% — doit être égal à 100%
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '22px', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={S.cancelBtn}>Annuler</button>
+          <button onClick={() => onSave(income, targets)} style={S.btn('#8899bb')}>
+            Sauvegarder
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PocketAccordion ────────────────────────────────────────────
+function PocketAccordion({ pocketKey, subcategories, transactions, targetEur, targetPct, onAddSub, onEditSub, onDeleteSub }) {
+  const [open, setOpen] = useState(pocketKey === 'essentials');
+  const { label, color } = POCKETS[pocketKey];
+
+  const spent = useMemo(() => {
+    const subIds = new Set(subcategories.map(s => s.id));
+    return transactions
+      .filter(tx => subIds.has(tx.subcategory_id))
+      .reduce((a, tx) => a + tx.amount, 0);
+  }, [subcategories, transactions]);
+
+  const subSpent = useCallback((subId) =>
+    transactions.filter(tx => tx.subcategory_id === subId).reduce((a, tx) => a + tx.amount, 0),
+  [transactions]);
+
+  const delta = targetEur ? spent - targetEur : null;
+  const overBudget = delta !== null && delta > 0;
+  const barPct = targetEur > 0 ? Math.min((spent / targetEur) * 100, 100) : 0;
+
+  return (
+    <div style={{ border: `1px solid rgba(136,153,187,0.13)`, borderLeft: `3px solid ${color}`, borderRadius: '8px', overflow: 'hidden', marginBottom: '8px' }}>
+      <div onClick={() => setOpen(o => !o)}
+        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', cursor: 'pointer', background: open ? 'rgba(136,153,187,0.04)' : 'transparent', userSelect: 'none' }}>
+        <span style={{ fontSize: '11px', color: '#3a4a5a', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block', lineHeight: 1 }}>▶</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '14px', fontWeight: 700, color }}>{label}</span>
+            {targetEur !== null && targetEur > 0 && (
+              <span style={{ fontSize: '11px', color: '#5a6a82' }}>{fmtEur(targetEur)} · {fmtPct(targetPct)}</span>
+            )}
+            <span style={{ fontSize: '11px', color: '#3a4a5a' }}>· {subcategories.length} sous-cat.</span>
+          </div>
+          <div style={{ marginTop: '6px', height: '4px', background: 'rgba(136,153,187,0.10)', borderRadius: '2px', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${barPct}%`, background: overBudget ? '#ff3344' : color, borderRadius: '2px', transition: 'width 0.3s' }} />
+          </div>
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: overBudget ? '#ff3344' : '#dde4ef' }}>{fmtEur(spent)}</div>
+          {delta !== null && delta !== 0 && (
+            <div style={{ fontSize: '11px', color: overBudget ? '#ff3344' : '#00cc77', marginTop: '1px' }}>
+              {overBudget ? '+' : ''}{fmtEur(delta)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {open && (
+        <div style={{ padding: '0 14px 12px' }}>
+          {subcategories.length === 0 && (
+            <div style={{ fontSize: '12px', color: '#3a4a5a', padding: '8px 0 4px' }}>Aucune sous-catégorie</div>
+          )}
+          {subcategories.map(sub => {
+            const s = subSpent(sub.id);
+            const alloc = sub.allocated_amount || 0;
+            const subPct = alloc > 0 ? Math.min((s / alloc) * 100, 100) : 0;
+            const over = alloc > 0 && s > alloc;
+            return (
+              <div key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0 7px 12px', borderTop: '1px solid rgba(136,153,187,0.09)' }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: sub.color, flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', color: '#dde4ef', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.name}</div>
+                  <div style={{ width: '110px', height: '3px', background: 'rgba(136,153,187,0.10)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${subPct}%`, background: over ? '#ff3344' : sub.color, borderRadius: '2px' }} />
+                  </div>
+                </div>
+                <div style={{ fontSize: '12px', color: '#5a6a82', textAlign: 'right', flexShrink: 0, minWidth: '100px' }}>
+                  <span style={{ color: over ? '#ff3344' : '#dde4ef' }}>{fmtEur(s)}</span>
+                  {alloc > 0 && <span style={{ color: '#3a4a5a' }}> / {fmtEur(alloc)}</span>}
+                </div>
+                <button onClick={() => onEditSub(sub)} title="Modifier"
+                  style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', padding: '2px 4px', fontSize: '12px' }}>✎</button>
+                <button onClick={() => onDeleteSub(sub.id)} title="Supprimer"
+                  style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', padding: '2px 4px', fontSize: '12px' }}>✕</button>
+              </div>
+            );
+          })}
+          <button onClick={() => onAddSub(pocketKey)}
+            style={{ marginTop: '8px', background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', fontSize: '12px', padding: '4px 0', fontFamily: 'inherit' }}>
+            + Ajouter une sous-catégorie à {label}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────
 export default function Budget() {
-  const [monthKey, setMonthKey] = useState(getMonthKey());
-  const [categories, setCategories] = useState([]);
+  const now = new Date();
+  const [currentMonth, setCurrentMonth] = useState(monthKey(now));
+  const [subcategories, setSubcategories] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [settings, setSettings] = useState({ monthly_income: 0, pocket_targets: { ...DEFAULT_TARGETS } });
-  const [expandedCat, setExpandedCat] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState(null);
 
-  // Modals
-  const [showAddCat, setShowAddCat] = useState(false);
-  const [editCat, setEditCat] = useState(null);
-  const [showAddTx, setShowAddTx] = useState(false);
-  const [prefillCatId, setPrefillCatId] = useState(null);
-  const [showTargets, setShowTargets] = useState(false);
+  const [modalSubcat, setModalSubcat]     = useState(null);
+  const [modalTx, setModalTx]             = useState(false);
+  const [modalTargets, setModalTargets]   = useState(false);
+  const [txExpanded, setTxExpanded]       = useState(false);
 
-  // Inline income edit
-  const [editingIncome, setEditingIncome] = useState(false);
-  const [incomeInput, setIncomeInput] = useState('');
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [catRes, txRes, setRes] = await Promise.all([
-        window.budget.getCategories(),
-        window.budget.getTransactions(monthKey),
-        window.budget.getSettings(monthKey),
-      ]);
-      setCategories(catRes.ok ? catRes.data : []);
-      setTransactions(txRes.ok ? txRes.data : []);
-
-      if (setRes.ok && setRes.data) {
-        setSettings({ monthly_income: setRes.data.monthly_income, pocket_targets: parseTargets(setRes.data.pocket_targets) });
-      } else {
-        // Initialize from latest month or defaults
-        const latestRes = await window.budget.getLatestSettings();
-        let income = 0, targets = { ...DEFAULT_TARGETS };
-        if (latestRes.ok && latestRes.data) {
-          income = latestRes.data.monthly_income;
-          targets = parseTargets(latestRes.data.pocket_targets);
-        }
-        await window.budget.updateSettings(monthKey, income, targets);
-        setSettings({ monthly_income: income, pocket_targets: targets });
-      }
-    } catch (e) {
-      console.error('Budget load error:', e);
+  const load = useCallback(async (mk) => {
+    const [subRes, txRes, stRes] = await Promise.all([
+      window.budget.getSubcategories(),
+      window.budget.getTransactions(mk),
+      window.budget.getSettings(mk),
+    ]);
+    if (subRes?.ok)  setSubcategories(subRes.data ?? []);
+    if (txRes?.ok)   setTransactions(txRes.data ?? []);
+    if (stRes?.ok && stRes.data?.length) {
+      setSettings(stRes.data[0]);
+    } else {
+      const latest = await window.budget.getLatestSettings();
+      if (latest?.ok && latest.data) setSettings({ ...latest.data, month_key: mk });
+      else setSettings(null);
     }
-    setLoading(false);
-  }, [monthKey]);
+  }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(currentMonth); }, [currentMonth, load]);
 
-  // ── Computed values
-  const totalBudget = settings.monthly_income;
-  const spent = transactions.reduce((s, t) => s + (t.amount || 0), 0);
-  const remaining = totalBudget - spent;
-  const spentPct = totalBudget > 0 ? Math.min(100, (spent / totalBudget) * 100) : 0;
-  const daysLeft = daysRemainingInMonth(monthKey);
-  const perDay = daysLeft > 0 && remaining > 0 ? remaining / daysLeft : 0;
-  const targets = settings.pocket_targets;
+  // ── Derived ───────────────────────────────────────────────────
+  const income = parseFloat(settings?.monthly_income) || 0;
 
-  const catSpent = {};
-  for (const tx of transactions) catSpent[tx.category_id] = (catSpent[tx.category_id] || 0) + tx.amount;
+  const parsedTargets = useMemo(() => {
+    try { return JSON.parse(settings?.targets_json || '{}'); } catch(_) { return {}; }
+  }, [settings?.targets_json]);
 
-  const pocketSpent = { essentials: 0, growth: 0, stability: 0, rewards: 0 };
-  let unassignedSpent = 0;
-  for (const cat of categories) {
-    const s = catSpent[cat.id] || 0;
-    if (s <= 0) continue;
-    if (cat.pocket && pocketSpent[cat.pocket] !== undefined) pocketSpent[cat.pocket] += s;
-    else unassignedSpent += s;
+  const pocketTargetPct = pk => Number(parsedTargets[pk] ?? POCKETS[pk].default_pct);
+  const pocketTargetEur = pk => income > 0 ? income * pocketTargetPct(pk) / 100 : null;
+  const pocketSubcats   = pk => subcategories.filter(s => s.pocket === pk);
+
+  const pocketSpent = useCallback(pk => {
+    const ids = new Set(pocketSubcats(pk).map(s => s.id));
+    return transactions.filter(tx => ids.has(tx.subcategory_id)).reduce((a, tx) => a + tx.amount, 0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subcategories, transactions]);
+
+  const totalSpent = transactions.reduce((a, tx) => a + tx.amount, 0);
+  const totalLeft  = income - totalSpent;
+
+  // ── Priority banner ───────────────────────────────────────────
+  const priorityBanner = useMemo(() => {
+    if (!income) return null;
+    let worstKey = null, worstOverflow = 0;
+    let mostUnderKey = null, mostUnderDelta = 0;
+    for (const pk of POCKET_KEYS) {
+      const tgt = pocketTargetEur(pk) || 0;
+      const sp  = pocketSpent(pk);
+      if (sp - tgt > worstOverflow) { worstOverflow = sp - tgt; worstKey = pk; }
+      if (tgt - sp > mostUnderDelta) { mostUnderDelta = tgt - sp; mostUnderKey = pk; }
+    }
+    if (!worstKey) return null;
+    return { worstKey, worstOverflow, mostUnderKey, mostUnderDelta };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [income, subcategories, transactions, parsedTargets]);
+
+  // ── Handlers ──────────────────────────────────────────────────
+  async function handleSaveSub(form) {
+    const payload = {
+      name: form.name.trim(), color: form.color,
+      allocated_amount: parseFloat(form.allocated_amount) || 0,
+      pocket: form.pocket, sort_order: 0,
+    };
+    if (modalSubcat.mode === 'edit') {
+      await window.budget.updateSubcategory(modalSubcat.sub.id, payload);
+    } else {
+      await window.budget.addSubcategory(payload);
+    }
+    setModalSubcat(null);
+    load(currentMonth);
   }
 
-  async function saveIncome() {
-    const val = parseFloat(incomeInput) || 0;
-    await window.budget.updateSettings(monthKey, val, targets);
-    setSettings(s => ({ ...s, monthly_income: val }));
-    setEditingIncome(false);
+  async function handleDeleteSub(id) {
+    if (!window.confirm('Supprimer cette sous-catégorie et ses dépenses associées ?')) return;
+    await window.budget.deleteSubcategory(id);
+    load(currentMonth);
+  }
+
+  async function handleSaveTx(form) {
+    await window.budget.addTransaction({
+      subcategory_id: parseInt(form.subcategory_id),
+      amount: parseFloat(form.amount),
+      label: form.label.trim(),
+      date: form.date,
+      month_key: currentMonth,
+    });
+    setModalTx(false);
+    load(currentMonth);
   }
 
   async function handleDeleteTx(id) {
     await window.budget.deleteTransaction(id);
-    await load();
+    load(currentMonth);
   }
 
-  async function handleDeleteCat(id) {
-    if (!window.confirm('Supprimer cette catégorie et toutes ses dépenses ?')) return;
-    await window.budget.deleteCategory(id);
-    setExpandedCat(null);
-    await load();
+  async function handleSaveTargets(incomeVal, targets) {
+    await window.budget.updateSettings(currentMonth, parseFloat(incomeVal) || 0, targets);
+    setModalTargets(false);
+    load(currentMonth);
   }
 
-  if (loading) {
-    return (
-      <div style={{ padding: '40px', color: T.textTert, fontSize: '12px', letterSpacing: '2px', textAlign: 'center' }}>
-        CHARGEMENT...
-      </div>
-    );
+  function navigateMonth(dir) {
+    const [y, m] = currentMonth.split('-').map(Number);
+    const d = new Date(y, m - 1 + dir, 1);
+    setCurrentMonth(monthKey(d));
   }
+
+  // ── Render ────────────────────────────────────────────────────
+  const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const [cy, cm] = currentMonth.split('-').map(Number);
+  const isCurrentMonth = currentMonth === monthKey(now);
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '1100px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto', fontFamily: "'JetBrains Mono','Fira Code',monospace", fontSize: '14px' }}>
 
-      {/* ── HEADER ─────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '24px' }}>
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ fontSize: '11px', color: T.textTert, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '4px' }}>
-            FINANCES PERSONNELLES
-          </div>
-          <div style={{ fontSize: '22px', fontWeight: '500', color: T.text }}>Gestion du budget</div>
-          <div style={{ fontSize: '12px', color: T.textTert, marginTop: '3px' }}>Vie courante · Séparé du trading</div>
+          <div style={{ fontSize: '22px', fontWeight: 700, color: '#dde4ef', letterSpacing: '-0.5px' }}>Budget</div>
+          <div style={{ fontSize: '12px', color: '#5a6a82', marginTop: '2px', letterSpacing: '0.5px' }}>Gestion de vos finances personnelles</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button onClick={() => setMonthKey(k => offsetMonth(k, -1))} style={navBtnStyle}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <span style={{ fontSize: '13px', fontWeight: '500', color: T.text, minWidth: '140px', textAlign: 'center', textTransform: 'capitalize' }}>
-            {monthLabel(monthKey)}
+          <button onClick={() => navigateMonth(-1)} style={{ ...S.btn(), padding: '6px 10px' }}>‹</button>
+          <span style={{ fontSize: '13px', color: '#dde4ef', minWidth: '100px', textAlign: 'center' }}>
+            {MONTHS[cm - 1]} {cy}
           </span>
-          <button onClick={() => setMonthKey(k => offsetMonth(k, +1))} style={navBtnStyle}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
+          <button onClick={() => navigateMonth(1)} style={{ ...S.btn(), padding: '6px 10px' }}>›</button>
         </div>
       </div>
 
-      {/* ── HERO (4 colonnes) ──────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr', gap: '10px', marginBottom: '16px' }}>
-        {/* Restant */}
-        <div style={{
-          background: remaining >= 0 ? 'rgba(8,26,16,0.9)' : 'rgba(18,8,8,0.9)',
-          border: `1px solid ${T.border}`,
-          borderLeft: `3px solid ${remaining >= 0 ? T.success : T.danger}`,
-          borderRadius: T.rLg, padding: '14px 16px',
-        }}>
-          <div style={{ fontSize: '10px', color: T.textTert, letterSpacing: '1.5px', marginBottom: '8px' }}>RESTANT À DÉPENSER</div>
-          <div style={{ fontSize: '28px', fontWeight: '500', color: remaining >= 0 ? T.success : T.danger }}>
-            {remaining >= 0 ? '+' : ''}{fmt(remaining)} €
+      {/* ── Hero cards ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: '12px', marginBottom: '20px' }}>
+        {[
+          { label: 'Revenu mensuel', value: fmtEur(income), sub: income === 0 ? 'non défini' : null, col: '#8899bb' },
+          { label: 'Dépensé', value: fmtEur(totalSpent), sub: income > 0 ? `${Math.round((totalSpent / income) * 100)}% du budget` : null, col: totalSpent > income ? '#ff3344' : '#dde4ef' },
+          { label: 'Restant', value: fmtEur(totalLeft), sub: null, col: totalLeft < 0 ? '#ff3344' : '#00cc77', big: true },
+          { label: 'Jours restants', value: isCurrentMonth ? daysLeft() : '—', sub: isCurrentMonth ? 'avant fin de mois' : null, col: '#dde4ef' },
+        ].map(({ label, value, sub, col, big }) => (
+          <div key={label} style={{ background: '#0f1120', border: '1px solid rgba(136,153,187,0.13)', borderRadius: '10px', padding: '14px 16px' }}>
+            <div style={{ fontSize: '12px', color: '#5a6a82', marginBottom: '6px', letterSpacing: '0.5px' }}>{label}</div>
+            <div style={{ fontSize: big ? '32px' : '22px', fontWeight: 700, color: col, lineHeight: 1 }}>{value}</div>
+            {sub && <div style={{ fontSize: '11px', color: '#3a4a5a', marginTop: '4px' }}>{sub}</div>}
           </div>
-          <div style={{ fontSize: '11px', color: T.textTert, marginTop: '4px' }}>Sur {fmt(totalBudget)} € de budget</div>
-        </div>
+        ))}
+      </div>
 
-        {/* Revenus */}
-        <div onClick={() => { setIncomeInput(String(totalBudget)); setEditingIncome(true); }} title="Cliquer pour modifier"
-          style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.rLg, padding: '14px 16px', cursor: 'pointer' }}>
-          <div style={{ fontSize: '10px', color: T.textTert, letterSpacing: '1.5px', marginBottom: '8px' }}>REVENUS DU MOIS</div>
-          {editingIncome ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} onClick={e => e.stopPropagation()}>
-              <input autoFocus value={incomeInput} onChange={e => setIncomeInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') saveIncome(); if (e.key === 'Escape') setEditingIncome(false); }}
-                style={{ flex: 1, background: 'rgba(0,0,0,0.4)', border: `1px solid ${T.borderMd}`, borderRadius: '4px', color: T.text, fontSize: '18px', padding: '2px 6px', fontFamily: 'inherit', outline: 'none', width: '0' }} />
-              <button onClick={saveIncome} style={{ background: 'none', border: 'none', color: T.success, cursor: 'pointer', fontSize: '16px', padding: '0 2px' }}>✓</button>
+      {/* ── Priority banner ── */}
+      {priorityBanner && (
+        <div style={{ background: 'rgba(255,51,68,0.07)', border: '1px solid rgba(255,51,68,0.25)', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '16px' }}>⚠</span>
+          <div>
+            <div style={{ fontSize: '13px', color: '#ff6677', fontWeight: 700 }}>
+              {POCKETS[priorityBanner.worstKey].label} dépasse la cible de {fmtEur(priorityBanner.worstOverflow)}
             </div>
-          ) : (
-            <div style={{ fontSize: '22px', fontWeight: '500', color: T.success }}>{fmt(totalBudget)} €</div>
-          )}
-          <div style={{ fontSize: '11px', color: T.textTert, marginTop: '4px' }}>Revenus mensuels nets</div>
-        </div>
-
-        {/* Dépensé */}
-        <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.rLg, padding: '14px 16px' }}>
-          <div style={{ fontSize: '10px', color: T.textTert, letterSpacing: '1.5px', marginBottom: '8px' }}>DÉPENSÉ</div>
-          <div style={{ fontSize: '22px', fontWeight: '500', color: T.text }}>{fmt(spent)} €</div>
-          <div style={{ fontSize: '11px', color: T.textTert, marginTop: '4px' }}>{spentPct.toFixed(0)} % du budget</div>
-        </div>
-
-        {/* Jours restants */}
-        <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.rLg, padding: '14px 16px' }}>
-          <div style={{ fontSize: '10px', color: T.textTert, letterSpacing: '1.5px', marginBottom: '8px' }}>JOURS RESTANTS</div>
-          <div style={{ fontSize: '22px', fontWeight: '500', color: T.text }}>{daysLeft} j</div>
-          <div style={{ fontSize: '11px', color: T.textTert, marginTop: '4px' }}>
-            {perDay > 0 ? `${fmt(perDay)} €/jour dispo` : remaining <= 0 ? 'Budget dépassé' : '—'}
+            {priorityBanner.mostUnderKey && priorityBanner.mostUnderKey !== priorityBanner.worstKey && (
+              <div style={{ fontSize: '12px', color: '#5a6a82', marginTop: '2px' }}>
+                Suggestion : réduire {POCKETS[priorityBanner.worstKey].label} · la poche {POCKETS[priorityBanner.mostUnderKey].label} dispose encore de {fmtEur(priorityBanner.mostUnderDelta)}
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* ── RÉPARTITION GLOBALE ─────────────────────────────── */}
-      <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.rLg, padding: '14px 18px', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <span style={{ fontSize: '11px', color: T.textTert, letterSpacing: '1.5px' }}>RÉPARTITION DU BUDGET</span>
-          <span style={{ fontSize: '12px', color: spentPct > 100 ? T.danger : T.textSub }}>{spentPct.toFixed(0)} % utilisé</span>
+      {/* ── Allocation par poche ── */}
+      <div style={{ background: '#0f1120', border: '1px solid rgba(136,153,187,0.13)', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#8899bb', letterSpacing: '1px' }}>ALLOCATION PAR POCHE</div>
+          <button onClick={() => setModalTargets(true)} style={{ ...S.btn(), padding: '5px 12px', fontSize: '11px' }}>Configurer</button>
         </div>
-        <div style={{ height: '10px', borderRadius: '5px', background: 'rgba(136,153,187,0.10)', overflow: 'hidden', display: 'flex' }}>
-          {categories.map(cat => {
-            const s = catSpent[cat.id] || 0;
-            if (s <= 0 || totalBudget <= 0) return null;
-            const w = Math.min(100, (s / totalBudget) * 100);
-            return <div key={cat.id} title={`${cat.name}: ${fmt(s)} €`}
-              style={{ width: `${w}%`, background: cat.color, flexShrink: 0 }} />;
-          })}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '11px', color: T.textTert }}>
-          <span>0 €</span>
-          <span style={{ color: T.textSub }}>{fmt(spent)} € sur {fmt(totalBudget)} €</span>
-          <span>{fmt(totalBudget)} €</span>
-        </div>
-      </div>
-
-      {/* ── MODULE 50/25/15/10 ──────────────────────────────── */}
-      <div style={{ border: `1px solid ${T.border}`, borderRadius: T.rLg, overflow: 'hidden', marginBottom: '16px' }}>
-        {/* Header */}
-        <div style={{ background: T.bg2, padding: '11px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${T.border}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.textTert} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/>
-            </svg>
-            <span style={{ fontSize: '11px', color: T.textTert, letterSpacing: '1.5px' }}>
-              ALLOCATION {POCKET_KEYS.map(k => targets[k]).join('/')}
-            </span>
-          </div>
-          <button onClick={() => setShowTargets(true)} style={actionBtnStyle}>Modifier les cibles</button>
-        </div>
-
-        {/* 4 pocket cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
-          {POCKET_KEYS.map((key, i) => {
-            const p = POCKETS[key];
-            const target = targets[key] || 0;
-            const actual = spent > 0 ? (pocketSpent[key] / spent) * 100 : 0;
-            const delta = actual - target;
-            const isOver  = delta > 3;
-            const isUnder = delta < -3;
-            const badgeColor = isOver ? T.danger : isUnder ? T.success : T.textTert;
-            const badgeBg    = isOver ? 'rgba(226,75,74,0.12)' : isUnder ? 'rgba(29,158,117,0.12)' : 'rgba(136,153,187,0.08)';
-            const deltaLabel = Math.abs(delta) < 3 ? '✓' : `${isOver ? '+' : '-'}${Math.abs(delta).toFixed(0)}pt`;
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {POCKET_KEYS.map(pk => {
+            const tgtPct = pocketTargetPct(pk);
+            const tgtEur = pocketTargetEur(pk);
+            const sp = pocketSpent(pk);
+            const pct = tgtEur > 0 ? Math.min((sp / tgtEur) * 100, 100) : 0;
+            const over = tgtEur && sp > tgtEur;
+            const { color, label } = POCKETS[pk];
             return (
-              <div key={key} style={{
-                background: p.bg, borderLeft: `3px solid ${p.color}`,
-                borderRight: i < 3 ? `1px solid ${T.border}` : 'none',
-                padding: '12px 14px',
-              }}>
-                <div style={{ fontSize: '9px', color: p.color, letterSpacing: '1.5px', fontWeight: '600', marginBottom: '4px' }}>
-                  {p.label.toUpperCase()}
+              <div key={pk}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                  <span style={{ fontSize: '12px', color }}>{label}</span>
+                  <span style={{ fontSize: '12px', color: '#5a6a82' }}>
+                    <span style={{ color: over ? '#ff3344' : '#dde4ef' }}>{fmtEur(sp)}</span>
+                    {tgtEur !== null && <span style={{ color: '#3a4a5a' }}> / {fmtEur(tgtEur)} ({tgtPct}%)</span>}
+                  </span>
                 </div>
-                <div style={{ fontSize: '18px', fontWeight: '500', color: T.text }}>{fmt(pocketSpent[key])} €</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px' }}>
-                  <span style={{ fontSize: '11px', color: T.textTert }}>Cible {target} %</span>
-                  <span style={{ fontSize: '9px', background: badgeBg, color: badgeColor, padding: '1px 4px', borderRadius: '3px', fontWeight: '700' }}>{deltaLabel}</span>
+                <div style={{ height: '6px', background: 'rgba(136,153,187,0.09)', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: over ? '#ff3344' : color, borderRadius: '3px', transition: 'width 0.4s' }} />
                 </div>
-                <div style={{ fontSize: '10px', color: T.textTert, marginTop: '2px' }}>Réel : {actual.toFixed(1)} %</div>
               </div>
             );
           })}
         </div>
-
-        {/* Stacked bar */}
-        <div style={{ padding: '12px 16px', borderTop: `1px solid ${T.border}` }}>
-          <div style={{ position: 'relative', height: '14px', borderRadius: '7px', background: 'rgba(136,153,187,0.08)', overflow: 'hidden', display: 'flex' }}>
-            {POCKET_KEYS.map(key => {
-              const s = pocketSpent[key];
-              if (s <= 0 || spent <= 0) return null;
-              return <div key={key} style={{ width: `${(s / spent) * 100}%`, background: POCKETS[key].color, flexShrink: 0 }} />;
-            })}
-            {/* Target markers */}
-            {(() => {
-              let cum = 0;
-              return POCKET_KEYS.slice(0, -1).map(key => {
-                cum += targets[key] || 0;
-                return (
-                  <div key={key} style={{
-                    position: 'absolute', left: `${cum}%`, top: 0, bottom: 0,
-                    width: '2px', background: 'rgba(255,255,255,0.25)', transform: 'translateX(-50%)',
-                  }} />
-                );
-              });
-            })()}
-          </div>
-          <div style={{ display: 'flex', gap: '10px', marginTop: '8px', flexWrap: 'wrap' }}>
-            {POCKET_KEYS.map(key => (
-              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: POCKETS[key].color }} />
-                <span style={{ fontSize: '10px', color: T.textTert }}>{POCKETS[key].label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {unassignedSpent > 0 && (
-          <div style={{ padding: '8px 16px', background: 'rgba(186,117,23,0.08)', borderTop: `1px solid rgba(186,117,23,0.20)`, fontSize: '11px', color: T.warn }}>
-            ⚠ {fmt(unassignedSpent)} € non assignés à une poche — édite les catégories pour les assigner
-          </div>
-        )}
       </div>
 
-      {/* ── CATÉGORIES ─────────────────────────────────────── */}
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <span style={{ fontSize: '11px', color: T.textTert, letterSpacing: '1.5px' }}>CATÉGORIES</span>
-          <button onClick={() => { setEditCat(null); setShowAddCat(true); }} style={actionBtnStyle}>
-            + Ajouter une catégorie
-          </button>
+      {/* ── Sous-catégories accordion ── */}
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#8899bb', letterSpacing: '1px' }}>SOUS-CATÉGORIES</div>
+          <button onClick={() => setModalSubcat({ mode: 'add', pocket: 'essentials' })}
+            style={{ ...S.btn(), padding: '5px 12px', fontSize: '11px' }}>+ Ajouter</button>
         </div>
-
-        {categories.length === 0 && (
-          <div style={{ padding: '24px', textAlign: 'center', color: T.textTert, fontSize: '12px', border: `1px dashed ${T.border}`, borderRadius: T.rLg }}>
-            Aucune catégorie. Créez votre première catégorie de dépenses.
-          </div>
-        )}
-
-        {categories.map(cat => {
-          const s = catSpent[cat.id] || 0;
-          const pct = cat.allocated_amount > 0 ? Math.min(100, (s / cat.allocated_amount) * 100) : 0;
-          const isOver = s > cat.allocated_amount && cat.allocated_amount > 0;
-          const isExpanded = expandedCat === cat.id;
-          const catTxs = transactions.filter(t => t.category_id === cat.id);
-          const pocket = cat.pocket ? POCKETS[cat.pocket] : null;
-
-          return (
-            <div key={cat.id} style={{ border: `1px solid ${T.border}`, borderRadius: T.rLg, marginBottom: '6px', overflow: 'hidden' }}>
-              <div onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
-                style={{ padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: cat.color, flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '13px', color: T.text }}>{cat.name}</span>
-                    {pocket && (
-                      <span style={{ fontSize: '9px', background: `${pocket.color}22`, color: pocket.color, padding: '1px 5px', borderRadius: '3px', fontWeight: '600' }}>
-                        {pocket.label}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ height: '5px', borderRadius: '3px', background: 'rgba(136,153,187,0.10)', marginTop: '6px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${pct}%`, background: isOver ? T.danger : cat.color, borderRadius: '3px' }} />
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0, marginRight: '4px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '500', color: isOver ? T.danger : T.text }}>{fmt(s)} €</div>
-                  <div style={{ fontSize: '10px', color: T.textTert }}>/ {fmt(cat.allocated_amount)} €</div>
-                </div>
-                <div style={{ display: 'flex', gap: '2px', flexShrink: 0, alignItems: 'center' }}>
-                  <button onClick={e => { e.stopPropagation(); setEditCat(cat); setShowAddCat(true); }}
-                    style={iconBtnStyle} title="Modifier">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                  </button>
-                  <button onClick={e => { e.stopPropagation(); handleDeleteCat(cat.id); }}
-                    style={iconBtnStyle} title="Supprimer">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-                  </button>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.textTert} strokeWidth="2" strokeLinecap="round"
-                    style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', marginLeft: '2px' }}>
-                    <polyline points="6 9 12 15 18 9"/>
-                  </svg>
-                </div>
-              </div>
-
-              {isExpanded && (
-                <div style={{ borderTop: `1px solid ${T.border}`, padding: '10px 14px', background: 'rgba(0,0,0,0.15)' }}>
-                  {catTxs.length === 0 ? (
-                    <div style={{ fontSize: '11px', color: T.textTert, textAlign: 'center', padding: '8px' }}>
-                      Aucune dépense ce mois
-                    </div>
-                  ) : (
-                    catTxs.map(tx => (
-                      <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 0', borderBottom: `1px solid rgba(136,153,187,0.06)` }}>
-                        <span style={{ fontSize: '12px', color: T.text, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.label}</span>
-                        <span style={{ fontSize: '11px', color: T.textTert, flexShrink: 0 }}>{tx.date?.slice(5)}</span>
-                        <span style={{ fontSize: '13px', color: T.danger, fontWeight: '500', flexShrink: 0 }}>−{fmt(tx.amount)} €</span>
-                        <button onClick={() => handleDeleteTx(tx.id)}
-                          style={{ background: 'none', border: 'none', color: T.textTert, cursor: 'pointer', fontSize: '11px', padding: '0 2px', lineHeight: 1, flexShrink: 0 }}>✕</button>
-                      </div>
-                    ))
-                  )}
-                  <button onClick={() => { setPrefillCatId(cat.id); setShowAddTx(true); }}
-                    style={{ ...actionBtnStyle, marginTop: '8px' }}>
-                    + Ajouter une dépense ici
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {POCKET_KEYS.map(pk => (
+          <PocketAccordion
+            key={pk}
+            pocketKey={pk}
+            subcategories={pocketSubcats(pk)}
+            transactions={transactions}
+            targetEur={pocketTargetEur(pk)}
+            targetPct={pocketTargetPct(pk)}
+            onAddSub={pocket => setModalSubcat({ mode: 'add', pocket })}
+            onEditSub={sub => setModalSubcat({ mode: 'edit', sub })}
+            onDeleteSub={handleDeleteSub}
+          />
+        ))}
       </div>
 
-      {/* ── BOTTOM ROW ─────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+      {/* ── Donut ── */}
+      {subcategories.length > 0 && (
+        <div style={{ background: '#0f1120', border: '1px solid rgba(136,153,187,0.13)', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#8899bb', letterSpacing: '1px', marginBottom: '16px' }}>RÉPARTITION DES DÉPENSES</div>
+          <DonutChart subcategories={subcategories} transactions={transactions} />
+        </div>
+      )}
 
-        {/* Dernières dépenses */}
-        <div style={{ border: `1px solid ${T.border}`, borderRadius: T.rLg, overflow: 'hidden' }}>
-          <div style={{ padding: '11px 16px', background: T.bg2, borderBottom: `1px solid ${T.border}`, fontSize: '11px', color: T.textTert, letterSpacing: '1.5px' }}>
-            DERNIÈRES DÉPENSES
+      {/* ── Transactions ── */}
+      <div style={{ background: '#0f1120', border: '1px solid rgba(136,153,187,0.13)', borderRadius: '12px', padding: '16px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#8899bb', letterSpacing: '1px' }}>DÉPENSES</div>
+            <span style={{ fontSize: '11px', color: '#3a4a5a' }}>({transactions.length})</span>
           </div>
-          <div style={{ padding: '10px 14px' }}>
-            {transactions.length === 0 ? (
-              <div style={{ fontSize: '12px', color: T.textTert, textAlign: 'center', padding: '16px' }}>Aucune dépense ce mois</div>
-            ) : (
-              transactions.slice(0, 8).map(tx => (
-                <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', borderBottom: `1px solid rgba(136,153,187,0.06)` }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: tx.category_color || '#8899bb', flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '12px', color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.label}</div>
-                    <div style={{ fontSize: '10px', color: T.textTert }}>{tx.category_name}</div>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: '12px', color: T.danger, fontWeight: '500' }}>−{fmt(tx.amount)} €</div>
-                    <div style={{ fontSize: '10px', color: T.textTert }}>{tx.date?.slice(5)}</div>
-                  </div>
-                </div>
-              ))
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {transactions.length > 5 && (
+              <button onClick={() => setTxExpanded(e => !e)} style={{ ...S.btn(), padding: '5px 12px', fontSize: '11px' }}>
+                {txExpanded ? 'Réduire' : 'Tout voir'}
+              </button>
             )}
-            <button onClick={() => { setPrefillCatId(null); setShowAddTx(true); }}
-              style={{ ...actionBtnStyle, width: '100%', marginTop: '10px', justifyContent: 'center' }}>
-              + Ajouter une dépense
+            <button onClick={() => subcategories.length > 0 && setModalTx(true)}
+              style={{ ...S.btn('#00cc77'), padding: '5px 12px', fontSize: '11px' }}>
+              + Dépense
             </button>
           </div>
         </div>
-
-        {/* Donut + légende */}
-        <div style={{ border: `1px solid ${T.border}`, borderRadius: T.rLg, overflow: 'hidden' }}>
-          <div style={{ padding: '11px 16px', background: T.bg2, borderBottom: `1px solid ${T.border}`, fontSize: '11px', color: T.textTert, letterSpacing: '1.5px' }}>
-            RÉPARTITION VISUELLE
+        {transactions.length === 0 ? (
+          <div style={{ fontSize: '12px', color: '#3a4a5a', textAlign: 'center', padding: '20px 0' }}>
+            Aucune dépense pour {MONTHS[cm - 1]} {cy}
           </div>
-          <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <DonutChart
-              segments={categories.filter(c => (catSpent[c.id] || 0) > 0).map(c => ({ color: c.color, value: catSpent[c.id], label: c.name }))}
-              total={spent}
-            />
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
-              {categories.filter(c => (catSpent[c.id] || 0) > 0).length === 0 && (
-                <div style={{ fontSize: '11px', color: T.textTert }}>Aucune dépense</div>
-              )}
-              {categories.filter(c => (catSpent[c.id] || 0) > 0).map(cat => {
-                const s = catSpent[cat.id];
-                const pct = spent > 0 ? (s / spent) * 100 : 0;
-                return (
-                  <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: cat.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: '11px', color: T.textSub, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</span>
-                    <span style={{ fontSize: '11px', color: T.textTert, flexShrink: 0 }}>{pct.toFixed(0)} %</span>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+            {(txExpanded ? transactions : transactions.slice(0, 5)).map(tx => (
+              <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 4px', borderTop: '1px solid rgba(136,153,187,0.09)' }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: tx.subcategory_color || '#3a4a5a', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', color: '#dde4ef', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {tx.label || tx.subcategory_name || '—'}
                   </div>
-                );
-              })}
-            </div>
+                  <div style={{ fontSize: '11px', color: '#3a4a5a' }}>
+                    {tx.subcategory_name}{tx.subcategory_name && ' · '}{tx.date}
+                  </div>
+                </div>
+                <div style={{ fontSize: '13px', color: '#dde4ef', fontWeight: 700, flexShrink: 0 }}>{fmtEur(tx.amount)}</div>
+                <button onClick={() => handleDeleteTx(tx.id)}
+                  style={{ background: 'none', border: 'none', color: '#3a4a5a', cursor: 'pointer', padding: '2px 4px', fontSize: '12px' }}>✕</button>
+              </div>
+            ))}
+            {!txExpanded && transactions.length > 5 && (
+              <div style={{ fontSize: '11px', color: '#3a4a5a', textAlign: 'center', paddingTop: '8px' }}>
+                +{transactions.length - 5} dépenses masquées
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
 
-      {/* ── MODALS ──────────────────────────────────────────── */}
-      {showAddCat && (
-        <CategoryModal
-          initial={editCat}
-          onClose={() => { setShowAddCat(false); setEditCat(null); }}
-          onSave={async data => {
-            if (editCat) await window.budget.updateCategory(editCat.id, data);
-            else await window.budget.addCategory(data);
-            setShowAddCat(false); setEditCat(null);
-            await load();
-          }}
+      {/* ── Modals ── */}
+      {modalSubcat && (
+        <SubcategoryModal
+          initial={modalSubcat.mode === 'edit' ? modalSubcat.sub : { pocket: modalSubcat.pocket }}
+          onSave={handleSaveSub}
+          onClose={() => setModalSubcat(null)}
         />
       )}
-
-      {showAddTx && categories.length > 0 && (
-        <TransactionModal
-          categories={categories}
-          prefillCatId={prefillCatId}
-          monthKey={monthKey}
-          onClose={() => { setShowAddTx(false); setPrefillCatId(null); }}
-          onSave={async data => {
-            await window.budget.addTransaction(data);
-            setShowAddTx(false); setPrefillCatId(null);
-            await load();
-          }}
-        />
+      {modalTx && subcategories.length > 0 && (
+        <TransactionModal subcategories={subcategories} onSave={handleSaveTx} onClose={() => setModalTx(false)} />
       )}
-
-      {showTargets && (
-        <TargetsModal
-          targets={targets}
-          onClose={() => setShowTargets(false)}
-          onSave={async newTargets => {
-            await window.budget.updateSettings(monthKey, totalBudget, newTargets);
-            setSettings(s => ({ ...s, pocket_targets: newTargets }));
-            setShowTargets(false);
-          }}
-        />
+      {modalTargets && (
+        <TargetsModal settings={settings} onSave={handleSaveTargets} onClose={() => setModalTargets(false)} />
       )}
     </div>
   );
 }
-
-// ── Module-level style constants ─────────────────────────────
-const navBtnStyle = {
-  width: '28px', height: '28px', borderRadius: T.rMd,
-  background: 'rgba(136,153,187,0.06)', border: `1px solid ${T.border}`,
-  color: T.textSub, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-  fontFamily: 'inherit', padding: 0,
-};
-
-const actionBtnStyle = {
-  background: 'rgba(136,153,187,0.06)', border: `1px solid ${T.border}`,
-  borderRadius: T.rSm, color: T.textSub, fontSize: '11px', padding: '5px 10px',
-  cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: '4px',
-};
-
-const iconBtnStyle = {
-  background: 'none', border: 'none', color: T.textTert,
-  cursor: 'pointer', padding: '3px 4px', display: 'flex', alignItems: 'center',
-  borderRadius: '4px', transition: 'color 0.15s',
-};
-
-const modalStyle = {
-  background: '#0d0f1a',
-  border: `1px solid rgba(136,153,187,0.20)`,
-  borderRadius: '12px',
-  width: '380px',
-  maxHeight: '85vh',
-  overflowY: 'auto',
-  boxShadow: '0 24px 64px rgba(0,0,0,0.85)',
-};
-
-const labelStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '5px',
-  fontSize: '11px',
-  color: T.textTert,
-};
-
-const inputStyle = {
-  background: 'rgba(0,0,0,0.3)',
-  border: `1px solid ${T.border}`,
-  borderRadius: T.rSm,
-  color: T.text,
-  fontSize: '13px',
-  padding: '7px 10px',
-  fontFamily: 'inherit',
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-};
-
-const saveBtnStyle = {
-  background: 'rgba(136,153,187,0.15)',
-  border: `1px solid rgba(136,153,187,0.35)`,
-  borderRadius: T.rSm,
-  color: T.text,
-  fontSize: '12px',
-  padding: '7px 14px',
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-  fontWeight: '600',
-};
-
-const cancelBtnStyle = {
-  background: 'transparent',
-  border: `1px solid ${T.border}`,
-  borderRadius: T.rSm,
-  color: T.textTert,
-  fontSize: '12px',
-  padding: '7px 14px',
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-};

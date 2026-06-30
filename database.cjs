@@ -153,6 +153,16 @@ function initSchema(db) {
       monthly_income REAL NOT NULL DEFAULT 0,
       pocket_targets TEXT NOT NULL DEFAULT '{"essentials":50,"growth":25,"stability":15,"rewards":10}'
     );
+
+    CREATE TABLE IF NOT EXISTS budget_subcategories (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      pocket           TEXT NOT NULL CHECK(pocket IN ('essentials','growth','stability','rewards')),
+      name             TEXT NOT NULL,
+      color            TEXT NOT NULL,
+      allocated_amount REAL NOT NULL DEFAULT 0,
+      sort_order       INTEGER DEFAULT 0,
+      created_at       TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Migrations for existing DBs
@@ -175,6 +185,7 @@ function initSchema(db) {
     "ALTER TABLE weekly_reports ADD COLUMN patterns TEXT",
     "ALTER TABLE weekly_reports ADD COLUMN recommandation TEXT",
     "ALTER TABLE weekly_reports ADD COLUMN paragraphes TEXT",
+    "ALTER TABLE budget_transactions ADD COLUMN subcategory_id INTEGER",
   ];
   for (const sql of migrations) { try { db.exec(sql); } catch (_) {} }
 }
@@ -576,41 +587,102 @@ function saveWeeklyReport(db, dbPath, report) {
   return getWeeklyReport(db, report.week_start);
 }
 
-// ── BUDGET CATEGORIES ─────────────────────────────────────────
+// ── BUDGET CATEGORIES (legacy, conservée pour rollback) ───────
 function getBudgetCategories(db) {
   return getAll(db, 'SELECT * FROM budget_categories ORDER BY sort_order, created_at');
 }
-function addBudgetCategory(db, dbPath, cat) {
-  runQ(db, dbPath, `INSERT INTO budget_categories (name, color, allocated_amount, pocket, sort_order) VALUES (:name, :color, :allocated_amount, :pocket, :sort_order)`, {
-    ':name': cat.name, ':color': cat.color, ':allocated_amount': cat.allocated_amount ?? 0,
-    ':pocket': cat.pocket ?? null, ':sort_order': cat.sort_order ?? 0,
-  });
-  return getOne(db, 'SELECT * FROM budget_categories WHERE id=?', [lastId(db)]);
+
+// ── BUDGET SUBCATEGORIES ───────────────────────────────────────
+const VALID_POCKETS = new Set(['essentials', 'growth', 'stability', 'rewards']);
+
+function getBudgetSubcategories(db) {
+  return getAll(db, 'SELECT * FROM budget_subcategories ORDER BY pocket, sort_order, created_at');
 }
-function updateBudgetCategory(db, dbPath, id, cat) {
-  runQ(db, dbPath, `UPDATE budget_categories SET name=:name, color=:color, allocated_amount=:allocated_amount, pocket=:pocket WHERE id=:id`, {
-    ':name': cat.name, ':color': cat.color, ':allocated_amount': cat.allocated_amount ?? 0,
-    ':pocket': cat.pocket ?? null, ':id': id,
+function addBudgetSubcategory(db, dbPath, sub) {
+  const pocket = VALID_POCKETS.has(sub.pocket) ? sub.pocket : 'essentials';
+  runQ(db, dbPath, `INSERT INTO budget_subcategories (name, color, allocated_amount, pocket, sort_order) VALUES (:name, :color, :allocated_amount, :pocket, :sort_order)`, {
+    ':name': sub.name, ':color': sub.color, ':allocated_amount': sub.allocated_amount ?? 0,
+    ':pocket': pocket, ':sort_order': sub.sort_order ?? 0,
   });
-  return getOne(db, 'SELECT * FROM budget_categories WHERE id=?', [id]);
+  return getOne(db, 'SELECT * FROM budget_subcategories WHERE id=?', [lastId(db)]);
 }
-function deleteBudgetCategory(db, dbPath, id) {
-  runQ(db, dbPath, 'DELETE FROM budget_transactions WHERE category_id=?', [id]);
-  runQ(db, dbPath, 'DELETE FROM budget_categories WHERE id=?', [id]);
+function updateBudgetSubcategory(db, dbPath, id, sub) {
+  const pocket = VALID_POCKETS.has(sub.pocket) ? sub.pocket : 'essentials';
+  runQ(db, dbPath, `UPDATE budget_subcategories SET name=:name, color=:color, allocated_amount=:allocated_amount, pocket=:pocket WHERE id=:id`, {
+    ':name': sub.name, ':color': sub.color, ':allocated_amount': sub.allocated_amount ?? 0,
+    ':pocket': pocket, ':id': id,
+  });
+  return getOne(db, 'SELECT * FROM budget_subcategories WHERE id=?', [id]);
+}
+function deleteBudgetSubcategory(db, dbPath, id) {
+  runQ(db, dbPath, 'DELETE FROM budget_transactions WHERE subcategory_id=?', [id]);
+  runQ(db, dbPath, 'DELETE FROM budget_subcategories WHERE id=?', [id]);
+}
+
+// ── BUDGET DATA MIGRATION (one-shot, budget_categories → budget_subcategories) ──
+function migrateBudgetData(db, dbPath) {
+  try {
+    const oldExists = getOne(db, "SELECT name FROM sqlite_master WHERE type='table' AND name='budget_categories'");
+    if (!oldExists) return;
+    const newCount = (getOne(db, 'SELECT COUNT(*) as n FROM budget_subcategories') ?? { n: 0 }).n;
+    if (newCount > 0) return;
+    const oldCats = getAll(db, 'SELECT * FROM budget_categories ORDER BY id');
+    if (oldCats.length === 0) return;
+
+    const idMap = {};
+    const defaultedCats = [];
+    const pocketCount = {};
+
+    for (const cat of oldCats) {
+      const pocket = VALID_POCKETS.has(cat.pocket) ? cat.pocket : 'essentials';
+      if (!VALID_POCKETS.has(cat.pocket)) defaultedCats.push(cat.name);
+      runQ(db, dbPath, `INSERT INTO budget_subcategories (name, color, allocated_amount, pocket, sort_order) VALUES (:name, :color, :allocated_amount, :pocket, :sort_order)`, {
+        ':name': cat.name, ':color': cat.color, ':allocated_amount': cat.allocated_amount ?? 0,
+        ':pocket': pocket, ':sort_order': cat.sort_order ?? 0,
+      });
+      const newId = lastId(db);
+      idMap[cat.id] = newId;
+      pocketCount[pocket] = (pocketCount[pocket] || 0) + 1;
+    }
+
+    const txs = getAll(db, 'SELECT id, category_id FROM budget_transactions');
+    let migratedTx = 0;
+    for (const tx of txs) {
+      const newSubId = idMap[tx.category_id];
+      if (newSubId) {
+        runQ(db, dbPath, 'UPDATE budget_transactions SET subcategory_id=? WHERE id=?', [newSubId, tx.id]);
+        migratedTx++;
+      }
+    }
+
+    console.log('[Budget Migration] Sous-catégories créées par poche:', JSON.stringify(pocketCount));
+    console.log(`[Budget Migration] Transactions migrées : ${migratedTx}`);
+    if (defaultedCats.length > 0) {
+      console.warn('[Budget Migration] ⚠ Catégories migrées vers essentials par défaut :', defaultedCats.join(', '));
+    }
+  } catch(e) {
+    console.error('[Budget Migration] Erreur :', e.message);
+  }
 }
 
 // ── BUDGET TRANSACTIONS ────────────────────────────────────────
 function getBudgetTransactions(db, monthKey) {
-  return getAll(db, `SELECT bt.*, bc.name as category_name, bc.color as category_color
+  return getAll(db, `
+    SELECT bt.*,
+      bs.name  as subcategory_name,
+      bs.color as subcategory_color,
+      bs.pocket as subcategory_pocket
     FROM budget_transactions bt
-    LEFT JOIN budget_categories bc ON bt.category_id = bc.id
+    LEFT JOIN budget_subcategories bs ON bt.subcategory_id = bs.id
     WHERE bt.month_key = ?
-    ORDER BY bt.date DESC, bt.id DESC`, [monthKey]);
+    ORDER BY bt.date DESC, bt.id DESC
+  `, [monthKey]);
 }
 function addBudgetTransaction(db, dbPath, tx) {
-  runQ(db, dbPath, `INSERT INTO budget_transactions (category_id, amount, label, date, month_key) VALUES (:category_id, :amount, :label, :date, :month_key)`, {
-    ':category_id': tx.category_id, ':amount': tx.amount, ':label': tx.label,
-    ':date': tx.date, ':month_key': tx.month_key,
+  const subId = tx.subcategory_id ?? tx.category_id;
+  runQ(db, dbPath, `INSERT INTO budget_transactions (category_id, subcategory_id, amount, label, date, month_key) VALUES (:category_id, :subcategory_id, :amount, :label, :date, :month_key)`, {
+    ':category_id': subId, ':subcategory_id': subId,
+    ':amount': tx.amount, ':label': tx.label, ':date': tx.date, ':month_key': tx.month_key,
   });
   return getOne(db, 'SELECT * FROM budget_transactions WHERE id=?', [lastId(db)]);
 }
@@ -669,7 +741,9 @@ module.exports = {
   getMentalReport, getMentalReportsRange, saveMentalReport,
   getWeeklyReport, saveWeeklyReport,
   getAiMessages, insertAiMessage, clearAiConversations,
-  getBudgetCategories, addBudgetCategory, updateBudgetCategory, deleteBudgetCategory,
+  migrateBudgetData,
+  getBudgetCategories,
+  getBudgetSubcategories, addBudgetSubcategory, updateBudgetSubcategory, deleteBudgetSubcategory,
   getBudgetTransactions, addBudgetTransaction, deleteBudgetTransaction,
   getBudgetSettings, getLatestBudgetSettings, updateBudgetSettings,
 };
