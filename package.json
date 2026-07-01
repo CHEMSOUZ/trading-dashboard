@@ -1,6 +1,6 @@
 {
   "name": "trading-dashboard",
-  "version": "1.9.38",
+  "version": "1.9.39",
   "private": true,
   "main": "electron.cjs",
   "scripts": {
@@ -45,6 +45,7 @@
       "electron.cjs",
       "preload.cjs",
       "database.cjs",
+      "dailyMentalReport.cjs",
       "accounts.cjs",
       "market_db.cjs",
       "demo.cjs",
