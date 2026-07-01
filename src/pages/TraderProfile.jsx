@@ -553,6 +553,22 @@ function splitLegacyBlocks(text) {
   };
 }
 
+// Ligne de pills quotidiennes du bilan hebdomadaire — un jour par pill, couleur du
+// trait (daily_mental_reports prioritaire sur l'ancien mental_reports, cf. Partie 6),
+// pill grise "?" si des trades existent sans aucune analyse, jour omis si ni l'un ni l'autre.
+function buildWeekPills(weekStart, tradeStats, dailyMentalByDate, calendar) {
+  const pills = [];
+  for (let i = 0; i < 7; i++) {
+    const date = addDaysStr(weekStart, i);
+    const stats = tradeStats[date];
+    const hasTrades = stats?.count > 0;
+    const trait = dailyMentalByDate[date]?.trait ?? calendar.find(e => e.date === date)?.emotion ?? null;
+    if (!hasTrades && !trait) continue;
+    pills.push({ date, dayLabel: WEEKDAY_LABELS[i], pnl: stats?.pnl ?? 0, trait, unknown: hasTrades && !trait });
+  }
+  return pills;
+}
+
 export default function TraderProfile() {
   const [loading,       setLoading]       = useState(true);
   const [isDemoMode,    setIsDemoMode]    = useState(false);
@@ -1019,6 +1035,30 @@ export default function TraderProfile() {
                   <div style={{ fontSize:'15px', fontWeight:'500', color:verdictColor }}>{weeklyReport.verdict_label || weeklyReport.trend}</div>
                 </div>
               )}
+
+              {/* Pills quotidiennes de la semaine */}
+              {weeklyReport && (() => {
+                const pills = buildWeekPills(weeklyReport.weekStart, tradeStats, dailyMentalByDate, calendar);
+                if (pills.length === 0) return null;
+                return (
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', padding:'10px 16px', borderBottom:`0.5px solid ${PT.border}`, background:PT.surfSecondary }}>
+                    {pills.map(p => p.unknown ? (
+                      <span key={p.date} style={{ display:'flex', alignItems:'center', gap:'4px', borderRadius:'99px', padding:'3px 10px', fontSize:'11px', background:'rgba(136,153,187,0.08)', color:PT.textTertiary }}>
+                        {p.dayLabel} <span style={{ fontWeight:'700' }}>?</span>
+                      </span>
+                    ) : (() => {
+                      const color = EMOTION_COLORS[p.trait] ?? PT.textTertiary;
+                      const rgb   = emotionRgb(color);
+                      return (
+                        <span key={p.date} style={{ display:'flex', alignItems:'center', gap:'4px', borderRadius:'99px', padding:'3px 10px', fontSize:'11px', background:`rgba(${rgb},0.14)`, color }}>
+                          <ToneIcon tone={emotionTone(p.trait)} color={color} size={11} />
+                          {p.dayLabel} {fmt(p.pnl, true)}
+                        </span>
+                      );
+                    })())}
+                  </div>
+                );
+              })()}
 
               {/* Patterns identifiés */}
               {weeklyReport && weeklyReport.patterns.length > 0 && (

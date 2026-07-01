@@ -33,6 +33,12 @@ const ACCOUNT_CONFIGS = {
   topstep_live_50k:  { phase:'live', size:50000,  dailyLoss:1000, winDaysNeeded:5, winDayMin:150 },
   topstep_live_100k: { phase:'live', size:100000, dailyLoss:2000, winDaysNeeded:5, winDayMin:150 },
   topstep_live_150k: { phase:'live', size:150000, dailyLoss:3000, winDaysNeeded:5, winDayMin:150 },
+  // Live — pas de daily loss limit connue pour LucidFlex dans l'app (null partout
+  // ailleurs, ex. ACCOUNT_RULES d'AccountSelect.jsx) : size repris de lucid_funded_*,
+  // dailyLoss volontairement omis plutôt qu'inventé (section masquée par le composant).
+  lucid_live_50k:    { phase:'live', size:50000,  winDaysNeeded:5, winDayMin:150 },
+  lucid_live_100k:   { phase:'live', size:100000, winDaysNeeded:5, winDayMin:150 },
+  lucid_live_150k:   { phase:'live', size:150000, winDaysNeeded:5, winDayMin:150 },
 };
 const DEFAULT_CFG = ACCOUNT_CONFIGS['topstep_50k'];
 
@@ -255,7 +261,7 @@ function MLLSection({ mll, size, maxLoss, balance, isLocked, postPayout, phaseLa
   );
 }
 
-function PayoutBox() {
+function PayoutBox({ account }) {
   return (
     <div style={{ background:'rgba(240,192,32,0.05)', border:'1px solid rgba(240,192,32,0.18)', borderRadius:'6px', padding:'12px 16px', display:'flex', gap:'14px', alignItems:'center', flexWrap:'wrap' }}>
       <span style={{ fontSize:'18px' }}>💸</span>
@@ -265,7 +271,7 @@ function PayoutBox() {
           <span>Minimum : <strong style={{ color:'#f0c020' }}>125$</strong></span>
           <span>Répartition : <strong style={{ color:'#f0c020' }}>90% / 10%</strong></span>
           <span>Pendant les heures CME</span>
-          <span>Via le dashboard Topstep</span>
+          <span>{firmName(account?.type) === 'LucidFlex' ? 'Via le dashboard Tradovate/Lucid' : 'Via le dashboard Topstep'}</span>
         </div>
       </div>
     </div>
@@ -379,7 +385,7 @@ function PhaseSelector({ account, onChanged, open, setOpen }) {
           <div onClick={e => e.stopPropagation()} style={{ background:'#0c0d16', border:'1px solid rgba(136,153,187,0.35)', borderRadius:'10px', padding:'24px', width:'620px', maxWidth:'100%', maxHeight:'85vh', overflowY:'auto' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px' }}>
               <div>
-                <div style={{ fontSize:'12px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'4px' }}>TOPSTEP PROPFIRM</div>
+                <div style={{ fontSize:'12px', color:'#5a6a82', letterSpacing:'2px', marginBottom:'4px' }}>{firmName(account?.type).toUpperCase()} PROPFIRM</div>
                 <div style={{ fontSize:'16px', fontWeight:'700', color:'#e8edf8' }}>Sélectionner le type de compte</div>
               </div>
               <button onClick={() => setOpen(false)} style={{ background:'none', border:'1px solid #1e2c40', color:'#5868a0', width:'28px', height:'28px', borderRadius:'50%', cursor:'pointer', fontSize:'16px' }}>×</button>
@@ -529,7 +535,7 @@ function CombineTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput,
 }
 
 // ── EXPRESS FUNDED STANDARD ────────────────────────────────────
-function ExpressStdTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput, onSaveBalance, postPayout, setPostPayout }) {
+function ExpressStdTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput, onSaveBalance, postPayout, setPostPayout, account }) {
   const { size, maxLoss, winDaysNeeded, winDayMin } = cfg;
   const totalNet = trades.reduce((s,t) => s + getNet(t), 0);
   const balance  = manualBalance > 0 ? manualBalance : size + totalNet;
@@ -570,9 +576,9 @@ function ExpressStdTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
         </div>
       </ObjRow>
 
-      <ObjRow ok pending label="Scaling Plan — respecter la taille de position selon les profits" detail="Le plan de scaling Topstep détermine le nombre de contrats autorisés selon ton niveau de profit" />
+      <ObjRow ok pending label="Scaling Plan — respecter la taille de position selon les profits" detail={`Le plan de scaling ${firmName(account?.type)} détermine le nombre de contrats autorisés selon ton niveau de profit`} />
 
-      <PayoutBox />
+      <PayoutBox account={account} />
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:'8px' }}>
         <MetricCard label="BALANCE" value={`${balance.toFixed(0)}$`} color={isLocked?'#8899bb':'#dde4ef'} sub={manualBalance>0?'Manuelle':'Calculée'} />
@@ -607,7 +613,7 @@ function ExpressStdTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
 }
 
 // ── EXPRESS FUNDED CONSISTENCY ─────────────────────────────────
-function ExpressConsTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput, onSaveBalance, postPayout, setPostPayout }) {
+function ExpressConsTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput, onSaveBalance, postPayout, setPostPayout, account }) {
   const { size, maxLoss, minTradeDays, maxConsistency } = cfg;
   const totalNet = trades.reduce((s,t) => s + getNet(t), 0);
   const balance  = manualBalance > 0 ? manualBalance : size + totalNet;
@@ -664,9 +670,9 @@ function ExpressConsTab({ trades, cfg, manualBalance, balanceInput, setBalanceIn
         )}
       </ObjRow>
 
-      <ObjRow ok pending label="Scaling Plan — respecter la taille de position selon les profits" detail="Le plan de scaling Topstep détermine le nombre de contrats autorisés" />
+      <ObjRow ok pending label="Scaling Plan — respecter la taille de position selon les profits" detail={`Le plan de scaling ${firmName(account?.type)} détermine le nombre de contrats autorisés`} />
 
-      <PayoutBox />
+      <PayoutBox account={account} />
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:'8px' }}>
         <MetricCard label="BALANCE" value={`${balance.toFixed(0)}$`} color='#dde4ef' sub={manualBalance>0?'Manuelle':'Calculée'} />
@@ -701,7 +707,7 @@ function ExpressConsTab({ trades, cfg, manualBalance, balanceInput, setBalanceIn
 }
 
 // ── LIVE FUNDED ACCOUNT ────────────────────────────────────────
-function LiveFundedTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput, onSaveBalance }) {
+function LiveFundedTab({ trades, cfg, manualBalance, balanceInput, setBalanceInput, onSaveBalance, account }) {
   const { size, dailyLoss, winDaysNeeded, winDayMin } = cfg;
   const totalNet = trades.reduce((s,t) => s + getNet(t), 0);
   const balance  = manualBalance > 0 ? manualBalance : size + totalNet;
@@ -765,7 +771,7 @@ function LiveFundedTab({ trades, cfg, manualBalance, balanceInput, setBalanceInp
         </div>
       </ObjRow>
 
-      <PayoutBox />
+      <PayoutBox account={account} />
 
       <div style={{ background:'rgba(255,68,85,0.05)', border:'1px solid rgba(255,68,85,0.15)', borderRadius:'5px', padding:'10px 14px', fontSize:'12px', color:'#6878a0' }}>
         ⚠ Interdit : account stacking · Intentional depletion d'un Live Funded Account
@@ -902,21 +908,21 @@ export default function PropFirm() {
           onSaveBalance={() => saveBalance('pf_bal_combine', setBalCombine)} />
       )}
       {phase === 'ef_standard' && (
-        <ExpressStdTab {...shared} trades={trades} cfg={cfg}
+        <ExpressStdTab {...shared} trades={trades} cfg={cfg} account={account}
           manualBalance={balEfStd}
           onSaveBalance={() => saveBalance('pf_bal_efstd', setBalEfStd)}
           postPayout={ppStd}
           setPostPayout={() => togglePP(ppStd, setPpStd, 'pf_pp_std')} />
       )}
       {phase === 'ef_consistency' && (
-        <ExpressConsTab {...shared} trades={trades} cfg={cfg}
+        <ExpressConsTab {...shared} trades={trades} cfg={cfg} account={account}
           manualBalance={balEfCons}
           onSaveBalance={() => saveBalance('pf_bal_efcons', setBalEfCons)}
           postPayout={ppCons}
           setPostPayout={() => togglePP(ppCons, setPpCons, 'pf_pp_cons')} />
       )}
       {phase === 'live' && (
-        <LiveFundedTab {...shared} trades={trades} cfg={cfg}
+        <LiveFundedTab {...shared} trades={trades} cfg={cfg} account={account}
           manualBalance={balLive}
           onSaveBalance={() => saveBalance('pf_bal_live', setBalLive)} />
       )}
