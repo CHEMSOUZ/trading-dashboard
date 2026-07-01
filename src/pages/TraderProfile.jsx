@@ -1030,23 +1030,8 @@ export default function TraderProfile() {
           );
         })()}
 
-        {/* Patterns identifiés */}
-        {weeklyReport && weeklyReport.patterns.length > 0 && (
-          <div style={{ background:PT.surfSecondary, borderBottom:`1px solid ${PT.borderSecondary}`, padding:'12px 16px' }}>
-            <div style={{ fontSize:'11px', color:PT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'8px' }}>PATTERNS IDENTIFIÉS</div>
-            <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
-              {weeklyReport.patterns.map((p, i) => (
-                <div key={i} style={{ display:'flex', gap:'8px', alignItems:'flex-start' }}>
-                  <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#7F77DD', marginTop:'5px', flexShrink:0 }} />
-                  <span style={{ fontSize:'12px', color:PT.textSecondary, lineHeight:'1.5' }}>{highlightNumbers(p)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Body : analyse détaillée */}
-        <div style={{ padding:'16px' }}>
+        <div style={{ maxWidth:'640px', padding:'16px' }}>
           {weeklyAuthError && (
             <div style={{ fontSize:'13px', color:'#f59e0b', lineHeight:'1.6' }}>
               {weeklyAuthError === 'unauthenticated'      ? 'Connecte-toi pour activer le bilan hebdomadaire.'
@@ -1070,20 +1055,38 @@ export default function TraderProfile() {
             <div style={{ fontSize:'13px', color:PT.danger }}>{weeklyError}</div>
           )}
 
-          {weeklyReport && weeklyReport.paragraphes.map((p, i) => (
-            <p key={i} style={{ fontSize:'13px', color:PT.textSecondary, lineHeight:'1.75', maxWidth:'640px', textAlign:'left', margin:'0 0 12px' }}>{highlightNumbers(p.trim())}</p>
-          ))}
-        </div>
+          {weeklyReport && weeklyReport.paragraphes.length > 0 && (
+            <>
+              <div style={{ fontSize:'11px', color:PT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'8px' }}>ANALYSE</div>
+              {weeklyReport.paragraphes.map((p, i) => (
+                <p key={i} style={{ fontSize:'13px', color:PT.textSecondary, lineHeight:'1.75', textAlign:'left', margin:'0 0 12px' }}>{highlightNumbers(p.trim())}</p>
+              ))}
+            </>
+          )}
 
-        {/* Recommandation prioritaire */}
-        {weeklyReport && weeklyReport.recommandation && (
-          <div style={{ margin:'0 16px 16px', borderRadius:PT.radiusMd, border:'0.5px solid rgba(186,117,23,0.35)', background:'rgba(186,117,23,0.08)', padding:'12px 14px' }}>
-            <div style={{ fontSize:'11px', fontWeight:'500', textTransform:'uppercase', color:PT.warn, display:'flex', alignItems:'center', gap:'5px', marginBottom:'6px' }}>
-              <IconArrowRight color={PT.warn} /> RECOMMANDATION SEMAINE SUIVANTE
+          {weeklyReport && weeklyReport.patterns.length > 0 && (
+            <>
+              <div style={{ fontSize:'11px', color:PT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', margin:'8px 0' }}>PATTERNS IDENTIFIÉS</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:'6px', marginBottom:'12px' }}>
+                {weeklyReport.patterns.map((p, i) => (
+                  <div key={i} style={{ display:'flex', gap:'8px', alignItems:'flex-start' }}>
+                    <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#7F77DD', marginTop:'5px', flexShrink:0 }} />
+                    <span style={{ fontSize:'12px', color:PT.textSecondary, lineHeight:'1.5' }}>{highlightNumbers(p)}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {weeklyReport && weeklyReport.recommandation && (
+            <div style={{ borderRadius:PT.radiusMd, border:'0.5px solid rgba(186,117,23,0.35)', background:'rgba(186,117,23,0.08)', padding:'12px 14px' }}>
+              <div style={{ fontSize:'11px', fontWeight:'500', textTransform:'uppercase', color:PT.warn, display:'flex', alignItems:'center', gap:'5px', marginBottom:'6px' }}>
+                <IconArrowRight color={PT.warn} /> RECOMMANDATION SEMAINE SUIVANTE
+              </div>
+              <div style={{ fontSize:'13px', color:PT.textPrimary, lineHeight:'1.6' }}>{weeklyReport.recommandation}</div>
             </div>
-            <div style={{ fontSize:'13px', color:PT.textPrimary, lineHeight:'1.6' }}>{weeklyReport.recommandation}</div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Footer */}
         <div style={{ padding:'8px 16px', background:PT.surfSecondary, borderTop:`1px solid ${PT.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
