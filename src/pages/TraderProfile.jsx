@@ -101,7 +101,10 @@ function addDaysStr(dateStr, n) {
 function mondayOf(d) {
   const day  = d.getDay(); // 0=dim..6=sam
   const diff = day === 0 ? -6 : 1 - day;
-  const m = new Date(d);
+  // Ancre à midi local (même technique que addDaysStr) avant de muter puis convertir en UTC :
+  // sans ça, un appel entre minuit et minuit+décalage-UTC (heure locale) fait basculer
+  // toISOString() sur la veille — reproduit le bug week_start = dimanche au lieu du lundi.
+  const m = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
   m.setDate(m.getDate() + diff);
   return m.toISOString().slice(0, 10);
 }

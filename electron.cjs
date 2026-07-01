@@ -1,9 +1,12 @@
 ﻿const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const path  = require('path');
 // Doit tourner avant tout app.getPath/new Store/require('./accounts.cjs') — sinon Electron
 // utilise son nom par défaut ("Electron") pour calculer userData, et l'app écrit ses données
-// dans le mauvais dossier (packagé ou en dev).
+// dans le mauvais dossier (packagé ou en dev). setPath() explicite en plus de setName() :
+// élimine toute dépendance à la résolution interne de app.getName(), quelle que soit la
+// méthode de lancement (dev non-packagé, build local, installeur NSIS).
 app.setName('Trading Dashboard');
-const path  = require('path');
+app.setPath('userData', path.join(app.getPath('appData'), 'Trading Dashboard'));
 const fs    = require('fs');
 const http  = require('http');
 const https = require('https');
