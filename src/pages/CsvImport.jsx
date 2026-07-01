@@ -943,6 +943,7 @@ export default function CsvImport() {
   async function handleImport(skipDuplicates = true) {
     setStep('importing');
     let imported = 0, skipped = 0, errors = 0;
+    const updatedDates = new Set();
 
     // Toujours passer TOUS les trades à la DB :
     // - nouveaux  → INSERT
@@ -958,19 +959,22 @@ export default function CsvImport() {
         // On appelle quand même insertTrade : il auto-patchera si nécessaire et retournera patched=true
         try {
           const res = await window.db.insertTrade(t);
-          if (res.ok && res.data?.patched) imported++;
+          if (res.ok && res.data?.patched) { imported++; if (t.date) updatedDates.add(t.date); }
           else skipped++;
         } catch { skipped++; }
         continue;
       }
       try {
         const res = await window.db.insertTrade(t);
-        if (res.ok && !res.data?.skipped) imported++;
+        if (res.ok && !res.data?.skipped) { imported++; if (t.date) updatedDates.add(t.date); }
         else skipped++;
       } catch { errors++; }
     }
     setResult({ imported, skipped, errors });
-    if (imported > 0) window.dispatchEvent(new CustomEvent('trades-changed'));
+    if (imported > 0) {
+      window.dispatchEvent(new CustomEvent('trades-changed'));
+      for (const date of updatedDates) window.dispatchEvent(new CustomEvent('trades-updated', { detail: { date } }));
+    }
     setStep('done');
   }
 

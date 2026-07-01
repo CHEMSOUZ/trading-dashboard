@@ -370,11 +370,19 @@ function ReportModal({ date, entry, dayStats, generating, isDemoMode, error, onG
   );
 }
 
+// Formatte une Date locale en "YYYY-MM-DD" sans passer par toISOString() (qui décale le
+// jour selon le fuseau UTC local — même piège que mondayOf(), cf. commentaire associé).
+function fmtISODate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 // ── Calendrier — base reprise de TradingCalendar (GlobalView.jsx) : navigation
-// mois, grille 7 colonnes + colonne résumé de semaine, tooltip au survol — mais
+// mois, grille 7 colonnes + colonne résumé de semaine (P&L net), tooltip au survol — mais
 // avec le trait psychologique du jour comme métrique principale (à la place du
 // P&L), enrichi du nombre de trades et du winrate du jour. Clic sur un jour
-// avec un rapport existant -> ouvre l'analyse complète (ReportModal).
+// avec un rapport existant -> ouvre l'analyse complète (ReportModal). Chaque semaine
+// affichée est complète (lundi->dimanche) : les jours débordant sur le mois précédent/suivant
+// sont affichés atténués, avec un micro-label du mois au-dessus du numéro de jour.
 function TraitCalendar({ calendar, dailyMentalByDate, tradeStats, referenceDay, generatingDates, isDemoMode, onMonthChange, onDayClick, onGenerateDay }) {
   const initial = referenceDay ? new Date(referenceDay + 'T12:00:00') : new Date();
   const [year,    setYear]    = useState(initial.getFullYear());
@@ -388,38 +396,43 @@ function TraitCalendar({ calendar, dailyMentalByDate, tradeStats, referenceDay, 
   for (const e of calendar) byDay[e.date] = e.emotion;
   for (const date in dailyMentalByDate) byDay[date] = dailyMentalByDate[date].trait;
 
-  const rawFirst    = new Date(year, month, 1).getDay();
-  const firstDay    = rawFirst === 0 ? 6 : rawFirst - 1;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthStart = new Date(year, month, 1);
+  const monthEnd   = new Date(year, month + 1, 0);
+  const leadOffset  = (monthStart.getDay() + 6) % 7;       // jours à remonter jusqu'au lundi
+  const trailOffset = (7 - monthEnd.getDay()) % 7;         // jours à ajouter jusqu'au dimanche
+  const gridStart = new Date(year, month, 1 - leadOffset);
+  const gridEnd   = new Date(year, month, monthEnd.getDate() + trailOffset);
 
-  const cells = [];
-  for (let i = 0; i < firstDay; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  const days = [];
+  for (const d = new Date(gridStart); d <= gridEnd; d.setDate(d.getDate() + 1)) {
+    days.push({ date: new Date(d), dateStr: fmtISODate(d), dayNum: d.getDate(), isOtherMonth: d.getMonth() !== month });
+  }
   const weeks = [];
-  let wk = [];
-  cells.forEach((day, i) => {
-    wk.push(day);
-    if (wk.length === 7 || i === cells.length - 1) {
-      while (wk.length < 7) wk.push(null);
-      weeks.push([...wk]);
-      wk = [];
-    }
-  });
+  for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
 
-  function weekDominant(wkArr) {
-    const firstIdx = wkArr.findIndex(d => d != null);
-    if (firstIdx < 0) return { count: 0, dominant: null };
-    const mondayDate = new Date(year, month, wkArr[firstIdx] - firstIdx);
-    const counts = {};
-    let count = 0;
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(mondayDate); d.setDate(d.getDate() + i);
-      const key = d.toISOString().slice(0, 10);
-      const emotion = byDay[key];
-      if (emotion) { counts[emotion] = (counts[emotion] ?? 0) + 1; count++; }
+  function weekSummary(weekDays) {
+    let pnl = 0, count = 0;
+    for (const { dateStr } of weekDays) {
+      const s = tradeStats[dateStr];
+      if (s) { pnl += s.pnl; count += s.count; }
     }
-    const dominant = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-    return { count, dominant };
+    return { pnl, count };
+  }
+
+  // Titre "Mois – Mois AAAA" quand la semaine contenant AUJOURD'HUI (date réelle) est
+  // cross-mois ; sinon simple libellé du mois affiché.
+  function calendarTitle() {
+    const todayStr = fmtISODate(new Date());
+    const boundaryWeek = weeks.find(w => w.some(c => c.dateStr === todayStr));
+    if (boundaryWeek) {
+      const first = boundaryWeek[0].date, last = boundaryWeek[6].date;
+      if (first.getMonth() !== last.getMonth() || first.getFullYear() !== last.getFullYear()) {
+        const firstLabel = first.toLocaleDateString('fr-FR', { month: 'long' });
+        const lastLabel  = last.toLocaleDateString('fr-FR', { month: 'long' });
+        return `${firstLabel} – ${lastLabel} ${last.getFullYear()}`;
+      }
+    }
+    return monthLabel(year, month);
   }
 
   function prevMonth() { if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1); }
@@ -431,7 +444,7 @@ function TraitCalendar({ calendar, dailyMentalByDate, tradeStats, referenceDay, 
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'10px', marginBottom:'14px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
           <button onClick={prevMonth} style={{ background:'none', border:'none', color:P.text2, cursor:'pointer', fontSize:'17px', lineHeight:1 }}>‹</button>
-          <span style={{ fontSize:'15px', fontWeight:'700', color:P.text1, minWidth:'160px', textAlign:'center', textTransform:'capitalize' }}>{monthLabel(year, month)}</span>
+          <span style={{ fontSize:'15px', fontWeight:'700', color:P.text1, minWidth:'160px', textAlign:'center', textTransform:'capitalize' }}>{calendarTitle()}</span>
           <button onClick={nextMonth} style={{ background:'none', border:'none', color:P.text2, cursor:'pointer', fontSize:'17px', lineHeight:1 }}>›</button>
           <button onClick={() => { const n = new Date(); setYear(n.getFullYear()); setMonth(n.getMonth()); }}
             style={{ background:'rgba(136,153,187,0.10)', border:'1px solid rgba(136,153,187,0.18)', color:'#8899bb', padding:'3px 9px', borderRadius:'4px', fontSize:'12px', fontFamily:'inherit', cursor:'pointer' }}>Aujourd'hui</button>
@@ -439,34 +452,32 @@ function TraitCalendar({ calendar, dailyMentalByDate, tradeStats, referenceDay, 
       </div>
 
       {/* Grid */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr) 80px', gap:'4px' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr) 40px', gap:'4px' }}>
         {WEEKDAY_LABELS.map(d => (
           <div key={d} style={{ textAlign:'center', fontSize:'11px', color:P.text3, padding:'4px 0', letterSpacing:'1px' }}>{d}</div>
         ))}
         <div style={{ textAlign:'center', fontSize:'11px', color:P.text3, padding:'4px 0' }}>SEM.</div>
 
         {weeks.map((week, wi) => {
-          const { count: weekCount, dominant: weekDom } = weekDominant(week);
-          const weekColor = weekDom ? (EMOTION_COLORS[weekDom] ?? P.text2) : P.text4;
+          const { pnl: weekPnl, count: weekCount } = weekSummary(week);
+          const weekColor = weekPnl >= 0 ? PT.success : PT.danger;
           return [
-            ...week.map((day, di) => {
-              if (!day) return <div key={`e-${wi}-${di}`} style={{ minHeight:'64px', borderRadius:'6px', background:'rgba(14,15,22,0.15)', border:'1px solid rgba(136,153,187,0.03)' }} />;
-              const date    = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-              const stats   = tradeStats[date];
+            ...week.map(({ date, dateStr, dayNum, isOtherMonth }) => {
+              const stats   = tradeStats[dateStr];
               const wr      = stats && stats.count > 0 ? Math.round(stats.wins / stats.count * 100) : null;
               const hasTrades = stats?.count > 0;
               // garde : ne jamais afficher un trait si aucun trade n'existe ce jour-là
-              const emotion = hasTrades ? byDay[date] : null;
+              const emotion = hasTrades ? byDay[dateStr] : null;
               const color   = emotion ? (EMOTION_COLORS[emotion] ?? P.text2) : null;
               const cellRgb = color ? emotionRgb(color) : null;
-              const isRef   = date === referenceDay;
-              const isHov   = hovered === date;
+              const isRef   = dateStr === referenceDay;
+              const isHov   = hovered === dateStr;
               const clickable = hasTrades;
-              const isGenerating = generatingDates?.has(date);
+              const isGenerating = generatingDates?.has(dateStr);
               return (
-                <div key={date}
-                  onClick={() => clickable && onDayClick?.(date)}
-                  onMouseEnter={() => setHovered(date)}
+                <div key={dateStr}
+                  onClick={() => clickable && onDayClick?.(dateStr)}
+                  onMouseEnter={() => setHovered(dateStr)}
                   onMouseLeave={() => setHovered(null)}
                   style={{
                     minHeight:'64px', borderRadius:'6px', padding:'5px 6px',
@@ -477,11 +488,11 @@ function TraitCalendar({ calendar, dailyMentalByDate, tradeStats, referenceDay, 
                     transform: isHov && emotion ? 'scale(1.03)' : 'scale(1)',
                     position:'relative', zIndex: isHov ? 3 : 1,
                     boxShadow: isHov && emotion ? '0 4px 16px rgba(0,0,0,0.4)' : 'none',
-                    opacity: isGenerating ? 0.45 : 1,
+                    opacity: isGenerating ? 0.45 : isOtherMonth ? 0.4 : 1,
                   }}>
                   {hasTrades && !isDemoMode && (
                     <button
-                      onClick={e => { e.stopPropagation(); onGenerateDay?.(date); }}
+                      onClick={e => { e.stopPropagation(); onGenerateDay?.(dateStr); }}
                       disabled={isGenerating}
                       title={emotion ? 'Régénérer l\'analyse de ce jour' : 'Générer l\'analyse de ce jour'}
                       style={{
@@ -494,7 +505,12 @@ function TraitCalendar({ calendar, dailyMentalByDate, tradeStats, referenceDay, 
                       <IconBrain color={P.text3} size={11} />
                     </button>
                   )}
-                  <span style={{ fontSize:'11px', color: emotion ? P.text2 : P.text4, fontWeight: isRef ? '700' : '400' }}>{day}</span>
+                  {isOtherMonth && (
+                    <span style={{ fontSize:'9px', color:PT.textTertiary, textTransform:'capitalize' }}>
+                      {date.toLocaleDateString('fr-FR', { month: 'long' })}
+                    </span>
+                  )}
+                  <span style={{ fontSize:'11px', color: emotion ? P.text2 : P.text4, fontWeight: isRef ? '700' : '400' }}>{dayNum}</span>
                   {emotion && (
                     <div style={{ display:'flex', alignItems:'center', gap:'4px' }}>
                       <ToneIcon tone={emotionTone(emotion)} color={color} size={13} />
@@ -512,15 +528,16 @@ function TraitCalendar({ calendar, dailyMentalByDate, tradeStats, referenceDay, 
                 </div>
               );
             }),
-            <div key={`w-${wi}`} style={{ background:'rgba(14,15,22,0.55)', border:`1px solid ${P.border}0.09)`, borderRadius:'6px', minHeight:'64px', padding:'6px 8px', display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center', gap:'4px' }}>
+            <div key={`w-${wi}`} style={{ background:'rgba(14,15,22,0.55)', border:`1px solid ${P.border}0.09)`, borderRadius:'6px', minHeight:'64px', padding:'4px 2px', display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center', gap:'2px' }}>
               {weekCount > 0 ? (
                 <>
-                  <span style={{ fontSize:'10px', color:P.text4 }}>S{wi+1}</span>
-                  {weekDom && <ToneIcon tone={emotionTone(weekDom)} color={weekColor} size={14} />}
-                  <span style={{ fontSize:'9px', color:weekColor, textAlign:'center', lineHeight:1.2 }}>{weekCount}j</span>
+                  <span style={{ fontSize:'10px', fontWeight:'700', color:weekColor, textAlign:'center', lineHeight:1.1 }}>
+                    {weekPnl >= 0 ? '+' : ''}{Math.round(weekPnl)}$
+                  </span>
+                  <span style={{ fontSize:'9px', color:P.text3 }}>{weekCount}t</span>
                 </>
               ) : (
-                <span style={{ fontSize:'10px', color:'#2e3d52' }}>S{wi+1}</span>
+                <span style={{ fontSize:'10px', color:PT.textTertiary }}>—</span>
               )}
             </div>,
           ];
@@ -582,6 +599,49 @@ function buildWeekPills(weekStart, tradeStats, dailyMentalByDate, calendar) {
   return pills;
 }
 
+// Winrate/Profit Factor/Série calculés UNIQUEMENT sur les trades d'un jour donné (agrégat
+// tous comptes déjà construit dans tradeStats[date]) — jamais sur le mois ou l'historique
+// global, contrairement à l'ancien window.db.getStats() (all-time) utilisé par erreur ici.
+function computeDayPortraitStats(dayAgg) {
+  if (!dayAgg || dayAgg.count === 0) return null;
+  const winrate = Math.round(dayAgg.wins / dayAgg.count * 100);
+  const profitFactor = dayAgg.grossLoss > 0 ? dayAgg.grossWin / dayAgg.grossLoss : dayAgg.grossWin > 0 ? 999 : 0;
+  const sorted = [...dayAgg.trades].sort((a, b) => (a.enteredAt ?? '').localeCompare(b.enteredAt ?? ''));
+  let streak = 0;
+  if (sorted.length > 0) {
+    const lastPositive = sorted[sorted.length - 1].pnl > 0;
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      if ((sorted[i].pnl > 0) === lastPositive) streak++; else break;
+    }
+    if (!lastPositive) streak = -streak;
+  }
+  return { winrate, profitFactor, streak };
+}
+
+// Recharge l'agrégat tradeStats (tous comptes) pour une seule date — utilisé par le listener
+// 'trades-updated' pour rafraîchir uniquement le jour concerné, sans tout recharger.
+async function fetchDayTradeStats(date) {
+  const agg = { count: 0, wins: 0, losses: 0, pnl: 0, grossWin: 0, grossLoss: 0, trades: [] };
+  const accRes = await window.accounts.getAll();
+  if (!accRes.ok) return agg;
+  for (const acc of accRes.data.accounts) {
+    const tRes = await window.db.getTradesForPath(acc.dbPath);
+    if (!tRes.ok) continue;
+    for (const t of tRes.data) {
+      if (t.date !== date) continue;
+      const net = t.result_net ?? t.result;
+      if (net != null && net !== 0 && Math.abs(net) < 10) continue; // micro trades exclus (cf. Vue Globale)
+      agg.count++;
+      const val = net ?? 0;
+      if (val > 0) { agg.wins++; agg.grossWin += val; }
+      else if (val < 0) { agg.losses++; agg.grossLoss += Math.abs(val); }
+      agg.pnl += val;
+      agg.trades.push({ pnl: val, enteredAt: t.entered_at ?? t.date });
+    }
+  }
+  return agg;
+}
+
 export default function TraderProfile() {
   const [loading,       setLoading]       = useState(true);
   const [isDemoMode,    setIsDemoMode]    = useState(false);
@@ -591,7 +651,7 @@ export default function TraderProfile() {
   const [generatingDates,   setGeneratingDates]   = useState(() => new Set());
   const [modalGenerating,   setModalGenerating]   = useState(false);
   const [modalError,        setModalError]        = useState(null);
-  const [tradeStats,    setTradeStats]    = useState({});  // { [date]: { count, wins, losses } } — tous comptes
+  const [tradeStats,    setTradeStats]    = useState({});  // { [date]: { count, wins, losses, pnl, grossWin, grossLoss, trades[] } } — tous comptes
   const [referenceDay,  setReferenceDay]  = useState(null);
   const [viewYear,      setViewYear]      = useState(new Date().getFullYear());
   const [viewMonth,     setViewMonth]     = useState(new Date().getMonth());
@@ -603,7 +663,6 @@ export default function TraderProfile() {
   const [authError,      setAuthError]      = useState(null); // null | 'unauthenticated' | 'subscription_inactive' | 'quota_exceeded'
   const [quotaResetDate, setQuotaResetDate] = useState(null);
   const [noTrades,       setNoTrades]       = useState(false);
-  const [stats,          setStats]          = useState(null); // winrate/profitFactor/streak
 
   // ── Bilan IA hebdomadaire (complément du bloc "aucun trade") ──
   const [weeklyReport,       setWeeklyReport]       = useState(null); // { weekStart, trend, verdict_label, patterns[], recommandation, paragraphes[], generatedAt }
@@ -615,10 +674,9 @@ export default function TraderProfile() {
 
   useEffect(() => {
     (async () => {
-      const [sessionRes, tradesRes, statsRes] = await Promise.all([
+      const [sessionRes, tradesRes] = await Promise.all([
         window.auth.getSession(),
         window.db.getAllTrades(),
-        window.db.getStats(),
       ]);
       const demoMode = !!sessionRes.data?.user && sessionRes.data.user.subscription_status !== 'active';
       const trades = tradesRes.ok ? (tradesRes.data ?? []) : [];
@@ -628,10 +686,11 @@ export default function TraderProfile() {
       setIsDemoMode(demoMode);
       setUserId(sessionRes.data?.user?.id ?? null);
       setReferenceDay(day);
-      setStats(statsRes.ok ? statsRes.data : null);
 
       // Trades de TOUS les comptes, agrégés par jour — même logique que Vue Globale,
-      // pour afficher trades + winrate sur chaque case du calendrier.
+      // pour afficher trades + winrate sur chaque case du calendrier. grossWin/grossLoss/trades
+      // permettent aussi de calculer un profit factor et une série scopés à un seul jour
+      // (portrait IA quotidien — cf. computeDayPortraitStats).
       const accRes = await window.accounts.getAll();
       if (accRes.ok) {
         const byDay = {};
@@ -642,11 +701,13 @@ export default function TraderProfile() {
             const net = t.result_net ?? t.result;
             if (net != null && net !== 0 && Math.abs(net) < 10) continue; // micro trades exclus (cf. Vue Globale)
             const d = t.date; if (!d) continue;
-            if (!byDay[d]) byDay[d] = { count: 0, wins: 0, losses: 0, pnl: 0 };
+            if (!byDay[d]) byDay[d] = { count: 0, wins: 0, losses: 0, pnl: 0, grossWin: 0, grossLoss: 0, trades: [] };
             byDay[d].count++;
             const val = net ?? 0;
-            if (val > 0) byDay[d].wins++; else if (val < 0) byDay[d].losses++;
+            if (val > 0) { byDay[d].wins++; byDay[d].grossWin += val; }
+            else if (val < 0) { byDay[d].losses++; byDay[d].grossLoss += Math.abs(val); }
             byDay[d].pnl += val;
+            byDay[d].trades.push({ pnl: val, enteredAt: t.entered_at ?? t.date });
           }
         }
         setTradeStats(byDay);
@@ -714,18 +775,60 @@ export default function TraderProfile() {
 
   // Analyses psychologiques quotidiennes automatiques du mois affiché dans le calendrier
   // (table daily_mental_reports, séparée de mental_reports) — jamais en mode démo, où le
-  // calendrier reste sur le dataset statique de demo_data.json.
+  // calendrier reste sur le dataset statique de demo_data.json. Charge aussi le mois
+  // précédent et suivant : le calendrier affiche désormais des semaines complètes
+  // (lundi->dimanche) qui débordent sur les mois adjacents (cf. Partie 3).
   useEffect(() => {
     if (loading || isDemoMode || !userId) return;
     (async () => {
-      const monthKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
-      const res = await window.dailyMental.getForMonth(userId, monthKey);
-      if (!res.ok) return;
+      const prevMonthDate = new Date(viewYear, viewMonth - 1, 1);
+      const nextMonthDate = new Date(viewYear, viewMonth + 1, 1);
+      const monthKeys = [
+        `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`,
+        `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`,
+        `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`,
+      ];
+      const results = await Promise.all(monthKeys.map(k => window.dailyMental.getForMonth(userId, k)));
       const byDate = {};
-      for (const row of (res.data ?? [])) byDate[row.date] = row;
+      for (const res of results) {
+        if (!res.ok) continue;
+        for (const row of (res.data ?? [])) byDate[row.date] = row;
+      }
       setDailyMentalByDate(prev => ({ ...prev, ...byDate }));
     })();
   }, [loading, isDemoMode, userId, viewYear, viewMonth]);
+
+  // Mise à jour temps réel du calendrier + du portrait quand un trade est ajouté (NewTrade)
+  // ou importé (CsvImport) : ne recharge QUE le jour concerné (tradeStats + daily_mental_reports),
+  // sans reload de toute la page. Si c'est le jour réel d'aujourd'hui et qu'il y a désormais
+  // au moins 2 trades, régénère automatiquement l'analyse de ce jour (force:true).
+  useEffect(() => {
+    if (isDemoMode) return;
+    async function handleTradesUpdated(e) {
+      const date = e.detail?.date;
+      if (!date) return;
+
+      const agg = await fetchDayTradeStats(date);
+      setTradeStats(prev => ({ ...prev, [date]: agg }));
+
+      if (userId) {
+        const monthKey = date.slice(0, 7);
+        const res = await window.dailyMental.getForMonth(userId, monthKey);
+        if (res.ok) {
+          const row = (res.data ?? []).find(r => r.date === date);
+          if (row) setDailyMentalByDate(prev => ({ ...prev, [date]: row }));
+        }
+      }
+
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      if (date === todayStr && agg.count >= 2) {
+        handleGenerateDay(date, true);
+      }
+    }
+    window.addEventListener('trades-updated', handleTradesUpdated);
+    return () => window.removeEventListener('trades-updated', handleTradesUpdated);
+  }, [isDemoMode, userId]);
 
   async function handleGenerateDay(date, force = true) {
     if (isDemoMode || !userId || generatingDates.has(date)) return;
@@ -995,6 +1098,10 @@ export default function TraderProfile() {
 
   const noTradeSynthesis = noTrades ? computeNoTradeSynthesis(calendar) : null;
 
+  // WR/PF/Série du portrait IA — scopés UNIQUEMENT aux trades du jour affiché (referenceDay),
+  // jamais au mois ou à l'historique global (cf. bug corrigé : ancien window.db.getStats()).
+  const dayPortraitStats = computeDayPortraitStats(tradeStats[referenceDay]);
+
   // Panneau "BILAN IA HEBDOMADAIRE" — affiché sur les jours sans trade (sous sa propre
   // synthèse) et, désormais, sous le portrait IA du jour sur les jours avec trades.
   function renderWeeklyPanel() {
@@ -1228,11 +1335,11 @@ export default function TraderProfile() {
           </div>
 
           <div style={{ padding:'22px 24px 24px' }}>
-            {stats && (
+            {dayPortraitStats && (
               <div style={{ display:'flex', gap:'8px', marginBottom:'20px' }}>
-                <MiniStat label="WIN RATE" value={`${stats.winrate.toFixed(0)}%`} />
-                <MiniStat label="PROFIT FACTOR" value={stats.profitFactor === 999 ? '∞' : stats.profitFactor.toFixed(2)} />
-                <MiniStat label="SÉRIE" value={stats.streak > 0 ? `${stats.streak} 🟢` : stats.streak < 0 ? `${Math.abs(stats.streak)} 🔴` : '—'} />
+                <MiniStat label="WIN RATE" value={`${dayPortraitStats.winrate.toFixed(0)}%`} />
+                <MiniStat label="PROFIT FACTOR" value={dayPortraitStats.profitFactor === 999 ? '∞' : dayPortraitStats.profitFactor.toFixed(2)} />
+                <MiniStat label="SÉRIE" value={dayPortraitStats.streak > 0 ? `${dayPortraitStats.streak} 🟢` : dayPortraitStats.streak < 0 ? `${Math.abs(dayPortraitStats.streak)} 🔴` : '—'} />
               </div>
             )}
             <div>{renderBlocks(report.text, badgeColor)}</div>

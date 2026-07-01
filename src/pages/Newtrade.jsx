@@ -428,6 +428,7 @@ export default function NewTrade() {
       clearDraft();
       window.dispatchEvent(new CustomEvent('toast', { detail: { msg: isEdit ? 'Trade mis à jour' : 'Trade enregistré', icon: '✓' } }));
       window.dispatchEvent(new CustomEvent('trades-changed'));
+      window.dispatchEvent(new CustomEvent('trades-updated', { detail: { date: form.date } }));
       navigate('/journal?tab=trades');
     }
     else setError(res.error ?? 'Erreur inconnue');
