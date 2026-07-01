@@ -693,6 +693,15 @@ export default function TraderProfile() {
     loadOrGenerateWeeklyReport();
   }, [loading, noTrades, isDemoMode]);
 
+  // Jours avec trades : le bilan hebdo reste visible sous le portrait du jour — on
+  // recharge juste ce qui existe déjà en base, sans jamais déclencher d'appel IA ici
+  // (seul le clic manuel sur "Regénérer" peut en générer un nouveau).
+  useEffect(() => {
+    if (loading || noTrades || isDemoMode) return;
+    if (weeklyReport || weeklyGenerating) return;
+    loadOrGenerateWeeklyReport(false, true);
+  }, [loading, noTrades, isDemoMode]);
+
   // Analyses psychologiques quotidiennes automatiques du mois affiché dans le calendrier
   // (table daily_mental_reports, séparée de mental_reports) — jamais en mode démo, où le
   // calendrier reste sur le dataset statique de demo_data.json.
@@ -725,13 +734,15 @@ export default function TraderProfile() {
     }
   }
 
-  async function loadOrGenerateWeeklyReport(force = false) {
+  async function loadOrGenerateWeeklyReport(force = false, viewOnly = false) {
     if (isDemoMode) return;
-    setWeeklyGenerating(true);
-    setWeeklyAuthError(null);
-    setWeeklyQuotaReset(null);
-    setWeeklyInsufficient(false);
-    setWeeklyError(null);
+    if (!viewOnly) {
+      setWeeklyGenerating(true);
+      setWeeklyAuthError(null);
+      setWeeklyQuotaReset(null);
+      setWeeklyInsufficient(false);
+      setWeeklyError(null);
+    }
 
     try {
       const weekStart = getCurrentWeekStart();
@@ -752,6 +763,7 @@ export default function TraderProfile() {
         });
         return; // déjà généré cette semaine — aucun appel IA
       }
+      if (viewOnly) return; // lecture seule (jour avec trades) — jamais de génération IA ici
 
       // Bilans de la semaine calendaire en cours ; si trop peu, fallback sur les derniers
       // jours disponibles au global (historique encore court, ex: 18 jours au total).
@@ -822,10 +834,11 @@ export default function TraderProfile() {
         generatedAt:    saved?.generated_at    ?? new Date().toISOString(),
       });
     } catch (e) {
+      if (viewOnly) { console.error('Weekly report view-only load error:', e); return; }
       console.error('Weekly AI report error:', e);
       setWeeklyError(e.message || 'Erreur lors de la génération du bilan hebdomadaire.');
     } finally {
-      setWeeklyGenerating(false);
+      if (!viewOnly) setWeeklyGenerating(false);
     }
   }
 
@@ -965,6 +978,135 @@ export default function TraderProfile() {
 
   const noTradeSynthesis = noTrades ? computeNoTradeSynthesis(calendar) : null;
 
+  // Panneau "BILAN IA HEBDOMADAIRE" — affiché sur les jours sans trade (sous sa propre
+  // synthèse) et, désormais, sous le portrait IA du jour sur les jours avec trades.
+  function renderWeeklyPanel() {
+    const trend        = weeklyReport?.trend ?? '';
+    const verdictColor = trend === 'En progression'                    ? PT.success
+      : trend === 'En dégradation' || trend === 'Critique'             ? PT.danger
+      : PT.textSecondary; // 'Stable' ou valeur inconnue
+    const verdictBg    = trend === 'Critique' ? '#1a0000' : '#120808';
+    return (
+      <div style={{ marginBottom:'1.25rem', border:`0.5px solid ${PT.border}`, borderRadius:PT.radiusLg, overflow:'hidden' }}>
+        {/* Header */}
+        <div style={{ background:PT.surfSecondary, borderBottom:`1px solid ${PT.border}`, padding:'10px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'6px' }}>
+          <span style={{ fontSize:'11px', fontWeight:'500', color:PT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em' }}>BILAN IA HEBDOMADAIRE</span>
+          {weeklyReport && (
+            <span style={{ fontSize:'11px', color:PT.textTertiary }}>
+              Semaine du {fmtDate(weeklyReport.weekStart)} · Généré par Claude
+            </span>
+          )}
+        </div>
+
+        {/* Verdict strip — fallback sur trend si verdict_label absent (anciennes entrées) */}
+        {weeklyReport && (weeklyReport.verdict_label || weeklyReport.trend) && (
+          <div style={{ padding:'12px 16px', background:verdictBg, borderBottom:'0.5px solid #3a1212' }}>
+            <div style={{ fontSize:'11px', color:'#9a6060', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'4px' }}>VERDICT</div>
+            <div style={{ fontSize:'15px', fontWeight:'500', color:verdictColor }}>{weeklyReport.verdict_label || weeklyReport.trend}</div>
+          </div>
+        )}
+
+        {/* Pills quotidiennes de la semaine */}
+        {weeklyReport && (() => {
+          const pills = buildWeekPills(weeklyReport.weekStart, tradeStats, dailyMentalByDate, calendar);
+          if (pills.length === 0) return null;
+          return (
+            <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', padding:'10px 16px', borderBottom:`0.5px solid ${PT.border}`, background:PT.surfSecondary }}>
+              {pills.map(p => p.unknown ? (
+                <span key={p.date} style={{ display:'flex', alignItems:'center', gap:'4px', borderRadius:'99px', padding:'3px 10px', fontSize:'11px', background:'rgba(136,153,187,0.08)', color:PT.textTertiary }}>
+                  {p.dayLabel} <span style={{ fontWeight:'700' }}>?</span>
+                </span>
+              ) : (() => {
+                const color = EMOTION_COLORS[p.trait] ?? PT.textTertiary;
+                const rgb   = emotionRgb(color);
+                return (
+                  <span key={p.date} style={{ display:'flex', alignItems:'center', gap:'4px', borderRadius:'99px', padding:'3px 10px', fontSize:'11px', background:`rgba(${rgb},0.14)`, color }}>
+                    <ToneIcon tone={emotionTone(p.trait)} color={color} size={11} />
+                    {p.dayLabel} {fmt(p.pnl, true)}
+                  </span>
+                );
+              })())}
+            </div>
+          );
+        })()}
+
+        {/* Patterns identifiés */}
+        {weeklyReport && weeklyReport.patterns.length > 0 && (
+          <div style={{ background:PT.surfSecondary, borderBottom:`1px solid ${PT.borderSecondary}`, padding:'12px 16px' }}>
+            <div style={{ fontSize:'11px', color:PT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'8px' }}>PATTERNS IDENTIFIÉS</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+              {weeklyReport.patterns.map((p, i) => (
+                <div key={i} style={{ display:'flex', gap:'8px', alignItems:'flex-start' }}>
+                  <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#7F77DD', marginTop:'5px', flexShrink:0 }} />
+                  <span style={{ fontSize:'12px', color:PT.textSecondary, lineHeight:'1.5' }}>{highlightNumbers(p)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Body : analyse détaillée */}
+        <div style={{ padding:'16px' }}>
+          {weeklyAuthError && (
+            <div style={{ fontSize:'13px', color:'#f59e0b', lineHeight:'1.6' }}>
+              {weeklyAuthError === 'unauthenticated'      ? 'Connecte-toi pour activer le bilan hebdomadaire.'
+                : weeklyAuthError === 'subscription_inactive' ? 'Abonnement requis pour activer le bilan hebdomadaire.'
+                : `Quota IA mensuel atteint${weeklyQuotaReset ? `, réessaie après le ${weeklyQuotaReset}` : ''}.`}
+            </div>
+          )}
+
+          {weeklyGenerating && !weeklyReport && (
+            <div style={{ fontSize:'13px', color:PT.textSecondary, display:'flex', alignItems:'center', gap:'8px' }}>
+              <span style={{ animation:'pulse 1.5s ease infinite', fontSize:'8px' }}>●</span>
+              Claude analyse ta semaine...
+            </div>
+          )}
+
+          {weeklyInsufficient && !weeklyGenerating && (
+            <div style={{ fontSize:'13px', color:PT.textSecondary }}>Historique encore trop court pour un bilan hebdomadaire.</div>
+          )}
+
+          {weeklyError && !weeklyGenerating && (
+            <div style={{ fontSize:'13px', color:PT.danger }}>{weeklyError}</div>
+          )}
+
+          {weeklyReport && weeklyReport.paragraphes.map((p, i) => (
+            <p key={i} style={{ fontSize:'13px', color:PT.textSecondary, lineHeight:'1.75', maxWidth:'640px', textAlign:'left', margin:'0 0 12px' }}>{highlightNumbers(p.trim())}</p>
+          ))}
+        </div>
+
+        {/* Recommandation prioritaire */}
+        {weeklyReport && weeklyReport.recommandation && (
+          <div style={{ margin:'0 16px 16px', borderRadius:PT.radiusMd, border:'0.5px solid rgba(186,117,23,0.35)', background:'rgba(186,117,23,0.08)', padding:'12px 14px' }}>
+            <div style={{ fontSize:'11px', fontWeight:'500', textTransform:'uppercase', color:PT.warn, display:'flex', alignItems:'center', gap:'5px', marginBottom:'6px' }}>
+              <IconArrowRight color={PT.warn} /> RECOMMANDATION SEMAINE SUIVANTE
+            </div>
+            <div style={{ fontSize:'13px', color:PT.textPrimary, lineHeight:'1.6' }}>{weeklyReport.recommandation}</div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{ padding:'8px 16px', background:PT.surfSecondary, borderTop:`1px solid ${PT.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
+          <span style={{ fontSize:'11px', color:PT.textTertiary }}>
+            {noTrades ? `Aucun trade enregistré le ${fmtDate(referenceDay)}.` : `Semaine du ${fmtDate(getCurrentWeekStart())}.`}
+          </span>
+          <button
+            onClick={() => loadOrGenerateWeeklyReport(true)}
+            disabled={isDemoMode || weeklyGenerating}
+            title={isDemoMode ? 'Disponible avec un abonnement actif' : undefined}
+            style={{
+              background:'transparent', border:`1px solid ${PT.textTertiary}`, color:PT.textTertiary,
+              fontSize:'12px', fontFamily:'inherit', padding:'3px 9px', borderRadius:'5px',
+              cursor: isDemoMode ? 'not-allowed' : weeklyGenerating ? 'wait' : 'pointer',
+              opacity: isDemoMode ? 0.5 : 1, flexShrink:0,
+            }}>
+            Regénérer ↗
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding:'24px 28px' }}>
       <style>{`@keyframes pulse{0%,100%{opacity:.35}50%{opacity:.9}}`}</style>
@@ -1013,130 +1155,7 @@ export default function TraderProfile() {
 
       {/* ── Aucun trade : bloc bilan IA hebdomadaire (sans appel IA si déjà généré cette semaine) ── */}
       {noTrades && !authError && !generating && (
-        noTradeSynthesis ? (() => {
-          const trend        = weeklyReport?.trend ?? '';
-          const verdictColor = trend === 'En progression'                    ? PT.success
-            : trend === 'En dégradation' || trend === 'Critique'             ? PT.danger
-            : PT.textSecondary; // 'Stable' ou valeur inconnue
-          const verdictBg    = trend === 'Critique' ? '#1a0000' : '#120808';
-          return (
-            <div style={{ marginBottom:'1.25rem', border:`0.5px solid ${PT.border}`, borderRadius:PT.radiusLg, overflow:'hidden' }}>
-              {/* Header */}
-              <div style={{ background:PT.surfSecondary, borderBottom:`1px solid ${PT.border}`, padding:'10px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'6px' }}>
-                <span style={{ fontSize:'11px', fontWeight:'500', color:PT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em' }}>BILAN IA HEBDOMADAIRE</span>
-                {weeklyReport && (
-                  <span style={{ fontSize:'11px', color:PT.textTertiary }}>
-                    Semaine du {fmtDate(weeklyReport.weekStart)} · Généré par Claude
-                  </span>
-                )}
-              </div>
-
-              {/* Verdict strip — fallback sur trend si verdict_label absent (anciennes entrées) */}
-              {weeklyReport && (weeklyReport.verdict_label || weeklyReport.trend) && (
-                <div style={{ padding:'12px 16px', background:verdictBg, borderBottom:'0.5px solid #3a1212' }}>
-                  <div style={{ fontSize:'11px', color:'#9a6060', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'4px' }}>VERDICT</div>
-                  <div style={{ fontSize:'15px', fontWeight:'500', color:verdictColor }}>{weeklyReport.verdict_label || weeklyReport.trend}</div>
-                </div>
-              )}
-
-              {/* Pills quotidiennes de la semaine */}
-              {weeklyReport && (() => {
-                const pills = buildWeekPills(weeklyReport.weekStart, tradeStats, dailyMentalByDate, calendar);
-                if (pills.length === 0) return null;
-                return (
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', padding:'10px 16px', borderBottom:`0.5px solid ${PT.border}`, background:PT.surfSecondary }}>
-                    {pills.map(p => p.unknown ? (
-                      <span key={p.date} style={{ display:'flex', alignItems:'center', gap:'4px', borderRadius:'99px', padding:'3px 10px', fontSize:'11px', background:'rgba(136,153,187,0.08)', color:PT.textTertiary }}>
-                        {p.dayLabel} <span style={{ fontWeight:'700' }}>?</span>
-                      </span>
-                    ) : (() => {
-                      const color = EMOTION_COLORS[p.trait] ?? PT.textTertiary;
-                      const rgb   = emotionRgb(color);
-                      return (
-                        <span key={p.date} style={{ display:'flex', alignItems:'center', gap:'4px', borderRadius:'99px', padding:'3px 10px', fontSize:'11px', background:`rgba(${rgb},0.14)`, color }}>
-                          <ToneIcon tone={emotionTone(p.trait)} color={color} size={11} />
-                          {p.dayLabel} {fmt(p.pnl, true)}
-                        </span>
-                      );
-                    })())}
-                  </div>
-                );
-              })()}
-
-              {/* Patterns identifiés */}
-              {weeklyReport && weeklyReport.patterns.length > 0 && (
-                <div style={{ background:PT.surfSecondary, borderBottom:`1px solid ${PT.borderSecondary}`, padding:'12px 16px' }}>
-                  <div style={{ fontSize:'11px', color:PT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'8px' }}>PATTERNS IDENTIFIÉS</div>
-                  <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
-                    {weeklyReport.patterns.map((p, i) => (
-                      <div key={i} style={{ display:'flex', gap:'8px', alignItems:'flex-start' }}>
-                        <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#7F77DD', marginTop:'5px', flexShrink:0 }} />
-                        <span style={{ fontSize:'12px', color:PT.textSecondary, lineHeight:'1.5' }}>{highlightNumbers(p)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Body : analyse détaillée */}
-              <div style={{ padding:'16px' }}>
-                {weeklyAuthError && (
-                  <div style={{ fontSize:'13px', color:'#f59e0b', lineHeight:'1.6' }}>
-                    {weeklyAuthError === 'unauthenticated'      ? 'Connecte-toi pour activer le bilan hebdomadaire.'
-                      : weeklyAuthError === 'subscription_inactive' ? 'Abonnement requis pour activer le bilan hebdomadaire.'
-                      : `Quota IA mensuel atteint${weeklyQuotaReset ? `, réessaie après le ${weeklyQuotaReset}` : ''}.`}
-                  </div>
-                )}
-
-                {weeklyGenerating && !weeklyReport && (
-                  <div style={{ fontSize:'13px', color:PT.textSecondary, display:'flex', alignItems:'center', gap:'8px' }}>
-                    <span style={{ animation:'pulse 1.5s ease infinite', fontSize:'8px' }}>●</span>
-                    Claude analyse ta semaine...
-                  </div>
-                )}
-
-                {weeklyInsufficient && !weeklyGenerating && (
-                  <div style={{ fontSize:'13px', color:PT.textSecondary }}>Historique encore trop court pour un bilan hebdomadaire.</div>
-                )}
-
-                {weeklyError && !weeklyGenerating && (
-                  <div style={{ fontSize:'13px', color:PT.danger }}>{weeklyError}</div>
-                )}
-
-                {weeklyReport && weeklyReport.paragraphes.map((p, i) => (
-                  <p key={i} style={{ fontSize:'13px', color:PT.textSecondary, lineHeight:'1.75', maxWidth:'640px', textAlign:'left', margin:'0 0 12px' }}>{highlightNumbers(p.trim())}</p>
-                ))}
-              </div>
-
-              {/* Recommandation prioritaire */}
-              {weeklyReport && weeklyReport.recommandation && (
-                <div style={{ margin:'0 16px 16px', borderRadius:PT.radiusMd, border:'0.5px solid rgba(186,117,23,0.35)', background:'rgba(186,117,23,0.08)', padding:'12px 14px' }}>
-                  <div style={{ fontSize:'11px', fontWeight:'500', textTransform:'uppercase', color:PT.warn, display:'flex', alignItems:'center', gap:'5px', marginBottom:'6px' }}>
-                    <IconArrowRight color={PT.warn} /> RECOMMANDATION SEMAINE SUIVANTE
-                  </div>
-                  <div style={{ fontSize:'13px', color:PT.textPrimary, lineHeight:'1.6' }}>{weeklyReport.recommandation}</div>
-                </div>
-              )}
-
-              {/* Footer */}
-              <div style={{ padding:'8px 16px', background:PT.surfSecondary, borderTop:`1px solid ${PT.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
-                <span style={{ fontSize:'11px', color:PT.textTertiary }}>Aucun trade enregistré le {fmtDate(referenceDay)}.</span>
-                <button
-                  onClick={() => loadOrGenerateWeeklyReport(true)}
-                  disabled={isDemoMode || weeklyGenerating}
-                  title={isDemoMode ? 'Disponible avec un abonnement actif' : undefined}
-                  style={{
-                    background:'transparent', border:`1px solid ${PT.textTertiary}`, color:PT.textTertiary,
-                    fontSize:'12px', fontFamily:'inherit', padding:'3px 9px', borderRadius:'5px',
-                    cursor: isDemoMode ? 'not-allowed' : weeklyGenerating ? 'wait' : 'pointer',
-                    opacity: isDemoMode ? 0.5 : 1, flexShrink:0,
-                  }}>
-                  Regénérer ↗
-                </button>
-              </div>
-            </div>
-          );
-        })() : (
+        noTradeSynthesis ? renderWeeklyPanel() : (
           <div style={{ marginBottom:'20px', padding:'20px', background:`${P.bg}0.40)`, border:`1px solid ${P.border}0.10)`, borderRadius:'10px', textAlign:'center' }}>
             <div style={{ fontSize:'28px', marginBottom:'10px' }}>📊</div>
             <div style={{ fontSize:'14px', color:P.text2 }}>Aucun trade enregistré le {fmtDate(referenceDay)}.</div>
@@ -1206,6 +1225,9 @@ export default function TraderProfile() {
           </div>
         </div>
       )}
+
+      {/* ── Bilan IA hebdomadaire : aussi visible sous le portrait du jour sur les jours avec trades ── */}
+      {!noTrades && !authError && weeklyReport && renderWeeklyPanel()}
 
       {/* Calendrier */}
       <div style={{ marginBottom:'16px' }}>
