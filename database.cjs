@@ -163,6 +163,21 @@ function initSchema(db) {
       sort_order       INTEGER DEFAULT 0,
       created_at       TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS daily_mental_reports (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id       INTEGER NOT NULL,
+      date          TEXT NOT NULL,
+      trait         TEXT NOT NULL,
+      emotion_text  TEXT NOT NULL,
+      patterns_text TEXT NOT NULL,
+      focus_text    TEXT NOT NULL,
+      trades_count  INTEGER NOT NULL,
+      win_rate      REAL NOT NULL,
+      pnl_net       REAL NOT NULL,
+      generated_at  TEXT DEFAULT (datetime('now')),
+      UNIQUE(user_id, date)
+    );
   `);
 
   // Migrations for existing DBs
@@ -587,6 +602,41 @@ function saveWeeklyReport(db, dbPath, report) {
   return getWeeklyReport(db, report.week_start);
 }
 
+// ── DAILY MENTAL REPORTS (analyse psychologique quotidienne automatique) ──
+function getDailyMentalReportsForMonth(db, userId, monthKey) {
+  return getAll(db, "SELECT * FROM daily_mental_reports WHERE user_id=? AND date LIKE ? ORDER BY date ASC", [userId, `${monthKey}%`]);
+}
+function getDailyMentalReportForDate(db, userId, date) {
+  return getOne(db, 'SELECT * FROM daily_mental_reports WHERE user_id=? AND date=?', [userId, date]);
+}
+function saveDailyMentalReport(db, dbPath, userId, date, report) {
+  const existing = getDailyMentalReportForDate(db, userId, date);
+  const params = {
+    ':user_id': userId, ':date': date,
+    ':trait': report.trait, ':emotion_text': report.emotion_text,
+    ':patterns_text': report.patterns_text, ':focus_text': report.focus_text,
+    ':trades_count': report.trades_count, ':win_rate': report.win_rate, ':pnl_net': report.pnl_net,
+  };
+  if (existing) {
+    runQ(db, dbPath, `
+      UPDATE daily_mental_reports SET
+        trait=:trait, emotion_text=:emotion_text, patterns_text=:patterns_text, focus_text=:focus_text,
+        trades_count=:trades_count, win_rate=:win_rate, pnl_net=:pnl_net,
+        generated_at=datetime('now')
+      WHERE user_id=:user_id AND date=:date
+    `, params);
+  } else {
+    runQ(db, dbPath, `
+      INSERT INTO daily_mental_reports (user_id, date, trait, emotion_text, patterns_text, focus_text, trades_count, win_rate, pnl_net)
+      VALUES (:user_id, :date, :trait, :emotion_text, :patterns_text, :focus_text, :trades_count, :win_rate, :pnl_net)
+    `, params);
+  }
+  return getDailyMentalReportForDate(db, userId, date);
+}
+function deleteDailyMentalReport(db, dbPath, userId, date) {
+  runQ(db, dbPath, 'DELETE FROM daily_mental_reports WHERE user_id=? AND date=?', [userId, date]);
+}
+
 // ── BUDGET CATEGORIES (legacy, conservée pour rollback) ───────
 function getBudgetCategories(db) {
   return getAll(db, 'SELECT * FROM budget_categories ORDER BY sort_order, created_at');
@@ -761,6 +811,7 @@ module.exports = {
   getWeeklyAnalyses, getWeeklyAnalysis, upsertWeeklyAnalysis, deleteWeeklyAnalysis,
   getMentalReport, getMentalReportsRange, saveMentalReport,
   getWeeklyReport, saveWeeklyReport,
+  getDailyMentalReportsForMonth, getDailyMentalReportForDate, saveDailyMentalReport, deleteDailyMentalReport,
   getAiMessages, insertAiMessage, clearAiConversations,
   migrateBudgetData,
   getBudgetCategories,

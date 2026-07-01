@@ -12,6 +12,7 @@ const { spawn } = require('child_process');
 const { autoUpdater } = require('electron-updater');
 const Store = require('electron-store');
 const demoModule = require('./demo.cjs');
+const dailyMentalReportMod = require('./dailyMentalReport.cjs');
 
 // ── Backend centralisé (auth + proxy IA) ─────────────────────
 // Changeable sans recompiler : surchargeable via .env (mêmes emplacements que loadEnv ci-dessous).
@@ -640,6 +641,43 @@ async function generateIctAnalysis(type, date, asset) {
   throw new Error(`Type inconnu: ${type}`);
 }
 
+// ── Scheduler analyse psychologique quotidienne (23h00 heure locale) ──────────
+// Heure configurable ici pour les tests (cf. instructions de vérification) :
+// passer DAILY_MENTAL_HOUR/MINUTE à l'heure courante +2 min, valider, puis remettre 23h00.
+const DAILY_MENTAL_HOUR   = 23;
+const DAILY_MENTAL_MINUTE = 0;
+
+function msUntilNextDailyMentalRun() {
+  const now  = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), DAILY_MENTAL_HOUR, DAILY_MENTAL_MINUTE, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  return next.getTime() - now.getTime();
+}
+
+async function runDailyMentalReportJob() {
+  try {
+    const token = getAuthToken();
+    const user  = authStore.get('user');
+    if (!token || !user || user.subscription_status !== 'active') {
+      console.log('[DailyMentalReport] Utilisateur non authentifié ou abonnement inactif, scheduler ignoré.');
+      return;
+    }
+    const today  = new Date().toISOString().slice(0, 10);
+    const result = await dailyMentalReportMod.generateDailyMentalReport(globalDb, globalDbPath, user.id, today, { force: false, callAnthropicApi });
+    if (result) console.log(`Daily mental report generated for ${today}`);
+    else console.log('No trades today, skipping');
+  } catch (e) {
+    console.error('[DailyMentalReport scheduler]', e.message);
+  }
+}
+
+function scheduleDailyMentalReport() {
+  setTimeout(async () => {
+    await runDailyMentalReportJob();
+    scheduleDailyMentalReport(); // recalcule le prochain déclenchement (jour suivant)
+  }, msUntilNextDailyMentalRun());
+}
+
 let mainWindow;
 let accounts;
 let dbModule;
@@ -954,6 +992,7 @@ app.whenReady().then(async () => {
   createWindow();
   startBotServer(3001);
   startBackendServer();
+  scheduleDailyMentalReport();
 
   if (app.isPackaged) {
     mainWindow.webContents.on('did-finish-load', () => {
@@ -1124,6 +1163,27 @@ function registerHandlers() {
   globalDbHandle('db:getWeeklyReport',  (db, _, weekStart) => dbModule.getWeeklyReport(db, weekStart));
   globalDbHandle('db:saveWeeklyReport', (db, dbp, weekStart, trend, description, extra) =>
     dbModule.saveWeeklyReport(db, dbp, { week_start: weekStart, trend, description, ...(extra || {}) }));
+
+  // Analyse psychologique quotidienne automatique (global DB — 1 ligne par user_id+date)
+  globalDbHandle('daily-mental:getForMonth', (db, _, userId, monthKey) => dbModule.getDailyMentalReportsForMonth(db, userId, monthKey), { demoFn: () => [] });
+  globalDbHandle('daily-mental:getForDate',  (db, _, userId, date) => dbModule.getDailyMentalReportForDate(db, userId, date), { demoFn: () => null });
+  globalDbHandle('daily-mental:save',        (db, dbp, userId, date, report) => dbModule.saveDailyMentalReport(db, dbp, userId, date, report), { blockInDemo: true });
+  globalDbHandle('daily-mental:delete',      (db, dbp, userId, date) => dbModule.deleteDailyMentalReport(db, dbp, userId, date), { blockInDemo: true });
+
+  ipcMain.handle('daily-mental:generate', async (_, userId, date, force) => {
+    try {
+      if (isDemoMode()) return DEMO_MODE_ERROR;
+      if (!globalDb || !globalDbPath) return { ok: false, error: 'Global DB non initialisée' };
+      const result = await dailyMentalReportMod.generateDailyMentalReport(globalDb, globalDbPath, userId, date, { force: !!force, callAnthropicApi });
+      return { ok: true, data: result };
+    } catch (e) {
+      if (e.code === 'UNAUTHENTICATED')       return { ok: false, error: 'unauthenticated', message: e.message };
+      if (e.code === 'SUBSCRIPTION_INACTIVE')  return { ok: false, error: 'subscription_inactive', message: e.message };
+      if (e.code === 'QUOTA_EXCEEDED')         return { ok: false, error: 'quota_exceeded', message: e.message, resetDate: e.resetDate, used: e.used, limit: e.limit };
+      console.error('[IPC] daily-mental:generate:', e.message);
+      return { ok: false, error: e.message };
+    }
+  });
 
   // ── Budget handlers (global DB — finances personnelles, séparées des comptes de trading)
   globalDbHandle('budget:getSubcategories',  (db) => dbModule.getBudgetSubcategories(db),                              { demoFn: ()       => demoModule.getDemoBudgetSubcategories() });

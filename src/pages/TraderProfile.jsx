@@ -64,6 +64,15 @@ function IconArrowRight({ color, size = 12 }) {
   );
 }
 
+function IconBrain({ color, size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9.5 4a2.5 2.5 0 0 0 -2.5 2.5v.5a2.5 2.5 0 0 0 -1 4.8a2.5 2.5 0 0 0 1.7 4.3a2.5 2.5 0 0 0 4.3 1.4a2.5 2.5 0 0 0 4.3 -1.4a2.5 2.5 0 0 0 1.7 -4.3a2.5 2.5 0 0 0 -1 -4.8v-.5a2.5 2.5 0 0 0 -2.5 -2.5h-5z" />
+      <path d="M12 6v13" />
+    </svg>
+  );
+}
+
 function monthLabel(year, month) {
   return new Date(year, month, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 }
@@ -260,21 +269,24 @@ function renderBlocks(text, color) {
 }
 
 // ── Modale — analyse psychologique complète d'un jour (ouverte au clic depuis le calendrier) ──
-function ReportModal({ entry, dayStats, onClose }) {
-  if (!entry) return null;
-  const color = EMOTION_COLORS[entry.emotion] ?? P.text2;
+// Accepte n'importe quel jour ayant des trades, avec ou sans analyse déjà générée
+// (entry === null -> bloc "Aucune analyse" + bouton Générer).
+function ReportModal({ date, entry, dayStats, generating, isDemoMode, error, onGenerate, onClose }) {
+  const color = entry ? (EMOTION_COLORS[entry.emotion] ?? P.text2) : P.text2;
   const rgb   = emotionRgb(color);
   return (
     <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:1000, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>
       <div onClick={e => e.stopPropagation()} style={{ background:'#0c0d16', border:`1px solid rgba(${rgb},0.35)`, borderRadius:'14px', width:'100%', maxWidth:'640px', maxHeight:'86vh', overflow:'hidden', display:'flex', flexDirection:'column' }}>
         <div style={{ padding:'20px 24px', background:`linear-gradient(135deg, rgba(${rgb},0.22), rgba(${rgb},0.05))`, borderBottom:`1px solid rgba(${rgb},0.25)`, display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'14px', flexShrink:0 }}>
           <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
-            <div style={{ width:'48px', height:'48px', borderRadius:'12px', background:`rgba(${rgb},0.18)`, border:`1px solid rgba(${rgb},0.45)`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-              <ToneIcon tone={emotionTone(entry.emotion)} color={color} size={24} />
-            </div>
+            {entry && (
+              <div style={{ width:'48px', height:'48px', borderRadius:'12px', background:`rgba(${rgb},0.18)`, border:`1px solid rgba(${rgb},0.45)`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <ToneIcon tone={emotionTone(entry.emotion)} color={color} size={24} />
+              </div>
+            )}
             <div>
-              <div style={{ fontSize:'12px', color:P.text2, textTransform:'capitalize', marginBottom:'2px' }}>{fmtDate(entry.date)}</div>
-              <div style={{ fontSize:'20px', fontWeight:'800', color, letterSpacing:'-0.3px', lineHeight:1.15 }}>{entry.emotion}</div>
+              <div style={{ fontSize:'12px', color:P.text2, textTransform:'capitalize', marginBottom:'2px' }}>{fmtDate(date)}</div>
+              <div style={{ fontSize:'20px', fontWeight:'800', color: entry ? color : P.text3, letterSpacing:'-0.3px', lineHeight:1.15 }}>{entry ? entry.emotion : 'Aucune analyse'}</div>
             </div>
           </div>
           <button onClick={onClose} style={{ background:'transparent', border:'none', color:P.text3, cursor:'pointer', fontSize:'18px', padding:'0', lineHeight:1 }}>✕</button>
@@ -287,8 +299,51 @@ function ReportModal({ entry, dayStats, onClose }) {
               <MiniStat label="P&L NET" value={dayStats.count > 0 ? `${dayStats.pnl >= 0 ? '+' : ''}${dayStats.pnl.toFixed(2)}$` : '—'} />
             </div>
           )}
-          <div>{renderBlocks(entry.text, color)}</div>
-          {entry.generatedAt && (
+
+          {entry ? (
+            <div>
+              <div style={{ marginBottom:'16px' }}>
+                <div style={{ fontSize:'11px', color:PT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'6px' }}>ÉTAT ÉMOTIONNEL</div>
+                <div style={{ fontSize:'13px', color:PT.textPrimary, lineHeight:'1.7', maxWidth:'560px' }}>{entry.emotionText}</div>
+              </div>
+              <div style={{ marginBottom:'16px' }}>
+                <div style={{ fontSize:'11px', color:PT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'6px' }}>PATTERNS IDENTIFIÉS</div>
+                <div style={{ fontSize:'13px', color:PT.textPrimary, lineHeight:'1.7', maxWidth:'560px' }}>{entry.patternsText}</div>
+              </div>
+              <div style={{ background:'rgba(186,117,23,0.08)', border:'0.5px solid rgba(186,117,23,0.35)', borderRadius:PT.radiusMd, padding:'10px 14px' }}>
+                <div style={{ fontSize:'11px', color:PT.warn, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'6px', display:'flex', alignItems:'center', gap:'5px' }}>
+                  <IconArrowRight color={PT.warn} /> FOCUS POUR DEMAIN
+                </div>
+                <div style={{ fontSize:'13px', color:PT.textPrimary, lineHeight:'1.6', borderLeft:'2px solid #7F77DD', paddingLeft:'10px' }}>{entry.focusText}</div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign:'center', padding:'24px 0' }}>
+              <div style={{ fontSize:'13px', color:P.text2, marginBottom:'16px' }}>Aucune analyse générée pour cette journée</div>
+              {error && (
+                <div style={{ fontSize:'12px', color:'#f59e0b', marginBottom:'12px' }}>
+                  {error === 'unauthenticated'      ? 'Connexion requise.'
+                    : error === 'subscription_inactive' ? 'Abonnement requis.'
+                    : error === 'quota_exceeded'         ? 'Quota IA mensuel atteint.'
+                    : error}
+                </div>
+              )}
+              <button
+                onClick={onGenerate}
+                disabled={generating || isDemoMode}
+                title={isDemoMode ? 'Disponible avec un abonnement actif' : undefined}
+                style={{
+                  padding:'8px 16px', borderRadius:'6px', background:'transparent',
+                  border:`1px solid ${P.border}0.30)`, color: isDemoMode ? P.text4 : P.text1,
+                  fontSize:'12px', fontFamily:'inherit', cursor: isDemoMode ? 'not-allowed' : generating ? 'wait' : 'pointer',
+                  opacity: isDemoMode ? 0.5 : 1,
+                }}>
+                {generating ? 'Génération en cours…' : 'Générer l\'analyse ↗'}
+              </button>
+            </div>
+          )}
+
+          {entry?.generatedAt && (
             <div style={{ marginTop:'20px', paddingTop:'14px', borderTop:`1px solid ${P.border}0.08)`, display:'flex', alignItems:'center', gap:'8px' }}>
               <div style={{ width:'5px', height:'5px', borderRadius:'50%', background:color, boxShadow:`0 0 5px ${color}` }} />
               <span style={{ fontSize:'11px', color:P.text4 }}>
@@ -307,7 +362,7 @@ function ReportModal({ entry, dayStats, onClose }) {
 // avec le trait psychologique du jour comme métrique principale (à la place du
 // P&L), enrichi du nombre de trades et du winrate du jour. Clic sur un jour
 // avec un rapport existant -> ouvre l'analyse complète (ReportModal).
-function TraitCalendar({ calendar, tradeStats, referenceDay, onMonthChange, onDayClick }) {
+function TraitCalendar({ calendar, dailyMentalByDate, tradeStats, referenceDay, generatingDates, isDemoMode, onMonthChange, onDayClick, onGenerateDay }) {
   const initial = referenceDay ? new Date(referenceDay + 'T12:00:00') : new Date();
   const [year,    setYear]    = useState(initial.getFullYear());
   const [month,   setMonth]   = useState(initial.getMonth());
@@ -315,8 +370,10 @@ function TraitCalendar({ calendar, tradeStats, referenceDay, onMonthChange, onDa
 
   useEffect(() => { onMonthChange?.(year, month); }, [year, month]);
 
+  // Priorité à daily_mental_reports quand les deux coexistent pour le même jour (cf. Partie 6).
   const byDay = {};
   for (const e of calendar) byDay[e.date] = e.emotion;
+  for (const date in dailyMentalByDate) byDay[date] = dailyMentalByDate[date].trait;
 
   const rawFirst    = new Date(year, month, 1).getDay();
   const firstDay    = rawFirst === 0 ? 6 : rawFirst - 1;
@@ -384,13 +441,15 @@ function TraitCalendar({ calendar, tradeStats, referenceDay, onMonthChange, onDa
               const date    = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
               const stats   = tradeStats[date];
               const wr      = stats && stats.count > 0 ? Math.round(stats.wins / stats.count * 100) : null;
+              const hasTrades = stats?.count > 0;
               // garde : ne jamais afficher un trait si aucun trade n'existe ce jour-là
-              const emotion = stats?.count > 0 ? byDay[date] : null;
+              const emotion = hasTrades ? byDay[date] : null;
               const color   = emotion ? (EMOTION_COLORS[emotion] ?? P.text2) : null;
               const cellRgb = color ? emotionRgb(color) : null;
               const isRef   = date === referenceDay;
               const isHov   = hovered === date;
-              const clickable = !!emotion;
+              const clickable = hasTrades;
+              const isGenerating = generatingDates?.has(date);
               return (
                 <div key={date}
                   onClick={() => clickable && onDayClick?.(date)}
@@ -405,13 +464,32 @@ function TraitCalendar({ calendar, tradeStats, referenceDay, onMonthChange, onDa
                     transform: isHov && emotion ? 'scale(1.03)' : 'scale(1)',
                     position:'relative', zIndex: isHov ? 3 : 1,
                     boxShadow: isHov && emotion ? '0 4px 16px rgba(0,0,0,0.4)' : 'none',
+                    opacity: isGenerating ? 0.45 : 1,
                   }}>
+                  {hasTrades && !isDemoMode && (
+                    <button
+                      onClick={e => { e.stopPropagation(); onGenerateDay?.(date); }}
+                      disabled={isGenerating}
+                      title={emotion ? 'Régénérer l\'analyse de ce jour' : 'Générer l\'analyse de ce jour'}
+                      style={{
+                        position:'absolute', top:'3px', right:'3px', zIndex:4,
+                        width:'16px', height:'16px', display:'flex', alignItems:'center', justifyContent:'center',
+                        background:'rgba(8,9,16,0.55)', border:'none', borderRadius:'4px',
+                        opacity: isHov ? 1 : 0, transition:'opacity 0.12s',
+                        cursor: isGenerating ? 'wait' : 'pointer', padding:0,
+                      }}>
+                      <IconBrain color={P.text3} size={11} />
+                    </button>
+                  )}
                   <span style={{ fontSize:'11px', color: emotion ? P.text2 : P.text4, fontWeight: isRef ? '700' : '400' }}>{day}</span>
                   {emotion && (
                     <div style={{ display:'flex', alignItems:'center', gap:'4px' }}>
                       <ToneIcon tone={emotionTone(emotion)} color={color} size={13} />
                       <span style={{ fontSize:'10px', color, fontWeight:'600', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{emotion}</span>
                     </div>
+                  )}
+                  {!emotion && hasTrades && !isGenerating && !isDemoMode && (
+                    <span style={{ fontSize:'10px', color:P.text3 }}>⚡ Analyser</span>
                   )}
                   {stats && (
                     <div style={{ fontSize:'9px', color: wr >= 50 ? '#00cc77' : '#ff3344' }}>
@@ -458,10 +536,32 @@ function TraitCalendar({ calendar, tradeStats, referenceDay, onMonthChange, onDa
   );
 }
 
+// Convertit le texte legacy (mental_reports, 3 blocs séparés par \n\n) vers la forme
+// unifiée {emotionText, patternsText, focusText} utilisée par la modale de détail.
+function splitLegacyBlocks(text) {
+  const blocks = (text ?? '').split(/\n\n+/);
+  const pick = (titles) => {
+    const b = blocks.find(blk => titles.some(t => blk.trim().toUpperCase().startsWith(t)));
+    if (!b) return '';
+    const lines = b.trim().split('\n');
+    return (titles.some(t => lines[0].trim().toUpperCase().includes(t)) ? lines.slice(1) : lines).join(' ').trim();
+  };
+  return {
+    emotionText:  pick(['ÉTAT ÉMOTIONNEL']) || blocks[0]?.trim() || '',
+    patternsText: pick(['PATTERNS IDENTIFIÉS']) || blocks[1]?.trim() || '',
+    focusText:    pick(['FOCUS POUR DEMAIN']) || blocks[2]?.trim() || '',
+  };
+}
+
 export default function TraderProfile() {
   const [loading,       setLoading]       = useState(true);
   const [isDemoMode,    setIsDemoMode]    = useState(false);
+  const [userId,        setUserId]        = useState(null);
   const [calendar,      setCalendar]      = useState([]); // [{ date, emotion, text, generatedAt }]
+  const [dailyMentalByDate, setDailyMentalByDate] = useState({}); // { [date]: row daily_mental_reports }
+  const [generatingDates,   setGeneratingDates]   = useState(() => new Set());
+  const [modalGenerating,   setModalGenerating]   = useState(false);
+  const [modalError,        setModalError]        = useState(null);
   const [tradeStats,    setTradeStats]    = useState({});  // { [date]: { count, wins, losses } } — tous comptes
   const [referenceDay,  setReferenceDay]  = useState(null);
   const [viewYear,      setViewYear]      = useState(new Date().getFullYear());
@@ -497,6 +597,7 @@ export default function TraderProfile() {
         ? trades.reduce((max, t) => (t.date && t.date > max ? t.date : max), trades[0]?.date ?? getPreviousTradingDay())
         : getPreviousTradingDay();
       setIsDemoMode(demoMode);
+      setUserId(sessionRes.data?.user?.id ?? null);
       setReferenceDay(day);
       setStats(statsRes.ok ? statsRes.data : null);
 
@@ -573,7 +674,40 @@ export default function TraderProfile() {
     loadOrGenerateWeeklyReport();
   }, [loading, noTrades, isDemoMode]);
 
-  async function loadOrGenerateWeeklyReport() {
+  // Analyses psychologiques quotidiennes automatiques du mois affiché dans le calendrier
+  // (table daily_mental_reports, séparée de mental_reports) — jamais en mode démo, où le
+  // calendrier reste sur le dataset statique de demo_data.json.
+  useEffect(() => {
+    if (loading || isDemoMode || !userId) return;
+    (async () => {
+      const monthKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
+      const res = await window.dailyMental.getForMonth(userId, monthKey);
+      if (!res.ok) return;
+      const byDate = {};
+      for (const row of (res.data ?? [])) byDate[row.date] = row;
+      setDailyMentalByDate(prev => ({ ...prev, ...byDate }));
+    })();
+  }, [loading, isDemoMode, userId, viewYear, viewMonth]);
+
+  async function handleGenerateDay(date, force = true) {
+    if (isDemoMode || !userId || generatingDates.has(date)) return;
+    setGeneratingDates(prev => new Set(prev).add(date));
+    if (modalDate === date) { setModalGenerating(true); setModalError(null); }
+    try {
+      const res = await window.dailyMental.generate(userId, date, force);
+      if (!res.ok) {
+        if (modalDate === date) setModalError(res.error || 'Erreur lors de la génération.');
+        return;
+      }
+      if (res.data) setDailyMentalByDate(prev => ({ ...prev, [date]: res.data }));
+    } finally {
+      setGeneratingDates(prev => { const next = new Set(prev); next.delete(date); return next; });
+      if (modalDate === date) setModalGenerating(false);
+    }
+  }
+
+  async function loadOrGenerateWeeklyReport(force = false) {
+    if (isDemoMode) return;
     setWeeklyGenerating(true);
     setWeeklyAuthError(null);
     setWeeklyQuotaReset(null);
@@ -583,7 +717,7 @@ export default function TraderProfile() {
     try {
       const weekStart = getCurrentWeekStart();
       const existingRes = await window.db.getWeeklyReport(weekStart);
-      if (existingRes.ok && existingRes.data) {
+      if (!force && existingRes.ok && existingRes.data) {
         const d = existingRes.data;
         const structured = d.paragraphes != null;
         setWeeklyReport({
@@ -792,17 +926,23 @@ export default function TraderProfile() {
   const badgeColor = report ? (EMOTION_COLORS[report.emotion] ?? P.text2) : P.text3;
   const badgeRgb    = emotionRgb(badgeColor);
 
-  // Mini-stats du jour affichées dans la modale de détail (carte ouverte au clic calendrier) —
-  // sourcées de tradeStats (agrégat tous comptes), même scope que les badges du calendrier,
-  // pour ne pas dépendre du compte actif au moment de l'ouverture (qui peut différer de celui
-  // actif lors de la génération du bilan).
-  const modalEntry = modalDate ? calendar.find(e => e.date === modalDate) : null;
+  // Mini-stats + analyse du jour affichées dans la modale de détail (carte ouverte au clic
+  // calendrier) — sourcées de tradeStats (agrégat tous comptes), même scope que les badges du
+  // calendrier. La modale s'ouvre pour tout jour ayant des trades, avec ou sans analyse :
+  // priorité à daily_mental_reports sur l'ancien mental_reports (cf. Partie 6).
   let modalDayStats = null;
-  if (modalEntry) {
-    const dayStat = tradeStats[modalEntry.date];
+  if (modalDate) {
+    const dayStat = tradeStats[modalDate];
     const count = dayStat?.count ?? 0;
     modalDayStats = { count, wr: count > 0 ? Math.round(dayStat.wins / count * 100) : null, pnl: dayStat?.pnl ?? 0 };
   }
+  const modalNewReport = modalDate ? dailyMentalByDate[modalDate] : null;
+  const modalLegacy     = modalDate ? calendar.find(e => e.date === modalDate) : null;
+  const modalEntry = modalNewReport
+    ? { emotion: modalNewReport.trait, emotionText: modalNewReport.emotion_text, patternsText: modalNewReport.patterns_text, focusText: modalNewReport.focus_text, generatedAt: modalNewReport.generated_at }
+    : modalLegacy
+    ? { emotion: modalLegacy.emotion, ...splitLegacyBlocks(modalLegacy.text), generatedAt: modalLegacy.generatedAt }
+    : null;
 
   const noTradeSynthesis = noTrades ? computeNoTradeSynthesis(calendar) : null;
 
@@ -936,8 +1076,20 @@ export default function TraderProfile() {
               )}
 
               {/* Footer */}
-              <div style={{ padding:'8px 16px', background:PT.surfSecondary, borderTop:`1px solid ${PT.border}`, fontSize:'11px', color:PT.textTertiary }}>
-                Aucun trade enregistré le {fmtDate(referenceDay)}.
+              <div style={{ padding:'8px 16px', background:PT.surfSecondary, borderTop:`1px solid ${PT.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
+                <span style={{ fontSize:'11px', color:PT.textTertiary }}>Aucun trade enregistré le {fmtDate(referenceDay)}.</span>
+                <button
+                  onClick={() => loadOrGenerateWeeklyReport(true)}
+                  disabled={isDemoMode || weeklyGenerating}
+                  title={isDemoMode ? 'Disponible avec un abonnement actif' : undefined}
+                  style={{
+                    background:'transparent', border:`1px solid ${PT.textTertiary}`, color:PT.textTertiary,
+                    fontSize:'12px', fontFamily:'inherit', padding:'3px 9px', borderRadius:'5px',
+                    cursor: isDemoMode ? 'not-allowed' : weeklyGenerating ? 'wait' : 'pointer',
+                    opacity: isDemoMode ? 0.5 : 1, flexShrink:0,
+                  }}>
+                  Regénérer ↗
+                </button>
               </div>
             </div>
           );
@@ -1016,10 +1168,14 @@ export default function TraderProfile() {
       <div style={{ marginBottom:'16px' }}>
         <TraitCalendar
           calendar={calendar}
+          dailyMentalByDate={dailyMentalByDate}
           tradeStats={tradeStats}
           referenceDay={referenceDay}
+          generatingDates={generatingDates}
+          isDemoMode={isDemoMode}
           onMonthChange={(y, m) => { setViewYear(y); setViewMonth(m); }}
-          onDayClick={date => setModalDate(date)}
+          onDayClick={date => { setModalDate(date); setModalError(null); }}
+          onGenerateDay={date => handleGenerateDay(date, true)}
         />
       </div>
 
@@ -1037,7 +1193,16 @@ export default function TraderProfile() {
       </div>
 
       {modalDate && (
-        <ReportModal entry={modalEntry} dayStats={modalDayStats} onClose={() => setModalDate(null)} />
+        <ReportModal
+          date={modalDate}
+          entry={modalEntry}
+          dayStats={modalDayStats}
+          generating={modalGenerating || generatingDates.has(modalDate)}
+          isDemoMode={isDemoMode}
+          error={modalError}
+          onGenerate={() => handleGenerateDay(modalDate, true)}
+          onClose={() => { setModalDate(null); setModalError(null); }}
+        />
       )}
     </div>
   );

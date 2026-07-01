@@ -27,6 +27,14 @@ contextBridge.exposeInMainWorld('db', {
   saveWeeklyReport:       (weekStart, trend, description, extra) => ipcRenderer.invoke('db:saveWeeklyReport', weekStart, trend, description, extra),
 });
 
+contextBridge.exposeInMainWorld('dailyMental', {
+  // Résout toujours { ok, data } ou { ok:false, error: 'unauthenticated'|'subscription_inactive'|'quota_exceeded'|'demo_mode'|string, message?, resetDate?, used?, limit? }
+  getForMonth: (userId, monthKey)      => ipcRenderer.invoke('daily-mental:getForMonth', userId, monthKey),
+  getForDate:  (userId, date)          => ipcRenderer.invoke('daily-mental:getForDate', userId, date),
+  generate:    (userId, date, force)   => ipcRenderer.invoke('daily-mental:generate', userId, date, !!force),
+  delete:      (userId, date)          => ipcRenderer.invoke('daily-mental:delete', userId, date),
+});
+
 contextBridge.exposeInMainWorld('accounts', {
   getAll:    ()            => ipcRenderer.invoke('accounts:getAll'),
   create:    (acc)         => ipcRenderer.invoke('accounts:create', acc),
