@@ -31,13 +31,23 @@ const PT = {
 const WEEKDAY_LABELS = ['LUN','MAR','MER','JEU','VEN','SAM','DIM'];
 
 // ── Bilan IA hebdomadaire : system prompt JSON structuré ──────
-const WEEKLY_SYSTEM_PROMPT = `Tu es un expert en psychologie du trading. Tu reçois les données de trading et états mentaux d'un trader sur une semaine. Génère une synthèse structurée en JSON avec exactement ces clés :
-- trend : string, un mot parmi : 'En progression' | 'Stable' | 'En dégradation' | 'Critique'
-- verdict_label : string, 1 phrase courte et directe résumant la semaine (max 15 mots)
-- patterns : array de 2 strings max, patterns comportementaux identifiés avec chiffres
-- recommandation : string, 1 règle concrète et non négociable pour la semaine suivante (max 3 phrases)
-- paragraphes : array de 2-3 strings, analyse détaillée découpée en paragraphes courts (max 3 lignes chacun), chiffres inclus
-Réponds uniquement en JSON valide, sans markdown, sans backticks, sans préambule.`;
+const WEEKLY_SYSTEM_PROMPT = `Tu es un analyste en psychologie du trading.
+Tu reçois les données de trading d'une semaine complète.
+Réponds UNIQUEMENT avec un objet JSON valide, sans
+markdown, sans backticks, sans texte avant ou après.
+Structure exacte requise :
+{
+  "trend": "En progression" | "Stable" | "En dégradation" | "Critique",
+  "verdict_label": "phrase courte max 15 mots résumant la semaine",
+  "paragraphes": ["paragraphe 1 max 3 lignes", "paragraphe 2 max 3 lignes"],
+  "patterns": ["pattern 1 avec chiffres", "pattern 2 avec chiffres"],
+  "recommandation": "règle concrète non négociable pour la semaine suivante, max 3 phrases"
+}
+Règles strictes :
+- paragraphes : exactement 2 strings, chacune max 3 lignes, faits chiffrés
+- patterns : exactement 2 strings, comportements identifiés avec dates et chiffres
+- recommandation : 1 règle opérationnelle précise, pas de généralité
+- Aucune clé supplémentaire, aucun texte hors JSON`;
 
 function parseJsonArray(raw) {
   if (!raw) return [];
