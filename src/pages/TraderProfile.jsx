@@ -1022,7 +1022,7 @@ export default function TraderProfile() {
                 return (
                   <span key={p.date} style={{ display:'flex', alignItems:'center', gap:'4px', borderRadius:'99px', padding:'3px 10px', fontSize:'11px', background:`rgba(${rgb},0.14)`, color }}>
                     <ToneIcon tone={emotionTone(p.trait)} color={color} size={11} />
-                    {p.dayLabel} {fmt(p.pnl, true)}
+                    {p.dayLabel} {p.pnl >= 0 ? '+' + p.pnl.toFixed(2) + '$' : p.pnl.toFixed(2) + '$'}
                   </span>
                 );
               })())}
