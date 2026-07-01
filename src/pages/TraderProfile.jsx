@@ -749,6 +749,13 @@ export default function TraderProfile() {
       const existingRes = await window.db.getWeeklyReport(weekStart);
       if (!force && existingRes.ok && existingRes.data) {
         const d = existingRes.data;
+        const isLegacy = d.paragraphes == null && d.patterns == null && d.recommandation == null;
+        if (isLegacy && !viewOnly) {
+          // Ancien format sans colonnes structurées : régénère immédiatement en arrière-plan
+          // pour obtenir le nouveau format (paragraphes/patterns/recommandation), sans clic manuel.
+          await loadOrGenerateWeeklyReport(true);
+          return;
+        }
         const structured = d.paragraphes != null;
         setWeeklyReport({
           weekStart:      d.week_start,
@@ -1031,7 +1038,7 @@ export default function TraderProfile() {
         })()}
 
         {/* Body : analyse détaillée */}
-        <div style={{ maxWidth:'640px', padding:'16px' }}>
+        <div style={{ maxWidth:'640px', textAlign:'left', padding:'16px' }}>
           {weeklyAuthError && (
             <div style={{ fontSize:'13px', color:'#f59e0b', lineHeight:'1.6' }}>
               {weeklyAuthError === 'unauthenticated'      ? 'Connecte-toi pour activer le bilan hebdomadaire.'
