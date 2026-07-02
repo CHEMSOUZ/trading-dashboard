@@ -16,6 +16,7 @@ const { autoUpdater } = require('electron-updater');
 const Store = require('electron-store');
 const demoModule = require('./demo.cjs');
 const dailyMentalReportMod = require('./dailyMentalReport.cjs');
+const cron = require('node-cron');
 
 // ── Backend centralisé (auth + proxy IA) ─────────────────────
 // Changeable sans recompiler : surchargeable via .env (mêmes emplacements que loadEnv ci-dessous).
@@ -647,17 +648,21 @@ async function generateIctAnalysis(type, date, asset) {
 // ── Scheduler analyse psychologique quotidienne (23h00 heure locale) ──────────
 // Heure configurable ici pour les tests (cf. instructions de vérification) :
 // passer DAILY_MENTAL_HOUR/MINUTE à l'heure courante +2 min, valider, puis remettre 23h00.
+// node-cron (et non setTimeout) : évite tout calcul manuel de ms-jusqu'au-prochain-run (source
+// d'erreurs autour des changements d'heure DST) et déclenche de façon fiable sur un pattern
+// jour/heure/minute tant que le process tourne. Ceci ne couvre PAS le cas où l'app est
+// complètement fermée à 23h00 (Windows ne "rattrape" jamais un setTimeout/cron manqué) —
+// cf. catchUpMissedDailyMentalReports() ci-dessous, exécutée une fois au démarrage.
 const DAILY_MENTAL_HOUR   = 23;
 const DAILY_MENTAL_MINUTE = 0;
 
-function msUntilNextDailyMentalRun() {
-  const now  = new Date();
-  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), DAILY_MENTAL_HOUR, DAILY_MENTAL_MINUTE, 0, 0);
-  if (next <= now) next.setDate(next.getDate() + 1);
-  return next.getTime() - now.getTime();
+// Date locale "YYYY-MM-DD" — jamais toISOString() (décalage UTC selon le fuseau, même piège
+// que mondayOf() côté renderer, cf. TraderProfile.jsx).
+function localDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-async function runDailyMentalReportJob() {
+async function runDailyMentalReportJob(date = localDateStr(new Date())) {
   try {
     const token = getAuthToken();
     const user  = authStore.get('user');
@@ -665,9 +670,8 @@ async function runDailyMentalReportJob() {
       console.log('[DailyMentalReport] Utilisateur non authentifié ou abonnement inactif, scheduler ignoré.');
       return;
     }
-    const today  = new Date().toISOString().slice(0, 10);
-    const result = await dailyMentalReportMod.generateDailyMentalReport(globalDb, globalDbPath, user.id, today, { force: false, callAnthropicApi });
-    if (result) console.log(`Daily mental report generated for ${today}`);
+    const result = await dailyMentalReportMod.generateDailyMentalReport(globalDb, globalDbPath, user.id, date, { force: false, callAnthropicApi });
+    if (result) console.log(`Daily mental report generated for ${date}`);
     else console.log('No trades today, skipping');
   } catch (e) {
     console.error('[DailyMentalReport scheduler]', e.message);
@@ -675,10 +679,28 @@ async function runDailyMentalReportJob() {
 }
 
 function scheduleDailyMentalReport() {
-  setTimeout(async () => {
-    await runDailyMentalReportJob();
-    scheduleDailyMentalReport(); // recalcule le prochain déclenchement (jour suivant)
-  }, msUntilNextDailyMentalRun());
+  cron.schedule(`${DAILY_MENTAL_MINUTE} ${DAILY_MENTAL_HOUR} * * *`, () => { runDailyMentalReportJob(); });
+}
+
+// Rattrapage au démarrage : si l'app était fermée (ou l'ordinateur éteint/en veille) au moment
+// du cron 23h00 hier soir, le rapport de la veille peut manquer alors que des trades existent.
+// Vérifie UNIQUEMENT hier (jamais aujourd'hui, dont la session peut être encore en cours) et
+// génère si absent — ne fait rien si déjà présent (generateDailyMentalReport est idempotent).
+async function catchUpMissedDailyMentalReports() {
+  try {
+    const token = getAuthToken();
+    const user  = authStore.get('user');
+    if (!token || !user || user.subscription_status !== 'active') return;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = localDateStr(yesterday);
+    const existing = dbModule.getDailyMentalReportForDate(globalDb, user.id, yStr);
+    if (existing) return;
+    const result = await dailyMentalReportMod.generateDailyMentalReport(globalDb, globalDbPath, user.id, yStr, { force: false, callAnthropicApi });
+    if (result) console.log(`[DailyMentalReport] Rattrapage au démarrage : rapport généré pour ${yStr} (scheduler manqué, app probablement fermée à 23h00).`);
+  } catch (e) {
+    console.error('[DailyMentalReport catch-up]', e.message);
+  }
 }
 
 let mainWindow;
@@ -996,6 +1018,7 @@ app.whenReady().then(async () => {
   startBotServer(3001);
   startBackendServer();
   scheduleDailyMentalReport();
+  catchUpMissedDailyMentalReports();
 
   if (app.isPackaged) {
     mainWindow.webContents.on('did-finish-load', () => {
@@ -1170,6 +1193,7 @@ function registerHandlers() {
   // Analyse psychologique quotidienne automatique (global DB — 1 ligne par user_id+date)
   globalDbHandle('daily-mental:getForMonth', (db, _, userId, monthKey) => dbModule.getDailyMentalReportsForMonth(db, userId, monthKey), { demoFn: () => [] });
   globalDbHandle('daily-mental:getForDate',  (db, _, userId, date) => dbModule.getDailyMentalReportForDate(db, userId, date), { demoFn: () => null });
+  globalDbHandle('daily-mental:getLatest',   (db, _, userId) => dbModule.getLatestDailyMentalReport(db, userId), { demoFn: () => null });
   globalDbHandle('daily-mental:save',        (db, dbp, userId, date, report) => dbModule.saveDailyMentalReport(db, dbp, userId, date, report), { blockInDemo: true });
   globalDbHandle('daily-mental:delete',      (db, dbp, userId, date) => dbModule.deleteDailyMentalReport(db, dbp, userId, date), { blockInDemo: true });
 

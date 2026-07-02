@@ -609,6 +609,11 @@ function getDailyMentalReportsForMonth(db, userId, monthKey) {
 function getDailyMentalReportForDate(db, userId, date) {
   return getOne(db, 'SELECT * FROM daily_mental_reports WHERE user_id=? AND date=?', [userId, date]);
 }
+// Dernier rapport disponible tous jours confondus — utilisé par le portrait IA quand
+// aujourd'hui n'a pas encore d'analyse (fallback "dernière analyse disponible").
+function getLatestDailyMentalReport(db, userId) {
+  return getOne(db, 'SELECT * FROM daily_mental_reports WHERE user_id=? ORDER BY date DESC LIMIT 1', [userId]);
+}
 function saveDailyMentalReport(db, dbPath, userId, date, report) {
   const existing = getDailyMentalReportForDate(db, userId, date);
   const params = {
@@ -811,7 +816,7 @@ module.exports = {
   getWeeklyAnalyses, getWeeklyAnalysis, upsertWeeklyAnalysis, deleteWeeklyAnalysis,
   getMentalReport, getMentalReportsRange, saveMentalReport,
   getWeeklyReport, saveWeeklyReport,
-  getDailyMentalReportsForMonth, getDailyMentalReportForDate, saveDailyMentalReport, deleteDailyMentalReport,
+  getDailyMentalReportsForMonth, getDailyMentalReportForDate, getLatestDailyMentalReport, saveDailyMentalReport, deleteDailyMentalReport,
   getAiMessages, insertAiMessage, clearAiConversations,
   migrateBudgetData,
   getBudgetCategories,

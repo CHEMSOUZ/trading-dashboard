@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('dailyMental', {
   // Résout toujours { ok, data } ou { ok:false, error: 'unauthenticated'|'subscription_inactive'|'quota_exceeded'|'demo_mode'|string, message?, resetDate?, used?, limit? }
   getForMonth: (userId, monthKey)      => ipcRenderer.invoke('daily-mental:getForMonth', userId, monthKey),
   getForDate:  (userId, date)          => ipcRenderer.invoke('daily-mental:getForDate', userId, date),
+  getLatest:   (userId)                => ipcRenderer.invoke('daily-mental:getLatest', userId),
   generate:    (userId, date, force)   => ipcRenderer.invoke('daily-mental:generate', userId, date, !!force),
   delete:      (userId, date)          => ipcRenderer.invoke('daily-mental:delete', userId, date),
 });

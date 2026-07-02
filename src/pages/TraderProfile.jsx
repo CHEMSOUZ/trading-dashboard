@@ -642,6 +642,15 @@ async function fetchDayTradeStats(date) {
   return agg;
 }
 
+// Convertit une ligne daily_mental_reports (emotion_text/patterns_text/focus_text séparés)
+// vers la forme {date, emotion, text, generatedAt} attendue par renderBlocks() — permet de
+// réutiliser le rendu existant du portrait IA sans dupliquer sa mise en page.
+function dailyRowToReportShape(row) {
+  if (!row) return null;
+  const text = `ÉTAT ÉMOTIONNEL\n${row.emotion_text}\n\nPATTERNS IDENTIFIÉS\n${row.patterns_text}\n\nFOCUS POUR DEMAIN\n${row.focus_text}`;
+  return { date: row.date, emotion: row.trait, text, generatedAt: row.generated_at };
+}
+
 export default function TraderProfile() {
   const [loading,       setLoading]       = useState(true);
   const [isDemoMode,    setIsDemoMode]    = useState(false);
@@ -663,6 +672,11 @@ export default function TraderProfile() {
   const [authError,      setAuthError]      = useState(null); // null | 'unauthenticated' | 'subscription_inactive' | 'quota_exceeded'
   const [quotaResetDate, setQuotaResetDate] = useState(null);
   const [noTrades,       setNoTrades]       = useState(false);
+
+  // Dernier daily_mental_reports disponible tous jours confondus (ORDER BY date DESC LIMIT 1) —
+  // fallback affiché dans le portrait IA quand aujourd'hui n'a pas encore d'analyse. dailyMentalByDate
+  // (mois courant ± 1) suffit pour "aujourd'hui" mais pas pour retrouver un historique plus ancien.
+  const [latestDailyFallback, setLatestDailyFallback] = useState(null);
 
   // ── Bilan IA hebdomadaire (complément du bloc "aucun trade") ──
   const [weeklyReport,       setWeeklyReport]       = useState(null); // { weekStart, trend, verdict_label, patterns[], recommandation, paragraphes[], generatedAt }
@@ -797,6 +811,17 @@ export default function TraderProfile() {
       setDailyMentalByDate(prev => ({ ...prev, ...byDate }));
     })();
   }, [loading, isDemoMode, userId, viewYear, viewMonth]);
+
+  // Dernier daily_mental_reports disponible tous jours confondus — fallback du portrait IA
+  // quand aujourd'hui n'a pas (encore) d'analyse. Chargé une fois au démarrage ; devient
+  // simplement inutilisé dès qu'un rapport existe pour aujourd'hui (priorité dans le rendu).
+  useEffect(() => {
+    if (loading || isDemoMode || !userId) return;
+    (async () => {
+      const res = await window.dailyMental.getLatest(userId);
+      if (res.ok) setLatestDailyFallback(res.data ?? null);
+    })();
+  }, [loading, isDemoMode, userId]);
 
   // Mise à jour temps réel du calendrier + du portrait quand un trade est ajouté (NewTrade)
   // ou importé (CsvImport) : ne recharge QUE le jour concerné (tradeStats + daily_mental_reports),
@@ -1075,7 +1100,24 @@ export default function TraderProfile() {
   }
   const domWR = domTrades > 0 ? Math.round(domWins / domTrades * 100) : null;
 
-  const badgeColor = report ? (EMOTION_COLORS[report.emotion] ?? P.text2) : P.text3;
+  // Sélection du portrait IA affiché (jamais en mode démo, qui garde son propre "report"
+  // synthétique) : priorité au daily_mental_reports d'AUJOURD'HUI (date réelle, pas referenceDay
+  // qui reste "dernier jour ouvré" pour le calendrier/bilan hebdo, non touchés ici) ; sinon,
+  // dernier rapport disponible tous jours confondus (latestDailyFallback, cf. effet dédié).
+  const todayStr        = fmtISODate(new Date());
+  const todayDailyRow   = !isDemoMode ? (dailyMentalByDate[todayStr] ?? null) : null;
+  const displayedDailyRow = todayDailyRow ?? (!isDemoMode ? latestDailyFallback : null);
+  const portraitIsToday = !!todayDailyRow;
+  const daysSincePortrait = displayedDailyRow
+    ? Math.round((new Date(todayStr + 'T12:00:00') - new Date(displayedDailyRow.date + 'T12:00:00')) / 86400000)
+    : null;
+  const showNoRecentHint = !isDemoMode && !portraitIsToday && daysSincePortrait != null && daysSincePortrait > 7;
+  const cardReport = isDemoMode ? report : dailyRowToReportShape(displayedDailyRow);
+  // Régénération : cible le système qui alimente réellement cardReport (mental_reports en démo,
+  // daily_mental_reports sinon) — sinon le bouton régénérerait des données jamais affichées.
+  const portraitRegenerating = isDemoMode ? generating : generatingDates.has(cardReport?.date);
+
+  const badgeColor = cardReport ? (EMOTION_COLORS[cardReport.emotion] ?? P.text2) : P.text3;
   const badgeRgb    = emotionRgb(badgeColor);
 
   // Mini-stats + analyse du jour affichées dans la modale de détail (carte ouverte au clic
@@ -1098,9 +1140,10 @@ export default function TraderProfile() {
 
   const noTradeSynthesis = noTrades ? computeNoTradeSynthesis(calendar) : null;
 
-  // WR/PF/Série du portrait IA — scopés UNIQUEMENT aux trades du jour affiché (referenceDay),
-  // jamais au mois ou à l'historique global (cf. bug corrigé : ancien window.db.getStats()).
-  const dayPortraitStats = computeDayPortraitStats(tradeStats[referenceDay]);
+  // WR/PF/Série du portrait IA — scopés UNIQUEMENT aux trades du jour RÉELLEMENT affiché
+  // (cardReport.date : aujourd'hui ou fallback), jamais au mois ou à l'historique global
+  // (cf. bug corrigé : ancien window.db.getStats()).
+  const dayPortraitStats = computeDayPortraitStats(tradeStats[cardReport?.date]);
 
   // Panneau "BILAN IA HEBDOMADAIRE" — affiché sur les jours sans trade (sous sa propre
   // synthèse) et, désormais, sous le portrait IA du jour sur les jours avec trades.
@@ -1241,7 +1284,20 @@ export default function TraderProfile() {
       <div style={{ marginBottom:'24px' }}>
         <div style={{ fontSize:'11px', color:PT.textTertiary, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'6px' }}>TRADING PSYCHOLOGY</div>
         <h1 style={{ fontSize:'22px', fontWeight:'500', color:P.text1, margin:'0 0 3px' }}>Profil Trader</h1>
-        <div style={{ fontSize:'12px', color:PT.textTertiary }}>Bilan IA · {fmtDate(referenceDay)}</div>
+        {cardReport ? (
+          <>
+            <div style={{ fontSize:'12px', color: portraitIsToday || isDemoMode ? PT.textPrimary : PT.textTertiary }}>
+              {portraitIsToday || isDemoMode ? 'Bilan IA' : 'Dernière analyse'} · {fmtDate(cardReport.date)}
+            </div>
+            {showNoRecentHint && (
+              <div style={{ fontSize:'11px', color:PT.textTertiary, marginTop:'2px' }}>
+                Aucune analyse récente — tradez pour générer un nouveau portrait
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{ fontSize:'12px', color:PT.textTertiary }}>Bilan IA · {fmtDate(referenceDay)}</div>
+        )}
       </div>
 
       {/* ── Summary row ── */}
@@ -1292,7 +1348,7 @@ export default function TraderProfile() {
       )}
 
       {/* ── Skeleton chargement ── */}
-      {generating && !report && (
+      {generating && !cardReport && (
         <div style={{ marginBottom:'20px', borderRadius:'12px', border:`1px solid ${P.border}0.12)`, background:`${P.bg}0.40)`, padding:'24px' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'14px', marginBottom:'20px' }}>
             <div style={{ width:'52px', height:'52px', borderRadius:'12px', background:`${P.border}0.08)`, animation:'pulse 1.5s ease infinite' }} />
@@ -1312,24 +1368,24 @@ export default function TraderProfile() {
       )}
 
       {/* ── Portrait IA du jour ── */}
-      {report && (
+      {cardReport && (
         <div style={{ marginBottom:'24px', borderRadius:'14px', overflow:'hidden', border:`1px solid rgba(${badgeRgb},0.30)`, background:'rgba(14,15,22,0.5)' }}>
           <div style={{ padding:'20px 24px', background:`linear-gradient(135deg, rgba(${badgeRgb},0.22), rgba(${badgeRgb},0.05))`, borderBottom:`1px solid rgba(${badgeRgb},0.25)` }}>
             <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'14px' }}>
               <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
                 <div style={{ width:'52px', height:'52px', borderRadius:'12px', background:`rgba(${badgeRgb},0.18)`, border:`1px solid rgba(${badgeRgb},0.45)`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  <ToneIcon tone={emotionTone(report.emotion)} color={badgeColor} />
+                  <ToneIcon tone={emotionTone(cardReport.emotion)} color={badgeColor} />
                 </div>
                 <div>
-                  <div style={{ fontSize:'22px', fontWeight:'800', color:badgeColor, letterSpacing:'-0.3px', lineHeight:1.15 }}>{report.emotion}</div>
-                  <div style={{ fontSize:'12px', color:P.text2, marginTop:'3px' }}>{EMOTION_TAGLINE[report.emotion] ?? 'Portrait psychologique du jour.'}</div>
+                  <div style={{ fontSize:'22px', fontWeight:'800', color:badgeColor, letterSpacing:'-0.3px', lineHeight:1.15 }}>{cardReport.emotion}</div>
+                  <div style={{ fontSize:'12px', color:P.text2, marginTop:'3px' }}>{EMOTION_TAGLINE[cardReport.emotion] ?? 'Portrait psychologique du jour.'}</div>
                 </div>
               </div>
-              <button onClick={() => generate(true)} disabled={generating}
-                style={{ padding:'6px 14px', borderRadius:'6px', background:'transparent', border:`1px solid ${P.border}0.15)`, color:P.text3, fontSize:'11px', fontFamily:'inherit', cursor:generating?'wait':'pointer', transition:'all 0.15s', opacity:generating?0.4:1, flexShrink:0 }}
+              <button onClick={() => isDemoMode ? generate(true) : handleGenerateDay(cardReport.date, true)} disabled={portraitRegenerating}
+                style={{ padding:'6px 14px', borderRadius:'6px', background:'transparent', border:`1px solid ${P.border}0.15)`, color:P.text3, fontSize:'11px', fontFamily:'inherit', cursor:portraitRegenerating?'wait':'pointer', transition:'all 0.15s', opacity:portraitRegenerating?0.4:1, flexShrink:0 }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor=`${P.border}0.40)`; e.currentTarget.style.color=P.text1; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor=`${P.border}0.15)`; e.currentTarget.style.color=P.text3; }}>
-                {generating ? '...' : '↺ Régénérer'}
+                {portraitRegenerating ? '...' : '↺ Régénérer'}
               </button>
             </div>
           </div>
@@ -1342,11 +1398,11 @@ export default function TraderProfile() {
                 <MiniStat label="SÉRIE" value={dayPortraitStats.streak > 0 ? `${dayPortraitStats.streak} 🟢` : dayPortraitStats.streak < 0 ? `${Math.abs(dayPortraitStats.streak)} 🔴` : '—'} />
               </div>
             )}
-            <div>{renderBlocks(report.text, badgeColor)}</div>
+            <div>{renderBlocks(cardReport.text, badgeColor)}</div>
             <div style={{ marginTop:'22px', paddingTop:'14px', borderTop:`1px solid ${P.border}0.08)`, display:'flex', alignItems:'center', gap:'8px' }}>
               <div style={{ width:'5px', height:'5px', borderRadius:'50%', background:badgeColor, boxShadow:`0 0 5px ${badgeColor}` }} />
               <span style={{ fontSize:'11px', color:P.text4 }}>
-                Généré par Claude · {fmtDate(report.date)} · {new Date(report.generatedAt).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })}
+                Généré par Claude · {fmtDate(cardReport.date)} · {new Date(cardReport.generatedAt).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })}
               </span>
             </div>
           </div>
